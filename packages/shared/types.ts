@@ -155,3 +155,29 @@ export interface AriesErrorShape {
   filePath?: string;
   cause?: unknown;
 }
+
+// ─────────────────────────────────────────────
+// Folder hierarchy (derived from file paths, used by graph/buildFolderGraph.ts)
+// ─────────────────────────────────────────────
+
+export interface FolderInfo {
+  /** Relative path, POSIX-style. "" for the repository root itself. */
+  path: string;
+  name: string;
+  /** Module ids (relativePaths) of files directly inside this folder (not nested subfolders) */
+  fileIds: string[];
+  /** Relative paths of direct child folders */
+  childFolderPaths: string[];
+}
+
+// ─────────────────────────────────────────────
+// External dependencies (npm packages actually imported, not indexed as modules)
+// ─────────────────────────────────────────────
+
+export interface ExternalDependency {
+  packageName: string;
+  /** Module ids that import this package at least once */
+  importedByModuleIds: string[];
+  /** Total number of import statements referencing this package, across all modules */
+  importCount: number;
+}
