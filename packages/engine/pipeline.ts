@@ -5,6 +5,7 @@ import { buildIndex } from "../indexer/buildIndex";
 import { buildDependencyGraph } from "../graph/buildDependencyGraph";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { parseTs } from "../parser/typescript/parseTs";
+import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
 import { AriesError, isAriesError } from "../shared/errors";
 import type { DependencyGraph, RepositoryMeta } from "../shared/types";
 import type { Repository } from "../repository/Repository";
@@ -68,8 +69,8 @@ export async function analyzeRepository(
       name,
       defaultBranch: cloneResult.branch,
       rootPath: localPath,
-      detectedFrameworks: [], // TODO: populate via a framework-detection pass over package.json
-      packageManager: "unknown", // TODO: detect from lockfile presence
+      detectedFrameworks: detectFrameworks(localPath),
+      packageManager: detectPackageManager(localPath),
       analyzedAt: new Date().toISOString(),
     };
 

@@ -1,6 +1,7 @@
 import { scanFiles } from "../parser/core/scanFiles";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { resolvePath } from "../graph/resolvePath";
+import { loadAliasConfig } from "./resolveAliases";
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
 import { AriesError } from "../shared/errors";
@@ -15,7 +16,8 @@ export interface BuildIndexOptions {
  * Full indexing pass over a repository:
  * 1. scanFiles      -> list every relevant file
  * 2. parserRegistry  -> parse each file with the right language parser
- * 3. resolvePath     -> turn raw import strings into module ids
+ * 3. resolvePath     -> turn raw import strings into module ids (using tsconfig
+ *                       path aliases from resolveAliases.ts, plus relative resolution)
  * 4. Repository      -> populated with ModuleInfo, importedBy back-references filled in
  *
  * This is a full rebuild. For incremental updates see watcher/changeQueue.ts + updateIndex.ts.
@@ -25,7 +27,7 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
 
   const files = scanFiles(rootPath);
   const knownFiles = new Set(files.map((f) => f.relativePath));
-
+  const aliasConfig = loadAliasConfig(rootPath);
   const repository = new Repository({ ...meta, analyzedAt: new Date().toISOString() });
 
   // Pass 1: parse every file
@@ -56,7 +58,7 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
     const resolvedImportIds: string[] = [];
 
     for (const rawImport of parsed.imports) {
-      const resolution = resolvePath(relativePath, rawImport.source, knownFiles);
+      const resolution = resolvePath(relativePath, rawImport.source, knownFiles, aliasConfig);
       if (resolution.type === "internal") {
         resolvedImportIds.push(resolution.moduleId);
       }
