@@ -1,39 +1,13 @@
 import { readdirSync, statSync, readFileSync } from "node:fs";
-import { join, relative, extname, sep } from "node:path";
-import { createHash } from "node:crypto";
+import { join, relative, extname } from "node:path";
 import { readGitignore } from "../../git/readGitignore";
+import { EXTENSION_TO_LANGUAGE } from "../../shared/constants";
+import { hashContent } from "../../shared/hash";
+import { toPosixPath } from "../../shared/paths";
 import type { FileInfo, SupportedLanguage } from "../../shared/types";
-
-const EXTENSION_TO_LANGUAGE: Record<string, SupportedLanguage> = {
-  ".js": "javascript",
-  ".jsx": "javascript",
-  ".mjs": "javascript",
-  ".cjs": "javascript",
-  ".ts": "typescript",
-  ".tsx": "typescript",
-  ".py": "python",
-  ".java": "java",
-  ".go": "go",
-  ".cs": "csharp",
-  ".php": "php",
-  ".rb": "ruby",
-  ".rs": "rust",
-  ".cpp": "cpp",
-  ".cc": "cpp",
-  ".h": "cpp",
-  ".hpp": "cpp",
-};
 
 function detectLanguage(extension: string): SupportedLanguage {
   return EXTENSION_TO_LANGUAGE[extension] ?? "unknown";
-}
-
-function hashContent(content: string): string {
-  return createHash("sha1").update(content).digest("hex").slice(0, 12);
-}
-
-function toPosixPath(p: string): string {
-  return p.split(sep).join("/");
 }
 
 /**
@@ -49,7 +23,7 @@ export function scanFiles(rootPath: string): FileInfo[] {
     try {
       entries = readdirSync(dir);
     } catch {
-      return; // permission denied etc — skip silently
+      return;
     }
 
     for (const entry of entries) {
@@ -74,13 +48,13 @@ export function scanFiles(rootPath: string): FileInfo[] {
 
       const extension = extname(entry).toLowerCase();
       const language = detectLanguage(extension);
-      if (language === "unknown") continue; // skip binaries, images, etc.
+      if (language === "unknown") continue;
 
       let content: string;
       try {
         content = readFileSync(absolutePath, "utf-8");
       } catch {
-        continue; // unreadable / non-utf8 file — skip
+        continue;
       }
 
       results.push({
