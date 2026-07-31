@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import {
   forceSimulation,
   forceLink,
@@ -21,13 +21,24 @@ const DOUBLE_CLICK_DELAY_MS = 300;
 const ZOOM_TO_NODE_SCALE = 2;
 
 export function GraphCanvas() {
-  const { graph, isLoading, error, selectedNodeId, selectNode, hoveredNodeId, setHoveredNodeId } =
-    useGraphContext();
+  const {
+    graph,
+    isLoading,
+    error,
+    selectedNodeId,
+    selectNode,
+    hoveredNodeId,
+    setHoveredNodeId,
+    transform,
+    setTransform,
+    setContextMenuNodeId,
+    positions,
+    setPositions,
+    dimensions,
+    setDimensions,
+  } = useGraphContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [positions, setPositions] = useState<Map<string, GraphNodePosition>>(new Map());
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const clickTimer = useRef<number | null>(null);
@@ -43,7 +54,7 @@ export function GraphCanvas() {
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [setDimensions]);
 
   useEffect(() => {
     if (!graph || graph.nodes.length === 0) return;
@@ -71,7 +82,7 @@ export function GraphCanvas() {
       nextPositions.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
     }
     setPositions(nextPositions);
-  }, [graph, dimensions.width, dimensions.height]);
+  }, [graph, dimensions.width, dimensions.height, setPositions]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -125,6 +136,13 @@ export function GraphCanvas() {
 
     selectNode(nodeId);
     zoomToNode(nodeId);
+  }
+
+  function handleSvgContextMenu(e: React.MouseEvent<SVGSVGElement>) {
+    const nodeId = getNodeIdFromEvent(e.target);
+    if (!nodeId) return;
+    e.preventDefault();
+    setContextMenuNodeId(nodeId);
   }
 
   function handlePointerDown(e: React.PointerEvent) {
@@ -184,7 +202,13 @@ export function GraphCanvas() {
       onPointerLeave={handlePointerUp}
       onWheel={handleWheel}
     >
-      <svg width="100%" height="100%" onClick={handleSvgClick} onDoubleClick={handleSvgDoubleClick}>
+      <svg
+        width="100%"
+        height="100%"
+        onClick={handleSvgClick}
+        onDoubleClick={handleSvgDoubleClick}
+        onContextMenu={handleSvgContextMenu}
+      >
         <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
           {graph.edges.map((edge) => {
             const sourcePos = positions.get(edge.source);

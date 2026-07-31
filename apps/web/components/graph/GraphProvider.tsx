@@ -1,7 +1,24 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import type { DependencyGraph, GraphNode as GraphNodeData } from "@/packages/shared/types";
+import type { GraphNodePosition } from "./GraphNode";
+
+export interface GraphTransform {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+export interface CanvasDimensions {
+  width: number;
+  height: number;
+}
+
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 3;
+const DEFAULT_TRANSFORM: GraphTransform = { x: 0, y: 0, scale: 1 };
+const DEFAULT_DIMENSIONS: CanvasDimensions = { width: 800, height: 600 };
 
 interface GraphContextValue {
   graph: DependencyGraph | null;
@@ -11,6 +28,17 @@ interface GraphContextValue {
   selectNode: (id: string | null) => void;
   hoveredNodeId: string | null;
   setHoveredNodeId: (id: string | null) => void;
+  transform: GraphTransform;
+  setTransform: (t: GraphTransform | ((prev: GraphTransform) => GraphTransform)) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetView: () => void;
+  contextMenuNodeId: string | null;
+  setContextMenuNodeId: (id: string | null) => void;
+  positions: Map<string, GraphNodePosition>;
+  setPositions: (p: Map<string, GraphNodePosition>) => void;
+  dimensions: CanvasDimensions;
+  setDimensions: (d: CanvasDimensions) => void;
 }
 
 const GraphContext = createContext<GraphContextValue | null>(null);
@@ -27,6 +55,10 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
   const [error, setError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [transform, setTransform] = useState<GraphTransform>(DEFAULT_TRANSFORM);
+  const [contextMenuNodeId, setContextMenuNodeId] = useState<string | null>(null);
+  const [positions, setPositions] = useState<Map<string, GraphNodePosition>>(new Map());
+  const [dimensions, setDimensions] = useState<CanvasDimensions>(DEFAULT_DIMENSIONS);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +94,18 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     };
   }, [repoUrl, branch]);
 
+  const zoomIn = useCallback(() => {
+    setTransform((t) => ({ ...t, scale: Math.min(MAX_SCALE, t.scale * 1.2) }));
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setTransform((t) => ({ ...t, scale: Math.max(MIN_SCALE, t.scale / 1.2) }));
+  }, []);
+
+  const resetView = useCallback(() => {
+    setTransform(DEFAULT_TRANSFORM);
+  }, []);
+
   const value: GraphContextValue = {
     graph,
     isLoading,
@@ -70,6 +114,17 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     selectNode: setSelectedNodeId,
     hoveredNodeId,
     setHoveredNodeId,
+    transform,
+    setTransform,
+    zoomIn,
+    zoomOut,
+    resetView,
+    contextMenuNodeId,
+    setContextMenuNodeId,
+    positions,
+    setPositions,
+    dimensions,
+    setDimensions,
   };
 
   return <GraphContext.Provider value={value}>{children}</GraphContext.Provider>;
