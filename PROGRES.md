@@ -65,7 +65,7 @@ vendor-ui/
 file itu landing di folder yang bener. `aliases.ui` gak selalu dihormati oleh
 registry pihak ketiga. Full detail: `apps/web/vendor-ui/README.md`.
 
-## Kode yang diadaptasi dari open source (bukan comot mentah)
+## Kode yang diadaptasi dari open source
 
 Semua ada attribusi di komentar kode. MIT-licensed semua.
 
