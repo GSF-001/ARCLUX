@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   forceSimulation,
   forceLink,
@@ -17,6 +17,9 @@ interface SimNode extends SimulationNodeDatum {
   id: string;
 }
 
+const DOUBLE_CLICK_DELAY_MS = 300;
+const ZOOM_TO_NODE_SCALE = 2;
+
 export function GraphCanvas() {
   const { graph, isLoading, error, selectedNodeId, selectNode, hoveredNodeId, setHoveredNodeId } =
     useGraphContext();
@@ -27,6 +30,7 @@ export function GraphCanvas() {
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
+  const clickTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -68,6 +72,60 @@ export function GraphCanvas() {
     }
     setPositions(nextPositions);
   }, [graph, dimensions.width, dimensions.height]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") selectNode(null);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectNode]);
+
+  const getNodeIdFromEvent = useCallback((target: EventTarget | null): string | undefined => {
+    if (!(target instanceof Element)) return undefined;
+    return target.closest<SVGElement>("[data-node-id]")?.dataset.nodeId;
+  }, []);
+
+  function zoomToNode(nodeId: string) {
+    const pos = positions.get(nodeId);
+    if (!pos) return;
+    setTransform({
+      x: dimensions.width / 2 - pos.x * ZOOM_TO_NODE_SCALE,
+      y: dimensions.height / 2 - pos.y * ZOOM_TO_NODE_SCALE,
+      scale: ZOOM_TO_NODE_SCALE,
+    });
+  }
+
+  function handleSvgClick(e: React.MouseEvent<SVGSVGElement>) {
+    const nodeId = getNodeIdFromEvent(e.target);
+
+    if (!nodeId) {
+      selectNode(null);
+      return;
+    }
+
+    if (clickTimer.current) {
+      return;
+    }
+
+    clickTimer.current = window.setTimeout(() => {
+      clickTimer.current = null;
+      selectNode(nodeId);
+    }, DOUBLE_CLICK_DELAY_MS);
+  }
+
+  function handleSvgDoubleClick(e: React.MouseEvent<SVGSVGElement>) {
+    const nodeId = getNodeIdFromEvent(e.target);
+    if (!nodeId) return;
+
+    if (clickTimer.current) {
+      window.clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+
+    selectNode(nodeId);
+    zoomToNode(nodeId);
+  }
 
   function handlePointerDown(e: React.PointerEvent) {
     isPanning.current = true;
@@ -126,7 +184,7 @@ export function GraphCanvas() {
       onPointerLeave={handlePointerUp}
       onWheel={handleWheel}
     >
-      <svg width="100%" height="100%">
+      <svg width="100%" height="100%" onClick={handleSvgClick} onDoubleClick={handleSvgDoubleClick}>
         <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
           {graph.edges.map((edge) => {
             const sourcePos = positions.get(edge.source);

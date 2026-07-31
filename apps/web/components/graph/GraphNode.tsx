@@ -19,14 +19,14 @@ export interface GraphNodeProps {
 
 const BASE_RADIUS = 6;
 
-export function GraphNode({ node, position, isSelected, isHovered, onClick, onHoverChange }: GraphNodeProps) {
+export function GraphNode({ node, position, isSelected, isHovered, onHoverChange }: GraphNodeProps) {
   const color = getGraphNodeColor(node.type, "dark");
   const radius = isSelected ? BASE_RADIUS + 3 : isHovered ? BASE_RADIUS + 1.5 : BASE_RADIUS;
 
   return (
     <g
+      data-node-id={node.id}
       transform={`translate(${position.x}, ${position.y})`}
-      onClick={() => onClick(node.id)}
       onMouseEnter={() => onHoverChange(node.id)}
       onMouseLeave={() => onHoverChange(null)}
       className="cursor-pointer"
