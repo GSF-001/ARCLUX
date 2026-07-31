@@ -4,7 +4,7 @@ import { resolvePath } from "../graph/resolvePath";
 import { loadAliasConfig } from "./resolveAliases";
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
-import { AriesError } from "../shared/errors";
+import { ArcluxError } from "../shared/errors";
 import type { RepositoryMeta, ModuleInfo, ParsedFile } from "../shared/types";
 
 export interface BuildIndexOptions {
@@ -40,7 +40,7 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
     try {
       content = readFileSync(file.absolutePath, "utf-8");
     } catch (err) {
-      throw new AriesError({
+      throw new ArcluxError({
         code: "PARSE_FAILED",
         message: `Could not read file for parsing`,
         filePath: file.relativePath,

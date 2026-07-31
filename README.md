@@ -1,4 +1,4 @@
-# Aries
+# Arclux
 
 Dependency graph, impact analysis, and structural linting for your codebase. CLI + web dashboard.
 
@@ -16,21 +16,21 @@ Dependency graph, impact analysis, and structural linting for your codebase. CLI
 ## Install
 
 ```bash
-pnpm add -g aries
+pnpm add -g arclux
 ```
 
 ## Usage
 
 ```bash
-aries analyze .              # full repository analysis
-aries graph .                # generate dependency graph
-aries impact <file>          # trace consumers of a file
-aries doctor                 # check conventions
-aries dashboard               # launch web UI
+arclux analyze .              # full repository analysis
+arclux graph .                # generate dependency graph
+arclux impact <file>          # trace consumers of a file
+arclux doctor                 # check conventions
+arclux dashboard               # launch web UI
 ```
 
 ```
-$ aries analyze .
+$ arclux analyze .
 1,204 files · 312 modules · 847ms
 3 circular deps · 12 unused exports · 3 layer violations
 ```
@@ -59,12 +59,12 @@ Alpha. Core model, graph builder, and TypeScript parser are working. Other langu
 ## Contributing
 
 ```bash
-git clone https://github.com/<org>/aries.git
-cd aries && pnpm install && pnpm test
+git clone https://github.com/<org>/arclux.git
+cd arclux && pnpm install && pnpm test
 ```
 
 PRs welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-MIT © Aries Contributors
+MIT © Arclux Contributors

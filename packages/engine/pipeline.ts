@@ -6,7 +6,7 @@ import { buildDependencyGraph } from "../graph/buildDependencyGraph";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { parseTs } from "../parser/typescript/parseTs";
 import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
-import { AriesError, isAriesError } from "../shared/errors";
+import { ArcluxError, isArcluxError } from "../shared/errors";
 import type { DependencyGraph, RepositoryMeta } from "../shared/types";
 import type { Repository } from "../repository/Repository";
 
@@ -35,7 +35,7 @@ function parseOrgAndName(repoUrl: string): { org: string; name: string } {
   const cleaned = repoUrl.replace(/\.git$/, "");
   const match = cleaned.match(/[:/]([^/]+)\/([^/]+)$/);
   if (!match) {
-    throw new AriesError({
+    throw new ArcluxError({
       code: "CLONE_FAILED",
       message: `Could not parse org/repo name from URL: ${repoUrl}`,
     });
@@ -78,16 +78,16 @@ export async function analyzeRepository(
     try {
       repository = await buildIndex({ rootPath: localPath, meta });
     } catch (err) {
-      throw isAriesError(err)
+      throw isArcluxError(err)
         ? err
-        : new AriesError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
+        : new ArcluxError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
     }
 
     let graph: DependencyGraph;
     try {
       graph = buildDependencyGraph(repository);
     } catch (err) {
-      throw new AriesError({
+      throw new ArcluxError({
         code: "GRAPH_BUILD_FAILED",
         message: "Graph construction failed",
         cause: err,

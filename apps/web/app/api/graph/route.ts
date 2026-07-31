@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeRepository } from "@/packages/engine/pipeline";
-import { isAriesError } from "@/packages/shared/errors";
+import { isArcluxError } from "@/packages/shared/errors";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const result = await analyzeRepository({ repoUrl, branch });
     return NextResponse.json(result.graph, { status: 200 });
   } catch (err) {
-    if (isAriesError(err)) {
+    if (isArcluxError(err)) {
       return NextResponse.json({ error: err.message, code: err.code }, { status: 502 });
     }
     console.error("Unexpected error in /api/graph:", err);

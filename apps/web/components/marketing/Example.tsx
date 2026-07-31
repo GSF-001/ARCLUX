@@ -9,7 +9,7 @@ export function Example() {
             <span className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
           </div>
           <pre className="overflow-x-auto p-5 text-sm leading-relaxed">
-            <code>{`$ aries analyze .
+            <code>{`$ arclux analyze .
 
 1,204 files · 312 modules · 847ms
 
@@ -17,7 +17,7 @@ export function Example() {
 12 unused exports
 3 layer violations
 
-Run \`aries impact src/api/client.ts\` to trace its consumers.`}</code>
+Run \`arclux impact src/api/client.ts\` to trace its consumers.`}</code>
           </pre>
         </div>
       </div>

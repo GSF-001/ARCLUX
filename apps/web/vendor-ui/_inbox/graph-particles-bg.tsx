@@ -20,7 +20,7 @@ interface Particle {
 
 /**
  * Ambient canvas background: drifting dots that connect with lines when close,
- * deliberately evoking ARIES's own dependency graph rather than generic "particles.js"
+ * deliberately evoking ARCLUX's own dependency graph rather than generic "particles.js"
  * noise. Meant for hero/marketing sections (components/marketing/Hero.tsx), not
  * dense in-app UI — it's decorative, not a real graph.
  */

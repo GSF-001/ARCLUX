@@ -11,7 +11,7 @@ export function Navbar() {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
       <Link href="/" className="text-sm font-semibold tracking-tight">
-        Aries
+        Arclux
       </Link>
 
       <div className="flex items-center gap-2">

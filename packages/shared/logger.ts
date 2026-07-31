@@ -8,7 +8,7 @@ const LEVEL_WEIGHT: Record<LogLevel, number> = {
 };
 
 function currentLevel(): LogLevel {
-  const fromEnv = process.env.ARIES_LOG_LEVEL as LogLevel | undefined;
+  const fromEnv = process.env.ARCLUX_LOG_LEVEL as LogLevel | undefined;
   return fromEnv && fromEnv in LEVEL_WEIGHT ? fromEnv : "info";
 }
 
@@ -34,7 +34,7 @@ function log(namespace: string, level: LogLevel, message: string, meta?: Record<
 /**
  * Minimal namespaced logger. Every package should create its own via
  * createLogger("packageName") instead of calling console.* directly, so
- * output stays consistent and filterable via the ARIES_LOG_LEVEL env var.
+ * output stays consistent and filterable via the ARCLUX_LOG_LEVEL env var.
  */
 export function createLogger(namespace: string): Logger {
   return {

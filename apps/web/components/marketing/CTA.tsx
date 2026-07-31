@@ -11,7 +11,7 @@ export function CTA() {
           Start mapping your codebase
         </h2>
         <p className="max-w-md text-muted-foreground">
-          Point Aries at any repository and see the full dependency graph in
+          Point Arclux at any repository and see the full dependency graph in
           under a minute.
         </p>
         <Link href="/new" className={cn(buttonVariants({ size: "lg" }))}>

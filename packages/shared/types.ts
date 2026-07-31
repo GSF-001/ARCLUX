@@ -1,5 +1,5 @@
 /**
- * ARIES Core Types
+ * ARCLUX Core Types
  * Ini adalah "kamus" data utama. Semua package (parser, indexer, graph, engine, detectors)
  * WAJIB pakai type dari sini. Jangan define shape data sendiri-sendiri di file lain.
  */
@@ -141,7 +141,7 @@ export interface DependencyGraph {
 // Errors (shared across packages, used by shared/errors.ts)
 // ─────────────────────────────────────────────
 
-export type AriesErrorCode =
+export type ArcluxErrorCode =
   | "CLONE_FAILED"
   | "PARSE_FAILED"
   | "UNSUPPORTED_LANGUAGE"
@@ -149,8 +149,8 @@ export type AriesErrorCode =
   | "GRAPH_BUILD_FAILED"
   | "NOT_FOUND";
 
-export interface AriesErrorShape {
-  code: AriesErrorCode;
+export interface ArcluxErrorShape {
+  code: ArcluxErrorCode;
   message: string;
   filePath?: string;
   cause?: unknown;

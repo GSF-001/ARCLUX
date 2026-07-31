@@ -1,4 +1,4 @@
-# ARIES — Progress Summary
+# ARCLUX — Progress Summary
 
 > Paste file ini ke awal chat Claude manapun (atau `cat PROGRESS.md`) supaya
 > Claude langsung paham status project tanpa perlu dijelasin ulang dari nol.
@@ -6,7 +6,7 @@
 
 ## Apa ini
 
-ARIES = tool analisis codebase. Clone repo → parse → index → build dependency
+ARCLUX = tool analisis codebase. Clone repo → parse → index → build dependency
 graph → visualisasi interaktif di browser. Target: liat gimana file/module
 saling terhubung, apa yang kena dampak kalau ubah sesuatu, dan convention apa
 yang dilanggar (misal "nambah page Next.js tapi lupa daftarin route").
@@ -43,11 +43,11 @@ clone/cleanup tetep bener di satu tempat.
 
 ## Theme
 
-`apps/web/theme/aries.json` + `theme/graphColors.ts` — hybrid: base hitam
+`apps/web/theme/arclux.json` + `theme/graphColors.ts` — hybrid: base hitam
 pekat ala Vercel + syntax/accent color ala OpenCode (ungu-oranye), plus token
 khusus buat 6 tipe graph node (`file`, `folder`, `external-package`, `route`,
 `component`, `hook`) dan 4 tipe edge. Diterapkan ke `app/globals.css` lewat
-script sekali-jalan (`apply-aries-theme.js`, udah dihapus setelah dijalanin).
+script sekali-jalan (`apply-arclux-theme.js`, udah dihapus setelah dijalanin).
 
 ## vendor-ui structure
 
@@ -71,7 +71,7 @@ Semua ada attribusi di komentar kode. MIT-licensed semua.
 
 | Sumber | Diambil | Jadi |
 |---|---|---|
-| `sst/opencode` | theme color tokens, pattern `use-filtered-list` (SolidJS) | `theme/aries.json`, `hooks/useFilteredList.ts` (full rewrite ke React) |
+| `sst/opencode` | theme color tokens, pattern `use-filtered-list` (SolidJS) | `theme/arclux.json`, `hooks/useFilteredList.ts` (full rewrite ke React) |
 | `pahen/madge` | algoritma DFS cycle detection | `detectors/detectCircularDependency.ts` |
 | `git-truck` | UX pattern: Escape-deselect, double-click-zoom, event delegation | `GraphCanvas.tsx` v2 |
 | `sverweij/dependency-cruiser` | konsep predicate-composable rule matcher | `rules/RuleEngine.ts` (fondasi ringan, bukan port penuh) |
@@ -79,7 +79,7 @@ Semua ada attribusi di komentar kode. MIT-licensed semua.
 
 Repo lain yang di-clone tapi TIDAK dipakai (dicoba, ternyata gak relevan/gak
 worth di-port): `react-force-graph` (cuma wrapper tipis), `vasturiano/force-graph`
-(canvas-based, ARIES pakai SVG — beda paradigma, gak portable langsung),
+(canvas-based, ARCLUX pakai SVG — beda paradigma, gak portable langsung),
 `nx`, `codecharta` (belum dieksplor lebih jauh).
 
 ## Masalah yang PERNAH kejadian, biar gak keulang
@@ -92,10 +92,10 @@ worth di-port): `react-force-graph` (cuma wrapper tipis), `vasturiano/force-grap
 - **Termux quirks**: `/tmp` gak ada (pakai path lokal biasa), Turbopack gak
   jalan di arm64 (pakai `next build --webpack` / `next dev --webpack`),
   git push minta Personal Access Token bukan password akun.
-- **Repo referensi jangan sampe ke-clone di dalam `~/ARIES`** — harus di `~`
+- **Repo referensi jangan sampe ke-clone di dalam `~/ARCLUX`** — harus di `~`
   root, kalau kepencet salah posisi bakal ke-nest dan ke-track git tanpa
   sengaja. Semua ada di `~/git-truck`, `~/madge`, `~/opencode`, dll — **di
-  luar** `~/ARIES`.
+  luar** `~/ARCLUX`.
 
 ## Yang MASIH kosong (prioritas kira-kira, boleh diubah)
 
@@ -113,7 +113,7 @@ worth di-port): `react-force-graph` (cuma wrapper tipis), `vasturiano/force-grap
 ## Cara cek status kosong terkini
 
 ```bash
-cd ~/ARIES
+cd ~/ARCLUX
 find . -name "*.ts" -o -name "*.tsx" | grep -v node_modules | grep -v ".next" \
   | xargs wc -l 2>/dev/null | sort -n | awk '$1==0 {print}' | grep -v total
 ```

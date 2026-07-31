@@ -2,7 +2,7 @@ import { simpleGit } from "simple-git";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AriesError } from "../shared/errors";
+import { ArcluxError } from "../shared/errors";
 
 export interface CloneOptions {
   /** e.g. "https://github.com/org/repo.git" */
@@ -26,7 +26,7 @@ export interface CloneResult {
 export async function cloneRepository(options: CloneOptions): Promise<CloneResult> {
   const { repoUrl, branch, depth = 1 } = options;
 
-  const workDir = mkdtempSync(join(tmpdir(), "aries-"));
+  const workDir = mkdtempSync(join(tmpdir(), "arclux-"));
   const git = simpleGit();
 
   try {
@@ -43,7 +43,7 @@ export async function cloneRepository(options: CloneOptions): Promise<CloneResul
 
     return { localPath: workDir, branch: resolvedBranch };
   } catch (err) {
-    throw new AriesError({
+    throw new ArcluxError({
       code: "CLONE_FAILED",
       message: `Failed to clone repository: ${repoUrl}`,
       cause: err,

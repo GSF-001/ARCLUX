@@ -1,5 +1,5 @@
 import type { LanguageParser } from "./ParserInterface";
-import { AriesError } from "../../shared/errors";
+import { ArcluxError } from "../../shared/errors";
 
 /**
  * Central place where all language parsers register themselves.
@@ -22,7 +22,7 @@ export class ParserRegistry {
   getParserOrThrow(extension: string): LanguageParser {
     const parser = this.getParserForExtension(extension);
     if (!parser) {
-      throw new AriesError({
+      throw new ArcluxError({
         code: "UNSUPPORTED_LANGUAGE",
         message: `No parser registered for extension "${extension}"`,
       });

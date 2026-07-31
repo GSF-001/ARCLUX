@@ -75,14 +75,14 @@ check where the file actually landed after running `add` and move it into
 ## _inbox
 
 Custom components that aren't from any vendor library — either hand-written for
-ARIES specifically, or adapted from a one-off snippet (CodePen, gist, etc.) found
+ARCLUX specifically, or adapted from a one-off snippet (CodePen, gist, etc.) found
 during development. Current contents:
 
 | File | Purpose |
 |---|---|
 | `neon-glow-card.tsx` | Card with a soft neon border glow, for emphasizing a single selected element (e.g. selected graph node) |
 | `code-block-terminal.tsx` | Terminal-chrome code block with copy button, for showing snippets/config/commands |
-| `graph-particles-bg.tsx` | Ambient canvas background of connected drifting particles, echoing ARIES's own dependency graph |
+| `graph-particles-bg.tsx` | Ambient canvas background of connected drifting particles, echoing ARCLUX's own dependency graph |
 | `keyboard-shortcut-hint.tsx` | Renders a key combo (⌘K etc.), Mac-symbol-aware |
 
 When adding something new here, prefer writing it from scratch over pulling from

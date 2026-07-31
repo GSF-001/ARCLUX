@@ -8,7 +8,7 @@ export function useTheme() {
   const [theme, setTheme] = useState<Theme>("light")
 
   useEffect(() => {
-    const stored = localStorage.getItem("aries-theme") as Theme | null
+    const stored = localStorage.getItem("arclux-theme") as Theme | null
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
     const initial = stored ?? (prefersDark ? "dark" : "light")
     setTheme(initial)
@@ -19,7 +19,7 @@ export function useTheme() {
     setTheme((prev) => {
       const next = prev === "dark" ? "light" : "dark"
       document.documentElement.classList.toggle("dark", next === "dark")
-      localStorage.setItem("aries-theme", next)
+      localStorage.setItem("arclux-theme", next)
       return next
     })
   }, [])

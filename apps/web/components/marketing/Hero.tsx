@@ -16,7 +16,7 @@ export function Hero() {
       </h1>
 
       <p className="max-w-xl text-balance text-lg text-muted-foreground">
-        Aries maps your repository into a dependency graph, flags structural
+        Arclux maps your repository into a dependency graph, flags structural
         issues, and traces the exact impact of any file, module, or route.
       </p>
 

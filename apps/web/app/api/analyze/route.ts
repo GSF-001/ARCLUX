@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeRepository } from "@/packages/engine/pipeline";
-import { isAriesError } from "@/packages/shared/errors";
+import { isArcluxError } from "@/packages/shared/errors";
 
 interface AnalyzeRequestBody {
   repoUrl: string;
   branch?: string;
 }
 
-/** Maps internal AriesErrorCode to an HTTP status — keeps this mapping in one place */
+/** Maps internal ArcluxErrorCode to an HTTP status — keeps this mapping in one place */
 function statusForErrorCode(code: string): number {
   switch (code) {
     case "NOT_FOUND":
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
-    if (isAriesError(err)) {
+    if (isArcluxError(err)) {
       return NextResponse.json(
         { error: err.message, code: err.code, filePath: err.filePath },
         { status: statusForErrorCode(err.code) }

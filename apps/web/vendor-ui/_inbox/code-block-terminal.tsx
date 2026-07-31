@@ -14,7 +14,7 @@ export interface CodeBlockTerminalProps {
 
 /**
  * A terminal-chrome code block: macOS-style traffic-light dots, filename in the
- * title bar, and a copy button. Used anywhere ARIES surfaces raw code or config
+ * title bar, and a copy button. Used anywhere ARCLUX surfaces raw code or config
  * to the user (e.g. showing a resolved import path, a CLI command to run).
  */
 export function CodeBlockTerminal({ code, language, filename, className }: CodeBlockTerminalProps) {
