@@ -1,0 +1,19 @@
+ARCLUX
+Copyright 2026 Mikatoshi
+
+This product includes software developed as part of the ARCLUX project.
+
+This product includes patterns and algorithms adapted from the following
+MIT-licensed open source projects:
+
+- madge (https://github.com/pahen/madge) — Copyright (c) 2017 Patrik Henningsson
+  Used as reference for circular dependency detection algorithm.
+
+- git-truck (https://github.com/git-truck/git-truck) — Copyright (c) 2022 git-truck
+  Used as reference for graph interaction UX patterns.
+
+- opencode (https://github.com/sst/opencode) — Copyright (c) 2025 opencode
+  Used as reference for theme tokens and filtered-list pattern.
+
+Full license texts for the above projects are MIT License, available at
+their respective repositories.
