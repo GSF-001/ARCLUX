@@ -117,3 +117,45 @@ cd ~/ARIES
 find . -name "*.ts" -o -name "*.tsx" | grep -v node_modules | grep -v ".next" \
   | xargs wc -l 2>/dev/null | sort -n | awk '$1==0 {print}' | grep -v total
 ```
+
+## Update — Graph components lengkap
+
+Melanjutkan dari GraphCanvas v2 (git-truck UX pattern). Yang ditambahin:
+
+- **State terpusat**: `transform` (pan/zoom), `positions` (hasil d3-force),
+  `dimensions` (ukuran canvas), dan `contextMenuNodeId` semua dipindah dari
+  `useState` lokal di `GraphCanvas` ke `GraphProvider` context. `GraphCanvas`
+  sekarang satu-satunya yang **nulis** ke state itu, komponen lain baca doang.
+  Alasan: `Minimap` butuh `positions`+`dimensions` juga tapi jangan sampai
+  itung ulang d3-force simulation dua kali (mahal & bisa beda hasil).
+- **7 komponen baru** (semua konsumsi `useGraphContext()`):
+  - `GraphToolbar.tsx` — zoom in/out/reset, nampilin persen zoom
+  - `GraphLegend.tsx` — legend warna node type & edge type (dari `theme/graphColors.ts`)
+  - `GraphSearch.tsx` — search box, filter node by label, klik hasil → fokus+zoom ke node
+  - `GraphSelection.tsx` — panel detail node yang dipilih (incoming/outgoing edge count)
+  - `GraphContextMenu.tsx` — klik kanan node → Focus / Copy path / Close
+  - `Minimap.tsx` — preview kecil semua node + kotak indikator viewport aktif
+  - `GraphViewport.tsx` — **composition root baru**, ngerakit Provider + Canvas +
+    semua komponen di atas jadi satu. Ini yang harusnya dipakai di
+    `app/[org]/[repo]/graph/page.tsx`, bukan manggil `GraphCanvas` manual.
+
+**Gotcha baru**: `Minimap` dan `GraphLegend` sama-sama nempatin diri di
+`bottom-4 right-4` (CSS absolute) — bentrok kalau dua-duanya dirender
+bareng. Sekarang `GraphViewport` cuma render `GraphLegend`, `Minimap` belum
+dipasang di situ. Kalau mau dua-duanya tampil, perlu disusun jadi stack
+vertikal dulu sebelum di-mount bareng.
+
+**Yang belum sempat dites di browser beneran** (cuma lolos `tsc --noEmit`,
+belum pernah `next dev` dan diliat visualnya):
+- Minimap viewport-rect masih pendekatan kasar, asumsi origin transform di (0,0)
+- Belum ada testing behavior double-click zoom + context menu barengan di device nyata
+
+## Yang MASIH kosong (update)
+
+Semua yang tercatat sebelumnya masih berlaku, KECUALI graph components
+(`components/graph/*`) sekarang udah lengkap semua — pindahin dari "belum"
+ke "udah". Prioritas berikutnya tetap:
+- `packages/impact/*` — masih 0%
+- `apps/cli/*` — masih 0%
+- `packages/detectors/*` — masih 1/18
+- `components/workspace/*`, `components/explorer/*` — masih 0%
