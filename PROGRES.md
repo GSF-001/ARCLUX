@@ -280,3 +280,37 @@ ditambahkan project-wide.
 `patterns/*` (CommandPalette, DataTable, dll — lihat cmdk/shadcn-table
 sebagai referensi), `workspace/*` (semua 5 file + 3 panel), `explorer/*`
 (3 file, referensi git-truck), `overview/*` (3 file), `search/GlobalSearch.tsx`.
+
+## Update — CommandPalette + fuzzyScore
+
+`packages/search/fuzzyScore.ts` — fuzzy match scoring, adaptasi dari
+`pacocoursey/cmdk`'s `command-score.ts` (MIT), re-typed ke TypeScript
+strict mode, konstanta scoring dipertahankan sama persis (itu hasil
+tuning empiris upstream, bukan sesuatu yang di-"improve" sembarangan).
+Belum dipakai di `GraphSearch.tsx` yang udah ada — masih exact/substring
+match di situ, upgrade ke fuzzyScore belum dilakukan, cek dulu sebelum
+asumsi udah terintegrasi.
+
+`components/patterns/CommandPalette.tsx` — selesai, **pakai `cmdk` sebagai
+dependency langsung** (bukan reimplement manual). Keputusan sadar: `cmdk`
+punya keyboard navigation + ARIA wiring yang accessibility-critical dan
+battle-tested (dipakai Vercel, Linear, GitHub) — reimplement dari nol
+resikonya lebih tinggi bikin bug accessibility yang halus, ketimbang pakai
+dependency langsung + atribusi di NOTICE.
+
+Command list masih hardcoded 4 item, mirror manual dari
+`components/layout/Sidebar.tsx`. Belum di-extract ke shared source — kalau
+nav link berubah, update dua tempat.
+
+**Catatan proses**: sesi sebelumnya sempet gagal di tengah jalan nulis
+CommandPalette.tsx (kemungkinan heredoc kepotong/terinterupsi) — fuzzyScore.ts
+dan cmdk install berhasil, tapi CommandPalette.tsx dan commit-nya enggak.
+Ketauan karena git log gak nunjukin commit yang diharapkan. Lesson: abis
+jalanin script panjang, selalu verifikasi tiap langkah beneran nyangkut
+(cat file / git log), jangan asumsi "udah dijalanin" = "berhasil semua".
+
+**Masih kosong**: `search/GlobalSearch.tsx` (bisa pakai `fuzzyScore.ts` yang
+udah ada), `patterns/DataTable.tsx`, `workspace/*`, `explorer/*`, `overview/*`,
+`packages/impact/*`, `apps/cli/*`, `packages/db/*`, `packages/cache/*`,
+`packages/watcher/*`, `packages/git/*`, `packages/ui/*`, detector sisanya
+(16/18 masih 0%), parser bahasa lain, `scripts/*`, `tests/*`.

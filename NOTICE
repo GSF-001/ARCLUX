@@ -22,3 +22,10 @@ their respective repositories.
   Traversal strategy (import-graph walk + re-export chain following)
   referenced for detectUnusedExports.ts. Re-implemented against ARCLUX's
   own ModuleInfo/ResolvedImport types, not a direct port.
+
+- pacocoursey/cmdk (https://github.com/pacocoursey/cmdk) — MIT License
+  Used directly as a dependency (see apps/web/package.json) for
+  CommandPalette.tsx's keyboard navigation and accessibility primitives.
+  The fuzzy-match scoring algorithm in packages/search/fuzzyScore.ts is
+  separately adapted (re-typed to TypeScript, renamed) from this project's
+  src/command-score.ts.
