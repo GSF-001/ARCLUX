@@ -159,3 +159,48 @@ ke "udah". Prioritas berikutnya tetap:
 - `apps/cli/*` — masih 0%
 - `packages/detectors/*` — masih 1/18
 - `components/workspace/*`, `components/explorer/*` — masih 0%
+
+## Update - Python parser via tree-sitter
+
+packages/parser/python/parsePython.ts ditambahin, pakai web-tree-sitter (WASM,
+bukan native binding) supaya nggak perlu compile apapun di Termux arm64.
+Udah didaftarkan ke parserRegistry lewat packages/engine/pipeline.ts.
+
+STATUS: lolos tsc --noEmit, TAPI BELUM di-test end-to-end lewat
+ParserRegistry beneran (cuma pernah dites manual pakai script terpisah pas
+eksperimen awal). Kalau nanti nemu bug pas analisis repo Python asli, cek
+dulu di sini sebelum curiga ke tempat lain.
+
+Gotcha penting kalau nanti mau nambah parser bahasa lain pakai tree-sitter
+juga (Go, Rust, Java, dst):
+
+- Versi web-tree-sitter WAJIB 0.25.0, bukan versi terbaru (0.26.x). Versi
+  0.26.11 gagal load WASM grammar dari tree-sitter-wasms dengan error di
+  getDylinkMetadata (ABI mismatch antara runtime dan wasm binary).
+- web-tree-sitter versi 0.25.0 juga gak bisa dipanggil pakai `import` murni
+  di file .mjs (error "Dynamic require of fs/promises is not supported").
+  Harus dipanggil lewat require(). Karena tsconfig project ini pakai
+  module: esnext tapi package.json gak declare "type": "module", parsePython.ts
+  pakai createRequire(import.meta.url) biar aman dua-duanya.
+- Package ini gak ada file .d.ts, dan gak bisa di-augment pakai `declare
+  module` dari file .ts biasa (error TS2665 "Invalid module name in
+  augmentation"). Solusinya: require sebagai `any`, terus semua type-safety
+  ditaruh di interface custom kita sendiri (lihat TSNode di parsePython.ts),
+  bukan ngandelin type dari package tersebut.
+- Grammar .wasm per-bahasa udah tersedia di package tree-sitter-wasms
+  (bukan clone/build dari repo tree-sitter yang di ~/research/tree-sitter -
+  itu cuma buat referensi konsep, bukan buat dipakai langsung). Path-nya:
+  node_modules/tree-sitter-wasms/out/tree-sitter-<lang>.wasm
+- WASM module loading itu mahal (compile WASM). Parser instance WAJIB
+  di-cache jadi singleton (lihat getPythonParser() pola promise-cache di
+  parsePython.ts), jangan reload tiap kali parse() dipanggil - bakal lambat
+  banget kalau dipanggil ratusan kali per repository scan.
+- Python gak punya keyword export kayak JS/TS. parsePython.ts nganggep semua
+  top-level function_definition dan class_definition sebagai "export" -
+  heuristic, bukan exact. Belum baca __all__ di file, itu enhancement
+  lanjutan kalau perlu lebih presisi.
+
+Repo referensi tambahan yang di-clone ke ~/research (di luar ~/arclux, gak
+ke-track git project ini): git, language-server-protocol, llvm-project,
+sqlite, tree-sitter. Dipakai buat liat pola arsitektur/struktur folder aja,
+bukan buat comot kode mentah.
