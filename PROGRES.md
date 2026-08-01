@@ -204,3 +204,32 @@ Repo referensi tambahan yang di-clone ke ~/research (di luar ~/arclux, gak
 ke-track git project ini): git, language-server-protocol, llvm-project,
 sqlite, tree-sitter. Dipakai buat liat pola arsitektur/struktur folder aja,
 bukan buat comot kode mentah.
+
+## Update — Python parsing & syntax highlighting
+
+`packages/parser/python/` bukan stub kosong lagi:
+
+- `parsePython.ts` — expose `getPythonRuntime()`, load `web-tree-sitter` +
+  grammar Python sekali & reuse. Extract imports/exports.
+- `pythonHighlightQuery.ts` — query highlight disalin **verbatim** dari
+  `tree-sitter-python` (MIT). Atribusi ada di komentar file.
+- `highlightPython.ts` — jalanin query, resolve span collision, map ke
+  theme token.
+
+Dipakai di `apps/web/app/api/file/route.ts` (route baru, fetch raw file dari
+GitHub) dan `components/explorer/FileDetails.tsx` (belum di-wire ke halaman
+manapun, `Explorer.tsx` masih kosong).
+
+**Status: belum diverifikasi visual di browser**, baru lolos `tsc --noEmit`.
+
+**Gotcha baru**: `web-tree-sitter` punya 2 API query beda versi
+(`language.query()` lama vs `new Query()` baru) — udah di-handle dengan
+fallback, tapi cek versi yang keinstall duluan kalau ada error runtime.
+
+**Action item**: `NOTICE` di root belum nyebut `tree-sitter-python` —
+perlu ditambahin karena ini verbatim copy, bukan cuma pola diadaptasi.
+`license-checker` juga perlu dijalanin ulang setelah nambah
+`web-tree-sitter` + `tree-sitter-wasms`.
+
+**Update daftar kosong**: `packages/parser/python/*` pindah dari "belum" ke
+"sebagian" (jalan tapi belum diverifikasi visual + belum ada UI yang makenya).
