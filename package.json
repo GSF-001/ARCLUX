@@ -12,12 +12,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "ignore": "^6.0.2",
     "simple-git": "^3.27.0",
-    "ignore": "^6.0.2"
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "0.25.0"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "turbo": "^2.3.0",
-    "typescript": "^5",
-    "@types/node": "^20"
+    "typescript": "^5"
   }
 }

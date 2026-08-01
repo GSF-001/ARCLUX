@@ -13,6 +13,7 @@ import { buildIndex } from "../indexer/buildIndex";
 import { buildDependencyGraph } from "../graph/buildDependencyGraph";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { parseTs } from "../parser/typescript/parseTs";
+import { parsePython } from "../parser/python/parsePython";
 import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
 import { ArcluxError, isArcluxError } from "../shared/errors";
 import type { DependencyGraph, RepositoryMeta } from "../shared/types";
@@ -24,6 +25,7 @@ let parsersRegistered = false;
 function ensureParsersRegistered() {
   if (parsersRegistered) return;
   parserRegistry.register(parseTs);
+  parserRegistry.register(parsePython);
   parsersRegistered = true;
 }
 
