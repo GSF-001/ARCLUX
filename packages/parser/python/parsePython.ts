@@ -14,7 +14,6 @@ import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/ty
 // .ts file (its main entry resolves to an untyped .js — see PROGRES.md
 // gotchas). We deliberately load it as untyped and keep our own type safety
 // entirely in the TSNode interface below.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const require = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TreeSitter: any = require("web-tree-sitter");
@@ -22,9 +21,11 @@ const { Parser, Language } = TreeSitter;
 
 // Minimal structural type for the parts of a web-tree-sitter node we use.
 // Avoids depending on internal/unstable type exports from the package.
-interface TSNode {
+export interface TSNode {
   type: string;
   text: string;
+  startIndex: number;
+  endIndex: number;
   startPosition: { row: number; column: number };
   childCount: number;
   child(index: number): TSNode | null;
@@ -32,25 +33,34 @@ interface TSNode {
   namedChildren: (TSNode | null)[];
 }
 
-let parserPromise: Promise<InstanceType<typeof Parser>> | null = null;
+export interface PythonRuntime {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parser: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  language: any;
+}
+
+let runtimePromise: Promise<PythonRuntime> | null = null;
 
 /**
  * Loads the tree-sitter runtime + Python grammar exactly once, then reuses
- * the same Parser instance for every file. Loading the WASM module per-call
- * would be very slow across a full repository scan.
+ * the same Parser instance everywhere. Loading the WASM module per-call
+ * would be very slow across a full repository scan (parsePython.ts below)
+ * or when highlighting many files (highlightPython.ts, which imports this
+ * same function so the WASM module is only ever loaded once total).
  */
-function getPythonParser(): Promise<InstanceType<typeof Parser>> {
-  if (!parserPromise) {
-    parserPromise = (async () => {
+export function getPythonRuntime(): Promise<PythonRuntime> {
+  if (!runtimePromise) {
+    runtimePromise = (async () => {
       await Parser.init();
       const parser = new Parser();
       const wasmPath = require.resolve("tree-sitter-wasms/out/tree-sitter-python.wasm");
-      const Python = await Language.load(wasmPath);
-      parser.setLanguage(Python);
-      return parser;
+      const language = await Language.load(wasmPath);
+      parser.setLanguage(language);
+      return { parser, language };
     })();
   }
-  return parserPromise;
+  return runtimePromise;
 }
 
 function getLine(node: TSNode): number {
@@ -68,8 +78,6 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
   function visit(node: TSNode | null) {
     if (!node) return;
 
-    // import a.b.c
-    // import a.b.c as x
     if (node.type === "import_statement") {
       for (let i = 0; i < node.namedChildren.length; i++) {
         const child = node.namedChildren[i];
@@ -100,9 +108,6 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
       }
     }
 
-    // from a.b import c, d as e
-    // from . import x   /   from ..pkg import y  (relative imports)
-    // from a.b import *
     if (node.type === "import_from_statement") {
       const moduleNode = node.childForFieldName("module_name");
       const source = moduleNode ? dottedNameToString(moduleNode) : ".";
@@ -148,16 +153,10 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
   return imports;
 }
 
-/**
- * Python has no explicit export keyword — every top-level name is importable
- * by convention. We treat top-level function/class definitions as exports,
- * since those are what other modules realistically import.
- */
 function extractExports(root: TSNode, warnings: string[]): RawExport[] {
   const exports: RawExport[] = [];
 
   try {
-    // root.type is "module"; iterate only its direct named children (top-level statements)
     for (let i = 0; i < root.namedChildren.length; i++) {
       const node = root.namedChildren[i];
       if (!node) continue;
@@ -188,7 +187,7 @@ export const parsePython: LanguageParser = {
     const warnings: string[] = [];
 
     try {
-      const parser = await getPythonParser();
+      const { parser } = await getPythonRuntime();
       const tree = parser.parse(content);
       const root = tree.rootNode as unknown as TSNode;
 

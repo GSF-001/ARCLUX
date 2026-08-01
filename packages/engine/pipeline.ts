@@ -41,7 +41,7 @@ export interface AnalyzeRepositoryResult {
 }
 
 /** Parses "org/name" out of a git URL, for https, ssh, and shorthand forms */
-function parseOrgAndName(repoUrl: string): { org: string; name: string } {
+export function parseOrgAndName(repoUrl: string): { org: string; name: string } {
   const cleaned = repoUrl.replace(/\.git$/, "");
   const match = cleaned.match(/[:/]([^/]+)\/([^/]+)$/);
   if (!match) {
