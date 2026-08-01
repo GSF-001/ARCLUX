@@ -1,8 +1,20 @@
 # ARCLUX — Progress Summary
 
-> Paste file ini ke awal chat Claude manapun (atau `cat PROGRESS.md`) supaya
+> Paste file ini ke awal chat Claude manapun (atau `cat PROGRES.md`) supaya
 > Claude langsung paham status project tanpa perlu dijelasin ulang dari nol.
-> Update file ini setiap kali ada progress besar — jangan biarin basi.
+> Update file ini setiap kali ada progress besar.
+>
+> Cek status kosong terkini:
+> ```bash
+> cd ~/arclux
+> find apps packages scripts tests -type f \( -name "*.ts" -o -name "*.tsx" \) \
+>   -not -path "*/node_modules/*" | while read f; do
+>   echo "$(wc -l < "$f") $f"
+> done | sort -n
+> ```
+> Threshold: file dengan header lisensi Apache 2.0 baseline-nya **8 baris**,
+> bukan 0 — jadi "kosong" berarti ≤9 baris, bukan `==0`. Selalu `cat` file
+> yang mencurigakan sebelum percaya angka `wc -l` doang.
 
 ## Apa ini
 
@@ -17,300 +29,262 @@ yang dilanggar (misal "nambah page Next.js tapi lupa daftarin route").
   gak support di Termux arm64), `packages/*` (logic inti, framework-agnostic)
 - UI: React, Tailwind v4, shadcn/ui (Base UI variant) + Aceternity + Magic UI
 - Graph render: SVG + `d3-force` (physics layout)
-- Parsing: TypeScript Compiler API (baru TS/TSX, bahasa lain belum)
-- Environment: ditulis & di-develop dari **Termux di Android**, bukan desktop
+- Parsing: TypeScript Compiler API (TS/TSX) + `web-tree-sitter` (Python)
+- Environment: Termux di Android, bukan desktop
+- Lisensi: Apache 2.0 (`LICENSE` + `NOTICE` di root, header per-file)
 
-## Yang UDAH jalan end-to-end
+---
 
-```
-cloneRepository() → scanFiles() → parserRegistry → buildIndex() → buildDependencyGraph()
-```
-Satu pintu masuk: `packages/engine/pipeline.ts` → `analyzeRepository({ repoUrl })`.
-Jangan panggil step individual dari luar `engine/` — itu yang jaga lifecycle
-clone/cleanup tetep bener di satu tempat.
+## ✅ SELESAI — pipeline & core
+Satu entry point: `packages/engine/pipeline.ts` → `analyzeRepository({ repoUrl })`.
+Jangan panggil step individual dari luar `engine/`.
 
-- API: `POST /api/analyze`, `GET /api/graph?repoUrl=...`
-- UI graph: `GraphProvider` (fetch+state) → `GraphCanvas` (render SVG,
-  d3-force layout, pan/zoom, **Escape buat deselect, double-click buat zoom
-  ke node, event delegation** — bukan onClick per-node)
-- Path alias (`@/lib/api`) udah ke-resolve lewat `indexer/resolveAliases.ts`
-  (baca tsconfig `paths`+`baseUrl`), dipanggil dari `graph/resolvePath.ts`
-- Framework & package manager detection: `engine/detectRepositoryMeta.ts`
-- Folder hierarchy: `graph/buildFolderGraph.ts` (pakai `d3-hierarchy`) →
-  `components/overview/ProjectStructure.tsx` (file tree UI, collapsible)
-- Detector pertama: `detectors/detectCircularDependency.ts` (DFS cycle detection)
-- Rule engine fondasi: `rules/RuleEngine.ts` + contoh `rules/nextjs/requirePage.ts`
+- `packages/git/cloneRepository.ts`, `cleanupRepository.ts`, `readGitignore.ts`
+- `packages/parser/core/*` (`ParserInterface`, `ParserRegistry`, `scanFiles`,
+  `LanguageDetector`)
+- `packages/parser/typescript/parseTs.ts` (194 baris) — **catatan**:
+  `parseTsx.ts` dan `parseTsConfig.ts` masih stub kosong terpisah, TSX
+  kemungkinan udah di-handle di `parseTs.ts` yang sama — cek dulu sebelum
+  asumsi TSX belum bisa diparse sama sekali.
+- `packages/parser/python/*` — `parsePython.ts`, `highlightPython.ts`,
+  `pythonHighlightQuery.ts` (lihat detail gotcha di bawah)
+- `packages/indexer/buildIndex.ts`, `resolveAliases.ts`
+- `packages/graph/buildDependencyGraph.ts`, `buildFolderGraph.ts`,
+  `resolvePath.ts`, `serializeGraph.ts`
+- `packages/repository/*` (`Repository`, `Module`, `File`, `Folder`, `Node`,
+  `Edge`, `Dependency`, `Graph`)
+- `packages/engine/detectRepositoryMeta.ts`
+- `packages/rules/RuleEngine.ts` + `rules/nextjs/requirePage.ts`
+- `packages/shared/*` (`types.ts`, `errors.ts`, `hash.ts`, `paths.ts`,
+  `constants.ts`, `logger.ts`, `utils.ts`)
+- `packages/search/fuzzyScore.ts` — adaptasi dari `cmdk` (lihat NOTICE)
 
-## Theme
+## ✅ SELESAI — detectors (2/18)
 
-`apps/web/theme/arclux.json` + `theme/graphColors.ts` — hybrid: base hitam
-pekat ala Vercel + syntax/accent color ala OpenCode (ungu-oranye), plus token
-khusus buat 6 tipe graph node (`file`, `folder`, `external-package`, `route`,
-`component`, `hook`) dan 4 tipe edge. Diterapkan ke `app/globals.css` lewat
-script sekali-jalan (`apply-arclux-theme.js`, udah dihapus setelah dijalanin).
+1. `detectCircularDependency.ts` — DFS cycle detection, adaptasi `madge`
+2. `detectUnusedExports.ts` — adaptasi strategi traversal `knip`, re-implement
+   total pakai `ResolvedImport`/`resolvedReExports` di `ModuleInfo`
+   - **Batasan**: gak ada reference-extraction pass (cuma bisa deteksi
+     "gak pernah di-import", bukan "di-import tapi gak dipake"). Namespace
+     import dianggap otomatis "pake semua". Aliased re-export gak ke-chain
+     bener (`RawExport` cuma simpen nama akhir). Belum entry-file-aware
+     (`resolveRoutes.ts` masih kosong → false positive di file kayak
+     Next.js `page.tsx`).
 
-## vendor-ui structure
+**16 sisanya masih 0%**: `detectComponentConvention`, `detectDeadCode`,
+`detectDuplicateModules`, `detectEntryPoints`, `detectFeatureStructure`,
+`detectIndexFiles`, `detectLargeModules`, `detectLayerViolation`,
+`detectMissingExports`, `detectOrphanFiles`, `detectRepositoryPattern`,
+`detectRouteConvention`, `detectSharedModules`, `detectStoryConvention`,
+`detectTestConvention`, `detectUnusedFiles`.
 
-```
-vendor-ui/
-├── shadcn/     ← alias "ui" di components.json nunjuk ke sini
-├── aceternity/ ← install via @aceternity registry, TAPI suka nyasar ke
-│                 components/ui/ dulu, harus dipindah manual tiap kali
-├── magic-ui/   ← install via shadcn CLI juga, SAMA nyasar ke vendor-ui/shadcn/
-│                 dulu, harus dipindah manual
-└── _inbox/     ← custom, ditulis dari nol (neon-glow-card, code-block-terminal,
-                  graph-particles-bg, keyboard-shortcut-hint)
-```
-**Gotcha**: abis `npx shadcn@latest add ...` buat vendor manapun, SELALU cek
-file itu landing di folder yang bener. `aliases.ui` gak selalu dihormati oleh
-registry pihak ketiga. Full detail: `apps/web/vendor-ui/README.md`.
+## ✅ SELESAI — UI: graph viewer
 
-## Kode yang diadaptasi dari open source
+Composition root: `GraphViewport.tsx` (dipakai di
+`app/[org]/[repo]/graph/page.tsx`, jangan panggil `GraphCanvas` manual).
 
-Semua ada attribusi di komentar kode. MIT-licensed semua.
+`GraphProvider` (state terpusat: transform, positions, dimensions,
+contextMenuNodeId — `GraphCanvas` satu-satunya yang nulis), `GraphCanvas`
+(260 baris, pan/zoom/Escape-deselect/double-click-zoom/event delegation),
+`GraphToolbar`, `GraphLegend`, `GraphSearch` (73 baris, masih exact/substring
+match — belum pakai `fuzzyScore.ts`), `GraphSelection`, `GraphContextMenu`,
+`Minimap`, `GraphNode`, `GraphEdge`.
 
-| Sumber | Diambil | Jadi |
-|---|---|---|
-| `sst/opencode` | theme color tokens, pattern `use-filtered-list` (SolidJS) | `theme/arclux.json`, `hooks/useFilteredList.ts` (full rewrite ke React) |
-| `pahen/madge` | algoritma DFS cycle detection | `detectors/detectCircularDependency.ts` |
-| `git-truck` | UX pattern: Escape-deselect, double-click-zoom, event delegation | `GraphCanvas.tsx` v2 |
-| `sverweij/dependency-cruiser` | konsep predicate-composable rule matcher | `rules/RuleEngine.ts` (fondasi ringan, bukan port penuh) |
-| `d3-hierarchy` (npm resmi, dipakai git-truck) | library-nya langsung, bukan kode mereka | `graph/buildFolderGraph.ts` |
+**Belum diverifikasi visual di browser** (cuma lolos `tsc --noEmit`):
+- `Minimap` viewport-rect masih asumsi origin transform di (0,0)
+- `Minimap` + `GraphLegend` bentrok kalau dirender bareng (sama-sama
+  `bottom-4 right-4` absolute) — saat ini cuma `GraphLegend` yang di-render
+- Double-click-zoom + context menu barengan belum dites di device nyata
 
-Repo lain yang di-clone tapi TIDAK dipakai (dicoba, ternyata gak relevan/gak
-worth di-port): `react-force-graph` (cuma wrapper tipis), `vasturiano/force-graph`
-(canvas-based, ARCLUX pakai SVG — beda paradigma, gak portable langsung),
-`nx`, `codecharta` (belum dieksplor lebih jauh).
+## ✅ SELESAI — UI: layout, primitives, patterns (sebagian), marketing
 
-## Masalah yang PERNAH kejadian, biar gak keulang
+**`components/layout/*`** (7 file, semua production-quality): `Sidebar.tsx`,
+`SplitPane.tsx` (resizable pane, pointer drag), `WorkspaceLayout.tsx`,
+`Navbar.tsx`, `Breadcrumbs.tsx`, `PageContainer.tsx`, `PageHeader.tsx`,
+`Footer.tsx`.
 
-- **Dead code numpuk**: pernah ada 2 file beda nama yang ngerjain hal sama
-  (`graph/resolveAlias.ts` vs `indexer/resolveAliases.ts`, `graph/createNodes.ts`
-  yang gak pernah di-wire ke `buildDependencyGraph.ts`) karena kerja bareng sesi
-  Claude lain tanpa sinkron. **Semua udah dihapus/dibersihin.** Lesson: SELALU
-  `cat` file yang relevan dulu sebelum nulis file baru yang mungkin overlap.
-- **Termux quirks**: `/tmp` gak ada (pakai path lokal biasa), Turbopack gak
-  jalan di arm64 (pakai `next build --webpack` / `next dev --webpack`),
-  git push minta Personal Access Token bukan password akun.
-- **Repo referensi jangan sampe ke-clone di dalam `~/ARCLUX`** — harus di `~`
-  root, kalau kepencet salah posisi bakal ke-nest dan ke-track git tanpa
-  sengaja. Semua ada di `~/git-truck`, `~/madge`, `~/opencode`, dll — **di
-  luar** `~/ARCLUX`.
+**`components/primitives/*`** (7 file): `Avatar.tsx`, `Badge.tsx`,
+`Checkbox.tsx`, `Kbd.tsx`, `Skeleton.tsx`, `Switch.tsx` — thin re-export dari
+`vendor-ui/shadcn/*`. Semua sudah lengkap.
 
-## Yang MASIH kosong (prioritas kira-kira, boleh diubah)
+**`components/patterns/*`** — cuma **3 dari 11** yang selesai:
+`CommandPalette.tsx` (pakai `cmdk` sebagai dependency, lihat NOTICE),
+`LoadingState.tsx`, `ErrorState.tsx`. **8 sisanya masih stub**:
+`ConfirmDialog`, `CopyButton`, `DataTable`, `EmptyState`, `FilterBar`,
+`MobileBottomSheet`, `SearchInput`, `StatusDot`.
 
-- `packages/impact/*` — fitur inti "apa yang kena dampak kalau file ini
-  diubah", belum ada sama sekali
-- `components/patterns/CommandPalette.tsx` + `hooks/useCommandPalette.ts` —
-  `useFilteredList.ts` udah ada, tinggal dipakein
-- `packages/detectors/*` — baru 1 dari ~18 (`detectCircularDependency`)
-- `packages/search/*`, `packages/db/*`, `packages/cache/*`, `packages/watcher/*` —
-  0% semua
-- Parser bahasa lain (Python, Go, Java, dst) — baru TS/TSX
-- `apps/cli/*` — 0%
-- Banyak komponen UI level app (`workspace/`, `explorer/`) masih kosong
+**`components/marketing/*`** (5 file, semua selesai): `Hero.tsx`, `CTA.tsx`,
+`Example.tsx`, `Features.tsx`, `Footer.tsx`.
 
-## Cara cek status kosong terkini
+**`components/overview/*`** — cuma `ProjectStructure.tsx` (99 baris, file
+tree UI collapsible pakai `d3-hierarchy`) yang selesai. `RepositoryHeader`,
+`RepositoryInfo`, `RepositoryOverview` masih stub.
 
-```bash
-cd ~/ARCLUX
-find . -name "*.ts" -o -name "*.tsx" | grep -v node_modules | grep -v ".next" \
-  | xargs wc -l 2>/dev/null | sort -n | awk '$1==0 {print}' | grep -v total
-```
+**`components/explorer/*`** — cuma `FileDetails.tsx` (132 baris, fetch +
+render source dengan syntax highlight) yang selesai, **belum di-wire ke
+halaman manapun** karena `Explorer.tsx` sendiri masih stub. `DependencyList`,
+`ImpactSummary` juga masih stub.
 
-## Update — Graph components lengkap
+**`hooks/useTheme.ts`** (36 baris) selesai. `useClipboard`,
+`useCommandPalette`, `useDebounce`, `useMediaQuery` masih stub.
 
-Melanjutkan dari GraphCanvas v2 (git-truck UX pattern). Yang ditambahin:
+**`theme/colors.ts`, `theme.dark.ts`, `graphColors.ts`** selesai.
+`motion.ts`, `spacing.ts`, `typography.ts` masih stub.
 
-- **State terpusat**: `transform` (pan/zoom), `positions` (hasil d3-force),
-  `dimensions` (ukuran canvas), dan `contextMenuNodeId` semua dipindah dari
-  `useState` lokal di `GraphCanvas` ke `GraphProvider` context. `GraphCanvas`
-  sekarang satu-satunya yang **nulis** ke state itu, komponen lain baca doang.
-  Alasan: `Minimap` butuh `positions`+`dimensions` juga tapi jangan sampai
-  itung ulang d3-force simulation dua kali (mahal & bisa beda hasil).
-- **7 komponen baru** (semua konsumsi `useGraphContext()`):
-  - `GraphToolbar.tsx` — zoom in/out/reset, nampilin persen zoom
-  - `GraphLegend.tsx` — legend warna node type & edge type (dari `theme/graphColors.ts`)
-  - `GraphSearch.tsx` — search box, filter node by label, klik hasil → fokus+zoom ke node
-  - `GraphSelection.tsx` — panel detail node yang dipilih (incoming/outgoing edge count)
-  - `GraphContextMenu.tsx` — klik kanan node → Focus / Copy path / Close
-  - `Minimap.tsx` — preview kecil semua node + kotak indikator viewport aktif
-  - `GraphViewport.tsx` — **composition root baru**, ngerakit Provider + Canvas +
-    semua komponen di atas jadi satu. Ini yang harusnya dipakai di
-    `app/[org]/[repo]/graph/page.tsx`, bukan manggil `GraphCanvas` manual.
+**`lib/utils.ts`, `lib/cn.ts`** selesai. `lib/api.ts`, `lib/graph.ts` stub.
 
-**Gotcha baru**: `Minimap` dan `GraphLegend` sama-sama nempatin diri di
-`bottom-4 right-4` (CSS absolute) — bentrok kalau dua-duanya dirender
-bareng. Sekarang `GraphViewport` cuma render `GraphLegend`, `Minimap` belum
-dipasang di situ. Kalau mau dua-duanya tampil, perlu disusun jadi stack
-vertikal dulu sebelum di-mount bareng.
+**App routes**: semua `page.tsx`/`error.tsx`/`loading.tsx` di
+`app/[org]/[repo]/*` udah ada isinya (bukan default Next.js boilerplate),
+termasuk `app/new/page.tsx`.
 
-**Yang belum sempat dites di browser beneran** (cuma lolos `tsc --noEmit`,
-belum pernah `next dev` dan diliat visualnya):
-- Minimap viewport-rect masih pendekatan kasar, asumsi origin transform di (0,0)
-- Belum ada testing behavior double-click zoom + context menu barengan di device nyata
+**API routes**: `POST /api/analyze`, `GET /api/graph`, `GET /api/file`
+(fetch raw dari GitHub + highlight Python) — semua selesai (65-84 baris).
+`api/impact/route.ts` dan `api/search/route.ts` masih stub 8 baris.
 
-## Yang MASIH kosong (update)
+## ✅ SELESAI — vendor-ui
 
-Semua yang tercatat sebelumnya masih berlaku, KECUALI graph components
-(`components/graph/*`) sekarang udah lengkap semua — pindahin dari "belum"
-ke "udah". Prioritas berikutnya tetap:
-- `packages/impact/*` — masih 0%
-- `apps/cli/*` — masih 0%
-- `packages/detectors/*` — masih 1/18
-- `components/workspace/*`, `components/explorer/*` — masih 0%
+Semua isi `vendor-ui/shadcn/*` (avatar, badge, button, checkbox,
+command, dialog, dropdown-menu, input, input-group, popover, select,
+separator, sheet, skeleton, switch, tabs, textarea, toast, tooltip),
+`vendor-ui/aceternity/*` (5 file), `vendor-ui/magic-ui/*` (6 file, termasuk
+`file-tree.tsx` 511 baris — file terbesar di seluruh project), dan
+`vendor-ui/_inbox/*` (4 file custom: neon-glow-card, code-block-terminal,
+graph-particles-bg, keyboard-shortcut-hint) — semua terinstall/tertulis
+lengkap.
 
-## Update - Python parser via tree-sitter
+---
 
-packages/parser/python/parsePython.ts ditambahin, pakai web-tree-sitter (WASM,
-bukan native binding) supaya nggak perlu compile apapun di Termux arm64.
-Udah didaftarkan ke parserRegistry lewat packages/engine/pipeline.ts.
+## ⚠️ SEBAGIAN / PERLU VERIFIKASI
 
-STATUS: lolos tsc --noEmit, TAPI BELUM di-test end-to-end lewat
-ParserRegistry beneran (cuma pernah dites manual pakai script terpisah pas
-eksperimen awal). Kalau nanti nemu bug pas analisis repo Python asli, cek
-dulu di sini sebelum curiga ke tempat lain.
+**Python parsing & syntax highlighting** — jalan (`parsePython.ts` 203
+baris, `highlightPython.ts` 142 baris, `pythonHighlightQuery.ts` 151 baris
+disalin verbatim dari `tree-sitter-python`, MIT — atribusi ada di NOTICE),
+tapi:
+- Belum pernah dites end-to-end lewat `ParserRegistry` beneran (cuma script
+  eksperimen terpisah)
+- Belum diverifikasi visual di browser (warna syntax highlight belum
+  pernah diliat beneran nempel ke karakter yang benar)
+- `FileDetails.tsx` yang makai ini belum di-wire ke halaman manapun
 
-Gotcha penting kalau nanti mau nambah parser bahasa lain pakai tree-sitter
-juga (Go, Rust, Java, dst):
+**Gotcha `web-tree-sitter`** (WAJIB dibaca sebelum nambah parser bahasa lain
+pakai tree-sitter):
+- Versi **wajib 0.25.0**, bukan 0.26.x — versi baru gagal load WASM grammar
+  (`getDylinkMetadata` ABI mismatch)
+- Harus dipanggil via `require()` (lewat `createRequire(import.meta.url)`),
+  bukan `import` murni — error "Dynamic require of fs/promises is not
+  supported" kalau dipaksa `import`
+- Gak ada `.d.ts`, gak bisa di-augment via `declare module` (error TS2665)
+  — solusinya type custom sendiri (`TSNode` interface), require sebagai `any`
+- Grammar `.wasm` per-bahasa ada di `node_modules/tree-sitter-wasms/out/`,
+  BUKAN dari clone `~/research/tree-sitter` (itu cuma referensi konsep)
+- Parser instance WAJIB singleton (`getPythonRuntime()` pola
+  promise-cache) — reload WASM per-`parse()` call bakal sangat lambat
+- Query constructor beda 2 versi API (`language.query()` lama vs
+  `new Query()` baru) — `highlightPython.ts` udah handle fallback
+- Python gak punya `export` — semua top-level `function_definition`/
+  `class_definition` dianggap "export" (heuristic, belum baca `__all__`)
 
-- Versi web-tree-sitter WAJIB 0.25.0, bukan versi terbaru (0.26.x). Versi
-  0.26.11 gagal load WASM grammar dari tree-sitter-wasms dengan error di
-  getDylinkMetadata (ABI mismatch antara runtime dan wasm binary).
-- web-tree-sitter versi 0.25.0 juga gak bisa dipanggil pakai `import` murni
-  di file .mjs (error "Dynamic require of fs/promises is not supported").
-  Harus dipanggil lewat require(). Karena tsconfig project ini pakai
-  module: esnext tapi package.json gak declare "type": "module", parsePython.ts
-  pakai createRequire(import.meta.url) biar aman dua-duanya.
-- Package ini gak ada file .d.ts, dan gak bisa di-augment pakai `declare
-  module` dari file .ts biasa (error TS2665 "Invalid module name in
-  augmentation"). Solusinya: require sebagai `any`, terus semua type-safety
-  ditaruh di interface custom kita sendiri (lihat TSNode di parsePython.ts),
-  bukan ngandelin type dari package tersebut.
-- Grammar .wasm per-bahasa udah tersedia di package tree-sitter-wasms
-  (bukan clone/build dari repo tree-sitter yang di ~/research/tree-sitter -
-  itu cuma buat referensi konsep, bukan buat dipakai langsung). Path-nya:
-  node_modules/tree-sitter-wasms/out/tree-sitter-<lang>.wasm
-- WASM module loading itu mahal (compile WASM). Parser instance WAJIB
-  di-cache jadi singleton (lihat getPythonParser() pola promise-cache di
-  parsePython.ts), jangan reload tiap kali parse() dipanggil - bakal lambat
-  banget kalau dipanggil ratusan kali per repository scan.
-- Python gak punya keyword export kayak JS/TS. parsePython.ts nganggep semua
-  top-level function_definition dan class_definition sebagai "export" -
-  heuristic, bukan exact. Belum baca __all__ di file, itu enhancement
-  lanjutan kalau perlu lebih presisi.
+**`packages/detectors/detectUnusedExports.ts`** — lihat batasan di section
+detectors di atas.
 
-Repo referensi tambahan yang di-clone ke ~/research (di luar ~/arclux, gak
-ke-track git project ini): git, language-server-protocol, llvm-project,
-sqlite, tree-sitter. Dipakai buat liat pola arsitektur/struktur folder aja,
-bukan buat comot kode mentah.
+---
 
-## Update — Python parsing & syntax highlighting
+## ❌ MASIH KOSONG (stub 8 baris, cuma header lisensi)
 
-`packages/parser/python/` bukan stub kosong lagi:
+**Prioritas #1 — fitur inti, 0% total**: `packages/impact/*` (8 file:
+`buildImpactTree`, `calculateAffectedComponents/Files/Modules/Routes`,
+`traceConsumers/Dependencies/Exports/Imports`)
 
-- `parsePython.ts` — expose `getPythonRuntime()`, load `web-tree-sitter` +
-  grammar Python sekali & reuse. Extract imports/exports.
-- `pythonHighlightQuery.ts` — query highlight disalin **verbatim** dari
-  `tree-sitter-python` (MIT). Atribusi ada di komentar file.
-- `highlightPython.ts` — jalanin query, resolve span collision, map ke
-  theme token.
+**Prioritas tinggi**:
+- `apps/cli/*` (6 file: `analyze`, `config`, `doctor`, `graph`, `impact`, `index`)
+- `packages/db/*` (5 file)
+- `components/workspace/*` (5 file + 3 panel — semua stub)
+- `components/patterns/*` — 8 dari 11 file (lihat daftar di atas)
+- `components/explorer/Explorer.tsx`, `DependencyList.tsx`, `ImpactSummary.tsx`
+- `components/overview/RepositoryHeader/Info/Overview.tsx`
+- `components/search/GlobalSearch.tsx` (tinggal pakai `fuzzyScore.ts` yang
+  udah ada)
+- Detector sisanya (16/18)
 
-Dipakai di `apps/web/app/api/file/route.ts` (route baru, fetch raw file dari
-GitHub) dan `components/explorer/FileDetails.tsx` (belum di-wire ke halaman
-manapun, `Explorer.tsx` masih kosong).
+**Prioritas menengah**:
+- `packages/cache/*`, `packages/watcher/*` (masing-masing 5 & 4 file)
+- `packages/git/*` sisanya (`checkoutBranch`, `detectDefaultBranch`,
+  `getBranches`, `getCommitHistory`, `getContributors` — beda dari
+  `cloneRepository`/`cleanupRepository`/`readGitignore` yang udah selesai)
+- `packages/graph/buildCallGraph/buildExportGraph/buildImportGraph.ts`
+- `packages/indexer/*` sisanya (`indexSchema`, `resolveComponents/Exports/
+  Hooks/Providers/Routes`, `updateIndex`, `watchIndex`) — **`resolveRoutes.ts`
+  kosong ini yang bikin `detectUnusedExports` belum entry-file-aware**
+- `packages/rules/*` sisanya (electron, express, nestjs, react, vite — 9 file,
+  `nextjs/*` juga masih 3 dari 4 stub: `requireIndexUpdate`,
+  `requireLayoutUpdate`, `requireMetadata`)
+- `packages/search/*` (SearchEngine, SearchFilters, SearchIndex,
+  SearchKeyboard, SearchProvider, SearchResults — beda dari `fuzzyScore.ts`
+  yang udah selesai, ini belum dipakein)
+- `packages/ui/*` (5 file) — ⚠️ **hati-hati duplikasi**: `graphColor.ts` di
+  sini vs `theme/graphColors.ts` di `apps/web` yang udah selesai, nama mirip
+  banget, resiko dead-code kayak kejadian sebelumnya kalau ada yang nulis ke
+  sini tanpa sadar udah ada versi jalan
+- `apps/web/features/*` (13 file — graph, impact, issues, repository, search
+  stores/hooks, semua stub)
+- `apps/web/hooks/*` sisanya (useClipboard, useCommandPalette, useDebounce,
+  useMediaQuery)
+- `apps/web/lib/api.ts`, `lib/graph.ts`
+- `apps/web/theme/motion.ts`, `spacing.ts`, `typography.ts`
+- Parser bahasa lain: cpp, csharp, go, java, javascript (parseCommonJs/Js/Jsx),
+  php, ruby, rust — semua 0%. `parser/config/*` (json, packageJson, toml,
+  yaml) juga 0%. `parser/core/parseImports.ts` 0%.
+- `parser/typescript/parseTsx.ts`, `parseTsConfig.ts` — cek dulu apa ini
+  beneran perlu diisi terpisah atau logic-nya udah nyatu di `parseTs.ts`
+  (194 baris) sebelum nulis ulang
 
-**Status: belum diverifikasi visual di browser**, baru lolos `tsc --noEmit`.
+**Prioritas rendah**:
+- `scripts/*` (4 file: benchmark, build, generateFixtures, release)
+- `tests/*` (semua — detector, graph, impact, indexer, pipeline, parser
+  per-bahasa) — 0% total, belum ada satu test pun di project ini
 
-**Gotcha baru**: `web-tree-sitter` punya 2 API query beda versi
-(`language.query()` lama vs `new Query()` baru) — udah di-handle dengan
-fallback, tapi cek versi yang keinstall duluan kalau ada error runtime.
+---
 
-**Action item**: `NOTICE` di root belum nyebut `tree-sitter-python` —
-perlu ditambahin karena ini verbatim copy, bukan cuma pola diadaptasi.
-`license-checker` juga perlu dijalanin ulang setelah nambah
-`web-tree-sitter` + `tree-sitter-wasms`.
+## Referensi eksternal yang sudah dipakai
 
-**Update daftar kosong**: `packages/parser/python/*` pindah dari "belum" ke
-"sebagian" (jalan tapi belum diverifikasi visual + belum ada UI yang makenya).
+Semua atribusi lengkap ada di `NOTICE` (root). Ringkasan:
 
-## Update — detectUnusedExports (detector 2/18)
+| Sumber | Lisensi | Sifat | Jadi |
+|---|---|---|---|
+| `sst/opencode` | MIT | pola diadaptasi ulang | `theme/arclux.json`, `hooks/useFilteredList.ts` |
+| `pahen/madge` | MIT | algoritma diimplementasi ulang | `detectCircularDependency.ts` |
+| `git-truck` | MIT | pola UX diimplementasi ulang | `GraphCanvas.tsx` |
+| `sverweij/dependency-cruiser` | MIT | konsep diimplementasi ulang | `RuleEngine.ts` |
+| `d3-hierarchy` | ISC | dipakai langsung | `buildFolderGraph.ts` |
+| `webpro-nl/knip` | MIT | strategi traversal diimplementasi ulang | `detectUnusedExports.ts` |
+| `tree-sitter/tree-sitter-python` | MIT | query disalin verbatim | `pythonHighlightQuery.ts` |
+| `pacocoursey/cmdk` | MIT | dipakai langsung sbg dependency + scoring diadaptasi | `CommandPalette.tsx`, `fuzzyScore.ts` |
 
-`packages/detectors/detectUnusedExports.ts` — jalan, typecheck bersih.
-Nambah `ResolvedImport` + `resolvedReExports` ke `ModuleInfo` (di
-`shared/types.ts`) buat nyimpen identifier-level import detail yang tadinya
-dibuang di `buildIndex.ts` Pass 2 (cuma kesimpen module id doang).
+**Repo di `~/research` yang cuma buat baca pola/arsitektur, bukan dicomot
+kodenya**: git, language-server-protocol, llvm-project, sqlite, tree-sitter,
+nx, clack, shadcn-table, drizzle-orm (cek mana yang beneran udah di-clone
+sebelum asumsi ada).
 
-Referensi strategi traversal dari `webpro-nl/knip` (MIT), re-implement
-total pakai struktur ARCLUX sendiri — bukan port. Atribusi ada di `NOTICE`.
+## Masalah yang pernah kejadian — jangan terulang
 
-**Batasan yang diketahui (bukan bug, keterbatasan data upstream)**:
-- Belum ada reference-extraction pass di pipeline manapun. Detector ini
-  bisa mastiin "export gak pernah di-import siapapun" — TAPI BUKAN "di-import
-  tapi gak dipake di body". Namespace import (`import * as ns`) dianggap
-  otomatis "pake semua export" karena gak ada cara tau property mana yang
-  diakses tanpa reference-extraction.
-- Aliased re-export (`export { foo as bar } from "./x"`) gak ke-chain
-  bener — `RawExport` cuma nyimpen nama akhir ("bar"), bukan nama asli di
-  source module ("foo"). Perlu perubahan di parser layer buat fix ini.
-- Belum entry-file-aware (`resolveRoutes.ts` masih 0%) — file kayak Next.js
-  `page.tsx` yang gak pernah di-import manual bisa ke-flag false positive.
-  Otomatis kebenerin begitu `resolveRoutes.ts` diisi.
-
-## Update — status folder components/ dikoreksi
-
-Ternyata `components/layout/*` (7 file: Sidebar, SplitPane, WorkspaceLayout,
-Navbar, Breadcrumbs, PageContainer, PageHeader) udah selesai semua dari
-sesi sebelumnya — sebelumnya kecatet kosong di PROGRES.md karena belum
-sempat diverifikasi isi filenya, bukan cuma jumlah baris (header lisensi
-bikin file kosong keliatan "8 baris" alih-alih 0).
-
-`components/primitives/*` (7 file) juga sekarang selesai — thin re-export
-dari vendor-ui/shadcn/ (Avatar, Badge, Checkbox, Kbd, Skeleton, Switch),
-semua sudah di-install lewat shadcn CLI dan landing di folder yang benar
-(alias `ui` dihormati kali ini, tidak nyasar ke components/ui/).
-
-**Lesson**: sebelum nyatet suatu folder "kosong" di PROGRES.md, cek ISI
-file-nya (`cat`), bukan cuma `wc -l` — file yang sudah dapat header lisensi
-Apache 2.0 punya baseline 8 baris meski isinya masih kosong, jadi
-perbandingan "0 baris = kosong" sudah tidak akurat lagi sejak header
-ditambahkan project-wide.
-
-**Masih kosong (confirmed via `cat`, bukan cuma jumlah baris)**:
-`patterns/*` (CommandPalette, DataTable, dll — lihat cmdk/shadcn-table
-sebagai referensi), `workspace/*` (semua 5 file + 3 panel), `explorer/*`
-(3 file, referensi git-truck), `overview/*` (3 file), `search/GlobalSearch.tsx`.
-
-## Update — CommandPalette + fuzzyScore
-
-`packages/search/fuzzyScore.ts` — fuzzy match scoring, adaptasi dari
-`pacocoursey/cmdk`'s `command-score.ts` (MIT), re-typed ke TypeScript
-strict mode, konstanta scoring dipertahankan sama persis (itu hasil
-tuning empiris upstream, bukan sesuatu yang di-"improve" sembarangan).
-Belum dipakai di `GraphSearch.tsx` yang udah ada — masih exact/substring
-match di situ, upgrade ke fuzzyScore belum dilakukan, cek dulu sebelum
-asumsi udah terintegrasi.
-
-`components/patterns/CommandPalette.tsx` — selesai, **pakai `cmdk` sebagai
-dependency langsung** (bukan reimplement manual). Keputusan sadar: `cmdk`
-punya keyboard navigation + ARIA wiring yang accessibility-critical dan
-battle-tested (dipakai Vercel, Linear, GitHub) — reimplement dari nol
-resikonya lebih tinggi bikin bug accessibility yang halus, ketimbang pakai
-dependency langsung + atribusi di NOTICE.
-
-Command list masih hardcoded 4 item, mirror manual dari
-`components/layout/Sidebar.tsx`. Belum di-extract ke shared source — kalau
-nav link berubah, update dua tempat.
-
-**Catatan proses**: sesi sebelumnya sempet gagal di tengah jalan nulis
-CommandPalette.tsx (kemungkinan heredoc kepotong/terinterupsi) — fuzzyScore.ts
-dan cmdk install berhasil, tapi CommandPalette.tsx dan commit-nya enggak.
-Ketauan karena git log gak nunjukin commit yang diharapkan. Lesson: abis
-jalanin script panjang, selalu verifikasi tiap langkah beneran nyangkut
-(cat file / git log), jangan asumsi "udah dijalanin" = "berhasil semua".
-
-**Masih kosong**: `search/GlobalSearch.tsx` (bisa pakai `fuzzyScore.ts` yang
-udah ada), `patterns/DataTable.tsx`, `workspace/*`, `explorer/*`, `overview/*`,
-`packages/impact/*`, `apps/cli/*`, `packages/db/*`, `packages/cache/*`,
-`packages/watcher/*`, `packages/git/*`, `packages/ui/*`, detector sisanya
-(16/18 masih 0%), parser bahasa lain, `scripts/*`, `tests/*`.
+- **Dead code numpuk**: 2 file beda nama ngerjain hal sama
+  (`graph/resolveAlias.ts` vs `indexer/resolveAliases.ts`) karena sesi kerja
+  paralel tanpa sinkron. Lesson: SELALU `cat`/`grep` dulu sebelum nulis file
+  baru yang berpotensi overlap. **Resiko sama masih ada** di
+  `packages/ui/graphColor.ts` vs `theme/graphColors.ts` — belum di-cleanup.
+- **`wc -l` menipu**: file dengan header lisensi Apache 2.0 baseline 8 baris
+  meski isinya kosong. Threshold "kosong" itu `≤9`, bukan `==0`. Selalu `cat`
+  file yang meragukan sebelum nyatet status di PROGRES.md.
+- **Header lisensi ganda**: pernah ada file dengan 2 header (MIT lama +
+  Apache baru numpuk) gara-gara ganti lisensi tengah jalan tanpa hapus
+  header lama dulu. Udah dibersihin manual.
+- **Script panjang bisa gagal di tengah tanpa ketauan**: sesi CommandPalette
+  sempet gagal nulis file di tengah heredoc, tapi step-step sebelumnya
+  (install `cmdk`, bikin `fuzzyScore.ts`) tetep sukses — bikin keliatan
+  "berhasil" padahal enggak lengkap. Lesson: abis jalanin script multi-step,
+  verifikasi tiap langkah (`cat` file / `git log`), jangan asumsi "dijalanin"
+  = "berhasil semua".
+- **Termux quirks**: `/tmp` gak ada, Turbopack gak jalan di arm64 (pakai
+  `--webpack`), git push butuh Personal Access Token bukan password.
+- **Repo referensi jangan ke-clone di dalam `~/arclux`** — harus di `~` root
+  (`~/git-truck`, `~/madge`, `~/opencode`, `~/research/*`), di luar project.
