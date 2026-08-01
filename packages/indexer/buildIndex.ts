@@ -13,7 +13,7 @@ import { loadAliasConfig } from "./resolveAliases";
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
 import { ArcluxError } from "../shared/errors";
-import type { RepositoryMeta, ModuleInfo, ParsedFile } from "../shared/types";
+import type { RepositoryMeta, ModuleInfo, ParsedFile, ResolvedImport } from "../shared/types";
 
 export interface BuildIndexOptions {
   rootPath: string;
@@ -64,20 +64,41 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
   const modulesByPath = new Map<string, ModuleInfo>();
   for (const [relativePath, parsed] of parsedByPath) {
     const resolvedImportIds: string[] = [];
+    const resolvedImports: ResolvedImport[] = [];
 
     for (const rawImport of parsed.imports) {
       const resolution = resolvePath(relativePath, rawImport.source, knownFiles, aliasConfig);
       if (resolution.type === "internal") {
         resolvedImportIds.push(resolution.moduleId);
+        resolvedImports.push({
+          moduleId: resolution.moduleId,
+          kind: rawImport.kind,
+          namedImports: rawImport.namedImports,
+          hasDefaultImport: rawImport.hasDefaultImport,
+          hasNamespaceImport: rawImport.hasNamespaceImport,
+          line: rawImport.line,
+        });
       }
       // external packages intentionally not added as modules — they're graph nodes, not repo modules
+    }
+
+    const resolvedReExports: Record<string, string> = {};
+    for (const exp of parsed.exports) {
+      if (exp.kind === "re-export" && exp.reExportSource) {
+        const resolution = resolvePath(relativePath, exp.reExportSource, knownFiles, aliasConfig);
+        if (resolution.type === "internal") {
+          resolvedReExports[exp.name] = resolution.moduleId;
+        }
+      }
     }
 
     modulesByPath.set(relativePath, {
       id: relativePath,
       file: parsed.file,
       exports: parsed.exports,
+      resolvedReExports,
       imports: resolvedImportIds,
+      resolvedImports,
       importedBy: [], // filled in pass 3
     });
   }

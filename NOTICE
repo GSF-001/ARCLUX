@@ -17,3 +17,8 @@ MIT-licensed open source projects:
 
 Full license texts for the above projects are MIT License, available at
 their respective repositories.
+
+- webpro-nl/knip (https://github.com/webpro-nl/knip) — MIT License
+  Traversal strategy (import-graph walk + re-export chain following)
+  referenced for detectUnusedExports.ts. Re-implemented against ARCLUX's
+  own ModuleInfo/ResolvedImport types, not a direct port.

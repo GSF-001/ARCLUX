@@ -100,12 +100,39 @@ export interface RepositoryMeta {
   analyzedAt: string; // ISO timestamp
 }
 
+/**
+ * Identifier-level detail of one resolved import, kept alongside the
+ * flattened `imports: string[]` on ModuleInfo. `imports` only tells you
+ * "file A imports file B" (used by buildDependencyGraph.ts for edges);
+ * this tells you WHICH identifiers, needed by detectors that check
+ * per-export usage (e.g. detectUnusedExports.ts).
+ */
+export interface ResolvedImport {
+  moduleId: string; // resolved internal module id being imported
+  kind: ImportKind;
+  namedImports: string[];
+  hasDefaultImport: boolean;
+  hasNamespaceImport: boolean;
+  line: number;
+}
+
 export interface ModuleInfo {
   id: string; // stable id, usually = relativePath
   file: FileInfo;
   exports: RawExport[];
+  /**
+   * For exports of kind "re-export" whose reExportSource resolves to a
+   * file inside the repo: exportName -> target moduleId. Populated by
+   * buildIndex.ts alongside `imports`. Does NOT capture aliased re-exports
+   * (`export { foo as bar } from "./x"`) correctly yet — RawExport only
+   * stores the final exported name ("bar"), not the original identifier
+   * ("foo") in the source module, so the chain breaks silently for that
+   * specific case until the parser layer captures both names separately.
+   */
+  resolvedReExports: Record<string, string>;
   importedBy: string[]; // module ids that import this module
   imports: string[]; // module ids this module imports (resolved, not raw strings)
+  resolvedImports: ResolvedImport[]; // identifier-level detail of `imports`
 }
 
 // ─────────────────────────────────────────────
