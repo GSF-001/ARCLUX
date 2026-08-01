@@ -5,4 +5,8 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Thin re-export of vendor-ui/shadcn/badge.tsx — see Avatar.tsx for why
+// this indirection exists.
 
+export { Badge, badgeVariants } from "@/vendor-ui/shadcn/badge"

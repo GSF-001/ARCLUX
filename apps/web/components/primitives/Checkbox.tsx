@@ -5,4 +5,8 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Thin re-export of vendor-ui/shadcn/checkbox.tsx — see Avatar.tsx for why
+// this indirection exists.
 
+export { Checkbox } from "@/vendor-ui/shadcn/checkbox"

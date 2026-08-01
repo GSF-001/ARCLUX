@@ -5,4 +5,8 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Thin re-export of vendor-ui/shadcn/skeleton.tsx — see Avatar.tsx for why
+// this indirection exists.
 
+export { Skeleton } from "@/vendor-ui/shadcn/skeleton"
