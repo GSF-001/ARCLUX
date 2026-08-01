@@ -6,8 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import { GraphProvider } from "@/components/graph/GraphProvider";
-import { GraphCanvas } from "@/components/graph/GraphCanvas";
+import { GraphViewport } from "@/components/graph/GraphViewport";
 
 interface GraphPageProps {
   params: Promise<{ org: string; repo: string }>;
@@ -19,9 +18,7 @@ export default async function GraphPage({ params }: GraphPageProps) {
 
   return (
     <div className="h-screen w-full">
-      <GraphProvider repoUrl={repoUrl}>
-        <GraphCanvas />
-      </GraphProvider>
+      <GraphViewport repoUrl={repoUrl} />
     </div>
   );
 }
