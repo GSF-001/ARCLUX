@@ -256,3 +256,27 @@ total pakai struktur ARCLUX sendiri — bukan port. Atribusi ada di `NOTICE`.
 - Belum entry-file-aware (`resolveRoutes.ts` masih 0%) — file kayak Next.js
   `page.tsx` yang gak pernah di-import manual bisa ke-flag false positive.
   Otomatis kebenerin begitu `resolveRoutes.ts` diisi.
+
+## Update — status folder components/ dikoreksi
+
+Ternyata `components/layout/*` (7 file: Sidebar, SplitPane, WorkspaceLayout,
+Navbar, Breadcrumbs, PageContainer, PageHeader) udah selesai semua dari
+sesi sebelumnya — sebelumnya kecatet kosong di PROGRES.md karena belum
+sempat diverifikasi isi filenya, bukan cuma jumlah baris (header lisensi
+bikin file kosong keliatan "8 baris" alih-alih 0).
+
+`components/primitives/*` (7 file) juga sekarang selesai — thin re-export
+dari vendor-ui/shadcn/ (Avatar, Badge, Checkbox, Kbd, Skeleton, Switch),
+semua sudah di-install lewat shadcn CLI dan landing di folder yang benar
+(alias `ui` dihormati kali ini, tidak nyasar ke components/ui/).
+
+**Lesson**: sebelum nyatet suatu folder "kosong" di PROGRES.md, cek ISI
+file-nya (`cat`), bukan cuma `wc -l` — file yang sudah dapat header lisensi
+Apache 2.0 punya baseline 8 baris meski isinya masih kosong, jadi
+perbandingan "0 baris = kosong" sudah tidak akurat lagi sejak header
+ditambahkan project-wide.
+
+**Masih kosong (confirmed via `cat`, bukan cuma jumlah baris)**:
+`patterns/*` (CommandPalette, DataTable, dll — lihat cmdk/shadcn-table
+sebagai referensi), `workspace/*` (semua 5 file + 3 panel), `explorer/*`
+(3 file, referensi git-truck), `overview/*` (3 file), `search/GlobalSearch.tsx`.
