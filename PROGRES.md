@@ -233,3 +233,26 @@ perlu ditambahin karena ini verbatim copy, bukan cuma pola diadaptasi.
 
 **Update daftar kosong**: `packages/parser/python/*` pindah dari "belum" ke
 "sebagian" (jalan tapi belum diverifikasi visual + belum ada UI yang makenya).
+
+## Update — detectUnusedExports (detector 2/18)
+
+`packages/detectors/detectUnusedExports.ts` — jalan, typecheck bersih.
+Nambah `ResolvedImport` + `resolvedReExports` ke `ModuleInfo` (di
+`shared/types.ts`) buat nyimpen identifier-level import detail yang tadinya
+dibuang di `buildIndex.ts` Pass 2 (cuma kesimpen module id doang).
+
+Referensi strategi traversal dari `webpro-nl/knip` (MIT), re-implement
+total pakai struktur ARCLUX sendiri — bukan port. Atribusi ada di `NOTICE`.
+
+**Batasan yang diketahui (bukan bug, keterbatasan data upstream)**:
+- Belum ada reference-extraction pass di pipeline manapun. Detector ini
+  bisa mastiin "export gak pernah di-import siapapun" — TAPI BUKAN "di-import
+  tapi gak dipake di body". Namespace import (`import * as ns`) dianggap
+  otomatis "pake semua export" karena gak ada cara tau property mana yang
+  diakses tanpa reference-extraction.
+- Aliased re-export (`export { foo as bar } from "./x"`) gak ke-chain
+  bener — `RawExport` cuma nyimpen nama akhir ("bar"), bukan nama asli di
+  source module ("foo"). Perlu perubahan di parser layer buat fix ini.
+- Belum entry-file-aware (`resolveRoutes.ts` masih 0%) — file kayak Next.js
+  `page.tsx` yang gak pernah di-import manual bisa ke-flag false positive.
+  Otomatis kebenerin begitu `resolveRoutes.ts` diisi.
