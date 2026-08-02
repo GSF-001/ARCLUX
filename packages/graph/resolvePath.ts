@@ -9,16 +9,20 @@
 import { posix } from "node:path";
 import { resolveAlias, type AliasConfig } from "../indexer/resolveAliases";
 
-const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
-const INDEX_FILENAMES = RESOLVABLE_EXTENSIONS.map((ext) => `index${ext}`);
+const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py"];
+const INDEX_FILENAMES = [
+  ...RESOLVABLE_EXTENSIONS.filter((ext) => ext !== ".py").map((ext) => `index${ext}`),
+  "__init__.py", // Python's equivalent of index.ts for package-style relative imports
+];
 
 export type PathResolution =
   | { type: "internal"; moduleId: string }
   | { type: "external"; packageName: string };
 
 /**
- * Resolves a raw import source (e.g. "../utils/foo", "react", "@/lib/api")
- * to either an internal module id (relative path in the repo) or an external package.
+ * Resolves a raw import source (e.g. "../utils/foo", "react", "@/lib/api",
+ * or Python's "utils", ".", "..pkg") to either an internal module id
+ * (relative path in the repo) or an external package.
  *
  * `knownFiles` is the set of relativePaths that scanFiles.ts found — used to verify
  * a resolved candidate actually exists before committing to it.
@@ -47,23 +51,38 @@ export function resolvePath(
     }
   }
 
-  // Bare specifier = external package, e.g. "react", "lodash/get"
-  if (!importSource.startsWith(".") && !importSource.startsWith("/")) {
-    // npm scoped or plain package name is everything up to the 2nd "/" for scoped, or 1st "/" otherwise
-    const parts = importSource.split("/");
-    const packageName = importSource.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
-    return { type: "external", packageName };
+  const importerDir = posix.dirname(importerRelativePath);
+
+  // Explicit relative import: JS/TS "./x", "../x", or Python's explicit
+  // relative form "." / ".." / "..pkg" (from a `from . import x` /
+  // `from ..pkg import x` statement — see parsePython.ts).
+  if (importSource.startsWith(".") || importSource.startsWith("/")) {
+    const rawTarget = posix.normalize(posix.join(importerDir, importSource));
+    const resolved = tryResolveInternal(rawTarget, knownFiles);
+    if (resolved) return resolved;
+    return { type: "external", packageName: importSource };
   }
 
-  const importerDir = posix.dirname(importerRelativePath);
-  const rawTarget = posix.normalize(posix.join(importerDir, importSource));
+  // Bare specifier, e.g. "react", "lodash/get" — OR Python's "utils" in
+  // `from utils import x` for a sibling utils.py in the SAME directory.
+  //
+  // In JS/TS a bare specifier is ALWAYS an npm package; relative imports
+  // there require an explicit "./" prefix, no exceptions. Python has no such
+  // rule — `from utils import x` with zero dots is a completely normal,
+  // common way to import a sibling module. So before assuming "external
+  // package" we try resolving the bare specifier as same-directory file
+  // first. For JS/TS repos this is effectively a no-op (a real npm package
+  // name almost never happens to collide with a same-named file sitting
+  // right next to the importer), but it's what makes Python sibling
+  // imports resolve at all instead of always being (wrongly) treated as
+  // external and silently dropped from the dependency graph.
+  const siblingCandidate = posix.normalize(posix.join(importerDir, importSource));
+  const siblingResolved = tryResolveInternal(siblingCandidate, knownFiles);
+  if (siblingResolved) return siblingResolved;
 
-  const resolved = tryResolveInternal(rawTarget, knownFiles);
-  if (resolved) return resolved;
-
-  // Unresolvable (genuinely missing file, or an alias target that doesn't exist on disk).
-  // Fall back to treating it as external so the pipeline doesn't crash — indexer can flag these separately.
-  return { type: "external", packageName: importSource };
+  const parts = importSource.split("/");
+  const packageName = importSource.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+  return { type: "external", packageName };
 }
 
 /**
