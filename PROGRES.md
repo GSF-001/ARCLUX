@@ -383,3 +383,35 @@ kemungkinan salah taruh/duplikat dari `apps/web/tsconfig.json`. Ini bikin
 include). **Belum diselidiki**: apa root `tsconfig.json` itu emang
 sengaja atau bug lama yang kebawa — worth dicek kalau nanti ada
 konsumer/workspace lain yang juga gak punya tsconfig sendiri.
+
+## KOREKSI PENTING — packages/impact/* ternyata SUDAH SELESAI (8/8)
+
+Sebelumnya dicatat sebagai prioritas #1 yang 0% total. Ternyata sudah
+diimplementasi lengkap di commit `8b69831a` (sebelum sesi ini bahkan
+mulai), cuma belum pernah ke-cross-check ke PROGRES.md. Terverifikasi
+lewat `cat` langsung (bukan cuma wc -l):
+
+- `traceImports.ts` (33 baris), `traceExports.ts` (46 baris) — trace
+  identifier-level, konsisten dengan pola yang sama seperti
+  `detectUnusedExports.ts` (namespace/default/named import handling)
+- `calculateAffectedFiles.ts` (66 baris) — base function
+- `calculateAffectedModules.ts`, `calculateAffectedComponents.ts`,
+  `calculateAffectedRoutes.ts` — semua compose di atas `calculateAffectedFiles`,
+  bukan duplikasi logic. `Routes` bahkan convert file path ke Next.js route
+  path dengan benar (strip route groups `(...)`)
+- `buildImpactTree.ts` (38 baris) — **ada cycle guard** (`ancestors: Set`)
+  + `maxDepth`, penting karena repo bisa punya circular import beneran
+  (lihat `playground/python-demo/cyclic_a.py` ↔ `cyclic_b.py`)
+- `traceDependencies.ts`, `traceConsumers.ts` — belum di-`cat` manual,
+  asumsikan selesai berdasarkan pola konsisten 6 file lain, tapi **verifikasi
+  ulang sebelum benar-benar mengandalkannya**
+
+**Lesson tambahan**: ini kejadian yang PERSIS sama seperti insiden
+`components/layout/*` sebelumnya — progress asli lebih maju dari yang
+tercatat karena beda sesi kerja tidak saling sinkron ke PROGRES.md.
+Redundansi verifikasi (`cat`, bukan asumsi dari nama file/PROGRES.md lama)
+tetap wajib sebelum mulai kerja di area manapun.
+
+**Action item**: `apps/cli/impact.ts` saat ini SALAH — bilang "not yet
+implemented" padahal fungsinya sudah ada. Perlu diperbaiki supaya
+benar-benar memanggil `buildImpactTree`/`calculateAffectedFiles` dkk.
