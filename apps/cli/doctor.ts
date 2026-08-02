@@ -6,11 +6,18 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Runs every detector that currently exists (9 of 18 — see PROGRES.md).
+// Runs every detector that currently exists (10 of 18 — see PROGRES.md).
 //
-// Manual call-per-detector, no registry yet. This was already flagged as
-// overdue at 8 detectors; still not done here to keep this pass scoped to
-// adding detectDeadCode. Do the registry refactor before adding #10.
+// Manual call-per-detector, no registry yet. Overdue for a registry
+// refactor (flagged since detector #8); still deferred here to keep this
+// pass scoped to adding detectEntryPoints.
+//
+// Note: detectEntryPoints findings will legitimately overlap with
+// detectOrphanFiles findings — an entry point IS an orphan by definition
+// (nothing imports it), it's just a recognized-as-intentional one. That
+// duplication in the printed output is expected, not a bug — the two
+// detectors answer different questions ("is this ever imported" vs "is
+// this orphan actually a known entry-point convention").
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
@@ -24,11 +31,12 @@ import { detectSharedModules } from "../../packages/detectors/detectSharedModule
 import { detectIndexFiles } from "../../packages/detectors/detectIndexFiles";
 import { detectLayerViolation } from "../../packages/detectors/detectLayerViolation";
 import { detectDeadCode } from "../../packages/detectors/detectDeadCode";
+import { detectEntryPoints } from "../../packages/detectors/detectEntryPoints";
 
 export function registerDoctorCommand(program: Command): void {
   program
     .command("doctor")
-    .description("Run all available detectors against a local repository (9/18 implemented so far)")
+    .description("Run all available detectors against a local repository (10/18 implemented so far)")
     .argument("[path]", "path to the repository root", ".")
     .action(async (targetPath: string) => {
       const spinner = p.spinner();
@@ -47,6 +55,7 @@ export function registerDoctorCommand(program: Command): void {
         const indexFiles = detectIndexFiles(repository);
         const layerViolations = detectLayerViolation(repository);
         const deadCode = detectDeadCode(repository);
+        const entryPoints = detectEntryPoints(repository);
 
         const total =
           cycles.length +
@@ -58,8 +67,10 @@ export function registerDoctorCommand(program: Command): void {
           indexFiles.length +
           layerViolations.length +
           deadCode.length;
+        // entryPoints intentionally excluded from `total` / exit code —
+        // it's informational (confirms known-good files), not an issue.
 
-        if (total === 0) {
+        if (total === 0 && entryPoints.length === 0) {
           p.log.success("No issues found.");
           return;
         }
@@ -74,7 +85,7 @@ export function registerDoctorCommand(program: Command): void {
         if (unusedExports.length > 0) {
           p.log.warn(`${unusedExports.length} unused ${unusedExports.length === 1 ? "export" : "exports"} found:`);
           p.log.message(
-            "  (note: entry files aren't detected yet \u2014 resolveRoutes.ts is empty \u2014 so an app's entry point may show up here as a false positive)"
+            "  (note: entry files aren't fully filtered out yet \u2014 see detectEntryPoints findings below \u2014 so an app's entry point may show up here as a false positive)"
           );
           for (const f of unusedExports) {
             p.log.message(`  ${f.filePath}:${f.line} \u2014 ${f.message}`);
@@ -84,7 +95,7 @@ export function registerDoctorCommand(program: Command): void {
         if (orphanFiles.length > 0) {
           p.log.warn(`${orphanFiles.length} orphan ${orphanFiles.length === 1 ? "file" : "files"} found:`);
           p.log.message(
-            "  (note: same entry-file caveat as unused exports \u2014 a genuine entry point can show up here)"
+            "  (note: same entry-file caveat as unused exports \u2014 cross-check against detectEntryPoints below)"
           );
           for (const f of orphanFiles) {
             p.log.message(`  ${f.filePath} \u2014 ${f.message}`);
@@ -143,7 +154,16 @@ export function registerDoctorCommand(program: Command): void {
           }
         }
 
-        process.exitCode = 1;
+        if (entryPoints.length > 0) {
+          p.log.info(
+            `${entryPoints.length} recognized entry ${entryPoints.length === 1 ? "point" : "points"} (informational \u2014 not an issue, listed to help cross-check the findings above):`
+          );
+          for (const f of entryPoints) {
+            p.log.message(`  ${f.filePath} \u2014 ${f.reason}`);
+          }
+        }
+
+        process.exitCode = total > 0 ? 1 : 0;
       } catch (err) {
         spinner.stop("Detectors failed to run");
         p.log.error(err instanceof Error ? err.message : String(err));
