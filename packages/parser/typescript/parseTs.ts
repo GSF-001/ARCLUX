@@ -94,10 +94,11 @@ function extractExports(sourceFile: ts.SourceFile): RawExport[] {
 
   function visit(node: ts.Node) {
     // export default ...
-    if (
+    const isDefaultExport =
       (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
-      node.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)
-    ) {
+      node.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword);
+
+    if (isDefaultExport) {
       exports.push({
         name: node.name?.text ?? "default",
         kind: "default",
@@ -105,9 +106,15 @@ function extractExports(sourceFile: ts.SourceFile): RawExport[] {
       });
     }
 
-    // export const/function/class x = ...
-    const hasExportModifier = (node as ts.Node & { modifiers?: ts.NodeArray<ts.ModifierLike> })
-      .modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+    // because "export default function Page()" carries BOTH the Default
+    // AND Export modifiers on the SAME node. Without this guard it was
+    // double-counted: once as "default" above, then again here as "named".
+    // Found via playground/nextjs-demo testing (page.tsx showed up with
+    // 2 exports and got flagged twice by detectUnusedExports).
+    const hasExportModifier =
+      !isDefaultExport &&
+      (node as ts.Node & { modifiers?: ts.NodeArray<ts.ModifierLike> })
+        .modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
     if (hasExportModifier) {
       if (ts.isVariableStatement(node)) {
