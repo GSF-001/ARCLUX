@@ -321,3 +321,32 @@ Atribusi lengkap ada di komentar `Database.ts`.
 detector-detector, semuanya masih jalan cara lama (full re-scan). Ini
 fondasi standalone yang perlu integrasi terpisah sebagai langkah besar
 berikutnya, bukan otomatis kepake begitu file ini ada.
+
+## Update — First real end-to-end verification (playground/python-demo)
+
+`playground/python-demo/` — fixture 6 file Python (circular import, unused
+export, normal chain) + `scripts/testPlayground.ts` — script manual yang
+manggil `buildIndex` → `buildDependencyGraph` → 2 detector langsung,
+BYPASS `analyzeRepository()` (yang didesain buat repoUrl/clone, bukan
+local path). Ini exception yang legit dari aturan "jangan panggil step
+individual dari luar engine/" — itu aturan buat call site produksi
+(CLI, API route), bukan script verifikasi lokal.
+
+**Hasil, pertama kali dites lawan kode nyata (bukan cuma tsc --noEmit)**:
+- Module count, import resolution, graph edges — semua benar
+- `detectCircularDependency` nemuin cycle `cyclic_a ↔ cyclic_b` — benar
+- `detectUnusedExports` nemuin `unused_helper` (true positive) DAN
+  `main` di `main.py` (false positive) — false positive ini **konfirmasi
+  empiris pertama** dari limitation "belum entry-file-aware" yang udah
+  dicatet sebelumnya, bukan bug baru. `resolveRoutes.ts` yang masih 0%
+  itu yang bakal benerin ini.
+
+**Catatan koordinasi**: sesi lain lagi rencanain refactor `pipeline.ts`
+buat CLI `doctor` command — nambah field `findings[]` ke
+`AnalyzeRepositoryResult`, biar `analyzeRepository()` orkestrasi detector
+secara internal (bukan tiap caller manggil `buildIndex`+detector sendiri).
+Belum ada kode yang di-commit dari rencana itu per commit `9e6b660e`.
+`scripts/testPlayground.ts` di atas TIDAK menggantikan rencana itu — itu
+tetap dibutuhkan buat local dev testing, sementara refactor `findings[]`
+itu buat production call sites (CLI, API). Kalau nanti `findings[]`
+ditambahkan, `testPlayground.ts` bisa disederhanakan buat pakai itu juga.
