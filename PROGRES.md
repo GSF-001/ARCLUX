@@ -59,7 +59,7 @@ Jangan panggil step individual dari luar `engine/`.
   `constants.ts`, `logger.ts`, `utils.ts`)
 - `packages/search/fuzzyScore.ts` — adaptasi dari `cmdk` (lihat NOTICE)
 
-## ✅ SELESAI — detectors (2/18)
+## ✅ SELESAI — detectors (7/18)
 
 1. `detectCircularDependency.ts` — DFS cycle detection, adaptasi `madge`
 2. `detectUnusedExports.ts` — adaptasi strategi traversal `knip`, re-implement
@@ -70,13 +70,42 @@ Jangan panggil step individual dari luar `engine/`.
      bener (`RawExport` cuma simpen nama akhir). Belum entry-file-aware
      (`resolveRoutes.ts` masih kosong → false positive di file kayak
      Next.js `page.tsx`).
+3. `detectOrphanFiles.ts` — file-level version dari poin 2 (nothing imports
+   this file at all). Kena entry-file caveat yang sama.
+4. `detectLargeModules.ts` — flag file di atas threshold byte (default
+   15,000). Verified lawan repo `arclux` sendiri: 0 hasil saat ini karena
+   file terbesar di repo (`file-tree.tsx`, 511 baris) cuma 12,840 bytes,
+   masih di bawah threshold — bukan bug, threshold emang belum kepancing.
+5. `detectDuplicateModules.ts` — group file by content hash.
+   - **Insiden yang udah difix**: threshold awal (`minSizeBytes = 200`)
+     kekecilan. Stub file kosong (header lisensi + 1 baris comment) di
+     repo ini ternyata 263 bytes, bukan di bawah 200 kayak yang diasumsikan
+     pas nulis komentarnya. Hasilnya 149 stub file ke-grouped jadi 1 fake
+     "duplicate group" pas dites lawan repo asli (gak ketauan di
+     `python-demo` yang cuma 6 file). Threshold dinaikin ke 300. Masih
+     heuristic byte-based yang rapuh — `FileInfo` gak punya `lineCount`
+     atau `content`, cuma `sizeBytes`/`hash`, jadi kalau header lisensi
+     berubah format, threshold ini bisa stale lagi.
+6. `detectSharedModules.ts` — flag high fan-in files (importedBy count).
+   Informational, bukan "masalah". Verified: nemuin
+   `packages/shared/types.ts` (25 importer), `packages/repository/Repository.ts`
+   (23 importer) di repo `arclux` sendiri — masuk akal.
+7. `detectIndexFiles.ts` — flag barrel file (index.ts) yang campur
+   re-export dengan definisi sendiri.
+   - **Catatan tumpang tindih**: `packages/repository/Module.ts` udah
+     punya `isBarrelFile()`/`isEntryPoint()` yang konsepnya mirip. Belum
+     dicek apa ada duplikasi logic — worth diverifikasi sebelum nulis
+     detector convention berikutnya yang mungkin nyenggol area sama.
 
-**16 sisanya masih 0%**: `detectComponentConvention`, `detectDeadCode`,
-`detectDuplicateModules`, `detectEntryPoints`, `detectFeatureStructure`,
-`detectIndexFiles`, `detectLargeModules`, `detectLayerViolation`,
-`detectMissingExports`, `detectOrphanFiles`, `detectRepositoryPattern`,
-`detectRouteConvention`, `detectSharedModules`, `detectStoryConvention`,
-`detectTestConvention`, `detectUnusedFiles`.
+Diverifikasi 2 kali: lawan `playground/python-demo` (fixture kecil) DAN
+lawan repo `arclux` sendiri lewat `npx tsx apps/cli/index.ts doctor .`
+(15,630 baris kode nyata) — yang kedua ini yang nemuin bug threshold di
+atas, gak ketauan dari fixture kecil doang.
+
+**11 sisanya masih 0%**: `detectComponentConvention`, `detectDeadCode`,
+`detectEntryPoints`, `detectFeatureStructure`, `detectLayerViolation`,
+`detectMissingExports`, `detectRepositoryPattern`, `detectRouteConvention`,
+`detectStoryConvention`, `detectTestConvention`, `detectUnusedFiles`.
 
 ## ✅ SELESAI — UI: graph viewer
 
@@ -350,6 +379,15 @@ Belum ada kode yang di-commit dari rencana itu per commit `9e6b660e`.
 tetap dibutuhkan buat local dev testing, sementara refactor `findings[]`
 itu buat production call sites (CLI, API). Kalau nanti `findings[]`
 ditambahkan, `testPlayground.ts` bisa disederhanakan buat pakai itu juga.
+
+## Update — doctor.ts sekarang manggil 7/18 detector (bukan 2/18)
+
+`apps/cli/doctor.ts` di-update manggil ke-5 detector baru di atas selain
+2 yang lama. Masih manual call per-detector (belum ada registry) — komentar
+di file itu sendiri udah nyatet ini worth di-registry-in begitu nambah
+detector ke-8+, karena tiap detector punya finding shape beda-beda
+(`cycle` vs `filePath`+`line` vs `hash`+`filePaths[]` vs `isPureBarrel`),
+jadi registry butuh print-adapter per detector, bukan cuma daftar fungsi.
 
 ## Update — apps/cli (5/6 file, index.ts sekarang punya isi beneran)
 
