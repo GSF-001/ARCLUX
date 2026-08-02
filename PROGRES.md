@@ -288,3 +288,36 @@ sebelum asumsi ada).
   `--webpack`), git push butuh Personal Access Token bukan password.
 - **Repo referensi jangan ke-clone di dalam `~/arclux`** — harus di `~` root
   (`~/git-truck`, `~/madge`, `~/opencode`, `~/research/*`), di luar project.
+
+## Update — packages/incremental (fondasi baru, belum di-wire)
+
+`packages/incremental/` — Cell (input), Query (memoized function dengan
+dependency tracking + early cutoff), Database (koordinasi revision).
+Prinsip diadaptasi dari `salsa-rs/salsa` (dual MIT/Apache-2.0) — BUKAN port
+(Rust proc-macro vs runtime tracking di TS), re-implementasi dari nol.
+Atribusi lengkap ada di komentar `Database.ts`.
+
+**Diverifikasi lewat demo runnable** (`packages/incremental/demo.ts`, jalanin
+`npx tsx packages/incremental/demo.ts`), bukan cuma `tsc --noEmit`:
+- Memoization: call berulang tanpa perubahan = 0 recompute
+- Dependency tracking: cuma Cell yang beneran dibaca yang trigger invalidation
+- Early cutoff: `Cell.set()` dengan value identik (`Object.is`) = no-op,
+  gak nge-bump revision
+- Cycle detection: query yang re-entry ke key yang sama pas masih computing
+  → throw, bukan infinite loop
+
+**Batasan yang diketahui (didokumentasikan di komentar `Query.ts`)**:
+- Early cutoff cuma jalan buat reference equality (`Object.is`) — object baru
+  dengan isi identik tetap dianggap "berubah". Deep-equality cutoff butuh
+  comparator custom, belum diimplementasi.
+- Dependency tracking pas re-validasi cache-hit itu over-approximate (query
+  C yang manggil A yang manggil B jadi depend on A DAN B langsung, bukan
+  cuma A dengan B implied transitively) — aman (gak ada missed invalidation)
+  tapi gak maximally minimal.
+- Cycle throw, gak ada fixed-point resolution buat query yang genuinely
+  rekursif — itu dianggap bug caller, bukan pattern yang didukung.
+
+**BELUM di-wire ke pipeline manapun** — `buildIndex.ts`, `pipeline.ts`,
+detector-detector, semuanya masih jalan cara lama (full re-scan). Ini
+fondasi standalone yang perlu integrasi terpisah sebagai langkah besar
+berikutnya, bukan otomatis kepake begitu file ini ada.
