@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -6,3 +7,20 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
+import { Command } from "commander";
+import { registerAnalyzeCommand } from "./analyze";
+import { registerGraphCommand } from "./graph";
+import { registerImpactCommand } from "./impact";
+import { registerDoctorCommand } from "./doctor";
+import { registerConfigCommand } from "./config";
+
+const program = new Command();
+program.name("arclux").description("Repository intelligence CLI").version("0.1.0");
+
+registerAnalyzeCommand(program);
+registerGraphCommand(program);
+registerImpactCommand(program);
+registerDoctorCommand(program);
+registerConfigCommand(program);
+
+program.parse();

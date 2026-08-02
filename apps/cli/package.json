@@ -9,8 +9,12 @@
     "lint": "eslint ."
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
-    "tsx": "^4"
+    "tsx": "^4",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "commander": "^15.0.0"
   }
 }
