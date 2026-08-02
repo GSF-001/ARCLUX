@@ -1,0 +1,5262 @@
+==================================================
+FILE: git/cloneRepository.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { simpleGit } from "simple-git";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { ArcluxError } from "../shared/errors";
+
+export interface CloneOptions {
+  /** e.g. "https://github.com/org/repo.git" */
+  repoUrl: string;
+  /** Branch to checkout. Defaults to the repo's default branch if omitted. */
+  branch?: string;
+  /** Shallow clone depth. Defaults to 1 (fastest, no history) */
+  depth?: number;
+}
+
+export interface CloneResult {
+  /** Local filesystem path where the repo was cloned */
+  localPath: string;
+  branch: string;
+}
+
+/**
+ * Clones a repo into a temp directory. Caller is responsible for calling
+ * cleanupRepository.ts on `localPath` once analysis is done.
+ */
+export async function cloneRepository(options: CloneOptions): Promise<CloneResult> {
+  const { repoUrl, branch, depth = 1 } = options;
+
+  const workDir = mkdtempSync(join(tmpdir(), "arclux-"));
+  const git = simpleGit();
+
+  try {
+    const cloneArgs = ["--depth", String(depth)];
+    if (branch) {
+      cloneArgs.push("--branch", branch);
+    }
+
+    await git.clone(repoUrl, workDir, cloneArgs);
+
+    const repoGit = simpleGit(workDir);
+    const status = await repoGit.status();
+    const resolvedBranch = branch ?? status.current ?? "main";
+
+    return { localPath: workDir, branch: resolvedBranch };
+  } catch (err) {
+    throw new ArcluxError({
+      code: "CLONE_FAILED",
+      message: `Failed to clone repository: ${repoUrl}`,
+      cause: err,
+    });
+  }
+}
+
+==================================================
+FILE: git/checkoutBranch.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: git/readGitignore.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import ignore, { type Ignore } from "ignore";
+
+/** Patterns always excluded, regardless of what .gitignore says */
+const DEFAULT_IGNORES = [
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".next",
+  ".turbo",
+  "coverage",
+  "*.lock",
+];
+
+/**
+ * Reads .gitignore (if present) at repo root and returns a matcher.
+ * Usage: `const ig = readGitignore(rootPath); if (ig.ignores(relPath)) skip();`
+ */
+export function readGitignore(rootPath: string): Ignore {
+  const ig = ignore();
+  ig.add(DEFAULT_IGNORES);
+
+  const gitignorePath = join(rootPath, ".gitignore");
+  if (existsSync(gitignorePath)) {
+    const content = readFileSync(gitignorePath, "utf-8");
+    ig.add(content);
+  }
+
+  return ig;
+}
+
+==================================================
+FILE: git/getCommitHistory.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: git/getContributors.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: git/getBranches.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: git/detectDefaultBranch.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: git/cleanupRepository.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+
+/**
+ * Deletes the temp directory created by cloneRepository.ts.
+ * Guards against accidentally rm -rf'ing something outside the OS temp dir —
+ * cloneRepository.ts always creates paths under os.tmpdir(), so anything else is suspicious.
+ */
+export async function cleanupRepository(localPath: string): Promise<void> {
+  const resolved = resolve(localPath);
+  const systemTmp = resolve(tmpdir());
+
+  if (!resolved.startsWith(systemTmp)) {
+    throw new Error(
+      `Refusing to delete "${resolved}": not inside system temp dir (${systemTmp}). ` +
+        `This looks like a bug, not a real cleanup target.`
+    );
+  }
+
+  await rm(resolved, { recursive: true, force: true });
+}
+
+==================================================
+FILE: parser/core/ParserRegistry.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { LanguageParser } from "./ParserInterface";
+import { ArcluxError } from "../../shared/errors";
+
+/**
+ * Central place where all language parsers register themselves.
+ * engine/pipeline.ts asks THIS for "who handles .tsx files", never imports
+ * parseTs.ts directly — that's what keeps parser/* swappable.
+ */
+export class ParserRegistry {
+  private parsersByExtension: Map<string, LanguageParser> = new Map();
+
+  register(parser: LanguageParser): void {
+    for (const ext of parser.extensions) {
+      this.parsersByExtension.set(ext.toLowerCase(), parser);
+    }
+  }
+
+  getParserForExtension(extension: string): LanguageParser | undefined {
+    return this.parsersByExtension.get(extension.toLowerCase());
+  }
+
+  getParserOrThrow(extension: string): LanguageParser {
+    const parser = this.getParserForExtension(extension);
+    if (!parser) {
+      throw new ArcluxError({
+        code: "UNSUPPORTED_LANGUAGE",
+        message: `No parser registered for extension "${extension}"`,
+      });
+    }
+    return parser;
+  }
+
+  get registeredExtensions(): string[] {
+    return Array.from(this.parsersByExtension.keys());
+  }
+}
+
+/** Shared singleton registry — import THIS everywhere, don't `new ParserRegistry()` elsewhere */
+export const parserRegistry = new ParserRegistry();
+
+==================================================
+FILE: parser/core/LanguageDetector.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { SupportedLanguage } from "../../shared/types";
+
+const EXTENSION_TO_LANGUAGE: Record<string, SupportedLanguage> = {
+  ".js": "javascript",
+  ".jsx": "javascript",
+  ".mjs": "javascript",
+  ".cjs": "javascript",
+  ".ts": "typescript",
+  ".tsx": "typescript",
+  ".py": "python",
+  ".java": "java",
+  ".go": "go",
+  ".cs": "csharp",
+  ".php": "php",
+  ".rb": "ruby",
+  ".rs": "rust",
+  ".cpp": "cpp",
+  ".cc": "cpp",
+  ".h": "cpp",
+  ".hpp": "cpp",
+};
+
+export function detectLanguage(extension: string): SupportedLanguage {
+  return EXTENSION_TO_LANGUAGE[extension.toLowerCase()] ?? "unknown";
+}
+
+export function isSupportedExtension(extension: string): boolean {
+  return detectLanguage(extension) !== "unknown";
+}
+
+export function getExtensionsForLanguage(language: SupportedLanguage): string[] {
+  return Object.entries(EXTENSION_TO_LANGUAGE)
+    .filter(([, lang]) => lang === language)
+    .map(([ext]) => ext);
+}
+
+==================================================
+FILE: parser/core/ParserInterface.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { FileInfo, ParsedFile } from "../../shared/types";
+
+/**
+ * Every language parser (parseJs, parseTs, parsePython, ...) must implement this.
+ * This is what makes the pipeline language-agnostic: engine/pipeline.ts only
+ * ever talks to this interface, never to a specific parser directly.
+ */
+export interface LanguageParser {
+  /** Which languages this parser handles, e.g. ["typescript"] or ["javascript", "jsx"] */
+  readonly supportedLanguages: string[];
+
+  /** File extensions this parser claims, e.g. [".ts", ".tsx"] */
+  readonly extensions: string[];
+
+  /**
+   * Parse a single file's content into the shared ParsedFile shape.
+   * Must NOT throw on malformed syntax — collect issues in `warnings` instead,
+   * so one bad file doesn't kill the whole repo analysis.
+   */
+  parse(file: FileInfo, content: string): Promise<ParsedFile>;
+}
+
+==================================================
+FILE: parser/core/scanFiles.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { readdirSync, statSync, readFileSync } from "node:fs";
+import { join, relative, extname } from "node:path";
+import { readGitignore } from "../../git/readGitignore";
+import { EXTENSION_TO_LANGUAGE } from "../../shared/constants";
+import { hashContent } from "../../shared/hash";
+import { toPosixPath } from "../../shared/paths";
+import type { FileInfo, SupportedLanguage } from "../../shared/types";
+
+function detectLanguage(extension: string): SupportedLanguage {
+  return EXTENSION_TO_LANGUAGE[extension] ?? "unknown";
+}
+
+/**
+ * Recursively walks `rootPath`, returning FileInfo for every non-ignored file.
+ * This does NOT parse file contents beyond hashing — that's parser/*'s job.
+ */
+export function scanFiles(rootPath: string): FileInfo[] {
+  const ig = readGitignore(rootPath);
+  const results: FileInfo[] = [];
+
+  function walk(dir: string) {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const absolutePath = join(dir, entry);
+      const relativePath = toPosixPath(relative(rootPath, absolutePath));
+
+      if (ig.ignores(relativePath)) continue;
+
+      let stat;
+      try {
+        stat = statSync(absolutePath);
+      } catch {
+        continue;
+      }
+
+      if (stat.isDirectory()) {
+        walk(absolutePath);
+        continue;
+      }
+
+      if (!stat.isFile()) continue;
+
+      const extension = extname(entry).toLowerCase();
+      const language = detectLanguage(extension);
+      if (language === "unknown") continue;
+
+      let content: string;
+      try {
+        content = readFileSync(absolutePath, "utf-8");
+      } catch {
+        continue;
+      }
+
+      results.push({
+        absolutePath,
+        relativePath,
+        language,
+        extension,
+        sizeBytes: stat.size,
+        hash: hashContent(content),
+      });
+    }
+  }
+
+  walk(rootPath);
+  return results;
+}
+
+==================================================
+FILE: parser/core/parseImports.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/javascript/parseJs.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/javascript/parseJsx.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/javascript/parseCommonJs.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/typescript/parseTs.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import ts from "typescript";
+import type { LanguageParser } from "../core/ParserInterface";
+import type { FileInfo, ParsedFile, RawImport, RawExport, ImportKind } from "../../shared/types";
+
+function getLine(sourceFile: ts.SourceFile, pos: number): number {
+  return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+}
+
+function extractImports(sourceFile: ts.SourceFile): RawImport[] {
+  const imports: RawImport[] = [];
+
+  function visit(node: ts.Node) {
+    // Static: import x, { y } from "z"  /  import type { y } from "z"
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const namedImports: string[] = [];
+      let hasDefaultImport = false;
+      let hasNamespaceImport = false;
+      let kind: ImportKind = node.importClause?.isTypeOnly ? "type-only" : "static";
+
+      if (node.importClause) {
+        if (node.importClause.name) hasDefaultImport = true;
+        const bindings = node.importClause.namedBindings;
+        if (bindings && ts.isNamedImports(bindings)) {
+          for (const el of bindings.elements) {
+            namedImports.push(el.name.text);
+          }
+        } else if (bindings && ts.isNamespaceImport(bindings)) {
+          hasNamespaceImport = true;
+        }
+      }
+
+      imports.push({
+        source: node.moduleSpecifier.text,
+        kind,
+        namedImports,
+        hasDefaultImport,
+        hasNamespaceImport,
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    // Dynamic: await import("z")
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments.length > 0 &&
+      ts.isStringLiteral(node.arguments[0])
+    ) {
+      imports.push({
+        source: node.arguments[0].text,
+        kind: "dynamic",
+        namedImports: [],
+        hasDefaultImport: false,
+        hasNamespaceImport: false,
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    // require("z")
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "require" &&
+      node.arguments.length > 0 &&
+      ts.isStringLiteral(node.arguments[0])
+    ) {
+      imports.push({
+        source: node.arguments[0].text,
+        kind: "require",
+        namedImports: [],
+        hasDefaultImport: false,
+        hasNamespaceImport: false,
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return imports;
+}
+
+function extractExports(sourceFile: ts.SourceFile): RawExport[] {
+  const exports: RawExport[] = [];
+
+  function visit(node: ts.Node) {
+    // export default ...
+    if (
+      (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
+      node.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)
+    ) {
+      exports.push({
+        name: node.name?.text ?? "default",
+        kind: "default",
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    // export const/function/class x = ...
+    const hasExportModifier = (node as ts.Node & { modifiers?: ts.NodeArray<ts.ModifierLike> })
+      .modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+
+    if (hasExportModifier) {
+      if (ts.isVariableStatement(node)) {
+        for (const decl of node.declarationList.declarations) {
+          if (ts.isIdentifier(decl.name)) {
+            exports.push({
+              name: decl.name.text,
+              kind: "named",
+              line: getLine(sourceFile, node.getStart()),
+            });
+          }
+        }
+      } else if (
+        (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node)) &&
+        node.name
+      ) {
+        exports.push({
+          name: node.name.text,
+          kind: "named",
+          line: getLine(sourceFile, node.getStart()),
+        });
+      }
+    }
+
+    // export { a, b } from "./x"  /  export * from "./x"
+    if (ts.isExportDeclaration(node)) {
+      const reExportSource =
+        node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)
+          ? node.moduleSpecifier.text
+          : undefined;
+
+      if (node.exportClause && ts.isNamedExports(node.exportClause)) {
+        for (const el of node.exportClause.elements) {
+          exports.push({
+            name: el.name.text,
+            kind: reExportSource ? "re-export" : "named",
+            reExportSource,
+            line: getLine(sourceFile, node.getStart()),
+          });
+        }
+      } else if (reExportSource) {
+        exports.push({
+          name: "*",
+          kind: "re-export",
+          reExportSource,
+          line: getLine(sourceFile, node.getStart()),
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return exports;
+}
+
+export const parseTs: LanguageParser = {
+  supportedLanguages: ["typescript"],
+  extensions: [".ts", ".tsx"],
+
+  async parse(file: FileInfo, content: string): Promise<ParsedFile> {
+    const warnings: string[] = [];
+
+    let sourceFile: ts.SourceFile;
+    try {
+      sourceFile = ts.createSourceFile(
+        file.absolutePath,
+        content,
+        ts.ScriptTarget.Latest,
+        /* setParentNodes */ true,
+        file.extension === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+      );
+    } catch (err) {
+      warnings.push(`Failed to parse: ${(err as Error).message}`);
+      return { file, imports: [], exports: [], warnings };
+    }
+
+    const imports = extractImports(sourceFile);
+    const exports = extractExports(sourceFile);
+
+    return { file, imports, exports, warnings };
+  },
+};
+
+==================================================
+FILE: parser/typescript/parseTsx.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/typescript/parseTsConfig.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/python/parsePython.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { createRequire } from "node:module";
+import type { LanguageParser } from "../core/ParserInterface";
+import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/types";
+
+// web-tree-sitter ships no .d.ts and cannot be module-augmented from a plain
+// .ts file (its main entry resolves to an untyped .js — see PROGRES.md
+// gotchas). We deliberately load it as untyped and keep our own type safety
+// entirely in the TSNode interface below.
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TreeSitter: any = require("web-tree-sitter");
+const { Parser, Language } = TreeSitter;
+
+// Minimal structural type for the parts of a web-tree-sitter node we use.
+// Avoids depending on internal/unstable type exports from the package.
+export interface TSNode {
+  type: string;
+  text: string;
+  startIndex: number;
+  endIndex: number;
+  startPosition: { row: number; column: number };
+  childCount: number;
+  child(index: number): TSNode | null;
+  childForFieldName(name: string): TSNode | null;
+  namedChildren: (TSNode | null)[];
+}
+
+export interface PythonRuntime {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parser: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  language: any;
+}
+
+let runtimePromise: Promise<PythonRuntime> | null = null;
+
+/**
+ * Loads the tree-sitter runtime + Python grammar exactly once, then reuses
+ * the same Parser instance everywhere. Loading the WASM module per-call
+ * would be very slow across a full repository scan (parsePython.ts below)
+ * or when highlighting many files (highlightPython.ts, which imports this
+ * same function so the WASM module is only ever loaded once total).
+ */
+export function getPythonRuntime(): Promise<PythonRuntime> {
+  if (!runtimePromise) {
+    runtimePromise = (async () => {
+      await Parser.init();
+      const parser = new Parser();
+      const wasmPath = require.resolve("tree-sitter-wasms/out/tree-sitter-python.wasm");
+      const language = await Language.load(wasmPath);
+      parser.setLanguage(language);
+      return { parser, language };
+    })();
+  }
+  return runtimePromise;
+}
+
+function getLine(node: TSNode): number {
+  return node.startPosition.row + 1;
+}
+
+/** Joins a dotted_name node (e.g. "a" "." "b" "." "c") into "a.b.c" */
+function dottedNameToString(node: TSNode): string {
+  return node.text;
+}
+
+function extractImports(root: TSNode, warnings: string[]): RawImport[] {
+  const imports: RawImport[] = [];
+
+  function visit(node: TSNode | null) {
+    if (!node) return;
+
+    if (node.type === "import_statement") {
+      for (let i = 0; i < node.namedChildren.length; i++) {
+        const child = node.namedChildren[i];
+        if (!child) continue;
+
+        if (child.type === "dotted_name") {
+          imports.push({
+            source: dottedNameToString(child),
+            kind: "static",
+            namedImports: [],
+            hasDefaultImport: false,
+            hasNamespaceImport: false,
+            line: getLine(node),
+          });
+        } else if (child.type === "aliased_import") {
+          const name = child.childForFieldName("name");
+          if (name) {
+            imports.push({
+              source: dottedNameToString(name),
+              kind: "static",
+              namedImports: [],
+              hasDefaultImport: false,
+              hasNamespaceImport: false,
+              line: getLine(node),
+            });
+          }
+        }
+      }
+    }
+
+    if (node.type === "import_from_statement") {
+      const moduleNode = node.childForFieldName("module_name");
+      const source = moduleNode ? dottedNameToString(moduleNode) : ".";
+
+      const namedImports: string[] = [];
+      let isWildcard = false;
+
+      for (let i = 0; i < node.namedChildren.length; i++) {
+        const child = node.namedChildren[i];
+        if (!child) continue;
+
+        if (child.type === "wildcard_import") {
+          isWildcard = true;
+        } else if (child.type === "aliased_import") {
+          const name = child.childForFieldName("name");
+          if (name) namedImports.push(name.text);
+        } else if (child.type === "dotted_name" && child !== moduleNode) {
+          namedImports.push(child.text);
+        }
+      }
+
+      imports.push({
+        source,
+        kind: "static",
+        namedImports: isWildcard ? ["*"] : namedImports,
+        hasDefaultImport: false,
+        hasNamespaceImport: false,
+        line: getLine(node),
+      });
+    }
+
+    for (let i = 0; i < node.childCount; i++) {
+      visit(node.child(i));
+    }
+  }
+
+  try {
+    visit(root);
+  } catch (err) {
+    warnings.push(`Import extraction failed: ${(err as Error).message}`);
+  }
+
+  return imports;
+}
+
+function extractExports(root: TSNode, warnings: string[]): RawExport[] {
+  const exports: RawExport[] = [];
+
+  try {
+    for (let i = 0; i < root.namedChildren.length; i++) {
+      const node = root.namedChildren[i];
+      if (!node) continue;
+
+      if (node.type === "function_definition" || node.type === "class_definition") {
+        const name = node.childForFieldName("name");
+        if (name) {
+          exports.push({
+            name: name.text,
+            kind: "named",
+            line: getLine(node),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    warnings.push(`Export extraction failed: ${(err as Error).message}`);
+  }
+
+  return exports;
+}
+
+export const parsePython: LanguageParser = {
+  supportedLanguages: ["python"],
+  extensions: [".py"],
+
+  async parse(file: FileInfo, content: string): Promise<ParsedFile> {
+    const warnings: string[] = [];
+
+    try {
+      const { parser } = await getPythonRuntime();
+      const tree = parser.parse(content);
+      const root = tree.rootNode as unknown as TSNode;
+
+      const imports = extractImports(root, warnings);
+      const exports = extractExports(root, warnings);
+
+      return { file, imports, exports, warnings };
+    } catch (err) {
+      warnings.push(`Failed to parse: ${(err as Error).message}`);
+      return { file, imports: [], exports: [], warnings };
+    }
+  },
+};
+
+==================================================
+FILE: parser/python/parseRequirements.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/python/pythonHighlightQuery.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// The query patterns below are copied verbatim from tree-sitter-python's
+// queries/highlights.scm, MIT-licensed:
+// https://github.com/tree-sitter/tree-sitter-python/blob/master/queries/highlights.scm
+//
+// Embedded as a TS string (not a loose .scm asset file) so it ships
+// correctly through webpack without needing a raw-text loader configured.
+export const PYTHON_HIGHLIGHTS_QUERY = `
+; Identifier naming conventions
+
+(identifier) @variable
+
+((identifier) @constructor
+  (#match? @constructor "^[A-Z]"))
+
+((identifier) @constant
+  (#match? @constant "^[A-Z][A-Z_]*$"))
+
+; Function calls
+
+(decorator) @function
+(decorator
+  (identifier) @function)
+
+(call
+  function: (attribute attribute: (identifier) @function.method))
+
+(call
+  function: (identifier) @function)
+
+; Builtin functions
+
+((call
+  function: (identifier) @function.builtin)
+  (#match?
+    @function.builtin
+    "^(abs|all|any|ascii|bin|bool|breakpoint|bytearray|bytes|callable|chr|classmethod|compile|complex|delattr|dict|dir|divmod|enumerate|eval|exec|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|isinstance|issubclass|iter|len|list|locals|map|max|memoryview|min|next|object|oct|open|ord|pow|print|property|range|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip|__import__)$"))
+
+; Function definitions
+
+(function_definition
+  name: (identifier) @function)
+
+(attribute attribute: (identifier) @property)
+
+(type (identifier) @type)
+
+; Literals
+
+[
+  (none)
+  (true)
+  (false)
+] @constant.builtin
+
+[
+  (integer)
+  (float)
+] @number
+
+(comment) @comment
+
+(string) @string
+
+(escape_sequence) @escape
+
+(interpolation
+  "{" @punctuation.special
+  "}" @punctuation.special) @embedded
+
+[
+  "-"
+  "-="
+  "!="
+  "*"
+  "**"
+  "**="
+  "*="
+  "/"
+  "//"
+  "//="
+  "/="
+  "&"
+  "&="
+  "%"
+  "%="
+  "^"
+  "^="
+  "+"
+  "->"
+  "+="
+  "<"
+  "<<"
+  "<<="
+  "<="
+  "<>"
+  "="
+  ":="
+  "=="
+  ">"
+  ">="
+  ">>"
+  ">>="
+  "|"
+  "|="
+  "~"
+  "@="
+  "and"
+  "in"
+  "is"
+  "not"
+  "or"
+  "is not"
+  "not in"
+] @operator
+
+[
+  "as"
+  "assert"
+  "async"
+  "await"
+  "break"
+  "class"
+  "continue"
+  "def"
+  "del"
+  "elif"
+  "else"
+  "except"
+  "exec"
+  "finally"
+  "for"
+  "from"
+  "global"
+  "if"
+  "import"
+  "lambda"
+  "nonlocal"
+  "pass"
+  "print"
+  "raise"
+  "return"
+  "try"
+  "while"
+  "with"
+  "yield"
+  "match"
+  "case"
+] @keyword
+`;
+
+==================================================
+FILE: parser/python/highlightPython.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { createRequire } from "node:module";
+import { getPythonRuntime } from "./parsePython";
+import { PYTHON_HIGHLIGHTS_QUERY } from "./pythonHighlightQuery";
+
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TreeSitter: any = require("web-tree-sitter");
+const { Query } = TreeSitter;
+
+export type SyntaxTokenType =
+  | "comment"
+  | "keyword"
+  | "string"
+  | "variable"
+  | "property"
+  | "type"
+  | "constant"
+  | "operator"
+  | "punctuation";
+
+export interface HighlightToken {
+  startIndex: number;
+  endIndex: number;
+  text: string;
+  tokenType: SyntaxTokenType;
+}
+
+/**
+ * Maps tree-sitter-python's highlight capture names to Arclux's theme
+ * syntax tokens (theme/colors.ts / theme/theme.dark.ts `syntax` fields).
+ *
+ * Multiple captures often share the EXACT same span — e.g. a function name
+ * is matched by both the generic `(identifier) @variable` pattern AND a
+ * more specific `@function` pattern in the same query. Array order below is
+ * priority: earlier entries win when spans collide.
+ *
+ * @escape, @punctuation.special and @embedded (f-string interpolation
+ * internals) are intentionally NOT mapped — their spans nest INSIDE a
+ * @string span rather than colliding with it, and resolving nested (not
+ * just duplicate) spans correctly needs a real interval tree. Out of scope
+ * for this first pass — those characters just render as plain text.
+ */
+const CAPTURE_PRIORITY: Array<{ name: string; token: SyntaxTokenType }> = [
+  { name: "function.builtin", token: "property" },
+  { name: "function.method", token: "property" },
+  { name: "function", token: "property" },
+  { name: "constructor", token: "type" },
+  { name: "type", token: "type" },
+  { name: "constant.builtin", token: "constant" },
+  { name: "constant", token: "constant" },
+  { name: "number", token: "constant" },
+  { name: "property", token: "property" },
+  { name: "comment", token: "comment" },
+  { name: "string", token: "string" },
+  { name: "keyword", token: "keyword" },
+  { name: "operator", token: "operator" },
+  { name: "variable", token: "variable" },
+];
+
+const PRIORITY_INDEX = new Map(CAPTURE_PRIORITY.map((c, i) => [c.name, i]));
+
+interface RawCapture {
+  name: string;
+  startIndex: number;
+  endIndex: number;
+  text: string;
+}
+
+/**
+ * web-tree-sitter has shipped both `language.query(source)` (older,
+ * deprecated) and `new Query(language, source)` (newer) across versions —
+ * see PROGRES.md gotchas for the last time this package's API shifted
+ * under us. Try the modern constructor first, fall back to the method.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createHighlightQuery(language: any): any {
+  if (typeof Query === "function") {
+    return new Query(language, PYTHON_HIGHLIGHTS_QUERY);
+  }
+  return language.query(PYTHON_HIGHLIGHTS_QUERY);
+}
+
+/**
+ * Runs the highlights query against Python source and returns a flat,
+ * non-overlapping list of highlight tokens sorted by position.
+ *
+ * STATUS: not yet verified against real rendered output in a browser —
+ * only exercised via tsc --noEmit so far. Most likely failure points if
+ * colors land on the wrong characters: (1) createHighlightQuery picked the
+ * wrong branch for the installed web-tree-sitter version, or (2) capture
+ * names below don't match what this version of tree-sitter-python's grammar
+ * actually emits. Check both before assuming the priority/mapping logic
+ * itself is wrong.
+ */
+export async function highlightPythonSource(source: string): Promise<HighlightToken[]> {
+  const { parser, language } = await getPythonRuntime();
+  const tree = parser.parse(source);
+  const query = createHighlightQuery(language);
+
+  const matches = query.matches(tree.rootNode) as Array<{
+    captures: Array<{ name: string; node: { text: string; startIndex: number; endIndex: number } }>;
+  }>;
+
+  const raw: RawCapture[] = [];
+  for (const match of matches) {
+    for (const capture of match.captures) {
+      if (!PRIORITY_INDEX.has(capture.name)) continue;
+      raw.push({
+        name: capture.name,
+        startIndex: capture.node.startIndex,
+        endIndex: capture.node.endIndex,
+        text: capture.node.text,
+      });
+    }
+  }
+
+  const bySpan = new Map<string, RawCapture>();
+  for (const cap of raw) {
+    const key = `${cap.startIndex}-${cap.endIndex}`;
+    const existing = bySpan.get(key);
+    if (!existing || PRIORITY_INDEX.get(cap.name)! < PRIORITY_INDEX.get(existing.name)!) {
+      bySpan.set(key, cap);
+    }
+  }
+
+  return Array.from(bySpan.values())
+    .map((cap) => ({
+      startIndex: cap.startIndex,
+      endIndex: cap.endIndex,
+      text: cap.text,
+      tokenType: CAPTURE_PRIORITY[PRIORITY_INDEX.get(cap.name)!].token,
+    }))
+    .sort((a, b) => a.startIndex - b.startIndex);
+}
+
+==================================================
+FILE: parser/java/parseJava.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/java/parseGradlePom.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/go/parseGo.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/go/parseGoMod.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/csharp/parseCSharp.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/csharp/parseCsproj.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/php/parsePhp.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/php/parseComposer.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/ruby/parseRuby.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/ruby/parseGemfile.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/rust/parseRust.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/rust/parseCargoToml.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/cpp/parseCpp.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/cpp/parseCMake.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/config/parseJson.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/config/parseYaml.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/config/parseToml.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: parser/config/parsePackageJson.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/buildIndex.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { scanFiles } from "../parser/core/scanFiles";
+import { parserRegistry } from "../parser/core/ParserRegistry";
+import { resolvePath } from "../graph/resolvePath";
+import { loadAliasConfig } from "./resolveAliases";
+import { Repository } from "../repository/Repository";
+import { readFileSync } from "node:fs";
+import { ArcluxError } from "../shared/errors";
+import type { RepositoryMeta, ModuleInfo, ParsedFile, ResolvedImport } from "../shared/types";
+
+export interface BuildIndexOptions {
+  rootPath: string;
+  meta: Omit<RepositoryMeta, "analyzedAt">;
+}
+
+/**
+ * Full indexing pass over a repository:
+ * 1. scanFiles      -> list every relevant file
+ * 2. parserRegistry  -> parse each file with the right language parser
+ * 3. resolvePath     -> turn raw import strings into module ids (using tsconfig
+ *                       path aliases from resolveAliases.ts, plus relative resolution)
+ * 4. Repository      -> populated with ModuleInfo, importedBy back-references filled in
+ *
+ * This is a full rebuild. For incremental updates see watcher/changeQueue.ts + updateIndex.ts.
+ */
+export async function buildIndex(options: BuildIndexOptions): Promise<Repository> {
+  const { rootPath, meta } = options;
+
+  const files = scanFiles(rootPath);
+  const knownFiles = new Set(files.map((f) => f.relativePath));
+  const aliasConfig = loadAliasConfig(rootPath);
+  const repository = new Repository({ ...meta, analyzedAt: new Date().toISOString() });
+
+  // Pass 1: parse every file
+  const parsedByPath = new Map<string, ParsedFile>();
+  for (const file of files) {
+    const parser = parserRegistry.getParserForExtension(file.extension);
+    if (!parser) continue; // no parser registered yet for this language — skip, don't crash
+
+    let content: string;
+    try {
+      content = readFileSync(file.absolutePath, "utf-8");
+    } catch (err) {
+      throw new ArcluxError({
+        code: "PARSE_FAILED",
+        message: `Could not read file for parsing`,
+        filePath: file.relativePath,
+        cause: err,
+      });
+    }
+
+    const parsed = await parser.parse(file, content);
+    parsedByPath.set(file.relativePath, parsed);
+  }
+
+  // Pass 2: build ModuleInfo with resolved import ids (but importedBy not filled yet)
+  const modulesByPath = new Map<string, ModuleInfo>();
+  for (const [relativePath, parsed] of parsedByPath) {
+    const resolvedImportIds: string[] = [];
+    const resolvedImports: ResolvedImport[] = [];
+
+    for (const rawImport of parsed.imports) {
+      const resolution = resolvePath(relativePath, rawImport.source, knownFiles, aliasConfig);
+      if (resolution.type === "internal") {
+        resolvedImportIds.push(resolution.moduleId);
+        resolvedImports.push({
+          moduleId: resolution.moduleId,
+          kind: rawImport.kind,
+          namedImports: rawImport.namedImports,
+          hasDefaultImport: rawImport.hasDefaultImport,
+          hasNamespaceImport: rawImport.hasNamespaceImport,
+          line: rawImport.line,
+        });
+      }
+      // external packages intentionally not added as modules — they're graph nodes, not repo modules
+    }
+
+    const resolvedReExports: Record<string, string> = {};
+    for (const exp of parsed.exports) {
+      if (exp.kind === "re-export" && exp.reExportSource) {
+        const resolution = resolvePath(relativePath, exp.reExportSource, knownFiles, aliasConfig);
+        if (resolution.type === "internal") {
+          resolvedReExports[exp.name] = resolution.moduleId;
+        }
+      }
+    }
+
+    modulesByPath.set(relativePath, {
+      id: relativePath,
+      file: parsed.file,
+      exports: parsed.exports,
+      resolvedReExports,
+      imports: resolvedImportIds,
+      resolvedImports,
+      importedBy: [], // filled in pass 3
+    });
+  }
+
+  // Pass 3: back-fill importedBy so consumers can be queried in O(1)
+  for (const module of modulesByPath.values()) {
+    for (const importedId of module.imports) {
+      const target = modulesByPath.get(importedId);
+      if (target) {
+        target.importedBy.push(module.id);
+      }
+    }
+  }
+
+  for (const module of modulesByPath.values()) {
+    repository.addModule(module);
+  }
+
+  return repository;
+}
+
+==================================================
+FILE: indexer/updateIndex.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/watchIndex.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/resolveExports.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/resolveAliases.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { readFileSync, existsSync } from "node:fs";
+import { posix } from "node:path";
+
+/**
+ * One entry from tsconfig's `compilerOptions.paths`, normalized.
+ * `prefix` is the part of the pattern before "*" (e.g. "@/" from "@/*").
+ * `targets` are the corresponding replacement bases, already joined with
+ * `baseUrl` and normalized to end with "/" (e.g. "../../packages/" from
+ * "@/packages/*": ["../../packages/*"] with no baseUrl).
+ */
+export interface AliasRule {
+  prefix: string;
+  targets: string[];
+}
+
+export interface AliasConfig {
+  rules: AliasRule[];
+}
+
+const CONFIG_FILENAMES = ["tsconfig.json", "jsconfig.json"];
+
+/**
+ * Loads path-alias rules for a repo by reading its tsconfig.json (or jsconfig.json)
+ * `compilerOptions.paths` + `baseUrl`. Used so resolvePath.ts can turn "@/lib/api"
+ * into a candidate internal module path instead of misreading it as an npm package.
+ *
+ * Returns an empty rule set (never throws) if no config file exists or it's
+ * malformed — a missing/broken tsconfig should never crash indexing, imports
+ * will just fall back to being treated as external, same as before this existed.
+ */
+export function loadAliasConfig(repoRoot: string): AliasConfig {
+  for (const filename of CONFIG_FILENAMES) {
+    const configPath = posix.join(repoRoot, filename);
+    if (!existsSync(configPath)) continue;
+
+    try {
+      const raw = readFileSync(configPath, "utf-8");
+      const json = JSON.parse(stripJsonComments(raw)) as {
+        compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> };
+      };
+
+      const rules = buildRules(json.compilerOptions?.paths, json.compilerOptions?.baseUrl);
+      if (rules.length > 0) {
+        return { rules };
+      }
+    } catch {
+      // Malformed tsconfig — try the next candidate filename, or fall through to empty.
+      continue;
+    }
+  }
+
+  return { rules: [] };
+}
+
+function buildRules(
+  paths: Record<string, string[]> | undefined,
+  baseUrl: string | undefined
+): AliasRule[] {
+  if (!paths) return [];
+
+  const rules: AliasRule[] = [];
+
+  for (const [pattern, targets] of Object.entries(paths)) {
+    const starIndex = pattern.indexOf("*");
+    const prefix = starIndex === -1 ? pattern : pattern.slice(0, starIndex);
+
+    const normalizedTargets = targets.map((target) => {
+      const targetStarIndex = target.indexOf("*");
+      let base = targetStarIndex === -1 ? target : target.slice(0, targetStarIndex);
+      if (baseUrl) {
+        base = posix.join(baseUrl, base);
+      }
+      return base.endsWith("/") ? base : `${base}/`;
+    });
+
+    rules.push({ prefix, targets: normalizedTargets });
+  }
+
+  // Longest prefix wins first, so a specific alias like "@/packages/*" is tried
+  // before a catch-all like "@/*" when both could technically match.
+  rules.sort((a, b) => b.prefix.length - a.prefix.length);
+
+  return rules;
+}
+
+/**
+ * Given a raw import source (e.g. "@/lib/api"), returns every repo-root-relative
+ * candidate path it could map to, in priority order. Does NOT touch the filesystem —
+ * resolvePath.ts is responsible for checking `knownFiles` and trying extensions.
+ * Returns [] if the import doesn't match any configured alias (i.e. it's not an
+ * alias import at all — caller should fall back to relative/external handling).
+ */
+export function resolveAlias(importSource: string, config: AliasConfig): string[] {
+  const candidates: string[] = [];
+
+  for (const rule of config.rules) {
+    if (!importSource.startsWith(rule.prefix)) continue;
+
+    const remainder = importSource.slice(rule.prefix.length);
+    for (const target of rule.targets) {
+      candidates.push(posix.normalize(target + remainder));
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * tsconfig.json commonly has // comments and trailing commas, neither of which
+ * are valid JSON. Strips just enough of that to make JSON.parse succeed —
+ * not a full JSONC parser, but sufficient for standard tsconfig files.
+ */
+function stripJsonComments(input: string): string {
+  return input
+    .replace(/\/\*[\s\S]*?\*\//g, "") // block comments
+    .replace(/(^|[^:])\/\/.*$/gm, "$1") // line comments (careful not to eat "://")
+    .replace(/,(\s*[}\]])/g, "$1"); // trailing commas
+}
+
+==================================================
+FILE: indexer/resolveRoutes.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/resolveComponents.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/resolveHooks.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/resolveProviders.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: indexer/indexSchema.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: watcher/watchRepository.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: watcher/watchGit.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: watcher/watchFilesystem.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: watcher/changeQueue.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/nextjs/requirePage.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Rule, RuleViolation } from "../RuleEngine";
+import type { Repository } from "../../repository/Repository";
+
+const APP_DIR_PATTERN = /(^|\/)app\//;
+
+function isLayoutFile(path: string): boolean {
+  return /(^|\/)layout\.(tsx|jsx|ts|js)$/.test(path) && APP_DIR_PATTERN.test(path);
+}
+
+function isPageFile(path: string): boolean {
+  return /(^|\/)page\.(tsx|jsx|ts|js)$/.test(path) && APP_DIR_PATTERN.test(path);
+}
+
+function directoryOf(path: string): string {
+  const idx = path.lastIndexOf("/");
+  return idx === -1 ? "" : path.slice(0, idx);
+}
+
+export const requirePage: Rule = {
+  id: "nextjs/require-page",
+  description: "Every layout.tsx should have at least one page.tsx in its subtree",
+  appliesToFramework: "nextjs",
+
+  check(repository: Repository): RuleViolation[] {
+    const violations: RuleViolation[] = [];
+    const modules = repository.getAllModules();
+
+    const layoutDirs = modules
+      .map((m) => m.file.relativePath)
+      .filter(isLayoutFile)
+      .map(directoryOf);
+
+    const pagePaths = modules.map((m) => m.file.relativePath).filter(isPageFile);
+
+    for (const layoutDir of layoutDirs) {
+      const hasPageInSubtree = pagePaths.some(
+        (pagePath) => pagePath === `${layoutDir}/page.tsx` || pagePath.startsWith(`${layoutDir}/`)
+      );
+
+      if (!hasPageInSubtree) {
+        violations.push({
+          ruleId: requirePage.id,
+          message: `Layout at "${layoutDir}" has no page.tsx anywhere in its subtree`,
+          filePath: `${layoutDir}/layout.tsx`,
+          severity: "warning",
+        });
+      }
+    }
+
+    return violations;
+  },
+};
+
+==================================================
+FILE: rules/nextjs/requireRoute.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/nextjs/requireLayoutUpdate.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/nextjs/requireMetadata.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/nextjs/requireIndexUpdate.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/react/requireHookRules.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/react/requirePropsTyping.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/react/requireComponentExport.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/nestjs/requireModuleRegistration.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/nestjs/requireControllerBinding.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/express/requireRouteRegistration.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/vite/requireEntryConfig.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/electron/requireMainProcessBinding.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/electron/requirePreloadExposure.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: rules/RuleEngine.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+
+export interface RuleViolation {
+  ruleId: string;
+  message: string;
+  filePath: string;
+  severity: "error" | "warning";
+}
+
+export interface Rule {
+  id: string;
+  description: string;
+  appliesToFramework: string;
+  check(repository: Repository): RuleViolation[];
+}
+
+export function runRules(repository: Repository, rules: Rule[], detectedFrameworks: string[]): RuleViolation[] {
+  const applicable = rules.filter((rule) => detectedFrameworks.includes(rule.appliesToFramework));
+  return applicable.flatMap((rule) => rule.check(repository));
+}
+
+==================================================
+FILE: graph/buildDependencyGraph.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+import type { DependencyGraph, GraphNode, GraphEdge } from "../shared/types";
+
+/**
+ * Turns an indexed Repository into a renderable DependencyGraph.
+ * One GraphNode per module (type: "file") plus one GraphNode per distinct
+ * external package actually imported. One GraphEdge per import relationship.
+ *
+ * This is intentionally dumb/structural — semantic node types (route, component,
+ * hook) get added later by indexer/resolveRoutes.ts, resolveComponents.ts etc,
+ * which should mutate metadata on top of this base graph, not replace it.
+ */
+export function buildDependencyGraph(repository: Repository): DependencyGraph {
+  const nodes: GraphNode[] = [];
+  const edges: GraphEdge[] = [];
+  const seenExternalPackages = new Set<string>();
+
+  const modules = repository.getAllModules();
+  const moduleIds = new Set(modules.map((m) => m.id));
+
+  for (const module of modules) {
+    nodes.push({
+      id: module.id,
+      type: "file",
+      label: module.file.relativePath.split("/").pop() ?? module.id,
+      filePath: module.file.relativePath,
+      metadata: {
+        language: module.file.language,
+        exportCount: module.exports.length,
+      },
+    });
+
+    for (const importedId of module.imports) {
+      // Internal edges only — imports pointing to a module id we actually indexed
+      if (moduleIds.has(importedId)) {
+        edges.push({
+          id: `${module.id}->${importedId}`,
+          source: module.id,
+          target: importedId,
+          type: "import",
+        });
+      }
+    }
+  }
+
+  // Note: external package nodes are added by resolveExports.ts / a future pass,
+  // since buildIndex.ts currently drops unresolved imports rather than tagging
+  // them with a package name. Left as a TODO hook — see resolveAliases.ts.
+
+  return {
+    repositoryId: repository.meta.id,
+    nodes,
+    edges,
+    builtAt: new Date().toISOString(),
+  };
+}
+
+==================================================
+FILE: graph/buildImportGraph.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: graph/buildExportGraph.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: graph/buildCallGraph.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: graph/buildFolderGraph.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { hierarchy, type HierarchyNode } from "d3-hierarchy";
+import type { Repository } from "../repository/Repository";
+import type { FolderInfo } from "../shared/types";
+
+export type TreeNodeType = "folder" | "file";
+
+export interface FileTreeNode {
+  name: string;
+  path: string;
+  type: TreeNodeType;
+  children?: FileTreeNode[];
+}
+
+function buildFileTree(relativePaths: string[]): FileTreeNode {
+  const root: FileTreeNode = { name: "", path: "", type: "folder", children: [] };
+
+  for (const relativePath of relativePaths) {
+    const segments = relativePath.split("/").filter(Boolean);
+    let current = root;
+    let currentPath = "";
+
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const isLastSegment = i === segments.length - 1;
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+
+      if (!current.children) current.children = [];
+
+      let child = current.children.find((c) => c.name === segment);
+      if (!child) {
+        child = {
+          name: segment,
+          path: currentPath,
+          type: isLastSegment ? "file" : "folder",
+          children: isLastSegment ? undefined : [],
+        };
+        current.children.push(child);
+      }
+
+      current = child;
+    }
+  }
+
+  return root;
+}
+
+export interface FolderGraphResult {
+  tree: FileTreeNode;
+  hierarchyRoot: HierarchyNode<FileTreeNode>;
+  folders: FolderInfo[];
+}
+
+export function buildFolderGraph(repository: Repository): FolderGraphResult {
+  const relativePaths = repository.getAllModules().map((m) => m.file.relativePath);
+  const tree = buildFileTree(relativePaths);
+  const hierarchyRoot = hierarchy<FileTreeNode>(tree, (node) => node.children);
+
+  const folders: FolderInfo[] = [];
+  hierarchyRoot.each((node) => {
+    if (node.data.type !== "folder") return;
+
+    const fileIds: string[] = [];
+    const childFolderPaths: string[] = [];
+
+    for (const child of node.data.children ?? []) {
+      if (child.type === "file") fileIds.push(child.path);
+      else childFolderPaths.push(child.path);
+    }
+
+    folders.push({
+      path: node.data.path,
+      name: node.data.name,
+      fileIds,
+      childFolderPaths,
+    });
+  });
+
+  return { tree, hierarchyRoot, folders };
+}
+
+==================================================
+FILE: graph/resolvePath.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { posix } from "node:path";
+import { resolveAlias, type AliasConfig } from "../indexer/resolveAliases";
+
+const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
+const INDEX_FILENAMES = RESOLVABLE_EXTENSIONS.map((ext) => `index${ext}`);
+
+export type PathResolution =
+  | { type: "internal"; moduleId: string }
+  | { type: "external"; packageName: string };
+
+/**
+ * Resolves a raw import source (e.g. "../utils/foo", "react", "@/lib/api")
+ * to either an internal module id (relative path in the repo) or an external package.
+ *
+ * `knownFiles` is the set of relativePaths that scanFiles.ts found — used to verify
+ * a resolved candidate actually exists before committing to it.
+ *
+ * `aliasConfig` (from indexer/resolveAliases.ts) is optional so callers that don't
+ * care about tsconfig path aliases (e.g. tests) can omit it.
+ */
+export function resolvePath(
+  importerRelativePath: string,
+  importSource: string,
+  knownFiles: Set<string>,
+  aliasConfig?: AliasConfig
+): PathResolution {
+  // Path alias, e.g. "@/lib/api" -> try candidates from tsconfig `paths` first,
+  // since these don't start with "." or "/" but are NOT external packages.
+  if (aliasConfig && aliasConfig.rules.length > 0) {
+    const aliasCandidates = resolveAlias(importSource, aliasConfig);
+    for (const candidate of aliasCandidates) {
+      const resolved = tryResolveInternal(candidate, knownFiles);
+      if (resolved) return resolved;
+    }
+    // Matched an alias prefix but no real file found — still not an npm package,
+    // so don't fall through to the bare-specifier branch below.
+    if (aliasCandidates.length > 0) {
+      return { type: "external", packageName: importSource };
+    }
+  }
+
+  // Bare specifier = external package, e.g. "react", "lodash/get"
+  if (!importSource.startsWith(".") && !importSource.startsWith("/")) {
+    // npm scoped or plain package name is everything up to the 2nd "/" for scoped, or 1st "/" otherwise
+    const parts = importSource.split("/");
+    const packageName = importSource.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+    return { type: "external", packageName };
+  }
+
+  const importerDir = posix.dirname(importerRelativePath);
+  const rawTarget = posix.normalize(posix.join(importerDir, importSource));
+
+  const resolved = tryResolveInternal(rawTarget, knownFiles);
+  if (resolved) return resolved;
+
+  // Unresolvable (genuinely missing file, or an alias target that doesn't exist on disk).
+  // Fall back to treating it as external so the pipeline doesn't crash — indexer can flag these separately.
+  return { type: "external", packageName: importSource };
+}
+
+/**
+ * Tries a repo-root-relative candidate path directly, then with resolvable
+ * extensions appended, then as a directory index. Shared by both the relative-import
+ * path and the alias-resolved path above, since both land on the same kind of
+ * "candidate path that might need an extension or /index" problem.
+ */
+function tryResolveInternal(candidate: string, knownFiles: Set<string>): PathResolution | undefined {
+  if (knownFiles.has(candidate)) {
+    return { type: "internal", moduleId: candidate };
+  }
+
+  for (const ext of RESOLVABLE_EXTENSIONS) {
+    const withExt = candidate + ext;
+    if (knownFiles.has(withExt)) {
+      return { type: "internal", moduleId: withExt };
+    }
+  }
+
+  for (const indexFile of INDEX_FILENAMES) {
+    const withIndex = posix.join(candidate, indexFile);
+    if (knownFiles.has(withIndex)) {
+      return { type: "internal", moduleId: withIndex };
+    }
+  }
+
+  return undefined;
+}
+
+==================================================
+FILE: graph/serializeGraph.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { DependencyGraph } from "../shared/types";
+
+export interface SerializedGraph {
+  repositoryId: string;
+  builtAt: string;
+  nodeCount: number;
+  edgeCount: number;
+  nodes: DependencyGraph["nodes"];
+  edges: DependencyGraph["edges"];
+}
+
+export function serializeGraph(graph: DependencyGraph): SerializedGraph {
+  return {
+    repositoryId: graph.repositoryId,
+    builtAt: graph.builtAt,
+    nodeCount: graph.nodes.length,
+    edgeCount: graph.edges.length,
+    nodes: graph.nodes,
+    edges: graph.edges,
+  };
+}
+
+export function deserializeGraph(serialized: SerializedGraph): DependencyGraph {
+  return {
+    repositoryId: serialized.repositoryId,
+    builtAt: serialized.builtAt,
+    nodes: serialized.nodes,
+    edges: serialized.edges,
+  };
+}
+
+==================================================
+FILE: search/SearchEngine.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: search/SearchIndex.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: search/SearchProvider.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: search/SearchResults.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: search/SearchFilters.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: search/SearchKeyboard.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: search/fuzzyScore.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Fuzzy match scoring algorithm adapted from pacocoursey/cmdk (MIT) —
+// see src/command-score.ts in that project. Re-typed for TypeScript strict
+// mode (original is untyped JS despite the .ts extension) and renamed for
+// ARCLUX's naming convention; scoring logic and constants are unchanged
+// from upstream since they encode tuned heuristics, not something to
+// "improve" without the same empirical tuning process the original went
+// through.
+//
+// Used by packages/search/SearchIndex.ts to rank results, and can upgrade
+// GraphSearch.tsx's node-label matching (currently likely exact/substring
+// match — check that file before assuming this replaces it wholesale).
+
+const SCORE_CONTINUE_MATCH = 1;
+const SCORE_SPACE_WORD_JUMP = 0.9;
+const SCORE_NON_SPACE_WORD_JUMP = 0.8;
+const SCORE_CHARACTER_JUMP = 0.17;
+const SCORE_TRANSPOSITION = 0.1;
+const PENALTY_SKIPPED = 0.999;
+const PENALTY_CASE_MISMATCH = 0.9999;
+const PENALTY_NOT_COMPLETE = 0.99;
+
+const IS_GAP_REGEXP = /[\\/_+.#"@[({&]/;
+const COUNT_GAPS_REGEXP = /[\\/_+.#"@[({&]/g;
+const IS_SPACE_REGEXP = /[\s-]/;
+const COUNT_SPACE_REGEXP = /[\s-]/g;
+
+function fuzzyScoreInner(
+  text: string,
+  query: string,
+  lowerText: string,
+  lowerQuery: string,
+  textIndex: number,
+  queryIndex: number,
+  memo: Record<string, number>
+): number {
+  if (queryIndex === query.length) {
+    return textIndex === text.length ? SCORE_CONTINUE_MATCH : PENALTY_NOT_COMPLETE;
+  }
+
+  const memoKey = `${textIndex},${queryIndex}`;
+  const memoized = memo[memoKey];
+  if (memoized !== undefined) return memoized;
+
+  const queryChar = lowerQuery.charAt(queryIndex);
+  let index = lowerText.indexOf(queryChar, textIndex);
+  let highScore = 0;
+
+  while (index >= 0) {
+    let score = fuzzyScoreInner(text, query, lowerText, lowerQuery, index + 1, queryIndex + 1, memo);
+
+    if (score > highScore) {
+      if (index === textIndex) {
+        score *= SCORE_CONTINUE_MATCH;
+      } else if (IS_GAP_REGEXP.test(text.charAt(index - 1))) {
+        score *= SCORE_NON_SPACE_WORD_JUMP;
+        const wordBreaks = text.slice(textIndex, index - 1).match(COUNT_GAPS_REGEXP);
+        if (wordBreaks && textIndex > 0) {
+          score *= PENALTY_SKIPPED ** wordBreaks.length;
+        }
+      } else if (IS_SPACE_REGEXP.test(text.charAt(index - 1))) {
+        score *= SCORE_SPACE_WORD_JUMP;
+        const spaceBreaks = text.slice(textIndex, index - 1).match(COUNT_SPACE_REGEXP);
+        if (spaceBreaks && textIndex > 0) {
+          score *= PENALTY_SKIPPED ** spaceBreaks.length;
+        }
+      } else {
+        score *= SCORE_CHARACTER_JUMP;
+        if (textIndex > 0) {
+          score *= PENALTY_SKIPPED ** (index - textIndex);
+        }
+      }
+
+      if (text.charAt(index) !== query.charAt(queryIndex)) {
+        score *= PENALTY_CASE_MISMATCH;
+      }
+    }
+
+    const isTransposition =
+      (score < SCORE_TRANSPOSITION && lowerText.charAt(index - 1) === lowerQuery.charAt(queryIndex + 1)) ||
+      (lowerQuery.charAt(queryIndex + 1) === lowerQuery.charAt(queryIndex) &&
+        lowerText.charAt(index - 1) !== lowerQuery.charAt(queryIndex));
+
+    if (isTransposition) {
+      const transposedScore = fuzzyScoreInner(text, query, lowerText, lowerQuery, index + 1, queryIndex + 2, memo);
+      if (transposedScore * SCORE_TRANSPOSITION > score) {
+        score = transposedScore * SCORE_TRANSPOSITION;
+      }
+    }
+
+    if (score > highScore) highScore = score;
+    index = lowerText.indexOf(queryChar, index + 1);
+  }
+
+  memo[memoKey] = highScore;
+  return highScore;
+}
+
+function normalize(text: string): string {
+  return text.toLowerCase().replace(COUNT_SPACE_REGEXP, " ");
+}
+
+/**
+ * Scores how well `query` fuzzy-matches `text`. Returns 0..1, where 1 is a
+ * perfect/complete match. `aliases` (optional) are appended to the searched
+ * text so a node can match on secondary labels (e.g. a file's full path as
+ * an alias for its display name) without changing what gets rendered.
+ */
+export function fuzzyScore(text: string, query: string, aliases: string[] = []): number {
+  const searchable = aliases.length > 0 ? `${text} ${aliases.join(" ")}` : text;
+  return fuzzyScoreInner(searchable, query, normalize(searchable), normalize(query), 0, 0, {});
+}
+
+==================================================
+FILE: engine/analyzeRepository.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/analyzeFile.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/analyzeModule.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/analyzeImpact.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/analyzeConvention.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/analyzeArchitecture.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/analyzeDependency.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/generateSummary.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/generateReport.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: engine/pipeline.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { randomUUID } from "node:crypto";
+import { cloneRepository } from "../git/cloneRepository";
+import { cleanupRepository } from "../git/cleanupRepository";
+import { buildIndex } from "../indexer/buildIndex";
+import { buildDependencyGraph } from "../graph/buildDependencyGraph";
+import { parserRegistry } from "../parser/core/ParserRegistry";
+import { parseTs } from "../parser/typescript/parseTs";
+import { parsePython } from "../parser/python/parsePython";
+import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
+import { ArcluxError, isArcluxError } from "../shared/errors";
+import type { DependencyGraph, RepositoryMeta } from "../shared/types";
+import type { Repository } from "../repository/Repository";
+
+// Register known parsers once, at module load. As more languages get parser
+// implementations (parseJs, parsePython, ...) they get registered here too.
+let parsersRegistered = false;
+function ensureParsersRegistered() {
+  if (parsersRegistered) return;
+  parserRegistry.register(parseTs);
+  parserRegistry.register(parsePython);
+  parsersRegistered = true;
+}
+
+export interface AnalyzeRepositoryOptions {
+  repoUrl: string;
+  branch?: string;
+}
+
+export interface AnalyzeRepositoryResult {
+  meta: RepositoryMeta;
+  moduleCount: number;
+  graph: DependencyGraph;
+}
+
+/** Parses "org/name" out of a git URL, for https, ssh, and shorthand forms */
+export function parseOrgAndName(repoUrl: string): { org: string; name: string } {
+  const cleaned = repoUrl.replace(/\.git$/, "");
+  const match = cleaned.match(/[:/]([^/]+)\/([^/]+)$/);
+  if (!match) {
+    throw new ArcluxError({
+      code: "CLONE_FAILED",
+      message: `Could not parse org/repo name from URL: ${repoUrl}`,
+    });
+  }
+  return { org: match[1], name: match[2] };
+}
+
+/**
+ * The single entry point for "analyze this repo". Everything else (CLI command,
+ * API route, future queue worker) should call THIS, not the individual steps —
+ * that keeps clone/cleanup lifecycle correct in exactly one place.
+ */
+export async function analyzeRepository(
+  options: AnalyzeRepositoryOptions
+): Promise<AnalyzeRepositoryResult> {
+  ensureParsersRegistered();
+
+  const { org, name } = parseOrgAndName(options.repoUrl);
+  let localPath: string | undefined;
+
+  try {
+    const cloneResult = await cloneRepository({
+      repoUrl: options.repoUrl,
+      branch: options.branch,
+    });
+    localPath = cloneResult.localPath;
+
+    const meta: RepositoryMeta = {
+      id: randomUUID(),
+      org,
+      name,
+      defaultBranch: cloneResult.branch,
+      rootPath: localPath,
+      detectedFrameworks: detectFrameworks(localPath),
+      packageManager: detectPackageManager(localPath),
+      analyzedAt: new Date().toISOString(),
+    };
+
+    let repository: Repository;
+    try {
+      repository = await buildIndex({ rootPath: localPath, meta });
+    } catch (err) {
+      throw isArcluxError(err)
+        ? err
+        : new ArcluxError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
+    }
+
+    let graph: DependencyGraph;
+    try {
+      graph = buildDependencyGraph(repository);
+    } catch (err) {
+      throw new ArcluxError({
+        code: "GRAPH_BUILD_FAILED",
+        message: "Graph construction failed",
+        cause: err,
+      });
+    }
+
+    return {
+      meta: repository.meta,
+      moduleCount: repository.moduleCount,
+      graph,
+    };
+  } finally {
+    // Always clean up the temp clone, even if analysis threw partway through.
+    if (localPath) {
+      await cleanupRepository(localPath).catch(() => {
+        // best-effort — don't let a cleanup failure mask the real error
+      });
+    }
+  }
+}
+
+==================================================
+FILE: engine/detectRepositoryMeta.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { RepositoryMeta } from "../shared/types";
+
+/**
+ * Maps a dependency name to the framework it implies, matching the folder names
+ * under packages/rules/* (electron, express, nestjs, nextjs, react, vite).
+ * Order matters: more specific frameworks (nestjs, nextjs) are checked before
+ * their more general underlying runtime (react is a dependency of nextjs too,
+ * so a Next.js app should report both "nextjs" and "react", but plain Express
+ * shouldn't also report "react").
+ */
+const FRAMEWORK_MARKERS: Array<{ dependency: string; framework: string }> = [
+  { dependency: "next", framework: "nextjs" },
+  { dependency: "@nestjs/core", framework: "nestjs" },
+  { dependency: "express", framework: "express" },
+  { dependency: "vite", framework: "vite" },
+  { dependency: "electron", framework: "electron" },
+  { dependency: "react", framework: "react" },
+];
+
+const LOCKFILE_MARKERS: Array<{ filename: string; packageManager: RepositoryMeta["packageManager"] }> = [
+  { filename: "pnpm-lock.yaml", packageManager: "pnpm" },
+  { filename: "yarn.lock", packageManager: "yarn" },
+  { filename: "package-lock.json", packageManager: "npm" },
+];
+
+interface PackageJsonShape {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}
+
+/**
+ * Reads package.json at the repo root (if any) and returns every dependency name,
+ * merging `dependencies` and `devDependencies`. Never throws — a missing or
+ * malformed package.json just means "no frameworks detected", it shouldn't
+ * fail the whole analysis pipeline.
+ */
+function readDependencyNames(rootPath: string): Set<string> {
+  const packageJsonPath = join(rootPath, "package.json");
+  if (!existsSync(packageJsonPath)) {
+    return new Set();
+  }
+
+  try {
+    const raw = readFileSync(packageJsonPath, "utf-8");
+    const parsed = JSON.parse(raw) as PackageJsonShape;
+    return new Set([
+      ...Object.keys(parsed.dependencies ?? {}),
+      ...Object.keys(parsed.devDependencies ?? {}),
+    ]);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Detects which frameworks a repo uses by inspecting package.json dependencies.
+ * Returns e.g. ["nextjs", "react"] for a Next.js app, [] if package.json is
+ * missing/malformed or matches nothing known.
+ */
+export function detectFrameworks(rootPath: string): string[] {
+  const dependencyNames = readDependencyNames(rootPath);
+  if (dependencyNames.size === 0) {
+    return [];
+  }
+
+  const frameworks: string[] = [];
+  for (const marker of FRAMEWORK_MARKERS) {
+    if (dependencyNames.has(marker.dependency)) {
+      frameworks.push(marker.framework);
+    }
+  }
+
+  return frameworks;
+}
+
+/**
+ * Detects the package manager a repo uses by checking for its lockfile at the
+ * repo root. Checked in order pnpm -> yarn -> npm since a repo might have a
+ * stray lockfile left over from switching tools; the first match wins.
+ * Returns "unknown" if no recognized lockfile is present.
+ */
+export function detectPackageManager(rootPath: string): RepositoryMeta["packageManager"] {
+  for (const marker of LOCKFILE_MARKERS) {
+    if (existsSync(join(rootPath, marker.filename))) {
+      return marker.packageManager;
+    }
+  }
+
+  return "unknown";
+}
+
+==================================================
+FILE: detectors/detectCircularDependency.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+
+export interface CircularDependency {
+  cycle: string[];
+}
+
+export function detectCircularDependency(repository: Repository): CircularDependency[] {
+  const circular: CircularDependency[] = [];
+  const resolved = new Set<string>();
+  const unresolved = new Set<string>();
+  const stack: string[] = [];
+
+  function resolve(moduleId: string) {
+    if (resolved.has(moduleId)) return;
+
+    unresolved.add(moduleId);
+    stack.push(moduleId);
+
+    const module = repository.getModule(moduleId);
+    if (module) {
+      for (const dependencyId of module.imports) {
+        if (resolved.has(dependencyId)) continue;
+
+        if (unresolved.has(dependencyId)) {
+          const cycleStart = stack.indexOf(dependencyId);
+          circular.push({ cycle: [...stack.slice(cycleStart), dependencyId] });
+          continue;
+        }
+
+        resolve(dependencyId);
+      }
+    }
+
+    resolved.add(moduleId);
+    unresolved.delete(moduleId);
+    stack.pop();
+  }
+
+  for (const module of repository.getAllModules()) {
+    resolve(module.id);
+  }
+
+  return circular;
+}
+
+==================================================
+FILE: detectors/detectUnusedFiles.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectUnusedExports.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Traversal strategy (walk import graph downward, follow re-export chains,
+// treat namespace imports conservatively) adapted from webpro-nl/knip (MIT)
+// — see graph-explorer/operations/is-referenced.ts in that project. Not a
+// direct port: ARCLUX's ModuleInfo/ResolvedImport shape is different from
+// knip's ModuleGraph, so this is re-implemented against ARCLUX's own types.
+
+import type { Repository } from "../repository/Repository";
+import type { ModuleInfo } from "../shared/types";
+
+export interface UnusedExportFinding {
+  filePath: string;
+  exportName: string;
+  exportKind: "default" | "named" | "re-export";
+  line: number;
+  message: string;
+}
+
+interface ImporterRef {
+  importerId: string;
+  namedImports: string[];
+  hasDefaultImport: boolean;
+  hasNamespaceImport: boolean;
+}
+
+interface ReExporterRef {
+  reExporterId: string;
+  exportName: string;
+}
+
+/**
+ * moduleId -> every module that imports it, with identifier-level detail.
+ * Built fresh per run from ResolvedImport data — not cached on Repository,
+ * since this is detector-specific and Repository.importedBy only tracks
+ * module-level, not identifier-level, relationships.
+ */
+function buildImportersIndex(modules: ModuleInfo[]): Map<string, ImporterRef[]> {
+  const index = new Map<string, ImporterRef[]>();
+
+  for (const module of modules) {
+    for (const resolved of module.resolvedImports) {
+      const list = index.get(resolved.moduleId) ?? [];
+      list.push({
+        importerId: module.id,
+        namedImports: resolved.namedImports,
+        hasDefaultImport: resolved.hasDefaultImport,
+        hasNamespaceImport: resolved.hasNamespaceImport,
+      });
+      index.set(resolved.moduleId, list);
+    }
+  }
+
+  return index;
+}
+
+/**
+ * moduleId -> every module that re-exports one of its exports, with the
+ * exported name under which it's re-exported. Needed so a chain like
+ * util.ts -> export { helper } from util.ts (in index.ts) -> import
+ * { helper } from index.ts (in consumer.ts) resolves back through index.ts
+ * to find consumer.ts, rather than stopping at index.ts's own importedBy.
+ */
+function buildReExportersIndex(modules: ModuleInfo[]): Map<string, ReExporterRef[]> {
+  const index = new Map<string, ReExporterRef[]>();
+
+  for (const module of modules) {
+    for (const [exportName, targetModuleId] of Object.entries(module.resolvedReExports)) {
+      const list = index.get(targetModuleId) ?? [];
+      list.push({ reExporterId: module.id, exportName });
+      index.set(targetModuleId, list);
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Whether `exportName` from `moduleId` is referenced anywhere in the repo,
+ * directly or through a chain of re-exports.
+ *
+ * Scope boundary (real, not a placeholder): ARCLUX's parser output records
+ * what's imported, not what's referenced inside an importer's body — there
+ * is no reference-extraction pass anywhere in the pipeline. Consequences:
+ *   - A namespace import (`import * as ns from "./file"`) is treated as
+ *     using ALL of that module's exports. We cannot tell which property of
+ *     `ns` actually gets accessed without body-level reference extraction,
+ *     so this stays conservative rather than guessing and false-flagging.
+ *   - This function proves "exported but never imported by anyone, even
+ *     transitively" — not "imported but never used." That's a narrower,
+ *     but fully accurate, claim given current data.
+ *   - Aliased re-exports (`export { foo as bar } from "./x"`) will not
+ *     chain correctly — see the comment on `resolvedReExports` in
+ *     shared/types.ts for why.
+ *   - No entry-file concept exists yet (resolveRoutes.ts is still empty),
+ *     so a chain terminating in a module nobody imports is reported as
+ *     unused even if that module is meant to be a framework entry point
+ *     (e.g. a Next.js page.tsx). Revisit once resolveRoutes.ts exists.
+ */
+function isExportUsed(
+  moduleId: string,
+  exportName: string,
+  isDefault: boolean,
+  importersIndex: Map<string, ImporterRef[]>,
+  reExportersIndex: Map<string, ReExporterRef[]>,
+  seen: Set<string> = new Set()
+): boolean {
+  const seenKey = `${moduleId}::${exportName}`;
+  if (seen.has(seenKey)) return false; // guards against circular re-export chains
+  seen.add(seenKey);
+
+  const importers = importersIndex.get(moduleId) ?? [];
+  for (const importer of importers) {
+    if (importer.hasNamespaceImport) return true;
+    if (isDefault && importer.hasDefaultImport) return true;
+    if (!isDefault && importer.namedImports.includes(exportName)) return true;
+  }
+
+  const reExporters = reExportersIndex.get(moduleId) ?? [];
+  for (const reExporter of reExporters) {
+    if (reExporter.exportName !== exportName) continue;
+    if (
+      isExportUsed(reExporter.reExporterId, exportName, isDefault, importersIndex, reExportersIndex, seen)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function detectUnusedExports(repository: Repository): UnusedExportFinding[] {
+  const modules = repository.getAllModules();
+  const importersIndex = buildImportersIndex(modules);
+  const reExportersIndex = buildReExportersIndex(modules);
+  const findings: UnusedExportFinding[] = [];
+
+  for (const module of modules) {
+    for (const exp of module.exports) {
+      // Re-export entries forward another module's export under this
+      // file's namespace — they're not "the" export being defined here,
+      // so they're checked via the module they point to, not flagged
+      // standalone.
+      if (exp.kind === "re-export") continue;
+
+      const isDefault = exp.kind === "default";
+      const used = isExportUsed(module.id, exp.name, isDefault, importersIndex, reExportersIndex);
+
+      if (!used) {
+        findings.push({
+          filePath: module.file.relativePath,
+          exportName: exp.name,
+          exportKind: exp.kind,
+          line: exp.line,
+          message: `Export "${exp.name}" is never imported anywhere in the repository.`,
+        });
+      }
+    }
+  }
+
+  return findings;
+}
+
+==================================================
+FILE: detectors/detectMissingExports.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectDeadCode.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectDuplicateModules.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectOrphanFiles.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectLargeModules.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectEntryPoints.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectSharedModules.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectRepositoryPattern.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectFeatureStructure.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectLayerViolation.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectIndexFiles.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectComponentConvention.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectRouteConvention.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectTestConvention.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: detectors/detectStoryConvention.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: impact/calculateAffectedFiles.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+import { traceConsumers } from "./traceConsumers";
+
+export interface AffectedFile {
+  moduleId: string;
+  filePath: string;
+  distance: number;
+}
+
+export interface ImpactResult {
+  changedModuleId: string;
+  notFound: boolean;
+  affectedFiles: AffectedFile[];
+  totalAffected: number;
+}
+
+export function calculateAffectedFiles(repository: Repository, moduleId: string): ImpactResult {
+  const trace = traceConsumers(repository, moduleId);
+
+  if (trace.notFound) {
+    return { changedModuleId: moduleId, notFound: true, affectedFiles: [], totalAffected: 0 };
+  }
+
+  const distances = new Map<string, number>();
+  const queue: Array<{ id: string; distance: number }> = trace.direct.map((id) => ({ id, distance: 1 }));
+  const visited = new Set<string>([moduleId]);
+
+  while (queue.length > 0) {
+    const { id, distance } = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    distances.set(id, distance);
+
+    const module = repository.getModule(id);
+    if (!module) continue;
+    for (const consumer of module.importedBy) {
+      if (!visited.has(consumer)) queue.push({ id: consumer, distance: distance + 1 });
+    }
+  }
+
+  const affectedFiles: AffectedFile[] = trace.transitive
+    .map((id) => {
+      const module = repository.getModule(id);
+      return {
+        moduleId: id,
+        filePath: module?.file.relativePath ?? id,
+        distance: distances.get(id) ?? -1,
+      };
+    })
+    .sort((a, b) => a.distance - b.distance);
+
+  return {
+    changedModuleId: moduleId,
+    notFound: false,
+    affectedFiles,
+    totalAffected: affectedFiles.length,
+  };
+}
+
+==================================================
+FILE: impact/calculateAffectedModules.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+import { calculateAffectedFiles } from "./calculateAffectedFiles";
+
+export interface AffectedWorkspacePackage {
+  packageId: string;
+  fileCount: number;
+  filePaths: string[];
+}
+
+export function calculateAffectedModules(repository: Repository, moduleId: string): AffectedWorkspacePackage[] {
+  const impact = calculateAffectedFiles(repository, moduleId);
+  const grouped = new Map<string, string[]>();
+
+  for (const file of impact.affectedFiles) {
+    const segments = file.filePath.split("/");
+    const packageId = segments.length >= 2 ? segments.slice(0, 2).join("/") : (segments[0] ?? file.filePath);
+
+    const list = grouped.get(packageId) ?? [];
+    list.push(file.filePath);
+    grouped.set(packageId, list);
+  }
+
+  return Array.from(grouped.entries())
+    .map(([packageId, filePaths]) => ({ packageId, fileCount: filePaths.length, filePaths }))
+    .sort((a, b) => b.fileCount - a.fileCount);
+}
+
+==================================================
+FILE: impact/calculateAffectedRoutes.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+import { calculateAffectedFiles, type AffectedFile } from "./calculateAffectedFiles";
+
+const ROUTE_FILE_PATTERN = /(^|\/)(page|route)\.(tsx|jsx|ts|js)$/;
+
+export interface AffectedRoute extends AffectedFile {
+  routePath: string;
+}
+
+function filePathToRoute(filePath: string): string {
+  const appIndex = filePath.indexOf("app/");
+  const withinApp = appIndex === -1 ? filePath : filePath.slice(appIndex + "app/".length);
+
+  const withoutFile = withinApp.replace(ROUTE_FILE_PATTERN, "");
+  const segments = withoutFile
+    .split("/")
+    .filter((seg) => seg && !(seg.startsWith("(") && seg.endsWith(")")));
+
+  return "/" + segments.join("/");
+}
+
+export function calculateAffectedRoutes(repository: Repository, moduleId: string): AffectedRoute[] {
+  const impact = calculateAffectedFiles(repository, moduleId);
+
+  return impact.affectedFiles
+    .filter((f) => ROUTE_FILE_PATTERN.test(f.filePath))
+    .map((f) => ({ ...f, routePath: filePathToRoute(f.filePath) }));
+}
+
+==================================================
+FILE: impact/calculateAffectedComponents.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+import { calculateAffectedFiles, type AffectedFile } from "./calculateAffectedFiles";
+
+const COMPONENT_EXTENSIONS = [".tsx", ".jsx"];
+
+function isLikelyComponentFile(filePath: string): boolean {
+  const hasComponentExt = COMPONENT_EXTENSIONS.some((ext) => filePath.endsWith(ext));
+  if (!hasComponentExt) return false;
+
+  const filename = filePath.split("/").pop() ?? "";
+  const baseName = filename.replace(/\.(tsx|jsx)$/, "");
+  return /^[A-Z]/.test(baseName);
+}
+
+export function calculateAffectedComponents(repository: Repository, moduleId: string): AffectedFile[] {
+  const impact = calculateAffectedFiles(repository, moduleId);
+  return impact.affectedFiles.filter((f) => isLikelyComponentFile(f.filePath));
+}
+
+==================================================
+FILE: impact/traceImports.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+import type { ResolvedImport } from "../shared/types";
+
+export interface ImportTraceEntry {
+  fromModuleId: string;
+  identifiers: string[];
+  line: number;
+}
+
+export function traceImports(repository: Repository, moduleId: string): ImportTraceEntry[] {
+  const module = repository.getModule(moduleId);
+  if (!module) return [];
+
+  return module.resolvedImports.map((imp: ResolvedImport) => {
+    const identifiers: string[] = [...imp.namedImports];
+    if (imp.hasDefaultImport) identifiers.push("default");
+    if (imp.hasNamespaceImport) identifiers.push("*");
+
+    return {
+      fromModuleId: imp.moduleId,
+      identifiers,
+      line: imp.line,
+    };
+  });
+}
+
+==================================================
+FILE: impact/traceExports.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+
+export interface ExportTraceEntry {
+  exportName: string;
+  exportKind: "default" | "named" | "re-export";
+  line: number;
+  importedByModuleIds: string[];
+}
+
+export function traceExports(repository: Repository, moduleId: string): ExportTraceEntry[] {
+  const module = repository.getModule(moduleId);
+  if (!module) return [];
+
+  const allModules = repository.getAllModules();
+
+  return module.exports.map((exp) => {
+    const importedByModuleIds: string[] = [];
+
+    if (exp.kind !== "re-export") {
+      for (const other of allModules) {
+        const importsThisExport = other.resolvedImports.some((imp) => {
+          if (imp.moduleId !== moduleId) return false;
+          if (imp.hasNamespaceImport) return true;
+          if (exp.kind === "default" && imp.hasDefaultImport) return true;
+          return imp.namedImports.includes(exp.name);
+        });
+        if (importsThisExport) importedByModuleIds.push(other.id);
+      }
+    }
+
+    return {
+      exportName: exp.name,
+      exportKind: exp.kind,
+      line: exp.line,
+      importedByModuleIds,
+    };
+  });
+}
+
+==================================================
+FILE: impact/traceDependencies.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+
+export interface DependencyTraceResult {
+  direct: string[];
+  transitive: string[];
+  notFound: boolean;
+}
+
+export function traceDependencies(repository: Repository, moduleId: string): DependencyTraceResult {
+  const startModule = repository.getModule(moduleId);
+  if (!startModule) {
+    return { direct: [], transitive: [], notFound: true };
+  }
+
+  const direct = [...startModule.imports];
+  const visited = new Set<string>([moduleId]);
+  const transitive: string[] = [];
+  const queue = [...direct];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    transitive.push(current);
+
+    const module = repository.getModule(current);
+    if (!module) continue;
+
+    for (const dep of module.imports) {
+      if (!visited.has(dep)) queue.push(dep);
+    }
+  }
+
+  return { direct, transitive, notFound: false };
+}
+
+==================================================
+FILE: impact/traceConsumers.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+
+export interface ConsumerTraceResult {
+  direct: string[];
+  transitive: string[];
+  notFound: boolean;
+}
+
+export function traceConsumers(repository: Repository, moduleId: string): ConsumerTraceResult {
+  const startModule = repository.getModule(moduleId);
+  if (!startModule) {
+    return { direct: [], transitive: [], notFound: true };
+  }
+
+  const direct = [...startModule.importedBy];
+  const visited = new Set<string>([moduleId]);
+  const transitive: string[] = [];
+  const queue = [...direct];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    transitive.push(current);
+
+    const module = repository.getModule(current);
+    if (!module) continue;
+
+    for (const consumer of module.importedBy) {
+      if (!visited.has(consumer)) queue.push(consumer);
+    }
+  }
+
+  return { direct, transitive, notFound: false };
+}
+
+==================================================
+FILE: impact/buildImpactTree.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Repository } from "../repository/Repository";
+
+export interface ImpactTreeNode {
+  moduleId: string;
+  filePath: string;
+  children: ImpactTreeNode[];
+}
+
+export function buildImpactTree(repository: Repository, moduleId: string, maxDepth = 20): ImpactTreeNode | null {
+  const rootModule = repository.getModule(moduleId);
+  if (!rootModule) return null;
+
+  function buildNode(id: string, ancestors: Set<string>, depth: number): ImpactTreeNode {
+    const module = repository.getModule(id);
+    const filePath = module?.file.relativePath ?? id;
+
+    if (depth >= maxDepth || !module) {
+      return { moduleId: id, filePath, children: [] };
+    }
+
+    const nextAncestors = new Set(ancestors).add(id);
+    const children = module.importedBy
+      .filter((consumerId) => !ancestors.has(consumerId))
+      .map((consumerId) => buildNode(consumerId, nextAncestors, depth + 1));
+
+    return { moduleId: id, filePath, children };
+  }
+
+  return buildNode(moduleId, new Set(), 0);
+}
+
+==================================================
+FILE: repository/Repository.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { RepositoryMeta, ModuleInfo } from "../shared/types";
+
+/**
+ * In-memory representation of one analyzed repository.
+ * This is the object passed around between indexer -> graph -> engine -> detectors.
+ * It does NOT persist itself — packages/db/repositories/RepoStore.ts handles persistence.
+ */
+export class Repository {
+  readonly meta: RepositoryMeta;
+  private modules: Map<string, ModuleInfo> = new Map();
+
+  constructor(meta: RepositoryMeta) {
+    this.meta = meta;
+  }
+
+  addModule(module: ModuleInfo): void {
+    this.modules.set(module.id, module);
+  }
+
+  getModule(id: string): ModuleInfo | undefined {
+    return this.modules.get(id);
+  }
+
+  getAllModules(): ModuleInfo[] {
+    return Array.from(this.modules.values());
+  }
+
+  get moduleCount(): number {
+    return this.modules.size;
+  }
+
+  /** Modules that nothing else imports — candidates for entry points or dead code */
+  findModulesWithNoImporters(): ModuleInfo[] {
+    return this.getAllModules().filter((m) => m.importedBy.length === 0);
+  }
+}
+
+==================================================
+FILE: repository/Module.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { ModuleInfo } from "../shared/types";
+
+/** A module nothing else imports — candidate entry point or dead code. */
+export function isEntryPoint(module: ModuleInfo): boolean {
+  return module.importedBy.length === 0;
+}
+
+/** A file that only re-exports from other modules (e.g. index.ts barrel files). */
+export function isBarrelFile(module: ModuleInfo): boolean {
+  return module.exports.length > 0 && module.exports.every((e) => e.kind === "re-export");
+}
+
+export function getExportNames(module: ModuleInfo): string[] {
+  return module.exports.map((e) => e.name);
+}
+
+export function dependencyCount(module: ModuleInfo): number {
+  return module.imports.length;
+}
+
+export function consumerCount(module: ModuleInfo): number {
+  return module.importedBy.length;
+}
+
+==================================================
+FILE: repository/File.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { posix } from "node:path";
+import type { FileInfo } from "../shared/types";
+
+const TEST_FILE_PATTERN = /\.(test|spec)\.[jt]sx?$/;
+const CONFIG_FILENAMES = new Set([
+  "package.json",
+  "tsconfig.json",
+  "jsconfig.json",
+  "turbo.json",
+  "next.config.ts",
+  "next.config.js",
+  "vite.config.ts",
+]);
+
+export function getFileName(file: FileInfo): string {
+  return posix.basename(file.relativePath);
+}
+
+export function getDirectory(file: FileInfo): string {
+  return posix.dirname(file.relativePath);
+}
+
+export function isTestFile(file: FileInfo): boolean {
+  return TEST_FILE_PATTERN.test(file.relativePath);
+}
+
+export function isIndexFile(file: FileInfo): boolean {
+  return /^index\.[jt]sx?$/.test(getFileName(file));
+}
+
+export function isConfigFile(file: FileInfo): boolean {
+  return CONFIG_FILENAMES.has(getFileName(file));
+}
+
+==================================================
+FILE: repository/Folder.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { posix } from "node:path";
+import type { FileInfo, FolderInfo } from "../shared/types";
+
+/**
+ * Derives the full folder hierarchy implied by a list of files' relativePaths.
+ * Used by graph/buildFolderGraph.ts to render folder nodes without needing a
+ * separate filesystem walk.
+ */
+export function buildFolderTree(files: FileInfo[]): FolderInfo[] {
+  const foldersByPath = new Map<string, FolderInfo>();
+
+  function ensureFolder(path: string): FolderInfo {
+    const existing = foldersByPath.get(path);
+    if (existing) return existing;
+
+    const folder: FolderInfo = {
+      path,
+      name: path === "" ? "/" : posix.basename(path),
+      fileIds: [],
+      childFolderPaths: [],
+    };
+    foldersByPath.set(path, folder);
+
+    if (path !== "") {
+      const parentPath = posix.dirname(path);
+      const normalizedParent = parentPath === "." ? "" : parentPath;
+      const parent = ensureFolder(normalizedParent);
+      if (!parent.childFolderPaths.includes(path)) {
+        parent.childFolderPaths.push(path);
+      }
+    }
+
+    return folder;
+  }
+
+  ensureFolder("");
+
+  for (const file of files) {
+    const dir = posix.dirname(file.relativePath);
+    const normalizedDir = dir === "." ? "" : dir;
+    const folder = ensureFolder(normalizedDir);
+    folder.fileIds.push(file.relativePath);
+  }
+
+  return Array.from(foldersByPath.values());
+}
+
+export function findFolder(folders: FolderInfo[], path: string): FolderInfo | undefined {
+  return folders.find((f) => f.path === path);
+}
+
+==================================================
+FILE: repository/Dependency.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { ImportKind } from "../shared/types";
+
+export interface DependencyProps {
+  fromModuleId: string;
+  toModuleId: string;
+  kind: ImportKind;
+  isTypeOnly: boolean;
+}
+
+export class Dependency {
+  readonly fromModuleId: string;
+  readonly toModuleId: string;
+  readonly kind: ImportKind;
+  readonly isTypeOnly: boolean;
+
+  constructor(props: DependencyProps) {
+    this.fromModuleId = props.fromModuleId;
+    this.toModuleId = props.toModuleId;
+    this.kind = props.kind;
+    this.isTypeOnly = props.isTypeOnly;
+  }
+
+  get isRuntimeDependency(): boolean {
+    return !this.isTypeOnly;
+  }
+
+  get id(): string {
+    return `${this.fromModuleId}->${this.toModuleId}`;
+  }
+}
+
+==================================================
+FILE: repository/Edge.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { GraphEdge, GraphEdgeType } from "../shared/types";
+
+function makeEdgeId(source: string, target: string, type: GraphEdgeType): string {
+  return `${source}--${type}-->${target}`;
+}
+
+export function createImportEdge(source: string, target: string): GraphEdge {
+  return { id: makeEdgeId(source, target, "import"), source, target, type: "import" };
+}
+
+export function createExportEdge(source: string, target: string): GraphEdge {
+  return { id: makeEdgeId(source, target, "export"), source, target, type: "export" };
+}
+
+export function createCallEdge(source: string, target: string, weight?: number): GraphEdge {
+  return { id: makeEdgeId(source, target, "call"), source, target, type: "call", weight };
+}
+
+export function createRouteLinkEdge(source: string, target: string): GraphEdge {
+  return { id: makeEdgeId(source, target, "route-link"), source, target, type: "route-link" };
+}
+
+==================================================
+FILE: repository/Node.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { posix } from "node:path";
+import type { GraphNode, ModuleInfo, FolderInfo, ExternalDependency, GraphNodeType } from "../shared/types";
+
+export function createFileNode(module: ModuleInfo): GraphNode {
+  return {
+    id: module.id,
+    type: "file",
+    label: posix.basename(module.file.relativePath),
+    filePath: module.file.relativePath,
+    metadata: { language: module.file.language, exportCount: module.exports.length },
+  };
+}
+
+export function createFolderNode(folder: FolderInfo): GraphNode {
+  return {
+    id: `folder:${folder.path}`,
+    type: "folder",
+    label: folder.name,
+    filePath: folder.path,
+    metadata: { fileCount: folder.fileIds.length },
+  };
+}
+
+export function createExternalPackageNode(dependency: ExternalDependency): GraphNode {
+  return {
+    id: `package:${dependency.packageName}`,
+    type: "external-package",
+    label: dependency.packageName,
+    metadata: { importCount: dependency.importCount },
+  };
+}
+
+export function isNodeType(node: GraphNode, type: GraphNodeType): boolean {
+  return node.type === type;
+}
+
+==================================================
+FILE: repository/Graph.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { DependencyGraph, GraphNode, GraphEdge } from "../shared/types";
+
+/**
+ * Wrapper around the raw DependencyGraph data with query helpers.
+ * packages/graph/*.ts BUILDS a DependencyGraph; this class is for CONSUMING one
+ * (impact analysis, detectors, UI serialization).
+ */
+export class Graph {
+  private nodesById: Map<string, GraphNode> = new Map();
+  private outgoing: Map<string, GraphEdge[]> = new Map();
+  private incoming: Map<string, GraphEdge[]> = new Map();
+  readonly repositoryId: string;
+  readonly builtAt: string;
+
+  constructor(data: DependencyGraph) {
+    this.repositoryId = data.repositoryId;
+    this.builtAt = data.builtAt;
+
+    for (const node of data.nodes) {
+      this.nodesById.set(node.id, node);
+    }
+    for (const edge of data.edges) {
+      this.pushToMap(this.outgoing, edge.source, edge);
+      this.pushToMap(this.incoming, edge.target, edge);
+    }
+  }
+
+  private pushToMap(map: Map<string, GraphEdge[]>, key: string, edge: GraphEdge) {
+    const list = map.get(key) ?? [];
+    list.push(edge);
+    map.set(key, list);
+  }
+
+  getNode(id: string): GraphNode | undefined {
+    return this.nodesById.get(id);
+  }
+
+  getOutgoingEdges(nodeId: string): GraphEdge[] {
+    return this.outgoing.get(nodeId) ?? [];
+  }
+
+  getIncomingEdges(nodeId: string): GraphEdge[] {
+    return this.incoming.get(nodeId) ?? [];
+  }
+
+  /** Direct dependents of a node (used by impact analysis) */
+  getDirectConsumers(nodeId: string): GraphNode[] {
+    return this.getIncomingEdges(nodeId)
+      .map((e) => this.getNode(e.source))
+      .filter((n): n is GraphNode => Boolean(n));
+  }
+
+  /** BFS traversal to find all transitive consumers up to a depth limit (guards against huge graphs) */
+  getTransitiveConsumers(nodeId: string, maxDepth = 20): GraphNode[] {
+    const visited = new Set<string>([nodeId]);
+    const result: GraphNode[] = [];
+    let frontier = [nodeId];
+    let depth = 0;
+
+    while (frontier.length > 0 && depth < maxDepth) {
+      const next: string[] = [];
+      for (const id of frontier) {
+        for (const consumer of this.getDirectConsumers(id)) {
+          if (!visited.has(consumer.id)) {
+            visited.add(consumer.id);
+            result.push(consumer);
+            next.push(consumer.id);
+          }
+        }
+      }
+      frontier = next;
+      depth++;
+    }
+    return result;
+  }
+
+  toJSON(): DependencyGraph {
+    return {
+      repositoryId: this.repositoryId,
+      builtAt: this.builtAt,
+      nodes: Array.from(this.nodesById.values()),
+      edges: [...this.outgoing.values()].flat(),
+    };
+  }
+}
+
+==================================================
+FILE: db/schema.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: db/client.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: db/repositories/RepoStore.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: db/repositories/AnalysisStore.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: db/repositories/IssueStore.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: cache/CacheProvider.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: cache/fileCache.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: cache/graphCache.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: cache/repositoryCache.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: cache/memoryCache.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: shared/constants.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { SupportedLanguage } from "./types";
+
+/** Maps a file extension (lowercase, with leading dot) to the language it implies. */
+export const EXTENSION_TO_LANGUAGE: Record<string, SupportedLanguage> = {
+  ".js": "javascript",
+  ".jsx": "javascript",
+  ".mjs": "javascript",
+  ".cjs": "javascript",
+  ".ts": "typescript",
+  ".tsx": "typescript",
+  ".py": "python",
+  ".java": "java",
+  ".go": "go",
+  ".cs": "csharp",
+  ".php": "php",
+  ".rb": "ruby",
+  ".rs": "rust",
+  ".cpp": "cpp",
+  ".cc": "cpp",
+  ".h": "cpp",
+  ".hpp": "cpp",
+};
+
+/** Extensions resolvePath.ts tries appending when an import has none, e.g. "./foo" -> "./foo.ts" */
+export const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
+
+/** Filenames tried when an import resolves to a directory, e.g. "./foo" -> "./foo/index.ts" */
+export const INDEX_FILENAMES = RESOLVABLE_EXTENSIONS.map((ext) => `index${ext}`);
+
+/** Hex characters kept from a content hash — enough to avoid collisions within
+ * one repo, short enough to stay readable in logs/cache keys. */
+export const HASH_LENGTH = 12;
+
+/** Default shallow clone depth used by git/cloneRepository.ts */
+export const DEFAULT_CLONE_DEPTH = 1;
+
+==================================================
+FILE: shared/logger.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+const LEVEL_WEIGHT: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+};
+
+function currentLevel(): LogLevel {
+  const fromEnv = process.env.ARCLUX_LOG_LEVEL as LogLevel | undefined;
+  return fromEnv && fromEnv in LEVEL_WEIGHT ? fromEnv : "info";
+}
+
+export interface Logger {
+  debug(message: string, meta?: Record<string, unknown>): void;
+  info(message: string, meta?: Record<string, unknown>): void;
+  warn(message: string, meta?: Record<string, unknown>): void;
+  error(message: string, meta?: Record<string, unknown>): void;
+}
+
+function log(namespace: string, level: LogLevel, message: string, meta?: Record<string, unknown>): void {
+  if (LEVEL_WEIGHT[level] < LEVEL_WEIGHT[currentLevel()]) return;
+
+  const timestamp = new Date().toISOString();
+  const prefix = `[${timestamp}] [${level.toUpperCase()}] [${namespace}]`;
+  const line = meta ? `${prefix} ${message} ${JSON.stringify(meta)}` : `${prefix} ${message}`;
+
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
+}
+
+/**
+ * Minimal namespaced logger. Every package should create its own via
+ * createLogger("packageName") instead of calling console.* directly, so
+ * output stays consistent and filterable via the ARCLUX_LOG_LEVEL env var.
+ */
+export function createLogger(namespace: string): Logger {
+  return {
+    debug: (message, meta) => log(namespace, "debug", message, meta),
+    info: (message, meta) => log(namespace, "info", message, meta),
+    warn: (message, meta) => log(namespace, "warn", message, meta),
+    error: (message, meta) => log(namespace, "error", message, meta),
+  };
+}
+
+==================================================
+FILE: shared/errors.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { ArcluxErrorCode, ArcluxErrorShape } from "./types";
+
+/**
+ * Single error class for the whole codebase. Throw this, never a bare Error,
+ * inside packages/* code — so callers (API routes, CLI) can branch on `.code`.
+ */
+export class ArcluxError extends Error implements ArcluxErrorShape {
+  code: ArcluxErrorCode;
+  filePath?: string;
+  cause?: unknown;
+
+  constructor(shape: ArcluxErrorShape) {
+    super(shape.message);
+    this.name = "ArcluxError";
+    this.code = shape.code;
+    this.filePath = shape.filePath;
+    this.cause = shape.cause;
+  }
+}
+
+export function isArcluxError(err: unknown): err is ArcluxError {
+  return err instanceof ArcluxError;
+}
+
+==================================================
+FILE: shared/hash.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { createHash } from "node:crypto";
+import { HASH_LENGTH } from "./constants";
+
+/**
+ * Short content hash used for cache invalidation and incremental re-indexing
+ * (FileInfo.hash, cache keys, etc). Not cryptographically sensitive — just needs
+ * to change when content changes and stay short enough to be readable.
+ */
+export function hashContent(content: string): string {
+  return createHash("sha1").update(content).digest("hex").slice(0, HASH_LENGTH);
+}
+
+/**
+ * Hashes a JSON-serializable value by stringifying it first. Useful for cache
+ * keys derived from options objects rather than raw file content.
+ */
+export function hashObject(value: unknown): string {
+  return hashContent(JSON.stringify(value));
+}
+
+==================================================
+FILE: shared/paths.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import { sep, posix } from "node:path";
+
+/**
+ * Converts an OS-specific path (with "\" on Windows) to POSIX-style ("/").
+ * Every relativePath stored in FileInfo/ModuleInfo must go through this —
+ * module ids are compared as plain strings elsewhere (resolvePath.ts,
+ * Repository.ts), so mixed separators would silently break lookups.
+ */
+export function toPosixPath(path: string): string {
+  return path.split(sep).join("/");
+}
+
+/** Joins path segments using POSIX rules, regardless of host OS. */
+export function joinPosix(...segments: string[]): string {
+  return posix.join(...segments);
+}
+
+/** Normalizes a POSIX path (resolves "..", ".", duplicate slashes). */
+export function normalizePosix(path: string): string {
+  return posix.normalize(path);
+}
+
+/**
+ * True if `childPath` is `parentPath` itself or nested inside it. Both must
+ * already be POSIX-style relative paths (e.g. from FileInfo.relativePath).
+ */
+export function isSubPath(parentPath: string, childPath: string): boolean {
+  const normalizedParent = normalizePosix(parentPath).replace(/\/$/, "");
+  const normalizedChild = normalizePosix(childPath);
+  return normalizedChild === normalizedParent || normalizedChild.startsWith(`${normalizedParent}/`);
+}
+
+==================================================
+FILE: shared/types.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+/**
+ * ARCLUX Core Types
+ * Ini adalah "kamus" data utama. Semua package (parser, indexer, graph, engine, detectors)
+ * WAJIB pakai type dari sini. Jangan define shape data sendiri-sendiri di file lain.
+ */
+
+// ─────────────────────────────────────────────
+// Language & File
+// ─────────────────────────────────────────────
+
+export type SupportedLanguage =
+  | "javascript"
+  | "typescript"
+  | "python"
+  | "java"
+  | "go"
+  | "csharp"
+  | "php"
+  | "ruby"
+  | "rust"
+  | "cpp"
+  | "unknown";
+
+export interface FileInfo {
+  /** Absolute path on disk during analysis */
+  absolutePath: string;
+  /** Path relative to repository root, always POSIX-style ("/") */
+  relativePath: string;
+  language: SupportedLanguage;
+  extension: string;
+  sizeBytes: number;
+  /** Content hash, used for cache invalidation & incremental updates */
+  hash: string;
+}
+
+// ─────────────────────────────────────────────
+// Parsing output (raw, before graph resolution)
+// ─────────────────────────────────────────────
+
+export type ImportKind =
+  | "static" // import x from "y"
+  | "dynamic" // await import("y")
+  | "require" // require("y")
+  | "type-only"; // import type x from "y"
+
+export interface RawImport {
+  /** The literal string written in source, e.g. "../utils/foo" or "react" */
+  source: string;
+  kind: ImportKind;
+  /** Named imports, e.g. ["useState", "useEffect"]. Empty for default/namespace-only. */
+  namedImports: string[];
+  hasDefaultImport: boolean;
+  hasNamespaceImport: boolean;
+  /** Line number in source file (1-indexed) */
+  line: number;
+}
+
+export interface RawExport {
+  name: string;
+  kind: "default" | "named" | "re-export";
+  /** For re-exports: the source module being re-exported from */
+  reExportSource?: string;
+  line: number;
+}
+
+/**
+ * Output of a single file parse. This is the CONTRACT every language parser
+ * (parseJs, parseTs, parsePython, ...) must return, regardless of language.
+ */
+export interface ParsedFile {
+  file: FileInfo;
+  imports: RawImport[];
+  exports: RawExport[];
+  /** Parser-specific extras (e.g. React components found, hooks used) go here, not in the base shape */
+  meta?: Record<string, unknown>;
+  /** Non-fatal parse warnings (e.g. "could not parse dynamic require") */
+  warnings: string[];
+}
+
+// ─────────────────────────────────────────────
+// Repository entities (post-indexing)
+// ─────────────────────────────────────────────
+
+export interface RepositoryMeta {
+  id: string;
+  org: string;
+  name: string;
+  defaultBranch: string;
+  rootPath: string;
+  detectedFrameworks: string[]; // e.g. ["nextjs", "react"]
+  packageManager: "npm" | "pnpm" | "yarn" | "unknown";
+  analyzedAt: string; // ISO timestamp
+}
+
+/**
+ * Identifier-level detail of one resolved import, kept alongside the
+ * flattened `imports: string[]` on ModuleInfo. `imports` only tells you
+ * "file A imports file B" (used by buildDependencyGraph.ts for edges);
+ * this tells you WHICH identifiers, needed by detectors that check
+ * per-export usage (e.g. detectUnusedExports.ts).
+ */
+export interface ResolvedImport {
+  moduleId: string; // resolved internal module id being imported
+  kind: ImportKind;
+  namedImports: string[];
+  hasDefaultImport: boolean;
+  hasNamespaceImport: boolean;
+  line: number;
+}
+
+export interface ModuleInfo {
+  id: string; // stable id, usually = relativePath
+  file: FileInfo;
+  exports: RawExport[];
+  /**
+   * For exports of kind "re-export" whose reExportSource resolves to a
+   * file inside the repo: exportName -> target moduleId. Populated by
+   * buildIndex.ts alongside `imports`. Does NOT capture aliased re-exports
+   * (`export { foo as bar } from "./x"`) correctly yet — RawExport only
+   * stores the final exported name ("bar"), not the original identifier
+   * ("foo") in the source module, so the chain breaks silently for that
+   * specific case until the parser layer captures both names separately.
+   */
+  resolvedReExports: Record<string, string>;
+  importedBy: string[]; // module ids that import this module
+  imports: string[]; // module ids this module imports (resolved, not raw strings)
+  resolvedImports: ResolvedImport[]; // identifier-level detail of `imports`
+}
+
+// ─────────────────────────────────────────────
+// Graph (what gets rendered / traversed)
+// ─────────────────────────────────────────────
+
+export type GraphNodeType =
+  | "file"
+  | "folder"
+  | "external-package"
+  | "route"
+  | "component"
+  | "hook";
+
+export interface GraphNode {
+  id: string;
+  type: GraphNodeType;
+  label: string;
+  filePath?: string; // relative path, absent for external-package nodes
+  metadata?: Record<string, unknown>;
+}
+
+export type GraphEdgeType = "import" | "export" | "call" | "route-link";
+
+export interface GraphEdge {
+  id: string;
+  source: string; // GraphNode id
+  target: string; // GraphNode id
+  type: GraphEdgeType;
+  weight?: number;
+}
+
+export interface DependencyGraph {
+  repositoryId: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  builtAt: string; // ISO timestamp
+}
+
+// ─────────────────────────────────────────────
+// Errors (shared across packages, used by shared/errors.ts)
+// ─────────────────────────────────────────────
+
+export type ArcluxErrorCode =
+  | "CLONE_FAILED"
+  | "PARSE_FAILED"
+  | "UNSUPPORTED_LANGUAGE"
+  | "INDEX_FAILED"
+  | "GRAPH_BUILD_FAILED"
+  | "NOT_FOUND";
+
+export interface ArcluxErrorShape {
+  code: ArcluxErrorCode;
+  message: string;
+  filePath?: string;
+  cause?: unknown;
+}
+
+// ─────────────────────────────────────────────
+// Folder hierarchy (derived from file paths, used by graph/buildFolderGraph.ts)
+// ─────────────────────────────────────────────
+
+export interface FolderInfo {
+  /** Relative path, POSIX-style. "" for the repository root itself. */
+  path: string;
+  name: string;
+  /** Module ids (relativePaths) of files directly inside this folder (not nested subfolders) */
+  fileIds: string[];
+  /** Relative paths of direct child folders */
+  childFolderPaths: string[];
+}
+
+// ─────────────────────────────────────────────
+// External dependencies (npm packages actually imported, not indexed as modules)
+// ─────────────────────────────────────────────
+
+export interface ExternalDependency {
+  packageName: string;
+  /** Module ids that import this package at least once */
+  importedByModuleIds: string[];
+  /** Total number of import statements referencing this package, across all modules */
+  importCount: number;
+}
+
+==================================================
+FILE: shared/utils.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+/** Removes duplicate values from an array while preserving order. */
+export function unique<T>(items: T[]): T[] {
+  return Array.from(new Set(items));
+}
+
+/** Groups an array of items by a key derived from each item. */
+export function groupBy<T, K extends string | number>(
+  items: T[],
+  keyFn: (item: T) => K
+): Record<K, T[]> {
+  const result = {} as Record<K, T[]>;
+  for (const item of items) {
+    const key = keyFn(item);
+    if (!result[key]) result[key] = [];
+    result[key].push(item);
+  }
+  return result;
+}
+
+/** Splits an array into chunks of at most `size` items each. */
+export function chunk<T>(items: T[], size: number): T[][] {
+  if (size <= 0) throw new Error("chunk size must be > 0");
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size));
+  }
+  return result;
+}
+
+/** Parses JSON, returning `fallback` instead of throwing on malformed input. */
+export function safeJsonParse<T>(input: string, fallback: T): T {
+  try {
+    return JSON.parse(input) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Awaitable delay, e.g. for retry backoff. */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Returns a debounced version of `fn` that only runs `waitMs` after the last
+ * call. Used by watcher/changeQueue.ts so a burst of filesystem events
+ * (e.g. a git checkout touching hundreds of files) triggers one re-index,
+ * not hundreds.
+ */
+export function debounce<Args extends unknown[]>(
+  fn: (...args: Args) => void,
+  waitMs: number
+): (...args: Args) => void {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return (...args: Args) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), waitMs);
+  };
+}
+
+==================================================
+FILE: shared/config.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: ui/graphLayout.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: ui/graphTheme.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: ui/graphColor.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: ui/graphAnimation.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: ui/graphIcons.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+
+==================================================
+FILE: incremental/types.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Cell } from "./Cell";
+import type { Query } from "./Query";
+
+/**
+ * A reference to something a Query read during computation — either a raw
+ * Cell or another Query's cached result at a specific key. Recorded by
+ * Database.recordRead() and later used to check whether a cached result
+ * is still valid (see Query.isStillValid).
+ */
+export type DepRef =
+  | { kind: "cell"; cell: Cell<unknown> }
+  | { kind: "query"; query: Query<unknown[], unknown>; key: string; args: unknown[] };
+
+==================================================
+FILE: incremental/Database.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Conceptually inspired by salsa-rs/salsa (dual MIT/Apache-2.0) — the
+// input/query/revision model and "early cutoff" idea come from there. This
+// is NOT a port: salsa relies on Rust proc-macros for zero-cost dependency
+// tracking; this is a from-scratch, more naive re-implementation of the
+// same principle in plain TypeScript, using a runtime stack instead of
+// compile-time codegen. See salsa's README + examples/lazy-input for the
+// original design this draws from.
+
+import type { DepRef } from "./types";
+
+interface ReadFrame {
+  deps: DepRef[];
+  maxRevision: number;
+}
+
+/**
+ * Coordinates revisions and dependency tracking across all Cells and
+ * Queries. One Database per independent incremental computation graph —
+ * ARCLUX would have exactly one, shared across the whole analysis pipeline,
+ * once this is wired in (not yet done — see PROGRES.md).
+ */
+export class Database {
+  private revision = 0;
+  private readStack: ReadFrame[] = [];
+
+  currentRevision(): number {
+    return this.revision;
+  }
+
+  /** Called by Cell.set() whenever a value actually changes. */
+  bumpRevision(): number {
+    this.revision += 1;
+    return this.revision;
+  }
+
+  /**
+   * Called by Cell.get() / Query.get() whenever they're read. If a
+   * computation is currently being tracked (i.e. we're inside a
+   * trackDependencies() call), this records the read against that frame.
+   * Reads that happen outside any tracked computation (e.g. a top-level
+   * `cell.get()` from user code) are silently ignored — there's nothing to
+   * attribute the dependency to.
+   */
+  recordRead(dep: DepRef, atRevision: number): void {
+    if (this.readStack.length === 0) return;
+    const frame = this.readStack[this.readStack.length - 1];
+    frame.deps.push(dep);
+    if (atRevision > frame.maxRevision) frame.maxRevision = atRevision;
+  }
+
+  /**
+   * Runs `fn`, capturing every Cell/Query it reads (directly or via nested
+   * tracked calls) and the highest revision among them. If this is called
+   * while another trackDependencies() is already active (nested queries),
+   * captured deps also bubble up to the enclosing frame — a query that
+   * calls another query transitively depends on everything the inner one
+   * read too.
+   */
+  trackDependencies<T>(fn: () => T): { result: T; dependencies: DepRef[]; maxDepRevision: number } {
+    this.readStack.push({ deps: [], maxRevision: 0 });
+    let result: T;
+    try {
+      result = fn();
+    } finally {
+      // eslint-disable-next-line no-var
+      var frame = this.readStack.pop()!;
+    }
+
+    if (this.readStack.length > 0) {
+      const parent = this.readStack[this.readStack.length - 1];
+      parent.deps.push(...frame.deps);
+      if (frame.maxRevision > parent.maxRevision) parent.maxRevision = frame.maxRevision;
+    }
+
+    return { result: result!, dependencies: frame.deps, maxDepRevision: frame.maxRevision };
+  }
+}
+
+==================================================
+FILE: incremental/Cell.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Database } from "./Database";
+
+/**
+ * A mutable input to the incremental computation graph — analogous to
+ * salsa's #[salsa::input]. Anything read via .get() while inside a
+ * Query's computation is automatically tracked as a dependency; calling
+ * .set() bumps the database's revision, which is how downstream Queries
+ * know they might need to recompute.
+ */
+export class Cell<T> {
+  private value: T;
+  private revision: number;
+
+  constructor(private readonly db: Database, initial: T) {
+    this.value = initial;
+    this.revision = db.currentRevision();
+  }
+
+  get(): T {
+    this.db.recordRead({ kind: "cell", cell: this as Cell<unknown> }, this.revision);
+    return this.value;
+  }
+
+  /**
+   * Updates the value. No-ops (does not bump revision) if the new value is
+   * reference-identical to the current one via Object.is — setting a Cell
+   * to "the same thing" shouldn't trigger downstream recomputation.
+   */
+  set(value: T): void {
+    if (Object.is(value, this.value)) return;
+    this.value = value;
+    this.revision = this.db.bumpRevision();
+  }
+
+  getRevision(): number {
+    return this.revision;
+  }
+
+  /** Reads the current value without registering a dependency. Use only
+   * for logging/debugging — using this inside a Query's compute function
+   * defeats the whole point of tracking. */
+  peek(): T {
+    return this.value;
+  }
+}
+
+==================================================
+FILE: incremental/Query.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import type { Database } from "./Database";
+import type { DepRef } from "./types";
+
+interface CacheEntry<T> {
+  value: T;
+  /** Highest revision among this entry's dependencies at computation time
+   * — OR the previous entry's computedRevision, if early cutoff applied
+   * (see the comment in get()). */
+  computedRevision: number;
+  /** db.currentRevision() the last time we confirmed this entry is still
+   * valid — lets isStillValid short-circuit if nothing has changed at all
+   * since the last check, without re-walking dependencies. */
+  verifiedAtRevision: number;
+  dependencies: DepRef[];
+}
+
+/**
+ * A memoized, incrementally-recomputed function — analogous to a salsa
+ * "tracked function". Results are cached per argument tuple (via keyFn).
+ * On repeat calls, a cached result is reused unless a dependency (a Cell
+ * or another Query result read during the original computation) has a
+ * newer revision than the one recorded at computation time — in which
+ * case the dependency chain is re-validated (recursively) and recomputed
+ * only where actually necessary.
+ *
+ * Known limitations (real, not placeholders):
+ * - Early cutoff (see get()) uses Object.is, so it only short-circuits for
+ *   primitives or literal reference equality — returning a new object with
+ *   identical contents still counts as "changed" and won't cut off
+ *   downstream recomputation. Deep-equality cutoff would need a
+ *   caller-supplied comparator; not implemented here.
+ * - Dependency tracking during cache-hit validation is over-approximate:
+ *   if validating query A's cached entry requires recomputing dependency
+ *   query B, and this whole thing happens inside a *third* query C's
+ *   tracked computation, C ends up depending on both A and B directly
+ *   (not just A, with B implied transitively through A). This is safe
+ *   (no missed invalidations) but not maximally minimal.
+ * - Cycle detection throws rather than resolving — there is no fixed-point
+ *   iteration like some incremental systems support for genuinely
+ *   recursive queries. A query (transitively) depending on itself with the
+ *   same key is a bug in the caller, not a supported pattern here.
+ */
+export class Query<Args extends unknown[], T> {
+  private cache = new Map<string, CacheEntry<T>>();
+  private computing = new Set<string>();
+
+  constructor(
+    private readonly db: Database,
+    private readonly compute: (...args: Args) => T,
+    private readonly keyFn: (...args: Args) => string = (...args) => JSON.stringify(args)
+  ) {}
+
+  get(...args: Args): T {
+    const key = this.keyFn(...args);
+
+    if (this.computing.has(key)) {
+      throw new Error(
+        `Cyclic query: re-entered with key "${key}" while already computing it. ` +
+          `A query must not depend on itself, directly or transitively.`
+      );
+    }
+
+    const existing = this.cache.get(key);
+    if (existing && this.isStillValid(existing)) {
+      this.recordSelfRead(key, args, existing.computedRevision);
+      return existing.value;
+    }
+
+    this.computing.add(key);
+    let result: T;
+    let dependencies: DepRef[];
+    let maxDepRevision: number;
+    try {
+      ({ result, dependencies, maxDepRevision } = this.db.trackDependencies(() => this.compute(...args)));
+    } finally {
+      this.computing.delete(key);
+    }
+
+    // Early cutoff: if the recomputed value is reference-identical to the
+    // previous cached value, keep the OLD computedRevision instead of
+    // bumping to maxDepRevision. This means a query that only depends on
+    // THIS query's *value* (not on it having recomputed) won't itself be
+    // forced to recompute just because an upstream input churned without
+    // actually changing this result. Mirrors salsa's "backdating".
+    const computedRevision =
+      existing !== undefined && Object.is(existing.value, result) ? existing.computedRevision : maxDepRevision;
+
+    this.cache.set(key, {
+      value: result,
+      computedRevision,
+      verifiedAtRevision: this.db.currentRevision(),
+      dependencies,
+    });
+
+    this.recordSelfRead(key, args, computedRevision);
+    return result;
+  }
+
+  /** Used by Query.isStillValid on OTHER queries when re-validating a
+   * dependency on this query. Recurses through this.get(), so it inherits
+   * full validity-checking / recomputation / early-cutoff behavior — this
+   * is not a raw cache peek. */
+  ensureUpToDateAndGetRevision(key: string, args: unknown[]): number {
+    this.get(...(args as Args));
+    return this.cache.get(key)!.computedRevision;
+  }
+
+  /** Drops all cached results. Coarse-grained escape hatch for cases not
+   * worth precise dependency tracking for (e.g. full repository re-scan). */
+  invalidateAll(): void {
+    this.cache.clear();
+  }
+
+  private recordSelfRead(key: string, args: Args, revision: number): void {
+    this.db.recordRead({ kind: "query", query: this as unknown as Query<unknown[], unknown>, key, args }, revision);
+  }
+
+  private isStillValid(entry: CacheEntry<T>): boolean {
+    if (entry.verifiedAtRevision === this.db.currentRevision()) return true;
+
+    for (const dep of entry.dependencies) {
+      const depRevision =
+        dep.kind === "cell" ? dep.cell.getRevision() : dep.query.ensureUpToDateAndGetRevision(dep.key, dep.args);
+      if (depRevision > entry.computedRevision) return false;
+    }
+
+    entry.verifiedAtRevision = this.db.currentRevision();
+    return true;
+  }
+}
+
+==================================================
+FILE: incremental/index.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// NOT YET WIRED into buildIndex.ts / pipeline.ts / anything else in
+// ARCLUX. This is a standalone, verified-by-demo foundation only — see
+// demo.ts for a runnable proof it behaves correctly, and PROGRES.md for
+// the integration plan.
+
+export { Database } from "./Database";
+export { Cell } from "./Cell";
+export { Query } from "./Query";
+export type { DepRef } from "./types";
+
+==================================================
+FILE: incremental/demo.ts
+==================================================
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Standalone runnable proof that Cell/Query/Database actually behave as
+// intended — not part of the production pipeline. Run with:
+//   npx tsx packages/incremental/demo.ts
+
+import { Database } from "./Database";
+import { Cell } from "./Cell";
+import { Query } from "./Query";
+
+const db = new Database();
+const a = new Cell(db, 2);
+const b = new Cell(db, 3);
+
+let sumRuns = 0;
+const sum = new Query(db, () => {
+  sumRuns++;
+  return a.get() + b.get();
+});
+
+let doubledRuns = 0;
+const doubled = new Query(db, () => {
+  doubledRuns++;
+  return sum.get() * 2;
+});
+
+console.log("--- first call ---");
+console.log("doubled =", doubled.get(), `(sum ran ${sumRuns}x, doubled ran ${doubledRuns}x — expect 1x, 1x)`);
+
+console.log("--- second call, nothing changed ---");
+console.log("doubled =", doubled.get(), `(sum ran ${sumRuns}x, doubled ran ${doubledRuns}x — expect still 1x, 1x: fully cached)`);
+
+console.log("--- a.set(10), real change ---");
+a.set(10);
+console.log("doubled =", doubled.get(), `(sum ran ${sumRuns}x, doubled ran ${doubledRuns}x — expect 2x, 2x: both recompute)`);
+
+console.log("--- b.set(3), SAME value as before ---");
+b.set(3);
+console.log("doubled =", doubled.get(), `(sum ran ${sumRuns}x, doubled ran ${doubledRuns}x — expect still 2x, 2x: Cell.set no-ops on identical value)`);
+
+console.log("--- cycle detection ---");
+try {
+  const cyclic: Query<[], number> = new Query(db, () => cyclic.get() + 1);
+  cyclic.get();
+  console.log("FAIL: should have thrown");
+} catch (err) {
+  console.log("OK, threw as expected:", (err as Error).message);
+}
+
