@@ -59,7 +59,7 @@ Jangan panggil step individual dari luar `engine/`.
   `constants.ts`, `logger.ts`, `utils.ts`)
 - `packages/search/fuzzyScore.ts` — adaptasi dari `cmdk` (lihat NOTICE)
 
-## ✅ SELESAI — detectors (7/18)
+## ✅ SELESAI — detectors (9/18)
 
 1. `detectCircularDependency.ts` — DFS cycle detection, adaptasi `madge`
 2. `detectUnusedExports.ts` — adaptasi strategi traversal `knip`, re-implement
@@ -102,10 +102,37 @@ lawan repo `arclux` sendiri lewat `npx tsx apps/cli/index.ts doctor .`
 (15,630 baris kode nyata) — yang kedua ini yang nemuin bug threshold di
 atas, gak ketauan dari fixture kecil doang.
 
-**11 sisanya masih 0%**: `detectComponentConvention`, `detectDeadCode`,
-`detectEntryPoints`, `detectFeatureStructure`, `detectLayerViolation`,
-`detectMissingExports`, `detectRepositoryPattern`, `detectRouteConvention`,
-`detectStoryConvention`, `detectTestConvention`, `detectUnusedFiles`.
+8. `detectLayerViolation.ts` — rule-matching concept (from-pattern /
+   to-pattern regex on folder path) adapted from sverweij/dependency-cruiser
+   (MIT), src/validate/match-folder-dependency-rule.mjs. Not a port —
+   dependency-cruiser supports arbitrary user-defined rules with regex
+   capture groups; this is a small fixed set of 2 ARCLUX-specific rules
+   (packages/* can't import apps/*, packages/shared/* can't import sibling
+   packages/*) against ARCLUX's own ModuleInfo/ResolvedImport shape, no
+   group-capture machinery. Verified with positive control (planted a fake
+   violation, confirmed detection, reverted) — 0 violations in `arclux`
+   itself currently.
+9. `detectDeadCode.ts` — ARCLUX-original, NOT adapted from knip despite
+   investigating knip first (knip has no "dead code" issue type at all —
+   its IssueType union is granular: files/exports/types/enumMembers/etc,
+   no umbrella bucket). Deliberately scoped to NOT duplicate
+   detectOrphanFiles or detectUnusedExports: flags a module that IS
+   imported by something (not orphaned) but where EVERY one of its own
+   exports is unused (per detectUnusedExports) — i.e. likely only ever
+   imported for a side effect. Composes detectUnusedExports's output
+   rather than re-deriving usage data, so there's one source of truth for
+   "is this export used." Verified with positive control (planted a fake
+   side-effect-only import, confirmed detection, reverted) — 0 findings in
+   `arclux` itself currently.
+
+Diverifikasi juga lewat `doctor.ts` end-to-end (9/9 detector jalan bareng,
+bukan cuma diuji satu-satu terisolasi) lawan `playground/python-demo` dan
+lawan repo `arclux` sendiri.
+
+**9 sisanya masih 0%**: `detectComponentConvention`, `detectEntryPoints`,
+`detectFeatureStructure`, `detectMissingExports`, `detectRepositoryPattern`,
+`detectRouteConvention`, `detectStoryConvention`, `detectTestConvention`,
+`detectUnusedFiles`.
 
 ## ✅ SELESAI — UI: graph viewer
 
@@ -380,7 +407,7 @@ tetap dibutuhkan buat local dev testing, sementara refactor `findings[]`
 itu buat production call sites (CLI, API). Kalau nanti `findings[]`
 ditambahkan, `testPlayground.ts` bisa disederhanakan buat pakai itu juga.
 
-## Update — doctor.ts sekarang manggil 7/18 detector (bukan 2/18)
+## Update — doctor.ts sekarang manggil 9/18 detector (updated dari 7/18)
 
 `apps/cli/doctor.ts` di-update manggil ke-5 detector baru di atas selain
 2 yang lama. Masih manual call per-detector (belum ada registry) — komentar
