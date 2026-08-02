@@ -2,7 +2,7 @@
 
 Dependency graph, impact analysis, and structural linting for your codebase. CLI + web dashboard.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-black)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)](LICENSE)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-black)](#status)
 
 ## What it does
@@ -67,4 +67,4 @@ PRs welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-MIT © Arclux Contributors
+Apache License 2.0 © Arclux Contributors
