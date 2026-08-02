@@ -6,15 +6,17 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Runs every detector that currently exists (7 of 18 — see PROGRES.md).
+// Runs every detector that currently exists (8 of 18 — see PROGRES.md).
 //
-// Still calling each directly rather than via a registry. With 7 of these
+// Still calling each directly rather than via a registry. With 8 of these
 // blocks the file is getting long, and a registry (detector -> run + print
 // adapter) is worth doing soon — but each detector's finding shape is
 // genuinely different (cycle vs filePath+line vs hash+filePaths[] vs
 // isPureBarrel, etc.), so a registry here needs a print-adapter per
 // detector, not just a list of functions. Deferred rather than done half-
 // right in this pass; revisit once detector #8+ makes this file painful.
+// (That threshold has now been crossed — next detector added should come
+// with the registry refactor, not another manual block.)
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
@@ -26,11 +28,12 @@ import { detectLargeModules } from "../../packages/detectors/detectLargeModules"
 import { detectDuplicateModules } from "../../packages/detectors/detectDuplicateModules";
 import { detectSharedModules } from "../../packages/detectors/detectSharedModules";
 import { detectIndexFiles } from "../../packages/detectors/detectIndexFiles";
+import { detectLayerViolation } from "../../packages/detectors/detectLayerViolation";
 
 export function registerDoctorCommand(program: Command): void {
   program
     .command("doctor")
-    .description("Run all available detectors against a local repository (7/18 implemented so far)")
+    .description("Run all available detectors against a local repository (8/18 implemented so far)")
     .argument("[path]", "path to the repository root", ".")
     .action(async (targetPath: string) => {
       const spinner = p.spinner();
@@ -47,6 +50,7 @@ export function registerDoctorCommand(program: Command): void {
         const duplicateModules = detectDuplicateModules(repository);
         const sharedModules = detectSharedModules(repository);
         const indexFiles = detectIndexFiles(repository);
+        const layerViolations = detectLayerViolation(repository);
 
         const total =
           cycles.length +
@@ -55,7 +59,8 @@ export function registerDoctorCommand(program: Command): void {
           largeModules.length +
           duplicateModules.length +
           sharedModules.length +
-          indexFiles.length;
+          indexFiles.length +
+          layerViolations.length;
 
         if (total === 0) {
           p.log.success("No issues found.");
@@ -122,6 +127,15 @@ export function registerDoctorCommand(program: Command): void {
             for (const f of mixed) {
               p.log.message(`    ${f.filePath} \u2014 ${f.message}`);
             }
+          }
+        }
+
+        if (layerViolations.length > 0) {
+          p.log.warn(
+            `${layerViolations.length} layer ${layerViolations.length === 1 ? "violation" : "violations"} found:`
+          );
+          for (const f of layerViolations) {
+            p.log.message(`  ${f.filePath}:${f.line} \u2192 ${f.importedFilePath} [${f.ruleName}] \u2014 ${f.message}`);
           }
         }
 
