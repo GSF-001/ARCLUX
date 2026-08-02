@@ -350,3 +350,36 @@ Belum ada kode yang di-commit dari rencana itu per commit `9e6b660e`.
 tetap dibutuhkan buat local dev testing, sementara refactor `findings[]`
 itu buat production call sites (CLI, API). Kalau nanti `findings[]`
 ditambahkan, `testPlayground.ts` bisa disederhanakan buat pakai itu juga.
+
+## Update — apps/cli (5/6 file, index.ts sekarang punya isi beneran)
+
+`apps/cli/*` — `analyze`, `doctor`, `graph`, `config` **jalan dan
+diverifikasi** lawan `playground/python-demo` (bukan cuma tsc --noEmit).
+`impact` sengaja jujur bilang "belum diimplementasi" — `packages/impact/*`
+masih 0%, jadi command ini gak nge-fake hasil kosong/palsu.
+
+Dibangun pakai `commander` (routing) + `@clack/prompts` (output/spinner).
+
+**`analyzeLocal.ts`** — helper baru, manggil `buildIndex` +
+`buildDependencyGraph` langsung terhadap local path, BYPASS
+`analyzeRepository()` (yang didesain buat repoUrl/clone). Exception yang
+sama kayak `scripts/testPlayground.ts` — legal buat local-path call site,
+bukan buat production remote-repo flow.
+
+**Action item eksplisit**: sesi lain dilaporkan lagi rencanain refactor
+`pipeline.ts` (nambah `findings[]` + local-path support ke
+`AnalyzeRepositoryResult`). Begitu itu landing, `analyzeLocal.ts` harus
+DIHAPUS dan semua command CLI pindah manggil engine API langsung — jangan
+biarin 2 jalur orkestrasi (pipeline.ts vs analyzeLocal.ts) hidup
+berdampingan lebih dari sementara, itu bakal jadi dead-code-risk baru.
+
+**Temuan tambahan**: `apps/cli` sebelumnya gak punya `tsconfig.json`
+sendiri — `tsc` otomatis naik cari config ke root `~/arclux/tsconfig.json`,
+yang ternyata isinya Next.js-flavored (`jsx: preserve`, `plugins: next`),
+kemungkinan salah taruh/duplikat dari `apps/web/tsconfig.json`. Ini bikin
+`tsc --noEmit` di CLI ikut nyisir seluruh `apps/web` dan gagal di puluhan
+`@/*` import yang cuma valid di scope Next.js. Fixed dengan bikin
+`apps/cli/tsconfig.json` sendiri (Node/ESNext target, self-contained
+include). **Belum diselidiki**: apa root `tsconfig.json` itu emang
+sengaja atau bug lama yang kebawa — worth dicek kalau nanti ada
+konsumer/workspace lain yang juga gak punya tsconfig sendiri.
