@@ -56,14 +56,6 @@ packages/       parser, graph, impact, detectors, rules, engine, indexer, search
 
 Alpha. Core model, graph builder, and TypeScript parser are working. Other language parsers, the detector suite, and the dashboard are in progress. Expect breaking changes pre-1.0.
 
-## Contributing
-
-```bash
-git clone https://github.com/<org>/arclux.git
-cd arclux && pnpm install && pnpm test
-```
-
-PRs welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
