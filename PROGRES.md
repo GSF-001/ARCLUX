@@ -492,3 +492,20 @@ tetap wajib sebelum mulai kerja di area manapun.
 **Action item**: `apps/cli/impact.ts` saat ini SALAH — bilang "not yet
 implemented" padahal fungsinya sudah ada. Perlu diperbaiki supaya
 benar-benar memanggil `buildImpactTree`/`calculateAffectedFiles` dkk.
+
+## Update — detectors 18/18 (100%), 2 bug produksi BELUM difix
+
+packages/detectors/* lengkap 18/18. Verifikasi via scripts/testPlayground.ts
+(sekarang manggil semua 18 detector, jalan lawan fixture ATAU repo sendiri
+lewat `npx tsx scripts/testPlayground.ts .`).
+
+**BUG PRODUKSI, BELUM DIFIX**: detectRouteConvention nemu
+apps/web/app/api/impact/route.ts DAN apps/web/app/api/search/route.ts
+gak export HTTP method (GET/POST/dll) — kedua endpoint kemungkinan besar
+gak jalan kalau di-hit.
+
+Temuan lain: detectRepositoryPattern nemu package-level cycle
+packages/indexer <-> packages/graph. detectMissingExports nemu 9 file
+shadcn (button.tsx dkk) gak di-re-export lewat components/ui/index.ts.
+detectUnusedExports masih false-positive di komponen React (belum pakai
+filter detectEntryPoints kayak detectUnusedFiles).
