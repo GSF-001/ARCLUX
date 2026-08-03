@@ -68,3 +68,9 @@ PRs welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 ## License
 
 Apache License 2.0 © Arclux Contributors
+
+## Contributors
+
+<a href="https://github.com/GSF-001/ARCLUX/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=GSF-001/ARCLUX" />
+</a>
