@@ -14,9 +14,16 @@ import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/ty
 // .ts file (its main entry resolves to an untyped .js — see PROGRES.md
 // gotchas). We deliberately load it as untyped and keep our own type safety
 // entirely in the TSNode interface below.
-const require = createRequire(import.meta.url);
+// Deliberately NOT named "require" -- Webpack's static analyzer matches on
+// the literal identifier "require" regardless of whether it is a real
+// CommonJS require or (as here) a variable from createRequire(), and tries
+// to statically bundle whatever it's called with. That breaks
+// serverExternalPackages, which only takes effect at module-resolution
+// time, after this static analysis already failed on the .wasm file below.
+// Renaming the identifier avoids triggering that analysis entirely.
+const nodeRequire = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TreeSitter: any = require("web-tree-sitter");
+const TreeSitter: any = nodeRequire("web-tree-sitter");
 const { Parser, Language } = TreeSitter;
 
 // Minimal structural type for the parts of a web-tree-sitter node we use.
@@ -54,7 +61,7 @@ export function getPythonRuntime(): Promise<PythonRuntime> {
     runtimePromise = (async () => {
       await Parser.init();
       const parser = new Parser();
-      const wasmPath = require.resolve("tree-sitter-wasms/out/tree-sitter-python.wasm");
+      const wasmPath = nodeRequire.resolve("tree-sitter-wasms/out/tree-sitter-python.wasm");
       const language = await Language.load(wasmPath);
       parser.setLanguage(language);
       return { parser, language };
