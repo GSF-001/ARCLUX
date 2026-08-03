@@ -7,7 +7,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 
 ## Status: alpha
 
-This project is under active development with a small team. Expect breaking changes, missing pieces, and stubs that are not wired up yet. See PROGRES.md for a detailed, honest breakdown of what works today vs. what is still a stub.
+This project is under active development with a small team. Expect breaking changes, missing pieces, and stubs that are not wired up yet. See [`PROGRES.md`](PROGRES.md) for a detailed, honest breakdown of what works today vs. what is still a stub.
 
 What is solid right now:
 - Core pipeline (clone, parse, index, dependency graph)
@@ -78,8 +78,14 @@ We use GitHub Issues to track open work. main is protected; all changes go throu
     git clone https://github.com/<org>/arclux.git
     cd arclux && npm install
 
-See CONTRIBUTING.md for conventions, and PROGRES.md for current project status before picking up work.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PROGRES.md) for current project status before picking up work.
 
 ## License
 
 Apache License 2.0 (c) ARCLUX Contributors
+
+## Contributors
+
+<a href="https://github.com/GSF-001/ARCLUX/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=GSF-001/ARCLUX" />
+</a>
