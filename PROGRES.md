@@ -629,3 +629,38 @@ begitu saja):
 
 Command ini compose 3 fungsi dari packages/impact/*: traceConsumers,
 traceDependencies, calculateAffectedFiles. Action item ini RESMI DITUTUP.
+
+## Update — components/patterns/* 8 file stub SUDAH selesai
+
+Ditulis 8 file yang tadinya stub (cuma header lisensi 8 baris):
+`ConfirmDialog.tsx`, `CopyButton.tsx`, `DataTable.tsx`, `EmptyState.tsx`,
+`FilterBar.tsx`, `MobileBottomSheet.tsx`, `SearchInput.tsx`, `StatusDot.tsx`.
+
+Convention diambil dari file yang udah selesai duluan (`LoadingState.tsx`,
+`ErrorState.tsx`, `CommandPalette.tsx`): named export, props interface
+`ComponentNameProps`, `"use client"` untuk yang interaktif, `cn()` dari
+`@/lib/cn`, primitives dari `@/components/ui/*` (bukan langsung dari
+`vendor-ui/shadcn/*`).
+
+- `ConfirmDialog` & `MobileBottomSheet` pakai `Dialog`/`Sheet` primitive dari
+  `components/ui/`, props API disesuaikan persis sama shape asli
+  (`DialogContent`, `SheetContent side="bottom"`, dll — dicek dulu dari source
+  vendor-ui sebelum nulis, gak nebak).
+- `DataTable` dibangun dari native `<table>` + Tailwind — belum ada shadcn
+  `table.tsx` primitive di `vendor-ui/`.
+- `FilterBar` sengaja gak pakai `Badge` (belum di-wrap di `components/ui/`,
+  masih open item dari `detectMissingExports`), pakai `Button` variant toggle.
+- Verifikasi: `npx tsc --noEmit -p apps/web/tsconfig.json` → 0 error dari
+  kode baru. Sisa 5 error di project itu pre-existing & tidak terkait
+  (`vendor-ui/magic-ui/file-tree.tsx` butuh package `@radix-ui/react-accordion`
+  + `scroll-area.tsx` yang belum ditulis; `packages/graph/buildFolderGraph.ts`
+  butuh package `d3-hierarchy` yang belum di-install — keduanya task terpisah).
+- Catatan penting: `npx tsc --noEmit` tanpa `-p apps/web/tsconfig.json` bakal
+  nunjukkin 130 error palsu (semua alias `@/*` gagal resolve) karena baseUrl
+  path mapping di tsconfig itu relatif ke `apps/web`, bukan root repo. Kalau
+  mau typecheck app ini, WAJIB pakai flag `-p apps/web/tsconfig.json`.
+- Belum ada consumer yang import 8 komponen ini (dicek via grep), jadi ini
+  murni komponen baru siap pakai, belum ada breaking-change risk.
+
+`components/patterns/*` sekarang 11/11 lengkap (termasuk `CommandPalette.tsx`
+yang udah selesai dari session lain sebelumnya).
