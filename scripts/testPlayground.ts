@@ -16,12 +16,27 @@
 //
 // Run with: npx tsx scripts/testPlayground.ts <fixture-name>
 // Example:  npx tsx scripts/testPlayground.ts python-demo
+// Example:  npx tsx scripts/testPlayground.ts . --local   (analyze ARCLUX itself)
 
 import path from "node:path";
 import { buildIndex } from "../packages/indexer/buildIndex";
 import { buildDependencyGraph } from "../packages/graph/buildDependencyGraph";
 import { detectCircularDependency } from "../packages/detectors/detectCircularDependency";
 import { detectUnusedExports } from "../packages/detectors/detectUnusedExports";
+import { detectOrphanFiles } from "../packages/detectors/detectOrphanFiles";
+import { detectLargeModules } from "../packages/detectors/detectLargeModules";
+import { detectDuplicateModules } from "../packages/detectors/detectDuplicateModules";
+import { detectSharedModules } from "../packages/detectors/detectSharedModules";
+import { detectIndexFiles } from "../packages/detectors/detectIndexFiles";
+import { detectEntryPoints } from "../packages/detectors/detectEntryPoints";
+import { detectUnusedFiles } from "../packages/detectors/detectUnusedFiles";
+import { detectComponentConvention } from "../packages/detectors/detectComponentConvention";
+import { detectRouteConvention } from "../packages/detectors/detectRouteConvention";
+import { detectTestConvention } from "../packages/detectors/detectTestConvention";
+import { detectStoryConvention } from "../packages/detectors/detectStoryConvention";
+import { detectMissingExports } from "../packages/detectors/detectMissingExports";
+import { detectFeatureStructure } from "../packages/detectors/detectFeatureStructure";
+import { detectRepositoryPattern } from "../packages/detectors/detectRepositoryPattern";
 import { parserRegistry } from "../packages/parser/core/ParserRegistry";
 import { parseTs } from "../packages/parser/typescript/parseTs";
 import { parsePython } from "../packages/parser/python/parsePython";
@@ -30,6 +45,17 @@ import type { RepositoryMeta } from "../packages/shared/types";
 parserRegistry.register(parseTs);
 parserRegistry.register(parsePython);
 
+function printList<T>(label: string, items: T[], format: (item: T) => string) {
+  console.log(`\n--- ${label} ---`);
+  if (items.length === 0) {
+    console.log("No findings.");
+    return;
+  }
+  for (const item of items) {
+    console.log(`  ${format(item)}`);
+  }
+}
+
 async function main() {
   const fixtureName = process.argv[2];
   if (!fixtureName) {
@@ -37,8 +63,12 @@ async function main() {
     process.exit(1);
   }
 
-  const rootPath = path.resolve(__dirname, "..", "playground", fixtureName);
-  console.log(`\n=== Analyzing playground/${fixtureName} ===\n`);
+  const rootPath =
+    fixtureName === "."
+      ? path.resolve(__dirname, "..")
+      : path.resolve(__dirname, "..", "playground", fixtureName);
+
+  console.log(`\n=== Analyzing ${fixtureName === "." ? "ARCLUX itself" : `playground/${fixtureName}`} ===\n`);
 
   const meta: RepositoryMeta = {
     id: "local-test",
@@ -54,34 +84,25 @@ async function main() {
   const repository = await buildIndex({ rootPath, meta });
   console.log(`Modules indexed: ${repository.moduleCount}`);
 
-  for (const module of repository.getAllModules()) {
-    console.log(
-      `  - ${module.id} (${module.exports.length} exports, imports: [${module.imports.join(", ")}])`
-    );
-  }
-
   const graph = buildDependencyGraph(repository);
-  console.log(`\nGraph: ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
+  console.log(`Graph: ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
 
-  console.log("\n--- detectCircularDependency ---");
-  const cycles = detectCircularDependency(repository);
-  if (cycles.length === 0) {
-    console.log("No cycles found.");
-  } else {
-    for (const cycle of cycles) {
-      console.log(JSON.stringify(cycle));
-    }
-  }
-
-  console.log("\n--- detectUnusedExports ---");
-  const unused = detectUnusedExports(repository);
-  if (unused.length === 0) {
-    console.log("No unused exports found.");
-  } else {
-    for (const finding of unused) {
-      console.log(`  ${finding.filePath}:${finding.line} — ${finding.message}`);
-    }
-  }
+  printList("detectCircularDependency", detectCircularDependency(repository), (c) => JSON.stringify(c));
+  printList("detectUnusedExports", detectUnusedExports(repository), (f) => `${f.filePath}:${f.line} — ${f.message}`);
+  printList("detectOrphanFiles", detectOrphanFiles(repository), (f) => f.message);
+  printList("detectLargeModules", detectLargeModules(repository), (f) => f.message);
+  printList("detectDuplicateModules", detectDuplicateModules(repository), (g) => `[${g.filePaths.join(", ")}]`);
+  printList("detectSharedModules", detectSharedModules(repository), (f) => f.message);
+  printList("detectIndexFiles", detectIndexFiles(repository), (f) => f.message);
+  printList("detectEntryPoints", detectEntryPoints(repository), (f) => `${f.filePath} — ${f.reason}`);
+  printList("detectUnusedFiles", detectUnusedFiles(repository), (f) => f.message);
+  printList("detectComponentConvention", detectComponentConvention(repository), (f) => f.message);
+  printList("detectRouteConvention", detectRouteConvention(repository), (f) => f.message);
+  printList("detectTestConvention", detectTestConvention(repository), (f) => f.message);
+  printList("detectStoryConvention", detectStoryConvention(repository), (f) => f.message);
+  printList("detectMissingExports", detectMissingExports(repository), (f) => f.message);
+  printList("detectFeatureStructure", detectFeatureStructure(repository), (f) => f.message);
+  printList("detectRepositoryPattern", detectRepositoryPattern(repository), (f) => f.message);
 
   console.log("");
 }
