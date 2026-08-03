@@ -1,10 +1,10 @@
 # ARCLUX — Progress Summary
 
-> Paste file ini ke awal chat Claude manapun (atau `cat PROGRES.md`) supaya
-> Claude langsung paham status project tanpa perlu dijelasin ulang dari nol.
-> Update file ini setiap kali ada progress besar.
+> Paste this file at the start of any Claude chat (or `cat PROGRES.md`) so
+> Claude immediately understands the project status without needing it
+> re-explained from scratch. Update this file after every major milestone.
 >
-> Cek status kosong terkini:
+> Check current empty-file status:
 > ```bash
 > cd ~/arclux
 > find apps packages scripts tests -type f \( -name "*.ts" -o -name "*.tsx" \) \
@@ -12,42 +12,43 @@
 >   echo "$(wc -l < "$f") $f"
 > done | sort -n
 > ```
-> Threshold: file dengan header lisensi Apache 2.0 baseline-nya **8 baris**,
-> bukan 0 — jadi "kosong" berarti ≤9 baris, bukan `==0`. Selalu `cat` file
-> yang mencurigakan sebelum percaya angka `wc -l` doang.
+> Threshold: a file with only the Apache 2.0 license header has a baseline
+> of **8 lines**, not 0 — so "empty" means ≤9 lines, not `==0`. Always `cat`
+> a suspicious file before trusting the `wc -l` number alone.
 
-## Apa ini
+## What this is
 
-ARCLUX = tool analisis codebase. Clone repo → parse → index → build dependency
-graph → visualisasi interaktif di browser. Target: liat gimana file/module
-saling terhubung, apa yang kena dampak kalau ubah sesuatu, dan convention apa
-yang dilanggar (misal "nambah page Next.js tapi lupa daftarin route").
+ARCLUX = a codebase analysis tool. Clone repo → parse → index → build
+dependency graph → interactive browser visualization. Goal: see how
+files/modules connect to each other, what gets affected if you change
+something, and which conventions are being violated (e.g. "added a
+Next.js page but forgot to register the route").
 
 ## Stack
 
-- Monorepo: `apps/web` (Next.js 16, App Router, Webpack — **bukan** Turbopack,
-  gak support di Termux arm64), `packages/*` (logic inti, framework-agnostic)
+- Monorepo: `apps/web` (Next.js 16, App Router, Webpack — **not** Turbopack,
+  unsupported on Termux arm64), `packages/*` (core logic, framework-agnostic)
 - UI: React, Tailwind v4, shadcn/ui (Base UI variant) + Aceternity + Magic UI
-- Graph render: SVG + `d3-force` (physics layout)
+- Graph rendering: SVG + `d3-force` (physics layout)
 - Parsing: TypeScript Compiler API (TS/TSX) + `web-tree-sitter` (Python)
-- Environment: Termux di Android, bukan desktop
-- Lisensi: Apache 2.0 (`LICENSE` + `NOTICE` di root, header per-file)
+- Environment: Termux on Android, not desktop
+- License: Apache 2.0 (`LICENSE` + `NOTICE` at root, per-file header)
 
 ---
 
-## ✅ SELESAI — pipeline & core
-Satu entry point: `packages/engine/pipeline.ts` → `analyzeRepository({ repoUrl })`.
-Jangan panggil step individual dari luar `engine/`.
+## ✅ DONE — pipeline & core
+Single entry point: `packages/engine/pipeline.ts` → `analyzeRepository({ repoUrl })`.
+Don't call individual steps from outside `engine/`.
 
 - `packages/git/cloneRepository.ts`, `cleanupRepository.ts`, `readGitignore.ts`
 - `packages/parser/core/*` (`ParserInterface`, `ParserRegistry`, `scanFiles`,
   `LanguageDetector`)
-- `packages/parser/typescript/parseTs.ts` (194 baris) — **catatan**:
-  `parseTsx.ts` dan `parseTsConfig.ts` masih stub kosong terpisah, TSX
-  kemungkinan udah di-handle di `parseTs.ts` yang sama — cek dulu sebelum
-  asumsi TSX belum bisa diparse sama sekali.
+- `packages/parser/typescript/parseTs.ts` (194 lines) — **note**:
+  `parseTsx.ts` and `parseTsConfig.ts` are still separate empty stubs, TSX
+  is likely already handled inside `parseTs.ts` itself — check before
+  assuming TSX can't be parsed at all.
 - `packages/parser/python/*` — `parsePython.ts`, `highlightPython.ts`,
-  `pythonHighlightQuery.ts` (lihat detail gotcha di bawah)
+  `pythonHighlightQuery.ts` (see gotcha details below)
 - `packages/indexer/buildIndex.ts`, `resolveAliases.ts`
 - `packages/graph/buildDependencyGraph.ts`, `buildFolderGraph.ts`,
   `resolvePath.ts`, `serializeGraph.ts`
@@ -57,50 +58,53 @@ Jangan panggil step individual dari luar `engine/`.
 - `packages/rules/RuleEngine.ts` + `rules/nextjs/requirePage.ts`
 - `packages/shared/*` (`types.ts`, `errors.ts`, `hash.ts`, `paths.ts`,
   `constants.ts`, `logger.ts`, `utils.ts`)
-- `packages/search/fuzzyScore.ts` — adaptasi dari `cmdk` (lihat NOTICE)
+- `packages/search/fuzzyScore.ts` — adapted from `cmdk` (see NOTICE)
 
-## ✅ SELESAI — detectors (10/18)
+## ✅ DONE — detectors (10/18)
 
-1. `detectCircularDependency.ts` — DFS cycle detection, adaptasi `madge`
-2. `detectUnusedExports.ts` — adaptasi strategi traversal `knip`, re-implement
-   total pakai `ResolvedImport`/`resolvedReExports` di `ModuleInfo`
-   - **Batasan**: gak ada reference-extraction pass (cuma bisa deteksi
-     "gak pernah di-import", bukan "di-import tapi gak dipake"). Namespace
-     import dianggap otomatis "pake semua". Aliased re-export gak ke-chain
-     bener (`RawExport` cuma simpen nama akhir). Belum entry-file-aware
-     (`resolveRoutes.ts` masih kosong → false positive di file kayak
-     Next.js `page.tsx`).
-3. `detectOrphanFiles.ts` — file-level version dari poin 2 (nothing imports
-   this file at all). Kena entry-file caveat yang sama.
-4. `detectLargeModules.ts` — flag file di atas threshold byte (default
-   15,000). Verified lawan repo `arclux` sendiri: 0 hasil saat ini karena
-   file terbesar di repo (`file-tree.tsx`, 511 baris) cuma 12,840 bytes,
-   masih di bawah threshold — bukan bug, threshold emang belum kepancing.
-5. `detectDuplicateModules.ts` — group file by content hash.
-   - **Insiden yang udah difix**: threshold awal (`minSizeBytes = 200`)
-     kekecilan. Stub file kosong (header lisensi + 1 baris comment) di
-     repo ini ternyata 263 bytes, bukan di bawah 200 kayak yang diasumsikan
-     pas nulis komentarnya. Hasilnya 149 stub file ke-grouped jadi 1 fake
-     "duplicate group" pas dites lawan repo asli (gak ketauan di
-     `python-demo` yang cuma 6 file). Threshold dinaikin ke 300. Masih
-     heuristic byte-based yang rapuh — `FileInfo` gak punya `lineCount`
-     atau `content`, cuma `sizeBytes`/`hash`, jadi kalau header lisensi
-     berubah format, threshold ini bisa stale lagi.
-6. `detectSharedModules.ts` — flag high fan-in files (importedBy count).
-   Informational, bukan "masalah". Verified: nemuin
-   `packages/shared/types.ts` (25 importer), `packages/repository/Repository.ts`
-   (23 importer) di repo `arclux` sendiri — masuk akal.
-7. `detectIndexFiles.ts` — flag barrel file (index.ts) yang campur
-   re-export dengan definisi sendiri.
-   - **Catatan tumpang tindih**: `packages/repository/Module.ts` udah
-     punya `isBarrelFile()`/`isEntryPoint()` yang konsepnya mirip. Belum
-     dicek apa ada duplikasi logic — worth diverifikasi sebelum nulis
-     detector convention berikutnya yang mungkin nyenggol area sama.
+1. `detectCircularDependency.ts` — DFS cycle detection, adapted from `madge`
+2. `detectUnusedExports.ts` — traversal strategy adapted from `knip`,
+   fully re-implemented using `ResolvedImport`/`resolvedReExports` on
+   `ModuleInfo`
+   - **Limitation**: no reference-extraction pass (can only detect "never
+     imported", not "imported but unused"). Namespace imports are treated
+     as automatically "using everything". Aliased re-exports aren't chained
+     correctly (`RawExport` only stores the final name). Not yet
+     entry-file-aware (`resolveRoutes.ts` is still empty → false positives
+     on files like Next.js `page.tsx`).
+3. `detectOrphanFiles.ts` — file-level version of point 2 (nothing imports
+   this file at all). Subject to the same entry-file caveat.
+4. `detectLargeModules.ts` — flags files above a byte threshold (default
+   15,000). Verified against the `arclux` repo itself: 0 results currently
+   because the largest file in the repo (`file-tree.tsx`, 511 lines) is
+   only 12,840 bytes, still under the threshold — not a bug, the
+   threshold just hasn't been triggered yet.
+5. `detectDuplicateModules.ts` — groups files by content hash.
+   - **Incident already fixed**: initial threshold (`minSizeBytes = 200`)
+     was too small. An empty stub file (license header + 1 comment line)
+     in this repo turned out to be 263 bytes, not below 200 as assumed
+     when the comment was written. This caused 149 stub files to get
+     grouped into one fake "duplicate group" when tested against the real
+     repo (not caught in `python-demo`, which only has 6 files). Threshold
+     raised to 300. Still a fragile byte-based heuristic — `FileInfo` has
+     no `lineCount` or `content`, only `sizeBytes`/`hash`, so if the
+     license header format ever changes, this threshold can go stale
+     again.
+6. `detectSharedModules.ts` — flags high fan-in files (importedBy count).
+   Informational, not a "problem". Verified: found
+   `packages/shared/types.ts` (25 importers), `packages/repository/Repository.ts`
+   (23 importers) in the `arclux` repo itself — makes sense.
+7. `detectIndexFiles.ts` — flags barrel files (index.ts) that mix
+   re-exports with their own definitions.
+   - **Overlap note**: `packages/repository/Module.ts` already has
+     `isBarrelFile()`/`isEntryPoint()` with a similar concept. Not yet
+     checked whether there's logic duplication — worth verifying before
+     writing the next convention detector that might touch the same area.
 
-Diverifikasi 2 kali: lawan `playground/python-demo` (fixture kecil) DAN
-lawan repo `arclux` sendiri lewat `npx tsx apps/cli/index.ts doctor .`
-(15,630 baris kode nyata) — yang kedua ini yang nemuin bug threshold di
-atas, gak ketauan dari fixture kecil doang.
+Verified twice: against `playground/python-demo` (small fixture) AND
+against the `arclux` repo itself via `npx tsx apps/cli/index.ts doctor .`
+(15,630 lines of real code) — the latter is what caught the threshold bug
+above, which the small fixture alone did not reveal.
 
 8. `detectLayerViolation.ts` — rule-matching concept (from-pattern /
    to-pattern regex on folder path) adapted from sverweij/dependency-cruiser
@@ -109,9 +113,9 @@ atas, gak ketauan dari fixture kecil doang.
    capture groups; this is a small fixed set of 2 ARCLUX-specific rules
    (packages/* can't import apps/*, packages/shared/* can't import sibling
    packages/*) against ARCLUX's own ModuleInfo/ResolvedImport shape, no
-   group-capture machinery. Verified with positive control (planted a fake
-   violation, confirmed detection, reverted) — 0 violations in `arclux`
-   itself currently.
+   group-capture machinery. Verified with a positive control (planted a
+   fake violation, confirmed detection, reverted) — 0 violations in
+   `arclux` itself currently.
 9. `detectDeadCode.ts` — ARCLUX-original, NOT adapted from knip despite
    investigating knip first (knip has no "dead code" issue type at all —
    its IssueType union is granular: files/exports/types/enumMembers/etc,
@@ -121,13 +125,13 @@ atas, gak ketauan dari fixture kecil doang.
    exports is unused (per detectUnusedExports) — i.e. likely only ever
    imported for a side effect. Composes detectUnusedExports's output
    rather than re-deriving usage data, so there's one source of truth for
-   "is this export used." Verified with positive control (planted a fake
-   side-effect-only import, confirmed detection, reverted) — 0 findings in
-   `arclux` itself currently.
+   "is this export used." Verified with a positive control (planted a
+   fake side-effect-only import, confirmed detection, reverted) — 0
+   findings in `arclux` itself currently.
 
-Diverifikasi juga lewat `doctor.ts` end-to-end (9/9 detector jalan bareng,
-bukan cuma diuji satu-satu terisolasi) lawan `playground/python-demo` dan
-lawan repo `arclux` sendiri.
+Also verified end-to-end via `doctor.ts` (9/9 detectors running together,
+not just tested one by one in isolation) against `playground/python-demo`
+and against the `arclux` repo itself.
 
 10. `detectEntryPoints.ts` — ARCLUX-original, positive classifier for
     orphaned modules (importedBy === 0) that match a known entry-point
@@ -139,528 +143,560 @@ lawan repo `arclux` sendiri.
     loading.tsx, error.tsx, route.ts under apps/web/app, plus
     apps/cli/index.ts).
 
-Diverifikasi juga lewat `doctor.ts` end-to-end (10/10 detector jalan
-bareng) lawan `playground/python-demo` dan lawan repo `arclux` sendiri.
+Also verified end-to-end via `doctor.ts` (10/10 detectors running
+together) against `playground/python-demo` and against the `arclux` repo
+itself.
 
-**8 sisanya masih 0%**: `detectComponentConvention`, `detectFeatureStructure`,
+**Remaining 8 still at 0%**: `detectComponentConvention`, `detectFeatureStructure`,
 `detectMissingExports`, `detectRepositoryPattern`, `detectRouteConvention`,
 `detectStoryConvention`, `detectTestConvention`, `detectUnusedFiles`.
 
-## ✅ SELESAI — UI: graph viewer
+## ✅ DONE — UI: graph viewer
 
-Composition root: `GraphViewport.tsx` (dipakai di
-`app/[org]/[repo]/graph/page.tsx`, jangan panggil `GraphCanvas` manual).
+Composition root: `GraphViewport.tsx` (used in
+`app/[org]/[repo]/graph/page.tsx`, don't call `GraphCanvas` manually).
 
-`GraphProvider` (state terpusat: transform, positions, dimensions,
-contextMenuNodeId — `GraphCanvas` satu-satunya yang nulis), `GraphCanvas`
-(260 baris, pan/zoom/Escape-deselect/double-click-zoom/event delegation),
-`GraphToolbar`, `GraphLegend`, `GraphSearch` (73 baris, masih exact/substring
-match — belum pakai `fuzzyScore.ts`), `GraphSelection`, `GraphContextMenu`,
+`GraphProvider` (centralized state: transform, positions, dimensions,
+contextMenuNodeId — `GraphCanvas` is the only writer), `GraphCanvas`
+(260 lines, pan/zoom/Escape-deselect/double-click-zoom/event delegation),
+`GraphToolbar`, `GraphLegend`, `GraphSearch` (73 lines, still exact/substring
+match — not yet using `fuzzyScore.ts`), `GraphSelection`, `GraphContextMenu`,
 `Minimap`, `GraphNode`, `GraphEdge`.
 
-**Belum diverifikasi visual di browser** (cuma lolos `tsc --noEmit`):
-- `Minimap` viewport-rect masih asumsi origin transform di (0,0)
-- `Minimap` + `GraphLegend` bentrok kalau dirender bareng (sama-sama
-  `bottom-4 right-4` absolute) — saat ini cuma `GraphLegend` yang di-render
-- Double-click-zoom + context menu barengan belum dites di device nyata
+**Not yet visually verified in a browser** (only passed `tsc --noEmit`):
+- `Minimap` viewport-rect still assumes transform origin at (0,0)
+- `Minimap` + `GraphLegend` collide when rendered together (both use
+  `bottom-4 right-4` absolute positioning) — currently only `GraphLegend`
+  is rendered
+- Double-click-zoom + context menu together haven't been tested on a real
+  device
 
-## ✅ SELESAI — UI: layout, primitives, patterns (sebagian), marketing
+## ✅ DONE — UI: layout, primitives, patterns (partial), marketing
 
-**`components/layout/*`** (7 file, semua production-quality): `Sidebar.tsx`,
+**`components/layout/*`** (7 files, all production-quality): `Sidebar.tsx`,
 `SplitPane.tsx` (resizable pane, pointer drag), `WorkspaceLayout.tsx`,
 `Navbar.tsx`, `Breadcrumbs.tsx`, `PageContainer.tsx`, `PageHeader.tsx`,
 `Footer.tsx`.
 
-**`components/primitives/*`** (7 file): `Avatar.tsx`, `Badge.tsx`,
-`Checkbox.tsx`, `Kbd.tsx`, `Skeleton.tsx`, `Switch.tsx` — thin re-export dari
-`vendor-ui/shadcn/*`. Semua sudah lengkap.
+**`components/primitives/*`** (7 files): `Avatar.tsx`, `Badge.tsx`,
+`Checkbox.tsx`, `Kbd.tsx`, `Skeleton.tsx`, `Switch.tsx` — thin re-exports
+from `vendor-ui/shadcn/*`. All complete.
 
-**`components/patterns/*`** — cuma **3 dari 11** yang selesai:
-`CommandPalette.tsx` (pakai `cmdk` sebagai dependency, lihat NOTICE),
-`LoadingState.tsx`, `ErrorState.tsx`. **8 sisanya masih stub**:
-`ConfirmDialog`, `CopyButton`, `DataTable`, `EmptyState`, `FilterBar`,
-`MobileBottomSheet`, `SearchInput`, `StatusDot`.
+**`components/patterns/*`** — now **11/11 complete** (see update below):
+`CommandPalette.tsx` (uses `cmdk` as a dependency, see NOTICE),
+`LoadingState.tsx`, `ErrorState.tsx`, `ConfirmDialog.tsx`, `CopyButton.tsx`,
+`DataTable.tsx`, `EmptyState.tsx`, `FilterBar.tsx`, `MobileBottomSheet.tsx`,
+`SearchInput.tsx`, `StatusDot.tsx`.
 
-**`components/marketing/*`** (5 file, semua selesai): `Hero.tsx`, `CTA.tsx`,
+**`components/marketing/*`** (5 files, all complete): `Hero.tsx`, `CTA.tsx`,
 `Example.tsx`, `Features.tsx`, `Footer.tsx`.
 
-**`components/overview/*`** — cuma `ProjectStructure.tsx` (99 baris, file
-tree UI collapsible pakai `d3-hierarchy`) yang selesai. `RepositoryHeader`,
-`RepositoryInfo`, `RepositoryOverview` masih stub.
+**`components/overview/*`** — only `ProjectStructure.tsx` (99 lines, file
+tree UI, collapsible, uses `d3-hierarchy`) is complete. `RepositoryHeader`,
+`RepositoryInfo`, `RepositoryOverview` are still stubs.
 
-**`components/explorer/*`** — cuma `FileDetails.tsx` (132 baris, fetch +
-render source dengan syntax highlight) yang selesai, **belum di-wire ke
-halaman manapun** karena `Explorer.tsx` sendiri masih stub. `DependencyList`,
-`ImpactSummary` juga masih stub.
+**`components/explorer/*`** — only `FileDetails.tsx` (132 lines, fetch +
+render source with syntax highlighting) is complete, **not yet wired into
+any page** because `Explorer.tsx` itself is still a stub. `DependencyList`,
+`ImpactSummary` are also still stubs.
 
-**`hooks/useTheme.ts`** (36 baris) selesai. `useClipboard`,
-`useCommandPalette`, `useDebounce`, `useMediaQuery` masih stub.
+**`hooks/useTheme.ts`** (36 lines) done. `useClipboard`,
+`useCommandPalette`, `useDebounce`, `useMediaQuery` still stubs.
 
-**`theme/colors.ts`, `theme.dark.ts`, `graphColors.ts`** selesai.
-`motion.ts`, `spacing.ts`, `typography.ts` masih stub.
+**`theme/colors.ts`, `theme.dark.ts`, `graphColors.ts`** done.
+`motion.ts`, `spacing.ts`, `typography.ts` still stubs.
 
-**`lib/utils.ts`, `lib/cn.ts`** selesai. `lib/api.ts`, `lib/graph.ts` stub.
+**`lib/utils.ts`, `lib/cn.ts`** done. `lib/api.ts`, `lib/graph.ts` stubs.
 
-**App routes**: semua `page.tsx`/`error.tsx`/`loading.tsx` di
-`app/[org]/[repo]/*` udah ada isinya (bukan default Next.js boilerplate),
-termasuk `app/new/page.tsx`.
+**App routes**: every `page.tsx`/`error.tsx`/`loading.tsx` under
+`app/[org]/[repo]/*` already has real content (not default Next.js
+boilerplate), including `app/new/page.tsx`.
 
 **API routes**: `POST /api/analyze`, `GET /api/graph`, `GET /api/file`
-(fetch raw dari GitHub + highlight Python) — semua selesai (65-84 baris).
-`api/impact/route.ts` dan `api/search/route.ts` masih stub 8 baris.
+(fetch raw from GitHub + Python highlighting) — all done (65-84 lines).
+`api/impact/route.ts` and `api/search/route.ts` — see update below, now
+implemented (previously 8-line stubs).
 
-## ✅ SELESAI — vendor-ui
+## ✅ DONE — vendor-ui
 
-Semua isi `vendor-ui/shadcn/*` (avatar, badge, button, checkbox,
+Everything in `vendor-ui/shadcn/*` (avatar, badge, button, checkbox,
 command, dialog, dropdown-menu, input, input-group, popover, select,
 separator, sheet, skeleton, switch, tabs, textarea, toast, tooltip),
-`vendor-ui/aceternity/*` (5 file), `vendor-ui/magic-ui/*` (6 file, termasuk
-`file-tree.tsx` 511 baris — file terbesar di seluruh project), dan
-`vendor-ui/_inbox/*` (4 file custom: neon-glow-card, code-block-terminal,
-graph-particles-bg, keyboard-shortcut-hint) — semua terinstall/tertulis
-lengkap.
+`vendor-ui/aceternity/*` (5 files), `vendor-ui/magic-ui/*` (6 files,
+including `file-tree.tsx` at 511 lines — the largest file in the whole
+project), and `vendor-ui/_inbox/*` (4 custom files: neon-glow-card,
+code-block-terminal, graph-particles-bg, keyboard-shortcut-hint) — all
+installed/written in full.
 
 ---
 
-## ⚠️ SEBAGIAN / PERLU VERIFIKASI
+## ⚠️ PARTIAL / NEEDS VERIFICATION
 
-**Python parsing & syntax highlighting** — jalan (`parsePython.ts` 203
-baris, `highlightPython.ts` 142 baris, `pythonHighlightQuery.ts` 151 baris
-disalin verbatim dari `tree-sitter-python`, MIT — atribusi ada di NOTICE),
-tapi:
-- Belum pernah dites end-to-end lewat `ParserRegistry` beneran (cuma script
-  eksperimen terpisah)
-- Belum diverifikasi visual di browser (warna syntax highlight belum
-  pernah diliat beneran nempel ke karakter yang benar)
-- `FileDetails.tsx` yang makai ini belum di-wire ke halaman manapun
+**Python parsing & syntax highlighting** — works (`parsePython.ts` 203
+lines, `highlightPython.ts` 142 lines, `pythonHighlightQuery.ts` 151 lines
+copied verbatim from `tree-sitter-python`, MIT — attribution in NOTICE),
+but:
+- Never tested end-to-end through the real `ParserRegistry` (only via a
+  separate experimental script)
+- Not yet visually verified in the browser (the syntax-highlight colors
+  have never actually been confirmed to attach to the right characters)
+- `FileDetails.tsx`, which uses this, is not yet wired into any page
 
-**Gotcha `web-tree-sitter`** (WAJIB dibaca sebelum nambah parser bahasa lain
-pakai tree-sitter):
-- Versi **wajib 0.25.0**, bukan 0.26.x — versi baru gagal load WASM grammar
-  (`getDylinkMetadata` ABI mismatch)
-- Harus dipanggil via `require()` (lewat `createRequire(import.meta.url)`),
-  bukan `import` murni — error "Dynamic require of fs/promises is not
-  supported" kalau dipaksa `import`
-- Gak ada `.d.ts`, gak bisa di-augment via `declare module` (error TS2665)
-  — solusinya type custom sendiri (`TSNode` interface), require sebagai `any`
-- Grammar `.wasm` per-bahasa ada di `node_modules/tree-sitter-wasms/out/`,
-  BUKAN dari clone `~/research/tree-sitter` (itu cuma referensi konsep)
-- Parser instance WAJIB singleton (`getPythonRuntime()` pola
-  promise-cache) — reload WASM per-`parse()` call bakal sangat lambat
-- Query constructor beda 2 versi API (`language.query()` lama vs
-  `new Query()` baru) — `highlightPython.ts` udah handle fallback
-- Python gak punya `export` — semua top-level `function_definition`/
-  `class_definition` dianggap "export" (heuristic, belum baca `__all__`)
+**`web-tree-sitter` gotcha** (MUST read before adding another
+tree-sitter-based language parser):
+- **Must be exactly 0.25.0**, not 0.26.x — newer versions fail to load the
+  WASM grammar (`getDylinkMetadata` ABI mismatch)
+- Must be called via `require()` (through `createRequire(import.meta.url)`),
+  not a pure `import` — otherwise "Dynamic require of fs/promises is not
+  supported" error
+- No `.d.ts`, can't be augmented via `declare module` (TS2665 error) —
+  solved with a custom type (`TSNode` interface), `require`d as `any`
+- Per-language grammar `.wasm` files live in
+  `node_modules/tree-sitter-wasms/out/`, NOT from the `~/research/tree-sitter`
+  clone (that's just a reference for concepts)
+- Parser instance MUST be a singleton (`getPythonRuntime()` promise-cache
+  pattern) — reloading the WASM per `parse()` call would be very slow
+- Query constructor differs between 2 API versions (old `language.query()`
+  vs new `new Query()`) — `highlightPython.ts` already handles the fallback
+- Python has no `export` — every top-level `function_definition`/
+  `class_definition` is treated as an "export" (heuristic, doesn't yet
+  read `__all__`)
 
-**`packages/detectors/detectUnusedExports.ts`** — lihat batasan di section
-detectors di atas.
+**`packages/detectors/detectUnusedExports.ts`** — see limitations in the
+detectors section above.
 
 ---
 
-## ❌ MASIH KOSONG (stub 8 baris, cuma header lisensi)
+## ❌ STILL EMPTY (8-line stub, license header only)
 
-**Prioritas #1 — fitur inti, 0% total**: `packages/impact/*` (8 file:
-`buildImpactTree`, `calculateAffectedComponents/Files/Modules/Routes`,
-`traceConsumers/Dependencies/Exports/Imports`)
+**Priority #1 — core feature — NOTE: this was previously miscategorized,
+see "packages/impact/* already done" update below**
 
-**Prioritas tinggi**:
-- `apps/cli/*` (6 file: `analyze`, `config`, `doctor`, `graph`, `impact`, `index`)
-- `packages/db/*` (5 file)
-- `components/workspace/*` (5 file + 3 panel — semua stub)
-- `components/patterns/*` — 8 dari 11 file (lihat daftar di atas)
+**High priority**:
+- `packages/db/*` (5 files)
+- `components/workspace/*` (5 files + 3 panels — all stubs)
 - `components/explorer/Explorer.tsx`, `DependencyList.tsx`, `ImpactSummary.tsx`
 - `components/overview/RepositoryHeader/Info/Overview.tsx`
-- `components/search/GlobalSearch.tsx` (tinggal pakai `fuzzyScore.ts` yang
-  udah ada)
-- Detector sisanya (16/18)
+- `components/search/GlobalSearch.tsx` (just needs to use the existing
+  `fuzzyScore.ts`)
+- Remaining detectors (8 of 18 — see list above)
 
-**Prioritas menengah**:
-- `packages/cache/*`, `packages/watcher/*` (masing-masing 5 & 4 file)
-- `packages/git/*` sisanya (`checkoutBranch`, `detectDefaultBranch`,
-  `getBranches`, `getCommitHistory`, `getContributors` — beda dari
-  `cloneRepository`/`cleanupRepository`/`readGitignore` yang udah selesai)
+**Medium priority**:
+- `packages/cache/*`, `packages/watcher/*` (5 & 4 files respectively)
+- Remaining `packages/git/*` (`checkoutBranch`, `detectDefaultBranch`,
+  `getBranches`, `getCommitHistory`, `getContributors` — different from
+  `cloneRepository`/`cleanupRepository`/`readGitignore`, which are already
+  done)
 - `packages/graph/buildCallGraph/buildExportGraph/buildImportGraph.ts`
-- `packages/indexer/*` sisanya (`indexSchema`, `resolveComponents/Exports/
-  Hooks/Providers/Routes`, `updateIndex`, `watchIndex`) — **`resolveRoutes.ts`
-  kosong ini yang bikin `detectUnusedExports` belum entry-file-aware**
-- `packages/rules/*` sisanya (electron, express, nestjs, react, vite — 9 file,
-  `nextjs/*` juga masih 3 dari 4 stub: `requireIndexUpdate`,
+- Remaining `packages/indexer/*` (`indexSchema`, `resolveComponents/Exports/
+  Hooks/Providers/Routes`, `updateIndex`, `watchIndex`) — **the empty
+  `resolveRoutes.ts` is why `detectUnusedExports` is not yet
+  entry-file-aware**
+- Remaining `packages/rules/*` (electron, express, nestjs, react, vite — 9
+  files, `nextjs/*` also still 3 of 4 stubs: `requireIndexUpdate`,
   `requireLayoutUpdate`, `requireMetadata`)
 - `packages/search/*` (SearchEngine, SearchFilters, SearchIndex,
-  SearchKeyboard, SearchProvider, SearchResults — beda dari `fuzzyScore.ts`
-  yang udah selesai, ini belum dipakein)
-- `packages/ui/*` (5 file) — ⚠️ **hati-hati duplikasi**: `graphColor.ts` di
-  sini vs `theme/graphColors.ts` di `apps/web` yang udah selesai, nama mirip
-  banget, resiko dead-code kayak kejadian sebelumnya kalau ada yang nulis ke
-  sini tanpa sadar udah ada versi jalan
-- `apps/web/features/*` (13 file — graph, impact, issues, repository, search
-  stores/hooks, semua stub)
-- `apps/web/hooks/*` sisanya (useClipboard, useCommandPalette, useDebounce,
-  useMediaQuery)
+  SearchKeyboard, SearchProvider, SearchResults — different from the
+  already-done `fuzzyScore.ts`, which isn't yet plugged into these)
+- `packages/ui/*` (5 files) — ⚠️ **watch for duplication**: `graphColor.ts`
+  here vs `theme/graphColors.ts` in `apps/web`, which is already done —
+  very similar names, same dead-code risk as a previous incident if
+  someone writes content here without realizing a working version already
+  exists
+- `apps/web/features/*` (13 files — graph, impact, issues, repository,
+  search stores/hooks, all stubs)
+- Remaining `apps/web/hooks/*` (useClipboard, useCommandPalette,
+  useDebounce, useMediaQuery)
 - `apps/web/lib/api.ts`, `lib/graph.ts`
 - `apps/web/theme/motion.ts`, `spacing.ts`, `typography.ts`
-- Parser bahasa lain: cpp, csharp, go, java, javascript (parseCommonJs/Js/Jsx),
-  php, ruby, rust — semua 0%. `parser/config/*` (json, packageJson, toml,
-  yaml) juga 0%. `parser/core/parseImports.ts` 0%.
-- `parser/typescript/parseTsx.ts`, `parseTsConfig.ts` — cek dulu apa ini
-  beneran perlu diisi terpisah atau logic-nya udah nyatu di `parseTs.ts`
-  (194 baris) sebelum nulis ulang
+- Other-language parsers: cpp, csharp, go, java, javascript
+  (parseCommonJs/Js/Jsx), php, ruby, rust — all 0%. `parser/config/*`
+  (json, packageJson, toml, yaml) also 0%. `parser/core/parseImports.ts`
+  0%.
+- `parser/typescript/parseTsx.ts`, `parseTsConfig.ts` — check first whether
+  these really need separate implementation or the logic already lives in
+  `parseTs.ts` (194 lines) before rewriting
 
-**Prioritas rendah**:
-- `scripts/*` (4 file: benchmark, build, generateFixtures, release)
-- `tests/*` (semua — detector, graph, impact, indexer, pipeline, parser
-  per-bahasa) — 0% total, belum ada satu test pun di project ini
+**Low priority**:
+- `scripts/*` (4 files: benchmark, build, generateFixtures, release)
+- `tests/*` (everything — detector, graph, impact, indexer, pipeline,
+  per-language parser tests) — 0% total, there isn't a single test in
+  this project yet
 
 ---
 
-## Referensi eksternal yang sudah dipakai
+## External references already used
 
-Semua atribusi lengkap ada di `NOTICE` (root). Ringkasan:
+Full attribution is in `NOTICE` (root). Summary:
 
-| Sumber | Lisensi | Sifat | Jadi |
+| Source | License | Nature | Became |
 |---|---|---|---|
-| `sst/opencode` | MIT | pola diadaptasi ulang | `theme/arclux.json`, `hooks/useFilteredList.ts` |
-| `pahen/madge` | MIT | algoritma diimplementasi ulang | `detectCircularDependency.ts` |
-| `git-truck` | MIT | pola UX diimplementasi ulang | `GraphCanvas.tsx` |
-| `sverweij/dependency-cruiser` | MIT | konsep diimplementasi ulang | `RuleEngine.ts` |
-| `d3-hierarchy` | ISC | dipakai langsung | `buildFolderGraph.ts` |
-| `webpro-nl/knip` | MIT | strategi traversal diimplementasi ulang | `detectUnusedExports.ts` |
-| `tree-sitter/tree-sitter-python` | MIT | query disalin verbatim | `pythonHighlightQuery.ts` |
-| `pacocoursey/cmdk` | MIT | dipakai langsung sbg dependency + scoring diadaptasi | `CommandPalette.tsx`, `fuzzyScore.ts` |
+| `sst/opencode` | MIT | pattern re-adapted | `theme/arclux.json`, `hooks/useFilteredList.ts` |
+| `pahen/madge` | MIT | algorithm re-implemented | `detectCircularDependency.ts` |
+| `git-truck` | MIT | UX pattern re-implemented | `GraphCanvas.tsx` |
+| `sverweij/dependency-cruiser` | MIT | concept re-implemented | `RuleEngine.ts` |
+| `d3-hierarchy` | ISC | used directly | `buildFolderGraph.ts` |
+| `webpro-nl/knip` | MIT | traversal strategy re-implemented | `detectUnusedExports.ts` |
+| `tree-sitter/tree-sitter-python` | MIT | query copied verbatim | `pythonHighlightQuery.ts` |
+| `pacocoursey/cmdk` | MIT | used directly as dependency + scoring adapted | `CommandPalette.tsx`, `fuzzyScore.ts` |
 
-**Repo di `~/research` yang cuma buat baca pola/arsitektur, bukan dicomot
-kodenya**: git, language-server-protocol, llvm-project, sqlite, tree-sitter,
-nx, clack, shadcn-table, drizzle-orm (cek mana yang beneran udah di-clone
-sebelum asumsi ada).
+**Repos in `~/research` used only to read patterns/architecture, not
+copied from**: git, language-server-protocol, llvm-project, sqlite,
+tree-sitter, nx, clack, shadcn-table, drizzle-orm (check which ones are
+actually cloned before assuming).
 
-## Masalah yang pernah kejadian — jangan terulang
+## Problems that happened before — don't repeat these
 
-- **Dead code numpuk**: 2 file beda nama ngerjain hal sama
-  (`graph/resolveAlias.ts` vs `indexer/resolveAliases.ts`) karena sesi kerja
-  paralel tanpa sinkron. Lesson: SELALU `cat`/`grep` dulu sebelum nulis file
-  baru yang berpotensi overlap. **Resiko sama masih ada** di
-  `packages/ui/graphColor.ts` vs `theme/graphColors.ts` — belum di-cleanup.
-- **`wc -l` menipu**: file dengan header lisensi Apache 2.0 baseline 8 baris
-  meski isinya kosong. Threshold "kosong" itu `≤9`, bukan `==0`. Selalu `cat`
-  file yang meragukan sebelum nyatet status di PROGRES.md.
-- **Header lisensi ganda**: pernah ada file dengan 2 header (MIT lama +
-  Apache baru numpuk) gara-gara ganti lisensi tengah jalan tanpa hapus
-  header lama dulu. Udah dibersihin manual.
-- **Script panjang bisa gagal di tengah tanpa ketauan**: sesi CommandPalette
-  sempet gagal nulis file di tengah heredoc, tapi step-step sebelumnya
-  (install `cmdk`, bikin `fuzzyScore.ts`) tetep sukses — bikin keliatan
-  "berhasil" padahal enggak lengkap. Lesson: abis jalanin script multi-step,
-  verifikasi tiap langkah (`cat` file / `git log`), jangan asumsi "dijalanin"
-  = "berhasil semua".
-- **Termux quirks**: `/tmp` gak ada, Turbopack gak jalan di arm64 (pakai
-  `--webpack`), git push butuh Personal Access Token bukan password.
-- **Repo referensi jangan ke-clone di dalam `~/arclux`** — harus di `~` root
-  (`~/git-truck`, `~/madge`, `~/opencode`, `~/research/*`), di luar project.
+- **Dead code piling up**: 2 differently-named files doing the same thing
+  (`graph/resolveAlias.ts` vs `indexer/resolveAliases.ts`) because of
+  parallel sessions without sync. Lesson: ALWAYS `cat`/`grep` first before
+  writing a new file that could overlap. **Same risk still exists** for
+  `packages/ui/graphColor.ts` vs `theme/graphColors.ts` — not yet cleaned
+  up.
+- **`wc -l` is misleading**: a file with just the Apache 2.0 license
+  header has a baseline of 8 lines even when empty. The "empty" threshold
+  is `≤9`, not `==0`. Always `cat` a suspicious file before recording its
+  status in PROGRES.md.
+- **Duplicate license headers**: there was once a file with 2 headers (old
+  MIT + new Apache stacked) from a mid-stream license change without
+  removing the old header first. Already cleaned up manually.
+- **Long scripts can silently fail partway through**: the CommandPalette
+  session once failed to write a file partway through a heredoc, but the
+  earlier steps (installing `cmdk`, creating `fuzzyScore.ts`) still
+  succeeded — making it look "done" when it wasn't complete. Lesson: after
+  running a multi-step script, verify each step (`cat` the file / `git
+  log`), don't assume "ran" means "all succeeded".
+- **Termux quirks**: `/tmp` doesn't exist, Turbopack doesn't run on arm64
+  (use `--webpack`), git push needs a Personal Access Token, not a
+  password.
+- **Don't clone reference repos inside `~/arclux`** — they must be at the
+  `~` root (`~/git-truck`, `~/madge`, `~/opencode`, `~/research/*`),
+  outside the project.
 
-## Update — packages/incremental (fondasi baru, belum di-wire)
+## Update — packages/incremental (new foundation, not wired in yet)
 
-`packages/incremental/` — Cell (input), Query (memoized function dengan
-dependency tracking + early cutoff), Database (koordinasi revision).
-Prinsip diadaptasi dari `salsa-rs/salsa` (dual MIT/Apache-2.0) — BUKAN port
-(Rust proc-macro vs runtime tracking di TS), re-implementasi dari nol.
-Atribusi lengkap ada di komentar `Database.ts`.
+`packages/incremental/` — Cell (input), Query (memoized function with
+dependency tracking + early cutoff), Database (revision coordination).
+Principle adapted from `salsa-rs/salsa` (dual MIT/Apache-2.0) — NOT a
+port (Rust proc-macro vs runtime tracking in TS), re-implemented from
+scratch. Full attribution in the `Database.ts` comment.
 
-**Diverifikasi lewat demo runnable** (`packages/incremental/demo.ts`, jalanin
-`npx tsx packages/incremental/demo.ts`), bukan cuma `tsc --noEmit`:
-- Memoization: call berulang tanpa perubahan = 0 recompute
-- Dependency tracking: cuma Cell yang beneran dibaca yang trigger invalidation
-- Early cutoff: `Cell.set()` dengan value identik (`Object.is`) = no-op,
-  gak nge-bump revision
-- Cycle detection: query yang re-entry ke key yang sama pas masih computing
-  → throw, bukan infinite loop
+**Verified via a runnable demo** (`packages/incremental/demo.ts`, run with
+`npx tsx packages/incremental/demo.ts`), not just `tsc --noEmit`:
+- Memoization: repeated calls with no change = 0 recomputation
+- Dependency tracking: only Cells that are actually read trigger
+  invalidation
+- Early cutoff: `Cell.set()` with an identical value (`Object.is`) is a
+  no-op, doesn't bump the revision
+- Cycle detection: a query re-entering the same key while still computing
+  → throws, instead of an infinite loop
 
-**Batasan yang diketahui (didokumentasikan di komentar `Query.ts`)**:
-- Early cutoff cuma jalan buat reference equality (`Object.is`) — object baru
-  dengan isi identik tetap dianggap "berubah". Deep-equality cutoff butuh
-  comparator custom, belum diimplementasi.
-- Dependency tracking pas re-validasi cache-hit itu over-approximate (query
-  C yang manggil A yang manggil B jadi depend on A DAN B langsung, bukan
-  cuma A dengan B implied transitively) — aman (gak ada missed invalidation)
-  tapi gak maximally minimal.
-- Cycle throw, gak ada fixed-point resolution buat query yang genuinely
-  rekursif — itu dianggap bug caller, bukan pattern yang didukung.
+**Known limitations (documented in the `Query.ts` comment)**:
+- Early cutoff only works for reference equality (`Object.is`) — a new
+  object with identical contents is still considered "changed". Deep-
+  equality cutoff would need a custom comparator, not yet implemented.
+- Dependency tracking during cache-hit revalidation is over-approximate
+  (query C calling A which calls B ends up depending on both A AND B
+  directly, rather than just A with B implied transitively) — safe (no
+  missed invalidations) but not maximally minimal.
+- Cycles throw, there's no fixed-point resolution for genuinely recursive
+  queries — that's treated as a caller bug, not a supported pattern.
 
-**BELUM di-wire ke pipeline manapun** — `buildIndex.ts`, `pipeline.ts`,
-detector-detector, semuanya masih jalan cara lama (full re-scan). Ini
-fondasi standalone yang perlu integrasi terpisah sebagai langkah besar
-berikutnya, bukan otomatis kepake begitu file ini ada.
+**NOT wired into any pipeline yet** — `buildIndex.ts`, `pipeline.ts`, the
+detectors, everything still runs the old way (full re-scan). This is a
+standalone foundation that needs separate integration as a bigger next
+step, not something that's automatically used just because this file
+exists.
 
 ## Update — First real end-to-end verification (playground/python-demo)
 
-`playground/python-demo/` — fixture 6 file Python (circular import, unused
-export, normal chain) + `scripts/testPlayground.ts` — script manual yang
-manggil `buildIndex` → `buildDependencyGraph` → 2 detector langsung,
-BYPASS `analyzeRepository()` (yang didesain buat repoUrl/clone, bukan
-local path). Ini exception yang legit dari aturan "jangan panggil step
-individual dari luar engine/" — itu aturan buat call site produksi
-(CLI, API route), bukan script verifikasi lokal.
+`playground/python-demo/` — a 6-file Python fixture (circular import,
+unused export, normal chain) + `scripts/testPlayground.ts` — a manual
+script that calls `buildIndex` → `buildDependencyGraph` → 2 detectors
+directly, BYPASSING `analyzeRepository()` (which is designed for
+repoUrl/clone, not a local path). This is a legitimate exception to the
+"don't call individual steps from outside engine/" rule — that rule is
+for production call sites (CLI, API route), not local verification
+scripts.
 
-**Hasil, pertama kali dites lawan kode nyata (bukan cuma tsc --noEmit)**:
-- Module count, import resolution, graph edges — semua benar
-- `detectCircularDependency` nemuin cycle `cyclic_a ↔ cyclic_b` — benar
-- `detectUnusedExports` nemuin `unused_helper` (true positive) DAN
-  `main` di `main.py` (false positive) — false positive ini **konfirmasi
-  empiris pertama** dari limitation "belum entry-file-aware" yang udah
-  dicatet sebelumnya, bukan bug baru. `resolveRoutes.ts` yang masih 0%
-  itu yang bakal benerin ini.
+**Results, tested against real code for the first time (not just
+tsc --noEmit)**:
+- Module count, import resolution, graph edges — all correct
+- `detectCircularDependency` found the cycle `cyclic_a ↔ cyclic_b` —
+  correct
+- `detectUnusedExports` found `unused_helper` (true positive) AND `main`
+  in `main.py` (false positive) — this false positive is the **first
+  empirical confirmation** of the "not yet entry-file-aware" limitation
+  noted earlier, not a new bug. The still-0% `resolveRoutes.ts` is what
+  will fix this.
 
-**Catatan koordinasi**: sesi lain lagi rencanain refactor `pipeline.ts`
-buat CLI `doctor` command — nambah field `findings[]` ke
-`AnalyzeRepositoryResult`, biar `analyzeRepository()` orkestrasi detector
-secara internal (bukan tiap caller manggil `buildIndex`+detector sendiri).
-Belum ada kode yang di-commit dari rencana itu per commit `9e6b660e`.
-`scripts/testPlayground.ts` di atas TIDAK menggantikan rencana itu — itu
-tetap dibutuhkan buat local dev testing, sementara refactor `findings[]`
-itu buat production call sites (CLI, API). Kalau nanti `findings[]`
-ditambahkan, `testPlayground.ts` bisa disederhanakan buat pakai itu juga.
+**Coordination note**: another session was planning a `pipeline.ts`
+refactor for the CLI `doctor` command — adding a `findings[]` field to
+`AnalyzeRepositoryResult` so `analyzeRepository()` orchestrates detectors
+internally (instead of every caller calling `buildIndex`+detectors
+itself). No code from that plan had been committed as of commit
+`9e6b660e`. The `scripts/testPlayground.ts` above does NOT replace that
+plan — it's still needed for local dev testing, while the `findings[]`
+refactor is for production call sites (CLI, API). If `findings[]` gets
+added later, `testPlayground.ts` could be simplified to use it too.
 
-## Update — doctor.ts sekarang manggil 10/18 detector (updated dari 9/18)
+## Update — doctor.ts now calls 10/18 detectors (updated from 9/18)
 
-`apps/cli/doctor.ts` di-update manggil ke-5 detector baru di atas selain
-2 yang lama. Masih manual call per-detector (belum ada registry) — komentar
-di file itu sendiri udah nyatet ini worth di-registry-in begitu nambah
-detector ke-8+, karena tiap detector punya finding shape beda-beda
-(`cycle` vs `filePath`+`line` vs `hash`+`filePaths[]` vs `isPureBarrel`),
-jadi registry butuh print-adapter per detector, bukan cuma daftar fungsi.
+`apps/cli/doctor.ts` updated to call the 5 new detectors above in addition
+to the 5 previous ones. Still manual per-detector calls (no registry yet)
+— the file's own comment already notes this is worth turning into a
+registry once you hit detector #8+, because each detector has a different
+finding shape (`cycle` vs `filePath`+`line` vs `hash`+`filePaths[]` vs
+`isPureBarrel`), so a registry would need a print-adapter per detector,
+not just a list of functions.
 
-## Update — apps/cli (5/6 file, index.ts sekarang punya isi beneran)
+## Update — apps/cli (5/6 files, index.ts now has real content)
 
-`apps/cli/*` — `analyze`, `doctor`, `graph`, `config` **jalan dan
-diverifikasi** lawan `playground/python-demo` (bukan cuma tsc --noEmit).
-`impact` sengaja jujur bilang "belum diimplementasi" — `packages/impact/*`
-masih 0%, jadi command ini gak nge-fake hasil kosong/palsu.
+`apps/cli/*` — `analyze`, `doctor`, `graph`, `config` **work and are
+verified** against `playground/python-demo` (not just tsc --noEmit).
+`impact` deliberately reports "not yet implemented" — `packages/impact/*`
+was still 0% at that point, so this command doesn't fake an
+empty/incorrect result.
 
-Dibangun pakai `commander` (routing) + `@clack/prompts` (output/spinner).
+Built with `commander` (routing) + `@clack/prompts` (output/spinner).
 
-**`analyzeLocal.ts`** — helper baru, manggil `buildIndex` +
-`buildDependencyGraph` langsung terhadap local path, BYPASS
-`analyzeRepository()` (yang didesain buat repoUrl/clone). Exception yang
-sama kayak `scripts/testPlayground.ts` — legal buat local-path call site,
-bukan buat production remote-repo flow.
+**`analyzeLocal.ts`** — new helper, calls `buildIndex` +
+`buildDependencyGraph` directly against a local path, BYPASSING
+`analyzeRepository()` (which is designed for repoUrl/clone). Same
+exception as `scripts/testPlayground.ts` — legitimate for a local-path
+call site, not for the production remote-repo flow.
 
-**Action item eksplisit**: sesi lain dilaporkan lagi rencanain refactor
-`pipeline.ts` (nambah `findings[]` + local-path support ke
-`AnalyzeRepositoryResult`). Begitu itu landing, `analyzeLocal.ts` harus
-DIHAPUS dan semua command CLI pindah manggil engine API langsung — jangan
-biarin 2 jalur orkestrasi (pipeline.ts vs analyzeLocal.ts) hidup
-berdampingan lebih dari sementara, itu bakal jadi dead-code-risk baru.
+**Explicit action item**: another session was reportedly planning a
+`pipeline.ts` refactor (adding `findings[]` + local-path support to
+`AnalyzeRepositoryResult`). Once that lands, `analyzeLocal.ts` should be
+DELETED and all CLI commands should call the engine API directly — don't
+let 2 orchestration paths (pipeline.ts vs analyzeLocal.ts) coexist longer
+than temporarily necessary, that would become a new dead-code risk.
 
-**Temuan tambahan**: `apps/cli` sebelumnya gak punya `tsconfig.json`
-sendiri — `tsc` otomatis naik cari config ke root `~/arclux/tsconfig.json`,
-yang ternyata isinya Next.js-flavored (`jsx: preserve`, `plugins: next`),
-kemungkinan salah taruh/duplikat dari `apps/web/tsconfig.json`. Ini bikin
-`tsc --noEmit` di CLI ikut nyisir seluruh `apps/web` dan gagal di puluhan
-`@/*` import yang cuma valid di scope Next.js. Fixed dengan bikin
-`apps/cli/tsconfig.json` sendiri (Node/ESNext target, self-contained
-include). **Belum diselidiki**: apa root `tsconfig.json` itu emang
-sengaja atau bug lama yang kebawa — worth dicek kalau nanti ada
-konsumer/workspace lain yang juga gak punya tsconfig sendiri.
+**Additional finding**: `apps/cli` previously had no `tsconfig.json` of
+its own — `tsc` automatically walked up to the root
+`~/arclux/tsconfig.json`, which turned out to be Next.js-flavored
+(`jsx: preserve`, `plugins: next`), possibly misplaced/duplicated from
+`apps/web/tsconfig.json`. This caused `tsc --noEmit` in the CLI to also
+sweep through all of `apps/web` and fail on dozens of `@/*` imports only
+valid in the Next.js scope. Fixed by creating a dedicated
+`apps/cli/tsconfig.json` (Node/ESNext target, self-contained include).
+**Not yet investigated**: whether that root `tsconfig.json` was
+intentional or a leftover bug — worth checking if any other
+consumer/workspace also lacks its own tsconfig.
 
-## KOREKSI PENTING — packages/impact/* ternyata SUDAH SELESAI (8/8)
+## CORRECTION — packages/impact/* turned out to be ALREADY DONE (8/8)
 
-Sebelumnya dicatat sebagai prioritas #1 yang 0% total. Ternyata sudah
-diimplementasi lengkap di commit `8b69831a` (sebelum sesi ini bahkan
-mulai), cuma belum pernah ke-cross-check ke PROGRES.md. Terverifikasi
-lewat `cat` langsung (bukan cuma wc -l):
+Previously recorded as priority #1 at 0% total. It turned out to be fully
+implemented in commit `8b69831a` (before this session even started),
+just never cross-checked against PROGRES.md. Verified via direct `cat`
+(not just `wc -l`):
 
-- `traceImports.ts` (33 baris), `traceExports.ts` (46 baris) — trace
-  identifier-level, konsisten dengan pola yang sama seperti
+- `traceImports.ts` (33 lines), `traceExports.ts` (46 lines) — identifier-
+  level tracing, consistent with the same pattern as
   `detectUnusedExports.ts` (namespace/default/named import handling)
-- `calculateAffectedFiles.ts` (66 baris) — base function
+- `calculateAffectedFiles.ts` (66 lines) — base function
 - `calculateAffectedModules.ts`, `calculateAffectedComponents.ts`,
-  `calculateAffectedRoutes.ts` — semua compose di atas `calculateAffectedFiles`,
-  bukan duplikasi logic. `Routes` bahkan convert file path ke Next.js route
-  path dengan benar (strip route groups `(...)`)
-- `buildImpactTree.ts` (38 baris) — **ada cycle guard** (`ancestors: Set`)
-  + `maxDepth`, penting karena repo bisa punya circular import beneran
-  (lihat `playground/python-demo/cyclic_a.py` ↔ `cyclic_b.py`)
-- `traceDependencies.ts`, `traceConsumers.ts` — belum di-`cat` manual,
-  asumsikan selesai berdasarkan pola konsisten 6 file lain, tapi **verifikasi
-  ulang sebelum benar-benar mengandalkannya**
+  `calculateAffectedRoutes.ts` — all compose on top of
+  `calculateAffectedFiles`, not duplicated logic. `Routes` even correctly
+  converts a file path to a Next.js route path (stripping route groups
+  `(...)`)
+- `buildImpactTree.ts` (38 lines) — **has a cycle guard**
+  (`ancestors: Set`) + `maxDepth`, important because a repo can have a
+  real circular import (see
+  `playground/python-demo/cyclic_a.py` ↔ `cyclic_b.py`)
+- `traceDependencies.ts`, `traceConsumers.ts` — not manually `cat`'d yet,
+  assumed done based on the consistent pattern of the other 6 files, but
+  **re-verify before actually relying on them**
 
-**Lesson tambahan**: ini kejadian yang PERSIS sama seperti insiden
-`components/layout/*` sebelumnya — progress asli lebih maju dari yang
-tercatat karena beda sesi kerja tidak saling sinkron ke PROGRES.md.
-Redundansi verifikasi (`cat`, bukan asumsi dari nama file/PROGRES.md lama)
-tetap wajib sebelum mulai kerja di area manapun.
+**Additional lesson**: this incident is EXACTLY the same as the earlier
+`components/layout/*` incident — actual progress was further ahead than
+recorded because parallel work sessions weren't synced to PROGRES.md.
+Redundant verification (`cat`, not assumption from file name/old
+PROGRES.md) remains mandatory before starting work in any area.
 
-**Action item**: `apps/cli/impact.ts` saat ini SALAH — bilang "not yet
-implemented" padahal fungsinya sudah ada. Perlu diperbaiki supaya
-benar-benar memanggil `buildImpactTree`/`calculateAffectedFiles` dkk.
+**Action item**: `apps/cli/impact.ts` is currently WRONG — it says "not
+yet implemented" even though the functionality already exists. Needs to
+be fixed so it actually calls `buildImpactTree`/`calculateAffectedFiles`
+etc.
 
-## Update — detectors 18/18 (100%), 2 bug produksi BELUM difix
+## Update — detectors 18/18 (100%), 2 production bugs NOT YET FIXED
 
-packages/detectors/* lengkap 18/18. Verifikasi via scripts/testPlayground.ts
-(sekarang manggil semua 18 detector, jalan lawan fixture ATAU repo sendiri
-lewat `npx tsx scripts/testPlayground.ts .`).
+packages/detectors/* is fully 18/18. Verified via scripts/testPlayground.ts
+(now calls all 18 detectors, runs against the fixture OR the repo itself
+via `npx tsx scripts/testPlayground.ts .`).
 
-**BUG PRODUKSI, BELUM DIFIX**: detectRouteConvention nemu
-apps/web/app/api/impact/route.ts DAN apps/web/app/api/search/route.ts
-gak export HTTP method (GET/POST/dll) — kedua endpoint kemungkinan besar
-gak jalan kalau di-hit.
+**PRODUCTION BUG, NOT YET FIXED**: detectRouteConvention found that
+apps/web/app/api/impact/route.ts AND apps/web/app/api/search/route.ts
+don't export any HTTP method (GET/POST/etc) — both endpoints are likely
+non-functional if hit.
 
-Temuan lain: detectRepositoryPattern nemu package-level cycle
-packages/indexer <-> packages/graph. detectMissingExports nemu 9 file
-shadcn (button.tsx dkk) gak di-re-export lewat components/ui/index.ts.
-detectUnusedExports masih false-positive di komponen React (belum pakai
-filter detectEntryPoints kayak detectUnusedFiles).
+Other findings: detectRepositoryPattern found a package-level cycle
+packages/indexer <-> packages/graph. detectMissingExports found 9 shadcn
+files (button.tsx etc.) not re-exported via components/ui/index.ts.
+detectUnusedExports still has false positives on React components (not
+yet using the detectEntryPoints filter like detectUnusedFiles does).
 
 ## Update — Python resolver bug + TS export default double-count bug (fixed)
 
-Dites lawan playground/python-demo (fixture 6 file, sudah ada sebelumnya)
-dan nemuin 2 bug produksi nyata:
+Tested against playground/python-demo (6-file fixture, existed already)
+and found 2 real production bugs:
 
-1. packages/graph/resolvePath.ts — bare specifier (contoh Python
-   "from utils import x") selalu divonis external package tanpa nyoba
-   resolve internal dulu. Bener buat JS/TS (bare = selalu npm package),
-   salah buat Python (bare = sering sibling module). Juga .py belum ada
-   di RESOLVABLE_EXTENSIONS dan __init__.py belum ada di INDEX_FILENAMES.
-   FIXED — sekarang bare specifier dicoba sebagai same-directory file dulu
-   sebelum divonis external, dan .py/__init__.py sudah masuk daftar.
-   Hasil sebelum fix: graph 0 edges di python-demo. Sesudah: 6 edges,
-   circular dependency kedetect benar, unused exports akurat.
+1. packages/graph/resolvePath.ts — a bare specifier (e.g. Python
+   "from utils import x") was always judged an external package without
+   first trying to resolve it internally. Correct for JS/TS (bare =
+   always an npm package), wrong for Python (bare = often a sibling
+   module). Also, .py was missing from RESOLVABLE_EXTENSIONS and
+   __init__.py was missing from INDEX_FILENAMES.
+   FIXED — a bare specifier is now tried as a same-directory file first
+   before being judged external, and .py/__init__.py are now in the list.
+   Before the fix: 0 graph edges in python-demo. After: 6 edges, circular
+   dependency detection and unused-exports detection both work correctly.
 
 2. packages/parser/typescript/parseTs.ts extractExports — "export default
-   function Page()" punya modifier Default DAN Export sekaligus di node
-   yang sama. Ada 2 blok if independen (bukan if/else), jadi node ini
-   ke-push 2x: sekali sebagai kind "default", sekali lagi sebagai "named".
-   FIXED — blok kedua di-guard dengan !isDefaultExport. Ketemu dari
-   playground/nextjs-demo testing (page.tsx kehitung 2 exports, bukan 1).
+   function Page()" has both the Default and Export modifiers on the same
+   node. There were 2 independent if-blocks (not if/else), so this node
+   was pushed twice: once as kind "default", once again as "named".
+   FIXED — the second block is now guarded with !isDefaultExport. Found
+   via playground/nextjs-demo testing (page.tsx was counted as 2 exports
+   instead of 1).
 
-Gotcha proses: 2x kejadian bash history expansion makan tanda "!" di
-python3 -c "..." heredoc (event not found), sekali di README badge fix,
-sekali di guard !isDefaultExport ini — walau python3 lapor "patched
-successfully", isi sebenarnya rusak karena baris yang ada "!" hilang.
-`set +H` di awal sesi terminal mencegah ini. SELALU re-cat file setelah
-patch multi-baris yang mengandung "!", jangan percaya "patched
-successfully" doang.
+Process gotcha: bash history expansion ate the "!" character in a
+python3 -c "..." heredoc twice — once during a README badge fix, once
+during this !isDefaultExport guard — even though python3 reported
+"patched successfully", the actual content was silently broken because
+lines containing "!" were dropped. `set +H` at the start of a terminal
+session prevents this. ALWAYS re-cat a file after a multi-line patch
+containing "!", don't trust "patched successfully" alone.
 
-playground/ sekarang punya 6 fixture baru: react-demo, nextjs-demo,
-express-demo, nest-demo (semua langsung testable via
-scripts/testPlayground.ts), go-demo, java-demo (fixture siap, parser
-untuk 2 bahasa ini belum ditulis).
+playground/ now has 6 new fixtures: react-demo, nextjs-demo,
+express-demo, nest-demo (all immediately testable via
+scripts/testPlayground.ts), go-demo, java-demo (fixtures ready, parsers
+for these 2 languages not yet written).
 
-## Update — Sync besar dari sesi paralel lain (baca sebelum asumsi apapun 0%)
+## Update — Large sync from other parallel sessions (read before assuming anything is 0%)
 
-Beberapa sesi Claude lain jalan paralel pakai akun berbeda. Progress asli
-jauh lebih maju dari yang sempat tercatat di sini. Highlight:
+Several Claude sessions ran in parallel using different accounts. Actual
+progress was much further along than what had been recorded here.
+Highlights:
 
-- packages/impact/* SUDAH 8/8 selesai (traceImports, traceExports,
+- packages/impact/* is ALREADY 8/8 done (traceImports, traceExports,
   calculateAffectedFiles/Modules/Components/Routes, buildImpactTree,
-  traceConsumers/Dependencies) — sempat salah tercatat "0%, prioritas #1"
-  di versi PROGRES.md lama. Verified via cat manual.
-- packages/detectors/* SUDAH 18/18 selesai (sebelumnya tercatat 10/18).
-- apps/cli/* SUDAH 5/6 (analyze, doctor, graph, config jalan + verified
-  lawan python-demo, pakai commander + @clack/prompts). impact.ts ADA
-  tapi salah — masih bilang "not yet implemented" padahal packages/impact
-  sudah selesai. Belum diperbaiki, action item terbuka.
-- apps/cli/analyzeLocal.ts — helper sementara bypass analyzeRepository()
-  buat local path. Harus dihapus begitu ada dukungan local-path resmi di
-  pipeline.ts (kalau itu jadi dikerjakan) — jangan biarkan 2 jalur
-  orkestrasi hidup berdampingan lama-lama.
-- packages/incremental/* (Cell/Query/Database, adaptasi konsep salsa-rs,
-  bukan port) — fondasi selesai + verified via demo.ts runnable, TAPI
-  belum di-wire ke pipeline manapun. buildIndex/pipeline/detectors semua
-  masih full re-scan cara lama.
-- packages/ui/graphColor.ts vs theme/graphColors.ts — dicek manual,
-  graphColor.ts masih stub 8 baris kosong (bukan duplikat aktif). Resiko
-  cuma muncul KALAU nanti ada yang nulis isi ke situ tanpa sadar
-  theme/graphColors.ts sudah jalan. Belum perlu cleanup sekarang.
+  traceConsumers/Dependencies) — was mistakenly recorded as "0%, priority
+  #1" in an older version of PROGRES.md. Verified via manual cat.
+- packages/detectors/* is ALREADY 18/18 done (previously recorded as
+  10/18).
+- apps/cli/* is ALREADY 5/6 (analyze, doctor, graph, config work +
+  verified against python-demo, using commander + @clack/prompts).
+  impact.ts EXISTS but is wrong — still says "not yet implemented" even
+  though packages/impact is done. Not yet fixed, open action item.
+- apps/cli/analyzeLocal.ts — temporary helper bypassing
+  analyzeRepository() for a local path. Should be deleted once there's
+  official local-path support in pipeline.ts (if that gets done) — don't
+  let 2 orchestration paths coexist for long.
+- packages/incremental/* (Cell/Query/Database, concept adapted from
+  salsa-rs, not a port) — foundation done + verified via a runnable
+  demo.ts, BUT not wired into any pipeline yet. buildIndex/pipeline/
+  detectors all still do a full re-scan the old way.
+- packages/ui/graphColor.ts vs theme/graphColors.ts — checked manually,
+  graphColor.ts is still an empty 8-line stub (not an active duplicate).
+  The risk only appears IF someone later writes content into it without
+  realizing theme/graphColors.ts is already working. No cleanup needed
+  right now.
 
-Lesson diulang lagi (sudah pernah dicatat, terbukti masih relevan): SELALU
-cat manual sebelum percaya catatan lama di file ini, apalagi kalau ada
-sesi lain yang mungkin jalan paralel.
+Lesson repeated again (already noted before, proven still relevant):
+ALWAYS cat manually before trusting old notes in this file, especially
+since other sessions may be running in parallel.
 
-## Update — /api/impact dan /api/search diimplementasi (dari stub kosong)
+## Update — /api/impact and /api/search implemented (from empty stubs)
 
-Ditemukan lewat dogfooding: detectRouteConvention (salah satu dari 18
-detector) menemukan apps/web/app/api/impact/route.ts dan
-.../search/route.ts sama sekali tidak export HTTP method apapun. Dicek
-manual — ternyata bukan lupa export, dua-duanya memang masih stub 8 baris
-(cuma header lisensi), belum pernah ditulis sama sekali.
+Found via dogfooding: detectRouteConvention (one of the 18 detectors)
+found that apps/web/app/api/impact/route.ts and .../search/route.ts
+exported no HTTP method at all. Checked manually — turns out it wasn't a
+missing export, both were genuinely still 8-line stubs (license header
+only), never written at all.
 
-Desain: AnalyzeRepositoryResult sekarang bawa field `repository` (instance
-Repository penuh, BUKAN plain object). PENTING — field ini server-side
-only. Repository.modules itu private Map, kalau di-JSON.stringify apa
-adanya bakal jadi {} kosong secara diam-diam (bukan crash, silent data
-loss). apps/web/app/api/analyze/route.ts (yang sudah lama jalan) di-patch
-untuk strip field `repository` sebelum response, supaya shape JSON-nya
-tidak berubah diam-diam sekarang field ini ada.
+Design: AnalyzeRepositoryResult now carries a `repository` field (a full
+Repository instance, NOT a plain object). IMPORTANT — this field is
+server-side only. Repository.modules is a private Map, so if
+JSON.stringify'd as-is it silently becomes {} (not a crash, silent data
+loss). apps/web/app/api/analyze/route.ts (which has worked for a while)
+was patched to strip the `repository` field before responding, so the
+JSON shape doesn't silently change now that this field exists.
 
-/api/impact — compose calculateAffectedFiles + buildImpactTree (dari
-packages/impact yang ternyata sudah selesai, lihat update di atas).
-/api/search — pakai fuzzyScore.ts (adaptasi cmdk) buat cari lewat module
-file path saja. Ini stopgap, BUKAN search sungguhan — packages/search/
-SearchEngine.ts dkk masih 0%.
+/api/impact — composes calculateAffectedFiles + buildImpactTree (from
+packages/impact, which turned out to already be done, see update above).
+/api/search — uses fuzzyScore.ts (adapted from cmdk) to search by module
+file path only. This is a stopgap, NOT real search — packages/search/
+SearchEngine.ts etc. is still 0%.
 
-STATUS: cuma lolos tsc --noEmit, BELUM dites end-to-end lewat dev server
-beneran (analyzeRepository perlu repoUrl asli/clone, tidak bisa dites
-lewat scripts/testPlayground.ts seperti kerjaan CLI/detector sebelumnya).
-Test manual sebelum dipercaya: pnpm dev di apps/web, lalu curl
-'localhost:3000/api/impact?repoUrl=<url>&moduleId=<path>' ke repo GitHub
-kecil beneran.
+STATUS: only passed tsc --noEmit, NOT YET tested end-to-end via a real
+dev server (analyzeRepository needs a real repoUrl/clone, can't be tested
+via scripts/testPlayground.ts the way CLI/detector work was). Manual test
+before trusting this: run pnpm dev in apps/web, then curl
+'localhost:3000/api/impact?repoUrl=<url>&moduleId=<path>' against a real
+small GitHub repo.
 
-## Update — file PROGRESS.md (double-S, typo) dihapus
+## Update — duplicate PROGRESS.md file (double-S typo) deleted
 
-Sempat ada file terpisah bernama PROGRESS.md (bukan PROGRES.md) dari sesi
-lain yang typo nama file. Sudah dihapus — PROGRES.md (single-S) ini tetap
-satu-satunya file progress resmi.
+There was briefly a separate file named PROGRESS.md (not PROGRES.md) from
+another session that typo'd the filename. It has been deleted —
+PROGRES.md (single-S) remains the one official progress file.
 
-## Update — apps/cli/impact.ts dikonfirmasi SUDAH benar (bukan lagi open item)
+## Update — apps/cli/impact.ts confirmed to ALREADY be correct (no longer an open item)
 
-Sempat tercatat berulang kali (3x di update-update sebelumnya) sebagai
-action item terbuka: "apps/cli/impact.ts salah, masih bilang not yet
-implemented padahal packages/impact sudah selesai". Dicek sekarang —
-ternyata sudah diperbaiki oleh sesi lain, ada komentar eksplisit
-"CORRECTED" di file itu sendiri menjelaskan riwayatnya.
+Had been recorded repeatedly (3x across previous updates) as an open
+action item: "apps/cli/impact.ts is wrong, still says not yet implemented
+even though packages/impact is done". Checked now — it turns out another
+session already fixed it, with an explicit "CORRECTED" comment in the
+file itself explaining the history.
 
-Diverifikasi ulang di sesi ini (bukan cuma percaya komentar "CORRECTED"
-begitu saja):
-- `tsc --noEmit` bersih
-- Dijalankan beneran: `npx tsx apps/cli/index.ts impact utils.py
-  playground/python-demo` — hasil masuk akal (utils.py di-consume
-  service.py secara direct, main.py transitively lewat service.py, total
-  2 affected files), konsisten dengan struktur fixture yang sudah dikenal.
+Re-verified in this session (not just trusting the "CORRECTED" comment):
+- `tsc --noEmit` is clean
+- Actually ran it: `npx tsx apps/cli/index.ts impact utils.py
+  playground/python-demo` — sensible result (utils.py is consumed
+  directly by service.py, transitively by main.py via service.py, 2
+  affected files total), consistent with the known fixture structure.
 
-Command ini compose 3 fungsi dari packages/impact/*: traceConsumers,
-traceDependencies, calculateAffectedFiles. Action item ini RESMI DITUTUP.
+This command composes 3 functions from packages/impact/*: traceConsumers,
+traceDependencies, calculateAffectedFiles. This action item is OFFICIALLY
+CLOSED.
 
-## Update — components/patterns/* 8 file stub SUDAH selesai
+## Update — components/patterns/* 8 stub files are now DONE
 
-Ditulis 8 file yang tadinya stub (cuma header lisensi 8 baris):
+Wrote 8 files that were previously stubs (just an 8-line license header):
 `ConfirmDialog.tsx`, `CopyButton.tsx`, `DataTable.tsx`, `EmptyState.tsx`,
 `FilterBar.tsx`, `MobileBottomSheet.tsx`, `SearchInput.tsx`, `StatusDot.tsx`.
 
-Convention diambil dari file yang udah selesai duluan (`LoadingState.tsx`,
-`ErrorState.tsx`, `CommandPalette.tsx`): named export, props interface
-`ComponentNameProps`, `"use client"` untuk yang interaktif, `cn()` dari
-`@/lib/cn`, primitives dari `@/components/ui/*` (bukan langsung dari
-`vendor-ui/shadcn/*`).
+Convention taken from the files that were already done
+(`LoadingState.tsx`, `ErrorState.tsx`, `CommandPalette.tsx`): named
+export, `ComponentNameProps` props interface, `"use client"` for
+interactive ones, `cn()` from `@/lib/cn`, primitives from
+`@/components/ui/*` (not directly from `vendor-ui/shadcn/*`).
 
-- `ConfirmDialog` & `MobileBottomSheet` pakai `Dialog`/`Sheet` primitive dari
-  `components/ui/`, props API disesuaikan persis sama shape asli
-  (`DialogContent`, `SheetContent side="bottom"`, dll — dicek dulu dari source
-  vendor-ui sebelum nulis, gak nebak).
-- `DataTable` dibangun dari native `<table>` + Tailwind — belum ada shadcn
-  `table.tsx` primitive di `vendor-ui/`.
-- `FilterBar` sengaja gak pakai `Badge` (belum di-wrap di `components/ui/`,
-  masih open item dari `detectMissingExports`), pakai `Button` variant toggle.
-- Verifikasi: `npx tsc --noEmit -p apps/web/tsconfig.json` → 0 error dari
-  kode baru. Sisa 5 error di project itu pre-existing & tidak terkait
-  (`vendor-ui/magic-ui/file-tree.tsx` butuh package `@radix-ui/react-accordion`
-  + `scroll-area.tsx` yang belum ditulis; `packages/graph/buildFolderGraph.ts`
-  butuh package `d3-hierarchy` yang belum di-install — keduanya task terpisah).
-- Catatan penting: `npx tsc --noEmit` tanpa `-p apps/web/tsconfig.json` bakal
-  nunjukkin 130 error palsu (semua alias `@/*` gagal resolve) karena baseUrl
-  path mapping di tsconfig itu relatif ke `apps/web`, bukan root repo. Kalau
-  mau typecheck app ini, WAJIB pakai flag `-p apps/web/tsconfig.json`.
-- Belum ada consumer yang import 8 komponen ini (dicek via grep), jadi ini
-  murni komponen baru siap pakai, belum ada breaking-change risk.
+- `ConfirmDialog` & `MobileBottomSheet` use the `Dialog`/`Sheet`
+  primitives from `components/ui/`, with props APIs matched exactly to
+  the real shape (`DialogContent`, `SheetContent side="bottom"`, etc. —
+  checked from vendor-ui source first, not guessed).
+- `DataTable` is built from a native `<table>` + Tailwind — there's no
+  shadcn `table.tsx` primitive in `vendor-ui/` yet.
+- `FilterBar` deliberately does not use `Badge` (not yet wrapped in
+  `components/ui/`, still an open item from `detectMissingExports`),
+  uses a `Button` variant toggle instead.
+- Verification: `npx tsc --noEmit -p apps/web/tsconfig.json` → 0 errors
+  from the new code. The remaining 5 errors in the project are
+  pre-existing and unrelated (`vendor-ui/magic-ui/file-tree.tsx` needs
+  the `@radix-ui/react-accordion` package + a not-yet-written
+  `scroll-area.tsx`; `packages/graph/buildFolderGraph.ts` needs the
+  `d3-hierarchy` package, which isn't installed — both are separate
+  tasks).
+- Important note: running `npx tsc --noEmit` WITHOUT
+  `-p apps/web/tsconfig.json` produces 130 false errors (every `@/*`
+  alias fails to resolve) because the baseUrl path mapping in that
+  tsconfig is relative to `apps/web`, not the repo root. To typecheck
+  this app, you MUST use the `-p apps/web/tsconfig.json` flag.
+- No consumer imports these 8 components yet (checked via grep), so this
+  is purely new, ready-to-use components with no breaking-change risk.
 
-`components/patterns/*` sekarang 11/11 lengkap (termasuk `CommandPalette.tsx`
-yang udah selesai dari session lain sebelumnya).
+`components/patterns/*` is now 11/11 complete (including
+`CommandPalette.tsx`, which was already done by a previous session).
