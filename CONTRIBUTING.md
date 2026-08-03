@@ -14,12 +14,12 @@ Expect breaking changes before 1.0.
 ```bash
 git clone https://github.com/GSF-001/ARCLUX.git
 cd ARCLUX
-npm install
+pnpm install
 ```
 
-Requires Node 20+. This is an npm workspaces monorepo — most day-to-day
-work happens inside a specific `apps/*` or `packages/*` directory, using
-that directory's own `package.json` scripts.
+Requires Node 20+. This is a pnpm workspaces monorepo (managed with
+Turborepo) — most day-to-day work happens inside a specific `apps/*` or
+`packages/*` directory, using that directory's own `package.json` scripts.
 
 ## Structure
 
