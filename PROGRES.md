@@ -722,3 +722,97 @@ dimensions, selection) via React Context. Do NOT implement a separate
 store/hooks layer here; it would create two sources of truth for the same
 state. Same class of risk as the `packages/ui/graphColor.ts` /
 `theme/graphColors.ts` naming collision noted earlier.
+
+
+## Update -- ImpactSummary.tsx built and verified in-browser, plus 2 major Webpack gotchas found
+
+components/explorer/ImpactSummary.tsx implemented: fetches /api/impact,
+renders total affected files, direct impact (distance === 1) and indirect
+impact (distance > 1) lists, each file with a High/Medium/Low severity
+badge derived from distance.
+
+Important: severity is NOT part of the backend response. packages/impact/*
+only produces distance (BFS hops from the changed module). The
+High/Medium/Low mapping is a UI-only heuristic (distance 1 -> High,
+2 -> Medium, 3+ -> Low), documented as such in the component's own
+comment, not validated against real incident data. If this ever needs to
+reflect real blast-radius severity (weighted by fan-in, file size, test
+coverage, etc.), that logic belongs in packages/impact/*, not the UI
+layer.
+
+Verified in-browser (not just tsc --noEmit): temporarily mounted the
+component on a throwaway test page, called it against
+apps/cli/impact.ts in the arclux repo itself, confirmed direct impact
+list, severity badge, and total count all render correctly. Test page
+was deleted after verification -- it was never a permanent route.
+
+Not yet wired into components/explorer/Explorer.tsx -- that file is
+still a stub, so ImpactSummary remains a standalone building block for
+now, same status as FileDetails.tsx.
+
+### Gotcha #1 -- Next.js route folders starting with underscore are NOT routable
+
+Any app/_foldername/ is treated by Next.js as a private folder by
+convention and will 404 no matter what's inside it -- even a valid
+page.tsx. This is intentional Next.js behavior for co-locating
+non-route files inside app/, not a bug. If you need a throwaway test
+route, do NOT prefix it with underscore -- that guarantees it can't be
+visited. Use a plain folder name instead, and delete it manually when
+done (Next.js has no built-in "temporary route" concept).
+
+### Gotcha #2 -- Webpack + web-tree-sitter .wasm: the actual fix (3 wrong attempts first)
+
+Running apps/web with next dev --webpack and hitting any route that
+imports packages/parser/python/parsePython.ts (e.g. /api/graph,
+/api/analyze, /new) used to hard-fail with a webpack error:
+"Module parse failed: Unexpected character (1:0) -- The module seem to
+be a WebAssembly module, but module is not flagged as WebAssembly
+module for webpack."
+
+This blocked ALL in-browser verification of the graph viewer, impact UI,
+and anything else touching the pipeline -- nothing past tsc --noEmit had
+ever actually been confirmed working in a browser until this was fixed.
+
+Three approaches were tried and did NOT work, in order:
+
+1. experiments.asyncWebAssembly: true in next.config.ts webpack()
+   callback. This does let Webpack parse some .wasm files, but
+   tree-sitter-python.wasm uses Emscripten dynamic linking (dylink),
+   which Webpack's WebAssembly module types don't support. Failure
+   changed to "Module not found: Can't resolve 'GOT.func'" (a dylink
+   relocation symbol Webpack tried and failed to resolve as a JS
+   import).
+2. serverExternalPackages: ["web-tree-sitter", "tree-sitter-wasms"].
+   Reasonable guess (this is the documented Next.js mechanism for
+   excluding server-only packages from the Webpack bundle), but it did
+   NOT fix it -- same "Unexpected character" error came right back.
+   Cause: serverExternalPackages only takes effect at module-resolution
+   time, but Webpack's static analysis of require.resolve("...") calls
+   happens earlier and unconditionally tries to bundle whatever the
+   resolved path points to, regardless of externalization config.
+3. Renaming the createRequire()-derived variable from require to
+   nodeRequire in parsePython.ts, on the theory that Webpack's analyzer
+   pattern-matches the literal identifier require. Also did NOT work --
+   Webpack traces the variable back to its createRequire() origin
+   regardless of what it's named, so renaming had zero effect. (This was
+   a dead end; the rename itself is harmless and was left in place.)
+
+What actually fixed it: tell Webpack to treat .wasm files as a raw
+binary asset instead of trying to parse them as a WebAssembly module at
+all, by pushing a module rule in next.config.ts's webpack() callback
+that matches /.wasm$/ and sets type to "asset/resource".
+
+This makes Webpack just copy the file and return a resolvable path,
+without attempting to parse its contents as JS or WASM -- the actual
+bytes are read by web-tree-sitter's own Node fs logic at runtime (same
+as how the CLI already worked), not by Webpack. Combined with
+serverExternalPackages (kept, though it may now be redundant with the
+asset/resource rule -- not yet tested with it removed) this is what
+finally let /api/graph, /new, and the impact UI all load without errors
+in the browser.
+
+Lesson: for a require.resolve()-loaded native/WASM asset in Webpack, the
+fix is almost never about identifier tricks or server package exclusion
+lists -- it's about telling Webpack's module rules how to treat the file
+type itself (asset/resource), so it never tries to parse it as code in
+the first place.
