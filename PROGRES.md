@@ -610,3 +610,22 @@ kecil beneran.
 Sempat ada file terpisah bernama PROGRESS.md (bukan PROGRES.md) dari sesi
 lain yang typo nama file. Sudah dihapus — PROGRES.md (single-S) ini tetap
 satu-satunya file progress resmi.
+
+## Update — apps/cli/impact.ts dikonfirmasi SUDAH benar (bukan lagi open item)
+
+Sempat tercatat berulang kali (3x di update-update sebelumnya) sebagai
+action item terbuka: "apps/cli/impact.ts salah, masih bilang not yet
+implemented padahal packages/impact sudah selesai". Dicek sekarang —
+ternyata sudah diperbaiki oleh sesi lain, ada komentar eksplisit
+"CORRECTED" di file itu sendiri menjelaskan riwayatnya.
+
+Diverifikasi ulang di sesi ini (bukan cuma percaya komentar "CORRECTED"
+begitu saja):
+- `tsc --noEmit` bersih
+- Dijalankan beneran: `npx tsx apps/cli/index.ts impact utils.py
+  playground/python-demo` — hasil masuk akal (utils.py di-consume
+  service.py secara direct, main.py transitively lewat service.py, total
+  2 affected files), konsisten dengan struktur fixture yang sudah dikenal.
+
+Command ini compose 3 fungsi dari packages/impact/*: traceConsumers,
+traceDependencies, calculateAffectedFiles. Action item ini RESMI DITUTUP.
