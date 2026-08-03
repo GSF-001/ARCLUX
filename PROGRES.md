@@ -509,3 +509,104 @@ packages/indexer <-> packages/graph. detectMissingExports nemu 9 file
 shadcn (button.tsx dkk) gak di-re-export lewat components/ui/index.ts.
 detectUnusedExports masih false-positive di komponen React (belum pakai
 filter detectEntryPoints kayak detectUnusedFiles).
+
+## Update — Python resolver bug + TS export default double-count bug (fixed)
+
+Dites lawan playground/python-demo (fixture 6 file, sudah ada sebelumnya)
+dan nemuin 2 bug produksi nyata:
+
+1. packages/graph/resolvePath.ts — bare specifier (contoh Python
+   "from utils import x") selalu divonis external package tanpa nyoba
+   resolve internal dulu. Bener buat JS/TS (bare = selalu npm package),
+   salah buat Python (bare = sering sibling module). Juga .py belum ada
+   di RESOLVABLE_EXTENSIONS dan __init__.py belum ada di INDEX_FILENAMES.
+   FIXED — sekarang bare specifier dicoba sebagai same-directory file dulu
+   sebelum divonis external, dan .py/__init__.py sudah masuk daftar.
+   Hasil sebelum fix: graph 0 edges di python-demo. Sesudah: 6 edges,
+   circular dependency kedetect benar, unused exports akurat.
+
+2. packages/parser/typescript/parseTs.ts extractExports — "export default
+   function Page()" punya modifier Default DAN Export sekaligus di node
+   yang sama. Ada 2 blok if independen (bukan if/else), jadi node ini
+   ke-push 2x: sekali sebagai kind "default", sekali lagi sebagai "named".
+   FIXED — blok kedua di-guard dengan !isDefaultExport. Ketemu dari
+   playground/nextjs-demo testing (page.tsx kehitung 2 exports, bukan 1).
+
+Gotcha proses: 2x kejadian bash history expansion makan tanda "!" di
+python3 -c "..." heredoc (event not found), sekali di README badge fix,
+sekali di guard !isDefaultExport ini — walau python3 lapor "patched
+successfully", isi sebenarnya rusak karena baris yang ada "!" hilang.
+`set +H` di awal sesi terminal mencegah ini. SELALU re-cat file setelah
+patch multi-baris yang mengandung "!", jangan percaya "patched
+successfully" doang.
+
+playground/ sekarang punya 6 fixture baru: react-demo, nextjs-demo,
+express-demo, nest-demo (semua langsung testable via
+scripts/testPlayground.ts), go-demo, java-demo (fixture siap, parser
+untuk 2 bahasa ini belum ditulis).
+
+## Update — Sync besar dari sesi paralel lain (baca sebelum asumsi apapun 0%)
+
+Beberapa sesi Claude lain jalan paralel pakai akun berbeda. Progress asli
+jauh lebih maju dari yang sempat tercatat di sini. Highlight:
+
+- packages/impact/* SUDAH 8/8 selesai (traceImports, traceExports,
+  calculateAffectedFiles/Modules/Components/Routes, buildImpactTree,
+  traceConsumers/Dependencies) — sempat salah tercatat "0%, prioritas #1"
+  di versi PROGRES.md lama. Verified via cat manual.
+- packages/detectors/* SUDAH 18/18 selesai (sebelumnya tercatat 10/18).
+- apps/cli/* SUDAH 5/6 (analyze, doctor, graph, config jalan + verified
+  lawan python-demo, pakai commander + @clack/prompts). impact.ts ADA
+  tapi salah — masih bilang "not yet implemented" padahal packages/impact
+  sudah selesai. Belum diperbaiki, action item terbuka.
+- apps/cli/analyzeLocal.ts — helper sementara bypass analyzeRepository()
+  buat local path. Harus dihapus begitu ada dukungan local-path resmi di
+  pipeline.ts (kalau itu jadi dikerjakan) — jangan biarkan 2 jalur
+  orkestrasi hidup berdampingan lama-lama.
+- packages/incremental/* (Cell/Query/Database, adaptasi konsep salsa-rs,
+  bukan port) — fondasi selesai + verified via demo.ts runnable, TAPI
+  belum di-wire ke pipeline manapun. buildIndex/pipeline/detectors semua
+  masih full re-scan cara lama.
+- packages/ui/graphColor.ts vs theme/graphColors.ts — dicek manual,
+  graphColor.ts masih stub 8 baris kosong (bukan duplikat aktif). Resiko
+  cuma muncul KALAU nanti ada yang nulis isi ke situ tanpa sadar
+  theme/graphColors.ts sudah jalan. Belum perlu cleanup sekarang.
+
+Lesson diulang lagi (sudah pernah dicatat, terbukti masih relevan): SELALU
+cat manual sebelum percaya catatan lama di file ini, apalagi kalau ada
+sesi lain yang mungkin jalan paralel.
+
+## Update — /api/impact dan /api/search diimplementasi (dari stub kosong)
+
+Ditemukan lewat dogfooding: detectRouteConvention (salah satu dari 18
+detector) menemukan apps/web/app/api/impact/route.ts dan
+.../search/route.ts sama sekali tidak export HTTP method apapun. Dicek
+manual — ternyata bukan lupa export, dua-duanya memang masih stub 8 baris
+(cuma header lisensi), belum pernah ditulis sama sekali.
+
+Desain: AnalyzeRepositoryResult sekarang bawa field `repository` (instance
+Repository penuh, BUKAN plain object). PENTING — field ini server-side
+only. Repository.modules itu private Map, kalau di-JSON.stringify apa
+adanya bakal jadi {} kosong secara diam-diam (bukan crash, silent data
+loss). apps/web/app/api/analyze/route.ts (yang sudah lama jalan) di-patch
+untuk strip field `repository` sebelum response, supaya shape JSON-nya
+tidak berubah diam-diam sekarang field ini ada.
+
+/api/impact — compose calculateAffectedFiles + buildImpactTree (dari
+packages/impact yang ternyata sudah selesai, lihat update di atas).
+/api/search — pakai fuzzyScore.ts (adaptasi cmdk) buat cari lewat module
+file path saja. Ini stopgap, BUKAN search sungguhan — packages/search/
+SearchEngine.ts dkk masih 0%.
+
+STATUS: cuma lolos tsc --noEmit, BELUM dites end-to-end lewat dev server
+beneran (analyzeRepository perlu repoUrl asli/clone, tidak bisa dites
+lewat scripts/testPlayground.ts seperti kerjaan CLI/detector sebelumnya).
+Test manual sebelum dipercaya: pnpm dev di apps/web, lalu curl
+'localhost:3000/api/impact?repoUrl=<url>&moduleId=<path>' ke repo GitHub
+kecil beneran.
+
+## Update — file PROGRESS.md (double-S, typo) dihapus
+
+Sempat ada file terpisah bernama PROGRESS.md (bukan PROGRES.md) dari sesi
+lain yang typo nama file. Sudah dihapus — PROGRES.md (single-S) ini tetap
+satu-satunya file progress resmi.
