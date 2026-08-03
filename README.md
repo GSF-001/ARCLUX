@@ -61,8 +61,3 @@ Alpha. Core model, graph builder, and TypeScript parser are working. Other langu
 
 Apache License 2.0 © Arclux Contributors
 
-## Contributors
-
-<a href="https://github.com/GSF-001/ARCLUX/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=GSF-001/ARCLUX" />
-</a>
