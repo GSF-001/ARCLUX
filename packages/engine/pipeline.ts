@@ -38,6 +38,16 @@ export interface AnalyzeRepositoryResult {
   meta: RepositoryMeta;
   moduleCount: number;
   graph: DependencyGraph;
+  /**
+   * Full in-memory Repository, for server-side consumers that need to run
+   * detectors/impact analysis (CLI, /api/impact, /api/search) without
+   * re-indexing. NEVER JSON.stringify this directly or spread it into an
+   * API response — Repository stores modules in a private Map, which
+   * serializes to an empty {} (silent data loss, not a crash). Route
+   * handlers must derive a plain-object shape from it first (see
+   * calculateAffectedFiles usage in api/impact/route.ts for the pattern).
+   */
+  repository: Repository;
 }
 
 /** Parses "org/name" out of a git URL, for https, ssh, and shorthand forms */
@@ -108,6 +118,7 @@ export async function analyzeRepository(
       meta: repository.meta,
       moduleCount: repository.moduleCount,
       graph,
+      repository,
     };
   } finally {
     // Always clean up the temp clone, even if analysis threw partway through.

@@ -50,7 +50,12 @@ export async function POST(request: NextRequest) {
       branch: body.branch,
     });
 
-    return NextResponse.json(result, { status: 200 });
+    // repository is for server-side consumers only (see the field's doc
+    // comment on AnalyzeRepositoryResult) — strip it so this endpoint's
+    // response shape doesn't silently change now that the field exists.
+    const { repository: _repository, ...safeResult } = result;
+
+    return NextResponse.json(safeResult, { status: 200 });
   } catch (err) {
     if (isArcluxError(err)) {
       return NextResponse.json(
