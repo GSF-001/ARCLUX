@@ -87,3 +87,42 @@ tanpa sinkron (mirip kejadian duplikasi file sebelumnya). Dicek via
 uncommitted changes yang saling tabrakan. Tapi worth diinget: kalau mulai
 kerja bareng banyak sesi Claude lagi, SELALU `git status` dulu sebelum
 nulis apapun ke file yang mungkin lagi disentuh sesi lain.
+
+## Update — detectors 18/18 (100%), 2 bug produksi ketemu
+
+Sisa 8 detector selesai: `detectUnusedFiles`, `detectComponentConvention`,
+`detectRouteConvention`, `detectTestConvention`, `detectStoryConvention`,
+`detectMissingExports`, `detectFeatureStructure`, `detectRepositoryPattern`.
+**`packages/detectors/*` sekarang 18/18.** Semua diverifikasi lewat
+`scripts/testPlayground.ts` (sekarang manggil semua 18 detector, bisa jalan
+lawan fixture `playground/*` ATAU ARCLUX itu sendiri via
+`npx tsx scripts/testPlayground.ts .`).
+
+### 🐛 2 bug produksi asli ketemu (BELUM difix)
+
+`detectRouteConvention` nemu:
+- `apps/web/app/api/impact/route.ts` — gak export HTTP method (GET/POST/dll)
+- `apps/web/app/api/search/route.ts` — sama
+
+**Ini artinya kedua endpoint itu kemungkinan besar gak akan jalan kalau
+di-hit** — Next.js gak tau method apa yang harus di-dispatch. Perlu dicek
+& difix segera, ini bukan false-positive.
+
+### Temuan lain (informational, bukan bug)
+
+- `detectRepositoryPattern` (package-level cycle): `packages/indexer` ↔
+  `packages/graph` saling circular di level package — worth dicek apa ini
+  disengaja atau perlu di-refactor.
+- `detectMissingExports`: 9 file shadcn component (`button.tsx` dkk) gak
+  di-re-export lewat `components/ui/index.ts` — perlu dicek disengaja atau
+  kelupaan pas migrasi ke `vendor-ui/shadcn/`.
+- `detectUnusedExports` masih false-positive banyak di komponen React/Next.js
+  (dipake lewat JSX/file-convention, bukan `import` biasa) — filter yang
+  sama kayak `detectUnusedFiles` pakai `detectEntryPoints` BELUM diterapkan
+  ke sini. Follow-up yang belum dikerjain.
+- `detectComponentConvention` "No findings" di 378 module — belum divalidasi
+  negatif (coba sengaja bikin file salah nama, pastikan detector nangkep).
+
+**Prioritas berikutnya**: fix 2 bug API routes di atas, lalu lanjut ke
+`apps/web`/`apps/cli` yang masih kosong, atau extend `detectUnusedExports`
+pakai filter `detectEntryPoints`.
