@@ -29,7 +29,3 @@ their respective repositories.
   The fuzzy-match scoring algorithm in packages/search/fuzzyScore.ts is
   separately adapted (re-typed to TypeScript, renamed) from this project's
   src/command-score.ts.
-
-- React Bits (https://reactbits.dev) — MIT License
-  Threads.tsx background component copied verbatim (WebGL/shader code,
-  not adapted) into apps/web/vendor-ui/reactbits/. Used in Hero.tsx.
