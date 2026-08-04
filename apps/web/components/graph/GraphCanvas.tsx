@@ -78,7 +78,13 @@ export function GraphCanvas() {
           .distance(60)
       )
       .force("charge", forceManyBody().strength(-120))
-      .force("center", forceCenter(dimensions.width / 2, dimensions.height / 2))
+      // Fixed virtual center, NOT dimensions.width/height. The simulation's
+      // coordinate space is independent of the actual container size —
+      // panning/zooming (via `transform`) is what maps simulation space to
+      // screen space. Using a fixed center means resizing the container
+      // (e.g. a side panel opening/closing) never needs to re-run this
+      // effect, since dimensions is no longer a dependency below.
+      .force("center", forceCenter(500, 500))
       .force("collide", forceCollide(14))
       .stop();
 
@@ -90,7 +96,13 @@ export function GraphCanvas() {
       nextPositions.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
     }
     setPositions(nextPositions);
-  }, [graph, dimensions.width, dimensions.height, setPositions]);
+    // dimensions intentionally NOT a dependency anymore — see the
+    // forceCenter comment above. Previously this effect re-ran (and reset
+    // ALL node positions from scratch) any time the container resized,
+    // e.g. a side panel opening/closing. Re-centering the VIEWPORT on
+    // resize is a separate, not-yet-implemented concern that should adjust
+    // `transform`, not re-run the simulation.
+  }, [graph, setPositions]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
