@@ -40,10 +40,20 @@ import { detectRepositoryPattern } from "../packages/detectors/detectRepositoryP
 import { parserRegistry } from "../packages/parser/core/ParserRegistry";
 import { parseTs } from "../packages/parser/typescript/parseTs";
 import { parsePython } from "../packages/parser/python/parsePython";
+import { parseJs } from "../packages/parser/javascript/parseJs";
+import { parseJsx } from "../packages/parser/javascript/parseJsx";
+import { parseCommonJs } from "../packages/parser/javascript/parseCommonJs";
+import { parseGo } from "../packages/parser/go/parseGo";
+import { parseJava } from "../packages/parser/java/parseJava";
 import type { RepositoryMeta } from "../packages/shared/types";
 
 parserRegistry.register(parseTs);
 parserRegistry.register(parsePython);
+parserRegistry.register(parseJs);
+parserRegistry.register(parseJsx);
+parserRegistry.register(parseCommonJs);
+parserRegistry.register(parseGo);
+parserRegistry.register(parseJava);
 
 function printList<T>(label: string, items: T[], format: (item: T) => string) {
   console.log(`\n--- ${label} ---`);

@@ -1009,3 +1009,42 @@ NOT YET DONE: no playground fixture, no end-to-end verification via
 scripts/testPlayground.ts or CLI doctor -- only tsc --noEmit passed so
 far. Next session should build playground/commonjs-demo/ using patterns
 from cjs-module-lexer's test file before trusting this beyond typecheck.
+
+## Update — Go & Java parsers written and verified (parseGo.ts, parseJava.ts)
+
+packages/parser/go/parseGo.ts and packages/parser/java/parseJava.ts
+implemented (regex/line-based, not tree-sitter — no grammar wired up for
+either language yet, unlike Python). Registered in both
+packages/engine/pipeline.ts AND scripts/testPlayground.ts (the latter had
+been silently only registering parseTs+parsePython — same class of bug as
+files getting skipped in buildIndex.ts's "no parser registered, skip
+silently" path, worth remembering next time a new parser is added
+anywhere).
+
+**Verified via scripts/testPlayground.ts against playground/go-demo and
+playground/java-demo (not just tsc --noEmit)**:
+- 6/6 modules indexed in both fixtures (previously 0, confirming parsers
+  are now actually registered and running)
+- Export extraction confirmed correct: Go's uppercase-first-letter
+  convention (HelperA, User, Product, Slugify, UnusedHelper) and Java's
+  `public` modifier convention (class/method/field level) both extract
+  the expected names, matching what each fixture file was written to
+  contain — including the deliberately-unused UnusedHelper/unusedHelper
+  in each
+
+**EXPECTED LIMITATION, confirmed empirically, NOT a bug**: both fixtures
+show 0 graph edges despite real cross-file calls existing (cyclic_a.go
+calls HelperB in cyclic_b.go, Main.java calls Service/Models/Utils) —
+this is because Go and Java don't require any import statement between
+files in the same package/directory, so there's nothing for
+resolvePath.ts to resolve. This makes every file/export in both fixtures
+show up as a false positive in detectOrphanFiles/detectUnusedExports/
+detectUnusedFiles, same root cause class as the already-documented
+Python/main.py false positive from resolveRoutes.ts being empty. A
+"same-package implicit dependency" resolution pass would be needed to
+fix this for Go/Java specifically — not yet built, not scoped.
+
+**NOT yet tested**: real-world Go/Java repos beyond the playground fixture
+(multi-package Go with actual cross-package imports, Java with actual
+`import demo.other.Thing;` statements) — only the same-package-only
+fixture has been verified so far.
