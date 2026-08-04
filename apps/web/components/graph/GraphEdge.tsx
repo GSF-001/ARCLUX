@@ -17,6 +17,14 @@ export interface GraphEdgeProps {
   sourcePos: GraphNodePosition;
   targetPos: GraphNodePosition;
   isHighlighted: boolean;
+  /**
+   * Rendered radius of source/target node circles, so the line can be
+   * shortened to stop cleanly at each boundary instead of ending at the
+   * node's center. Defaults to the base GraphNode radius; pass the actual
+   * value if selected/hovered nodes render at a different size.
+   */
+  sourceRadius?: number;
+  targetRadius?: number;
 }
 
 const EDGE_LABELS: Record<string, string> = {
@@ -26,6 +34,33 @@ const EDGE_LABELS: Record<string, string> = {
   "route-link": "routes to",
 };
 
+const DEFAULT_NODE_RADIUS = 7;
+
+/**
+ * Returns the point where the line from `from` to `to` crosses the
+ * boundary of a circle of `radius` centered at `from`. Used to shorten
+ * both ends of an edge so it stops at each node's circle edge instead of
+ * its center — this replaces the earlier center-to-center line, which
+ * made highlighted arrowheads land under/inside the target node instead
+ * of stopping cleanly at its boundary (see GraphCanvas.tsx PROGRES.md
+ * note). Falls back to `from` itself if the two points coincide, to avoid
+ * a divide-by-zero.
+ */
+function shortenToCircleBoundary(
+  from: GraphNodePosition,
+  to: GraphNodePosition,
+  radius: number
+): GraphNodePosition {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist === 0) return from;
+  return {
+    x: from.x + (dx / dist) * radius,
+    y: from.y + (dy / dist) * radius,
+  };
+}
+
 /**
  * isHighlighted covers BOTH selected and hovered (see GraphCanvas.tsx).
  * That means hovering a high fan-in hub node will pop a label on every one
@@ -33,29 +68,33 @@ const EDGE_LABELS: Record<string, string> = {
  * click-only for now since that matches the existing highlight behavior
  * (glow ring, thicker stroke) already used for both states. Revisit if
  * hover turns out too busy in practice.
- *
- * KNOWN LIMITATION: line endpoints are node CENTERS, not circle edges, so
- * the arrowhead marker lands under/inside the target node's circle rather
- * than stopping cleanly at its boundary. Fixing this needs the line to be
- * shortened by the node's rendered radius, which isn't threaded through
- * here yet — out of scope for this change.
  */
-export function GraphEdge({ edge, sourcePos, targetPos, isHighlighted }: GraphEdgeProps) {
+export function GraphEdge({
+  edge,
+  sourcePos,
+  targetPos,
+  isHighlighted,
+  sourceRadius = DEFAULT_NODE_RADIUS,
+  targetRadius = DEFAULT_NODE_RADIUS,
+}: GraphEdgeProps) {
   const dimColor = getGraphEdgeColor(edge.type, "dark");
   const brightColor = getGraphEdgeHighlightColor(edge.type);
   const color = isHighlighted ? brightColor : dimColor;
 
-  const midX = (sourcePos.x + targetPos.x) / 2;
-  const midY = (sourcePos.y + targetPos.y) / 2;
+  const adjustedSource = shortenToCircleBoundary(sourcePos, targetPos, sourceRadius);
+  const adjustedTarget = shortenToCircleBoundary(targetPos, sourcePos, targetRadius);
+
+  const midX = (adjustedSource.x + adjustedTarget.x) / 2;
+  const midY = (adjustedSource.y + adjustedTarget.y) / 2;
   const label = EDGE_LABELS[edge.type] ?? edge.type;
 
   return (
     <g>
       <line
-        x1={sourcePos.x}
-        y1={sourcePos.y}
-        x2={targetPos.x}
-        y2={targetPos.y}
+        x1={adjustedSource.x}
+        y1={adjustedSource.y}
+        x2={adjustedTarget.x}
+        y2={adjustedTarget.y}
         stroke={color}
         strokeWidth={isHighlighted ? 1.5 : 1}
         strokeOpacity={isHighlighted ? 1 : 0.6}
