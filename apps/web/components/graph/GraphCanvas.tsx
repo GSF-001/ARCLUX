@@ -217,6 +217,27 @@ export function GraphCanvas() {
         onDoubleClick={handleSvgDoubleClick}
         onContextMenu={handleSvgContextMenu}
       >
+        <defs>
+          {[
+            ["import", "#E5E5E5"],
+            ["export", "#C9A6F5"],
+            ["call", "#8FC4FF"],
+            ["route-link", "#8FE8D8"],
+          ].map(([type, fillColor]) => (
+            <marker
+              key={type}
+              id={`arrow-${type}`}
+              viewBox="0 0 8 8"
+              refX="6"
+              refY="4"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto-start-reverse"
+            >
+              <path d="M0,0 L8,4 L0,8 Z" fill={fillColor} />
+            </marker>
+          ))}
+        </defs>
         <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
           {graph.edges.map((edge) => {
             const sourcePos = positions.get(edge.source);

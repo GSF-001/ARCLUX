@@ -31,3 +31,23 @@ export function getGraphNodeColor(type: GraphNodeType, mode: "light" | "dark" = 
 export function getGraphEdgeColor(type: GraphEdgeType, mode: "light" | "dark" = "dark"): string {
   return graphEdgeColors[type][mode];
 }
+
+/**
+ * Brighter, hand-picked colors for HIGHLIGHTED edges only. graphEdgeColors
+ * dark["import"] (#454545) is deliberately dim so a busy graph doesn't look
+ * noisy at rest, but that same dimness makes it nearly invisible against
+ * GraphCanvas's black background once selected/hovered. These are NOT a
+ * theme mode (no light/dark split) — GraphCanvas is hardcoded to a black
+ * background regardless of app theme, so "highlighted" only ever needs
+ * one bright variant per edge type.
+ */
+const graphEdgeHighlightColors: Record<GraphEdgeType, string> = {
+  import: "#E5E5E5",
+  export: "#C9A6F5",
+  call: "#8FC4FF",
+  "route-link": "#8FE8D8",
+};
+
+export function getGraphEdgeHighlightColor(type: GraphEdgeType): string {
+  return graphEdgeHighlightColors[type];
+}
