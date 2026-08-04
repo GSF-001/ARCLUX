@@ -12,16 +12,28 @@ import type { DependencyGraph, GraphNode, GraphEdge } from "../shared/types";
 /**
  * Turns an indexed Repository into a renderable DependencyGraph.
  * One GraphNode per module (type: "file") plus one GraphNode per distinct
- * external package actually imported. One GraphEdge per import relationship.
+ * external package actually imported. One GraphEdge per DISTINCT import
+ * relationship (deduped by source->target pair).
  *
  * This is intentionally dumb/structural — semantic node types (route, component,
  * hook) get added later by indexer/resolveRoutes.ts, resolveComponents.ts etc,
  * which should mutate metadata on top of this base graph, not replace it.
+ *
+ * Bug fix: a module's `imports` array can contain the same target moduleId
+ * more than once — e.g. `import { X } from "./Y"` and
+ * `import type { Z } from "./Y"` in the same file both resolve to "./Y",
+ * so buildIndex.ts's resolvedImportIds legitimately has two entries with
+ * the same value (each carries different kind/identifier info consumers
+ * like detectUnusedExports.ts need — deduping THERE would lose data).
+ * Deduping belongs here instead, since a rendered graph edge represents
+ * "does A depend on B at all", not "how many import statements said so".
+ * Without this, GraphCanvas.tsx renders two <GraphEdge> with an identical
+ * React key (`${source}->${target}`), which is what the "Encountered two
+ * children with the same key" warning traces back to.
  */
 export function buildDependencyGraph(repository: Repository): DependencyGraph {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
-  const seenExternalPackages = new Set<string>();
 
   const modules = repository.getAllModules();
   const moduleIds = new Set(modules.map((m) => m.id));
@@ -38,16 +50,18 @@ export function buildDependencyGraph(repository: Repository): DependencyGraph {
       },
     });
 
+    const seenTargets = new Set<string>();
     for (const importedId of module.imports) {
-      // Internal edges only — imports pointing to a module id we actually indexed
-      if (moduleIds.has(importedId)) {
-        edges.push({
-          id: `${module.id}->${importedId}`,
-          source: module.id,
-          target: importedId,
-          type: "import",
-        });
-      }
+      if (!moduleIds.has(importedId)) continue; // internal edges only
+      if (seenTargets.has(importedId)) continue; // dedup — see comment above
+      seenTargets.add(importedId);
+
+      edges.push({
+        id: `${module.id}->${importedId}`,
+        source: module.id,
+        target: importedId,
+        type: "import",
+      });
     }
   }
 
