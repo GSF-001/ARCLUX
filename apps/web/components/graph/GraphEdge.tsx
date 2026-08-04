@@ -8,7 +8,7 @@
 
 "use client";
 
-import { getGraphEdgeColor, getGraphEdgeHighlightColor } from "@/theme/graphColors";
+import { getGraphEdgeColor } from "@/theme/graphColors";
 import type { GraphEdge as GraphEdgeData } from "@/packages/shared/types";
 import type { GraphNodePosition } from "./GraphNode";
 
@@ -67,9 +67,10 @@ export function GraphEdge({
   sourceRadius = DEFAULT_NODE_RADIUS,
   targetRadius = DEFAULT_NODE_RADIUS,
 }: GraphEdgeProps) {
-  const dimColor = getGraphEdgeColor(edge.type, "dark");
-  const brightColor = getGraphEdgeHighlightColor(edge.type);
-  const color = isHighlighted ? brightColor : dimColor;
+  // Same hue as GraphLegend at all times (legend reads graphEdgeColors
+  // directly) — highlighting now only changes opacity/width, not color,
+  // so a highlighted edge never shows a color absent from the legend.
+  const color = getGraphEdgeColor(edge.type, "dark");
 
   const adjustedSource = shortenToCircleBoundary(sourcePos, targetPos, sourceRadius);
   const adjustedTarget = shortenToCircleBoundary(targetPos, sourcePos, targetRadius);
@@ -83,7 +84,6 @@ export function GraphEdge({
       stroke={color}
       strokeWidth={isHighlighted ? 1.5 : 1}
       strokeOpacity={isHighlighted ? 1 : 0.6}
-      markerEnd={isHighlighted ? `url(#arrow-${edge.type})` : undefined}
       className="pointer-events-none"
     />
   );
