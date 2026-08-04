@@ -260,6 +260,14 @@ export function GraphCanvas() {
               edge.target === selectedNodeId ||
               edge.source === hoveredNodeId ||
               edge.target === hoveredNodeId;
+            // Label only shows for the SELECTED node's edges, not hover —
+            // hovering a high fan-in hub was popping dozens of overlapping
+            // "imports" labels at once (see live dogfood screenshot).
+            // GraphFocusView already lists all connections cleanly on
+            // click, so the canvas label no longer needs to fire on hover
+            // too.
+            const showLabel =
+              edge.source === selectedNodeId || edge.target === selectedNodeId;
             return (
               <GraphEdge
                 key={edge.id}
@@ -267,6 +275,7 @@ export function GraphCanvas() {
                 sourcePos={sourcePos}
                 targetPos={targetPos}
                 isHighlighted={isHighlighted}
+                showLabel={showLabel}
               />
             );
           })}
