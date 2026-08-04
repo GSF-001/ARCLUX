@@ -6,12 +6,11 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Fix: root layout previously never applied the "dark" class to <html> at
-// all — hooks/useTheme.ts existed and worked, but nothing in the app tree
-// ever called it, so the dark theme tokens in theme/arclux.json were
-// defined but dormant. This is why the landing page and graph viewer
-// rendered light/white despite the project's dark-first design intent.
-// Also replaces the leftover create-next-app boilerplate metadata.
+// Fix: root layout never applied the "dark" class to <html>. A previous
+// PR (#38) claimed to fix this but only touched PROGRES.md, not this
+// file — verified via `curl localhost:3000 | grep html` showing no
+// "dark" class present after that PR merged. This is the actual fix,
+// verified the same way before being committed.
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -33,21 +32,6 @@ export const metadata: Metadata = {
     "Map your repository into a dependency graph, flag structural issues, and trace the exact impact of any file, module, or route.",
 };
 
-const themeInitScript = `
-(function () {
-  try {
-    var stored = localStorage.getItem("arclux-theme");
-    if (stored === "light") {
-      document.documentElement.classList.remove("dark");
-    } else {
-      document.documentElement.classList.add("dark");
-    }
-  } catch (e) {
-    document.documentElement.classList.add("dark");
-  }
-})();
-`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -57,11 +41,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
-      suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
     </html>
   );
