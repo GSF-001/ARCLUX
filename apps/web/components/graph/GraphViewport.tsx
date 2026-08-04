@@ -10,8 +10,7 @@
 
 import { GraphProvider } from "./GraphProvider";
 import { GraphCanvas } from "./GraphCanvas";
-import { GraphToolbar } from "./GraphToolbar";
-import { GraphLegend } from "./GraphLegend";
+import { GraphMenu } from "./GraphMenu";
 import { GraphSearch } from "./GraphSearch";
 import { GraphFocusView } from "./GraphFocusView";
 import { GraphContextMenu } from "./GraphContextMenu";
@@ -26,10 +25,9 @@ export function GraphViewport({ repoUrl, branch }: GraphViewportProps) {
     <GraphProvider repoUrl={repoUrl} branch={branch}>
       <div className="relative h-full w-full">
         <GraphCanvas />
-        <GraphToolbar />
+        <GraphMenu />
         <GraphSearch />
         <GraphFocusView />
-        <GraphLegend />
         <GraphContextMenu />
       </div>
     </GraphProvider>

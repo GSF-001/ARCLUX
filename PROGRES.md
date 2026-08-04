@@ -943,3 +943,40 @@ something the size of TypeScript's repo.
 
 Neither is built yet — this is a known gap, not scoped/prioritized
 against the rest of the backlog yet.
+
+## Update — dark theme default fix + GraphMenu consolidation
+
+**Dark theme bug found via dogfooding**: landing page and graph viewer
+rendered light/white despite theme/arclux.json being dark-first by
+design. Root cause: hooks/useTheme.ts existed and worked, but NOTHING in
+the app tree ever called it — app/layout.tsx never applied the "dark"
+class to <html> at all. Fixed:
+- app/layout.tsx now has an inline script (runs before hydration) that
+  applies "dark" class by default, only removing it if the user
+  explicitly chose "light" before (localStorage). Avoids flash-of-light
+  on every page load.
+- hooks/useTheme.ts default flipped from "light" to "dark", and its
+  useEffect now reads what layout.tsx's script already applied instead of
+  independently re-deciding (avoids the two disagreeing).
+- Replaced leftover create-next-app boilerplate metadata (title was
+  literally "Create Next App").
+
+**GraphMenu.tsx (new)**: consolidates GraphToolbar.tsx (zoom controls)
+and GraphLegend.tsx (node/edge color key) into one toggleable slide-out
+panel — canvas was getting cluttered with search bar + toolbar + legend +
+focus view all fighting for corner space at once (seen in mobile
+screenshots). GraphViewport.tsx now renders GraphMenu instead of
+GraphToolbar+GraphLegend directly. The two old components are NOT
+deleted, just no longer wired in — check before assuming they're unused
+elsewhere.
+
+**STATUS: typecheck-only, NOT visually verified in-browser yet** — both
+changes pushed near a chat context limit. Confirm before relying on them:
+1. Reload the app, confirm dark theme applies immediately (no white
+   flash)
+2. Open the graph viewer, click "Menu" button (bottom-left), confirm
+   zoom controls + legend render correctly inside the slide-out panel
+
+**Also still open from earlier**: GraphFocusView (two-column
+dependencies/dependents panel) was also pushed without visual
+verification in a previous update — still needs confirming.
