@@ -816,3 +816,58 @@ fix is almost never about identifier tricks or server package exclusion
 lists -- it's about telling Webpack's module rules how to treat the file
 type itself (asset/resource), so it never tries to parse it as code in
 the first place.
+
+## Update — Graph node icons + edge labels/arrows (visual polish, dogfood-driven)
+
+Requested after visually testing the graph viewer live in-browser against
+the arclux repo itself (localhost:3000, first real dogfood screenshot
+session). Two gaps found:
+
+1. All nodes were plain colored circles, no visual distinction between
+   node types beyond color alone.
+2. Edges were plain lines — no direction indicator, no way to tell edge
+   type (import/export/call/route-link) without clicking through to
+   inspect the underlying data.
+
+Fixes:
+
+- `apps/web/components/graph/nodeIcons.tsx` (new) — minimal single-path
+  SVG icons per GraphNodeType (file/folder/external-package/route/
+  component/hook), drawn inside GraphNode's existing circle. Deliberately
+  NOT using a full icon library import (e.g. lucide-react) here — graphs
+  can have 1000+ nodes, each rendered icon is a cost, so this is a raw
+  path string sized for an 8x8 viewBox instead.
+- `apps/web/theme/graphColors.ts` — added `getGraphEdgeHighlightColor()`.
+  The existing dark-mode `import` edge color (#454545) was deliberately
+  dim so a busy graph doesn't look noisy at rest, but that same dimness
+  made it nearly invisible once highlighted/selected against
+  GraphCanvas's black background. Highlight colors are a separate,
+  brighter palette, not a theme mode swap (GraphCanvas's background is
+  hardcoded black regardless of app theme).
+- `apps/web/components/graph/GraphEdge.tsx` — highlighted edges now show
+  an arrowhead (SVG marker) and a type label ("imports"/"exports"/
+  "calls"/"routes to") at the midpoint.
+- `apps/web/components/graph/GraphCanvas.tsx` — registers 4 `<marker>`
+  defs (one per edge type) in `<defs>`, referenced by GraphEdge via
+  `markerEnd`.
+
+**Known limitation, not fixed in this change**: line endpoints are node
+CENTERS, not circle edges, so the arrowhead lands under/inside the target
+node's circle instead of stopping cleanly at its boundary. Would need the
+line shortened by the node's rendered radius (which varies by
+selected/hovered state) — not threaded through to GraphEdge yet.
+
+**Also not fully resolved**: label popping on hover (not just click) may
+get noisy on a high fan-in hub node, since `isHighlighted` covers both
+hover and selected states — hovering a hub like `Repository.ts` (34
+incoming edges, seen in live testing) would pop 34 labels at once.
+Flagged in the component's own comment, not yet addressed.
+
+Verified so far: `tsc --noEmit -p apps/web/tsconfig.json` clean. Node
+icons confirmed visually in-browser (dogfood screenshot showed file-type
+document icons rendering correctly on all nodes in a TypeScript-only
+subgraph — other node type icons folder/component/hook/route/
+external-package not yet visually confirmed since that subgraph happened
+to be all-file). Edge label/arrow/color change was NOT visually verified
+before merging — pushed under time pressure near a chat context limit,
+confirm in-browser before relying on it.
