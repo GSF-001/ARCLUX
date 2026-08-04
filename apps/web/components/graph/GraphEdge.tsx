@@ -18,14 +18,6 @@ export interface GraphEdgeProps {
   targetPos: GraphNodePosition;
   isHighlighted: boolean;
   /**
-   * Whether to show the type label ("imports", "calls", etc) at the
-   * edge midpoint. Deliberately separate from isHighlighted: the line
-   * still lights up on hover, but the label only shows when this edge's
-   * node is actually SELECTED — otherwise hovering a high fan-in hub
-   * pops one label per edge at once, unreadable. See GraphCanvas.tsx.
-   */
-  showLabel: boolean;
-  /**
    * Rendered radius of source/target node circles, so the line can be
    * shortened to stop cleanly at each boundary instead of ending at the
    * node's center. Defaults to the base GraphNode radius; pass the actual
@@ -35,24 +27,13 @@ export interface GraphEdgeProps {
   targetRadius?: number;
 }
 
-const EDGE_LABELS: Record<string, string> = {
-  import: "imports",
-  export: "exports",
-  call: "calls",
-  "route-link": "routes to",
-};
-
 const DEFAULT_NODE_RADIUS = 7;
 
 /**
  * Returns the point where the line from `from` to `to` crosses the
  * boundary of a circle of `radius` centered at `from`. Used to shorten
  * both ends of an edge so it stops at each node's circle edge instead of
- * its center — this replaces the earlier center-to-center line, which
- * made highlighted arrowheads land under/inside the target node instead
- * of stopping cleanly at its boundary (see GraphCanvas.tsx PROGRES.md
- * note). Falls back to `from` itself if the two points coincide, to avoid
- * a divide-by-zero.
+ * its center.
  */
 function shortenToCircleBoundary(
   from: GraphNodePosition,
@@ -70,19 +51,19 @@ function shortenToCircleBoundary(
 }
 
 /**
- * isHighlighted covers BOTH selected and hovered (see GraphCanvas.tsx).
- * That means hovering a high fan-in hub node will pop a label on every one
- * of its edges at once — could get noisy on a dense hub. Not restricted to
- * click-only for now since that matches the existing highlight behavior
- * (glow ring, thicker stroke) already used for both states. Revisit if
- * hover turns out too busy in practice.
+ * Edge type labels ("imports", "calls", etc) were previously rendered at
+ * the midpoint on hover/select, but were removed: any node with a large
+ * fan-in/fan-out popped one overlapping label per edge, unreadable
+ * regardless of whether it was gated to hover or to selection only.
+ * GraphFocusView.tsx already lists all of a selected node's connections
+ * as clean labeled cards with no overlap — that's the intended place to
+ * see per-edge type info now, not the canvas itself.
  */
 export function GraphEdge({
   edge,
   sourcePos,
   targetPos,
   isHighlighted,
-  showLabel,
   sourceRadius = DEFAULT_NODE_RADIUS,
   targetRadius = DEFAULT_NODE_RADIUS,
 }: GraphEdgeProps) {
@@ -93,39 +74,17 @@ export function GraphEdge({
   const adjustedSource = shortenToCircleBoundary(sourcePos, targetPos, sourceRadius);
   const adjustedTarget = shortenToCircleBoundary(targetPos, sourcePos, targetRadius);
 
-  const midX = (adjustedSource.x + adjustedTarget.x) / 2;
-  const midY = (adjustedSource.y + adjustedTarget.y) / 2;
-  const label = EDGE_LABELS[edge.type] ?? edge.type;
-
   return (
-    <g>
-      <line
-        x1={adjustedSource.x}
-        y1={adjustedSource.y}
-        x2={adjustedTarget.x}
-        y2={adjustedTarget.y}
-        stroke={color}
-        strokeWidth={isHighlighted ? 1.5 : 1}
-        strokeOpacity={isHighlighted ? 1 : 0.6}
-        markerEnd={isHighlighted ? `url(#arrow-${edge.type})` : undefined}
-        className="pointer-events-none"
-      />
-      {showLabel && (
-        <g transform={`translate(${midX}, ${midY})`} className="pointer-events-none">
-          <rect
-            x={-label.length * 3.1}
-            y={-7}
-            width={label.length * 6.2}
-            height={14}
-            rx={3}
-            fill="#000"
-            fillOpacity={0.75}
-          />
-          <text x={0} y={4} fontSize={10} fontFamily="monospace" fill={brightColor} textAnchor="middle">
-            {label}
-          </text>
-        </g>
-      )}
-    </g>
+    <line
+      x1={adjustedSource.x}
+      y1={adjustedSource.y}
+      x2={adjustedTarget.x}
+      y2={adjustedTarget.y}
+      stroke={color}
+      strokeWidth={isHighlighted ? 1.5 : 1}
+      strokeOpacity={isHighlighted ? 1 : 0.6}
+      markerEnd={isHighlighted ? `url(#arrow-${edge.type})` : undefined}
+      className="pointer-events-none"
+    />
   );
 }
