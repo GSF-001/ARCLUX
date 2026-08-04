@@ -13,7 +13,7 @@ import { GraphCanvas } from "./GraphCanvas";
 import { GraphToolbar } from "./GraphToolbar";
 import { GraphLegend } from "./GraphLegend";
 import { GraphSearch } from "./GraphSearch";
-import { GraphSelection } from "./GraphSelection";
+import { GraphFocusView } from "./GraphFocusView";
 import { GraphContextMenu } from "./GraphContextMenu";
 
 export interface GraphViewportProps {
@@ -28,7 +28,7 @@ export function GraphViewport({ repoUrl, branch }: GraphViewportProps) {
         <GraphCanvas />
         <GraphToolbar />
         <GraphSearch />
-        <GraphSelection />
+        <GraphFocusView />
         <GraphLegend />
         <GraphContextMenu />
       </div>
