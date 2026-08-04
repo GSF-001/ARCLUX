@@ -46,7 +46,7 @@ export function GraphMenu() {
 
   return (
     <>
-      <div className="absolute bottom-4 left-4 z-10">
+      <div className="absolute top-4 right-4 z-10">
         <Button
           variant="outline"
           size="sm"
