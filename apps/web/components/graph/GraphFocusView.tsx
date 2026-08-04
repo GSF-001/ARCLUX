@@ -17,16 +17,28 @@
 // Closing this panel (closeFocusPanel) is deliberately separate from
 // deselecting the node (selectNode(null)): the panel can hide while the
 // node stays highlighted in GraphCanvas.
+//
+// Labels rewritten from graph-theory terms ("Depends on" / "Used by") to
+// consequence-framed language ("This file needs" / "If you change this,
+// it affects"), plus a color split (neutral for what this file needs,
+// warm/red for what breaks if this file changes) — dogfooding feedback
+// was that the two columns read as visually identical and required
+// stopping to think about which side was which.
 
 "use client";
 
-import { X, ArrowLeft, ArrowRight } from "lucide-react";
+import { X, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useGraphContext } from "./GraphProvider";
 import { getGraphNodeColor } from "@/theme/graphColors";
 import { getNodeIconPath } from "./nodeIcons";
 import type { GraphNode as GraphNodeData } from "@/packages/shared/types";
 
 const MAX_CARDS_PER_SIDE = 12;
+
+// Reuses the existing "hook" node color (#E06C75 dark) as the impact/
+// warning accent, rather than introducing a new color not in
+// theme/graphColors.ts's palette.
+const IMPACT_COLOR = "#E06C75";
 
 function NodeIcon({ node, size = 16 }: { node: GraphNodeData; size?: number }) {
   const color = getGraphNodeColor(node.type, "dark");
@@ -45,11 +57,23 @@ function NodeIcon({ node, size = 16 }: { node: GraphNodeData; size?: number }) {
   );
 }
 
-function NodeCard({ node, onClick }: { node: GraphNodeData; onClick: () => void }) {
+function NodeCard({
+  node,
+  onClick,
+  accent = false,
+}: {
+  node: GraphNodeData;
+  onClick: () => void;
+  accent?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/80 px-3 py-2 text-left transition-colors hover:border-neutral-600 hover:bg-neutral-900"
+      className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left transition-colors ${
+        accent
+          ? "border-red-900/40 bg-red-950/10 hover:border-red-700/60 hover:bg-red-950/20"
+          : "border-neutral-800 bg-neutral-950/80 hover:border-neutral-600 hover:bg-neutral-900"
+      }`}
     >
       <NodeIcon node={node} />
       <div className="min-w-0 flex-1">
@@ -101,9 +125,12 @@ export function GraphFocusView() {
 
       <div className="grid flex-1 grid-cols-2 divide-x divide-neutral-800 overflow-hidden">
         <div className="flex flex-col overflow-hidden">
-          <div className="flex items-center gap-1.5 border-b border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-400">
-            <ArrowLeft className="h-3 w-3" />
-            Depends on ({dependencies.length})
+          <div className="flex flex-col gap-0.5 border-b border-neutral-800 px-3 py-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
+              <ArrowLeft className="h-3 w-3" />
+              This file needs ({dependencies.length})
+            </div>
+            <p className="text-[10px] text-neutral-600">Files {node.label} imports</p>
           </div>
           <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
             {dependencies.length === 0 && (
@@ -121,16 +148,19 @@ export function GraphFocusView() {
         </div>
 
         <div className="flex flex-col overflow-hidden">
-          <div className="flex items-center justify-end gap-1.5 border-b border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-400">
-            Used by ({dependents.length})
-            <ArrowRight className="h-3 w-3" />
+          <div className="flex flex-col gap-0.5 border-b border-red-900/30 bg-red-950/5 px-3 py-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: IMPACT_COLOR }}>
+              <AlertTriangle className="h-3 w-3" />
+              If you change this, it affects ({dependents.length})
+            </div>
+            <p className="text-[10px] text-neutral-600">Files that import {node.label}</p>
           </div>
           <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
             {dependents.length === 0 && (
               <p className="px-1 text-xs text-neutral-600">Nothing imports this file.</p>
             )}
             {dependents.slice(0, MAX_CARDS_PER_SIDE).map((dep) => (
-              <NodeCard key={dep.id} node={dep} onClick={() => selectNode(dep.id)} />
+              <NodeCard key={dep.id} node={dep} onClick={() => selectNode(dep.id)} accent />
             ))}
             {dependents.length > MAX_CARDS_PER_SIDE && (
               <p className="px-1 pt-1 text-xs text-neutral-600">
