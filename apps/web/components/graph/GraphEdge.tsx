@@ -68,8 +68,13 @@ export function GraphEdge({
   targetRadius = DEFAULT_NODE_RADIUS,
 }: GraphEdgeProps) {
   // Same hue as GraphLegend at all times (legend reads graphEdgeColors
-  // directly) — highlighting now only changes opacity/width, not color,
-  // so a highlighted edge never shows a color absent from the legend.
+  // directly) — highlighting changes opacity/width/glow, never color, so
+  // a highlighted edge never shows a hue absent from the legend. Glow
+  // (not a color swap) is what gives contrast: bumping a dark gray's
+  // opacity alone (0.6 -> 1) barely reads as different on a phone screen,
+  // since most edges are "import" (deliberately dim at rest, see
+  // graphColors.ts comment) — a soft drop-shadow in the same hue reads as
+  // "this one is lit up" without introducing a second palette.
   const color = getGraphEdgeColor(edge.type, "dark");
 
   const adjustedSource = shortenToCircleBoundary(sourcePos, targetPos, sourceRadius);
@@ -82,8 +87,9 @@ export function GraphEdge({
       x2={adjustedTarget.x}
       y2={adjustedTarget.y}
       stroke={color}
-      strokeWidth={isHighlighted ? 1.5 : 1}
-      strokeOpacity={isHighlighted ? 1 : 0.6}
+      strokeWidth={isHighlighted ? 2 : 1}
+      strokeOpacity={isHighlighted ? 1 : 0.35}
+      style={isHighlighted ? { filter: `drop-shadow(0 0 3px ${color})` } : undefined}
       className="pointer-events-none"
     />
   );
