@@ -34,6 +34,8 @@ interface GraphContextValue {
   error: string | null;
   selectedNodeId: string | null;
   selectNode: (id: string | null) => void;
+  isFocusPanelOpen: boolean;
+  closeFocusPanel: () => void;
   hoveredNodeId: string | null;
   setHoveredNodeId: (id: string | null) => void;
   transform: GraphTransform;
@@ -62,6 +64,7 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isFocusPanelOpen, setIsFocusPanelOpen] = useState(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [transform, setTransform] = useState<GraphTransform>(DEFAULT_TRANSFORM);
   const [contextMenuNodeId, setContextMenuNodeId] = useState<string | null>(null);
@@ -102,6 +105,19 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     };
   }, [repoUrl, branch]);
 
+  // Selecting a node highlights it AND opens the focus panel. Closing the
+  // panel (closeFocusPanel) does NOT clear selectedNodeId, so the graph
+  // highlight survives the panel closing. Only selectNode(null) — clicking
+  // empty canvas or Escape — clears both.
+  const selectNode = useCallback((id: string | null) => {
+    setSelectedNodeId(id);
+    setIsFocusPanelOpen(id !== null);
+  }, []);
+
+  const closeFocusPanel = useCallback(() => {
+    setIsFocusPanelOpen(false);
+  }, []);
+
   const zoomIn = useCallback(() => {
     setTransform((t) => ({ ...t, scale: Math.min(MAX_SCALE, t.scale * 1.2) }));
   }, []);
@@ -119,7 +135,9 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     isLoading,
     error,
     selectedNodeId,
-    selectNode: setSelectedNodeId,
+    selectNode,
+    isFocusPanelOpen,
+    closeFocusPanel,
     hoveredNodeId,
     setHoveredNodeId,
     transform,
