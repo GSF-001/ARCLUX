@@ -907,3 +907,39 @@ by testing it against ourselves earlier) — this was pushed via
 `feat/graph-focus-view` branch + PR, not direct push. Any future session:
 you CANNOT `git push` directly to `main` anymore, always
 `git checkout -b <branch>` first.
+
+## Update — large-repo limitation found via dogfooding (NOT a bug, not yet addressed)
+
+Tested against `vercel/next.js` (huge) and `microsoft/TypeScript` (huge,
+lots of test fixtures) from the mobile Termux environment.
+
+- `vercel/next.js` — worked, but took a very long time (clone + scan +
+  parse of tens of thousands of files, synchronously, on a phone).
+- `microsoft/TypeScript` — showed "Indexing failed" in the UI. Root cause
+  not yet diagnosed (no server log was captured at the time — the dev
+  server had just been restarted, so the actual crash/error was missed).
+  Re-run with `curl "http://localhost:3000/api/graph?repoUrl=..."` while
+  watching the `npm run dev` terminal output to actually capture the
+  error next time this is investigated.
+
+This is a real device/resource-capacity limitation, not a pipeline
+correctness bug — smaller repos (`vscode` was mentioned as working; the
+`python-demo` fixture and small GitHub repos all work fine) are unaffected.
+The pipeline currently has NO safeguards for large repos: no file-count
+cap, no timeout, no progress streaming — `analyzeRepository()` just tries
+to clone/scan/parse everything in one synchronous request regardless of
+size, which is fine on a small repo but can hang or crash on a phone for
+something the size of TypeScript's repo.
+
+**Two concrete follow-ups identified, not yet built**:
+1. Progress indicator during analysis — right now the UI just shows
+   "Analyzing..." with no feedback on whether it's actually progressing
+   or stuck, which is why microsoft/TypeScript's failure looked
+   indistinguishable from vercel/next.js's "just slow" until it errored.
+2. A size guard/warning before starting analysis — e.g. checking repo
+   file count via the GitHub API before cloning, and warning the user
+   ("this repo is large, analysis may take a while or fail on this
+   device") rather than only finding out after a long hang.
+
+Neither is built yet — this is a known gap, not scoped/prioritized
+against the rest of the backlog yet.
