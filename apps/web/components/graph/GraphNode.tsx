@@ -9,6 +9,7 @@
 "use client";
 
 import { getGraphNodeColor } from "@/theme/graphColors";
+import { getNodeIconPath } from "./nodeIcons";
 import type { GraphNode as GraphNodeData } from "@/packages/shared/types";
 
 export interface GraphNodePosition {
@@ -48,6 +49,16 @@ export function GraphNode({ node, position, isSelected, isHovered, onHoverChange
         stroke={isSelected ? "#fff" : "transparent"}
         strokeWidth={1.5}
         opacity={isSelected || isHovered ? 1 : 0.85}
+      />
+      <path
+        d={getNodeIconPath(node.type)}
+        fill="none"
+        stroke="#fff"
+        strokeWidth={0.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={isSelected || isHovered ? 0.95 : 0.65}
+        className="pointer-events-none"
       />
       {(isSelected || isHovered) && (
         <text
