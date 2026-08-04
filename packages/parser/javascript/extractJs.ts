@@ -1,0 +1,227 @@
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+import ts from "typescript";
+import type { RawImport, RawExport, ImportKind } from "../../shared/types";
+
+// Shared by parseJs.ts, parseJsx.ts, parseCommonJs.ts. Deliberately NOT
+// reusing packages/parser/typescript/parseTs.ts's extractImports/
+// extractExports -- the TS version detects TS-only syntax ("import type",
+// interfaces) that plain JS/CJS files can never actually have. Reusing it
+// would silently overclaim features these files don't support. The two
+// implementations share structure on purpose (easier to compare/audit
+// side by side) but are kept as separate functions.
+
+function getLine(sourceFile: ts.SourceFile, pos: number): number {
+  return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+}
+
+export function extractImportsJs(sourceFile: ts.SourceFile): RawImport[] {
+  const imports: RawImport[] = [];
+
+  function visit(node: ts.Node) {
+    // Static: import x, { y } from "z"
+    // (No "import type" here -- that's TS-only syntax, plain JS can't have it.)
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const namedImports: string[] = [];
+      let hasDefaultImport = false;
+      let hasNamespaceImport = false;
+      const kind: ImportKind = "static";
+
+      if (node.importClause) {
+        if (node.importClause.name) hasDefaultImport = true;
+        const bindings = node.importClause.namedBindings;
+        if (bindings && ts.isNamedImports(bindings)) {
+          for (const el of bindings.elements) {
+            namedImports.push(el.name.text);
+          }
+        } else if (bindings && ts.isNamespaceImport(bindings)) {
+          hasNamespaceImport = true;
+        }
+      }
+
+      imports.push({
+        source: node.moduleSpecifier.text,
+        kind,
+        namedImports,
+        hasDefaultImport,
+        hasNamespaceImport,
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    // Dynamic: await import("z")
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments.length > 0 &&
+      ts.isStringLiteral(node.arguments[0])
+    ) {
+      imports.push({
+        source: node.arguments[0].text,
+        kind: "dynamic",
+        namedImports: [],
+        hasDefaultImport: false,
+        hasNamespaceImport: false,
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    // require("z")
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "require" &&
+      node.arguments.length > 0 &&
+      ts.isStringLiteral(node.arguments[0])
+    ) {
+      imports.push({
+        source: node.arguments[0].text,
+        kind: "require",
+        namedImports: [],
+        hasDefaultImport: false,
+        hasNamespaceImport: false,
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return imports;
+}
+
+/**
+ * Recognizes `module.exports.NAME = ...` and `exports.NAME = ...`
+ * (per-property CommonJS assignment). Deliberately does NOT handle
+ * whole-object exports (`module.exports = { a, b }`) -- that's a known
+ * gap, tracked as follow-up work (see PROGRES.md). Real-world CommonJS
+ * uses whole-object assignment extremely often, so this alone
+ * under-reports exports for many packages until that follow-up lands.
+ */
+function matchCommonJsExportTarget(expr: ts.Expression): string | null {
+  // exports.NAME
+  if (
+    ts.isPropertyAccessExpression(expr) &&
+    ts.isIdentifier(expr.expression) &&
+    expr.expression.text === "exports"
+  ) {
+    return expr.name.text;
+  }
+
+  // module.exports.NAME
+  if (
+    ts.isPropertyAccessExpression(expr) &&
+    ts.isPropertyAccessExpression(expr.expression) &&
+    ts.isIdentifier(expr.expression.expression) &&
+    expr.expression.expression.text === "module" &&
+    expr.expression.name.text === "exports"
+  ) {
+    return expr.name.text;
+  }
+
+  return null;
+}
+
+export function extractExportsJs(sourceFile: ts.SourceFile): RawExport[] {
+  const exports: RawExport[] = [];
+
+  function visit(node: ts.Node) {
+    // export default ...
+    const isDefaultExport =
+      (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
+      node.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword);
+
+    if (isDefaultExport) {
+      exports.push({
+        name: (node as ts.FunctionDeclaration | ts.ClassDeclaration).name?.text ?? "default",
+        kind: "default",
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    // See parseTs.ts's identical guard for why !isDefaultExport matters:
+    // "export default function X()" carries both Default and Export
+    // modifiers on the same node, so without this it gets double-counted.
+    const hasExportModifier =
+      !isDefaultExport &&
+      (node as ts.Node & { modifiers?: ts.NodeArray<ts.ModifierLike> })
+        .modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+
+    if (hasExportModifier) {
+      if (ts.isVariableStatement(node)) {
+        for (const decl of node.declarationList.declarations) {
+          if (ts.isIdentifier(decl.name)) {
+            exports.push({
+              name: decl.name.text,
+              kind: "named",
+              line: getLine(sourceFile, node.getStart()),
+            });
+          }
+        }
+      } else if (
+        (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
+        node.name
+      ) {
+        exports.push({
+          name: node.name.text,
+          kind: "named",
+          line: getLine(sourceFile, node.getStart()),
+        });
+      }
+    }
+
+    // export { a, b } from "./x"  /  export * from "./x"
+    if (ts.isExportDeclaration(node)) {
+      const reExportSource =
+        node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)
+          ? node.moduleSpecifier.text
+          : undefined;
+
+      if (node.exportClause && ts.isNamedExports(node.exportClause)) {
+        for (const el of node.exportClause.elements) {
+          exports.push({
+            name: el.name.text,
+            kind: reExportSource ? "re-export" : "named",
+            reExportSource,
+            line: getLine(sourceFile, node.getStart()),
+          });
+        }
+      } else if (reExportSource) {
+        exports.push({
+          name: "*",
+          kind: "re-export",
+          reExportSource,
+          line: getLine(sourceFile, node.getStart()),
+        });
+      }
+    }
+
+    // CommonJS: module.exports.NAME = ... / exports.NAME = ...
+    if (
+      ts.isExpressionStatement(node) &&
+      ts.isBinaryExpression(node.expression) &&
+      node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
+    ) {
+      const target = matchCommonJsExportTarget(node.expression.left);
+      if (target !== null) {
+        exports.push({
+          name: target,
+          kind: "named",
+          line: getLine(sourceFile, node.getStart()),
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return exports;
+}

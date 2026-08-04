@@ -980,3 +980,32 @@ changes pushed near a chat context limit. Confirm before relying on them:
 **Also still open from earlier**: GraphFocusView (two-column
 dependencies/dependents panel) was also pushed without visual
 verification in a previous update — still needs confirming.
+
+## Update -- JavaScript parser: parseJs/parseJsx/parseCommonJs written and registered
+
+packages/parser/javascript/extractJs.ts (shared) + parseJs.ts + parseJsx.ts
++ parseCommonJs.ts implemented and registered in packages/engine/pipeline.ts.
+Reuses TypeScript Compiler API with ScriptKind.JS/JSX (NOT reusing
+parseTs.ts's extractors directly -- those detect TS-only syntax like
+"import type" that plain JS can never have). Detects ES import/export,
+dynamic import(), require(), and per-property CommonJS
+(module.exports.x = / exports.x =).
+
+KNOWN GAP, NOT YET FIXED: whole-object exports
+(module.exports = { a, b }) are NOT detected -- only per-property
+assignment is. This under-reports exports for a lot of real-world
+CommonJS. Confirmed common via nodejs/cjs-module-lexer's own test fixtures
+(~/research/cjs-module-lexer/test/_unit.js) during research for this
+work. Follow-up PR needed for extractWholeObjectExports() (shorthand
+props, renamed props, string-literal keys, getter exports -- spread
+props and computed keys can stay unsupported/silently skipped for now).
+
+parseCommonJs.ts is currently behavior-identical to parseJs.ts (kept
+separate on purpose -- see its own file comment -- because the
+whole-object-exports follow-up is scoped to CommonJS specifically, not
+plain JS).
+
+NOT YET DONE: no playground fixture, no end-to-end verification via
+scripts/testPlayground.ts or CLI doctor -- only tsc --noEmit passed so
+far. Next session should build playground/commonjs-demo/ using patterns
+from cjs-module-lexer's test file before trusting this beyond typecheck.
