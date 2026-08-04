@@ -871,3 +871,39 @@ external-package not yet visually confirmed since that subgraph happened
 to be all-file). Edge label/arrow/color change was NOT visually verified
 before merging — pushed under time pressure near a chat context limit,
 confirm in-browser before relying on it.
+
+## Update — GraphFocusView (new): replaces overlapping edge labels on high-fan-in nodes
+
+Dogfooding on the graph viewer against the arclux repo itself (mobile
+screenshot) showed hovering a high-fan-in node (index.ts, 85 incoming
+edges) popped dozens of overlapping "imports" labels on the canvas —
+unreadable. This is the same root cause already flagged in GraphEdge.tsx's
+own comment (isHighlighted covers hover, not scoped per-edge).
+
+Rather than patch the label-overlap directly, built a different
+interaction: `apps/web/components/graph/GraphFocusView.tsx` — a full-panel
+overlay (replaces `GraphSelection.tsx` in `GraphViewport.tsx`) that opens
+on node selection, showing DIRECT dependencies/dependents as two columns
+of labeled cards (icon + name + path, reusing `getGraphNodeColor` /
+`nodeIcons.tsx` already in the codebase). Capped at 12 cards per side
+("+N more") specifically because of the 85-incoming-edge case found in
+this same repo — an uncapped list would just move the unreadability
+problem into the panel instead of fixing it.
+
+Scope: DIRECT neighbors only, not transitive — this is a readable local
+map, not a replacement for `traceConsumers`/`traceDependencies` in
+packages/impact/*.
+
+**NOT YET DONE**: the underlying canvas label-overlap bug (GraphEdge.tsx)
+is still there — GraphFocusView is a new, separate way to inspect a
+node's connections, it doesn't fix hover behavior on the canvas itself.
+Also **not visually verified in-browser yet** — only typechecked
+(`tsc --noEmit -p apps/web/tsconfig.json`), pushed under time pressure
+near a chat context limit. Confirm visually before relying on it,
+same caveat as the earlier edge-label/arrow update.
+
+**Repo now requires branch protection on `main`** (PR required, verified
+by testing it against ourselves earlier) — this was pushed via
+`feat/graph-focus-view` branch + PR, not direct push. Any future session:
+you CANNOT `git push` directly to `main` anymore, always
+`git checkout -b <branch>` first.
