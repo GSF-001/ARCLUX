@@ -57,8 +57,8 @@ export function GraphEdge({ edge, sourcePos, targetPos, isHighlighted }: GraphEd
         x2={targetPos.x}
         y2={targetPos.y}
         stroke={color}
-        strokeWidth={isHighlighted ? 1.5 : 0.75}
-        strokeOpacity={isHighlighted ? 1 : 0.35}
+        strokeWidth={isHighlighted ? 1.5 : 1}
+        strokeOpacity={isHighlighted ? 1 : 0.6}
         markerEnd={isHighlighted ? `url(#arrow-${edge.type})` : undefined}
         className="pointer-events-none"
       />
