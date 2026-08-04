@@ -47,9 +47,23 @@ export function GraphCanvas() {
   } = useGraphContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const graphGroupRef = useRef<SVGGElement>(null);
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const clickTimer = useRef<number | null>(null);
+  // Mirrors `transform` state but is mutated directly during a drag,
+  // bypassing React entirely, so panning never re-renders graph.nodes /
+  // graph.edges (hundreds of SVG elements) on every pointermove. State is
+  // only committed once, on pointerup, via setTransform.
+  const liveTransform = useRef(transform);
+
+  useEffect(() => {
+    liveTransform.current = transform;
+  }, [transform]);
+
+  function applyTransformToDOM(t: typeof transform) {
+    graphGroupRef.current?.setAttribute("transform", `translate(${t.x}, ${t.y}) scale(${t.scale})`);
+  }
 
   useEffect(() => {
     const el = containerRef.current;
@@ -175,10 +189,20 @@ export function GraphCanvas() {
     const dx = e.clientX - lastPointer.current.x;
     const dy = e.clientY - lastPointer.current.y;
     lastPointer.current = { x: e.clientX, y: e.clientY };
-    setTransform((t) => ({ ...t, x: t.x + dx, y: t.y + dy }));
+    liveTransform.current = {
+      ...liveTransform.current,
+      x: liveTransform.current.x + dx,
+      y: liveTransform.current.y + dy,
+    };
+    applyTransformToDOM(liveTransform.current);
   }
 
   function handlePointerUp() {
+    if (isPanning.current) {
+      // Commit the DOM-only value to React state exactly once, at the end
+      // of the drag, instead of on every pointermove.
+      setTransform(liveTransform.current);
+    }
     isPanning.current = false;
   }
 
@@ -250,7 +274,7 @@ export function GraphCanvas() {
             </marker>
           ))}
         </defs>
-        <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
+        <g ref={graphGroupRef} transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
           {graph.edges.map((edge) => {
             const sourcePos = positions.get(edge.source);
             const targetPos = positions.get(edge.target);
@@ -266,8 +290,6 @@ export function GraphCanvas() {
             // GraphFocusView already lists all connections cleanly on
             // click, so the canvas label no longer needs to fire on hover
             // too.
-            const showLabel =
-              edge.source === selectedNodeId || edge.target === selectedNodeId;
             return (
               <GraphEdge
                 key={edge.id}
@@ -275,7 +297,6 @@ export function GraphCanvas() {
                 sourcePos={sourcePos}
                 targetPos={targetPos}
                 isHighlighted={isHighlighted}
-                showLabel={showLabel}
               />
             );
           })}
