@@ -1048,3 +1048,60 @@ fix this for Go/Java specifically — not yet built, not scoped.
 (multi-package Go with actual cross-package imports, Java with actual
 `import demo.other.Thing;` statements) — only the same-package-only
 fixture has been verified so far.
+
+## Update — Manifest parsers built (parseGoMod, parseCargoToml, parsePackageJson, parseComposer, parseGemfile, parseGradle/parsePom, parseCsproj) + ManifestParser interface
+
+New packages/parser/core/ManifestParserInterface.ts (ManifestDependency:
+name/versionRange/kind runtime|dev; ManifestParser: filename + sync parse()).
+Distinct from LanguageParser/ParserRegistry — manifests are single
+well-known files read directly, not scanned. Generic format primitives
+added: config/parseJson.ts, config/parseToml.ts (parseTomlSections, NOT
+spec-complete TOML), config/parseYaml.ts (parseFlatYaml, unused so far).
+
+Verified against REAL manifests from public repos (gin, tokio, laravel,
+rails, spring-petclinic — downloaded to ~/manifest-samples, outside the
+repo) via scripts/testManifests.ts, not hand-written fixtures:
+- parseGoMod: 35/35 deps correct (gin's go.mod)
+- parseCargoToml: found and FIXED a real bug — first version only handled
+  flat [dependencies]/[dev-dependencies], missed tokio's many
+  [target.'cfg(...)'.dependencies] conditional sections and
+  single-dep-per-section form ([target.'cfg(windows)'.dependencies.windows-sys]).
+  Fixed via classifySection() suffix matching + SINGLE_DEP_SECTION_PATTERN.
+  13 -> 36 deps after fix, matches tokio's Cargo.toml.
+- parseComposer: 8/8 correct, php/ext-*/lib-* platform entries correctly filtered
+- parseGemfile: 82 deps found, all reported "runtime" — KNOWN LIMITATION,
+  doesn't read `group :test do...end` blocks, so gems only ever declared
+  inside a group (rubocop, mdl, sdoc group etc in rails' real Gemfile)
+  are mis-classified as runtime. Not fixed, documented in file comment.
+- parsePom (Maven): 30 found but 2 are WRONG — regex matches every
+  <dependency> in the file including ones nested inside
+  <plugin><dependencies> (checkstyle plugin's own deps), which aren't
+  real project dependencies. NOT FIXED — would need real XML tree
+  parsing to scope to the top-level <dependencies> block only, not a
+  regex. Known false-positive, documented in file comment.
+- parseGradle (Groovy DSL) — NOT yet tested against a real build.gradle,
+  only pom.xml side was verified.
+
+**Also fixed while building this**: packages/graph/buildFolderGraph.ts
+was failing tsc with "Cannot find module 'd3-hierarchy'" — dependency was
+used but never installed. Fixed with `pnpm add d3-hierarchy -w` +
+`pnpm add -D @types/d3-hierarchy -w` (-w needed because packages/* isn't
+a pnpm workspace member, only apps/* is — deps go to root package.json).
+
+**STILL NOT DONE**: nothing calls these manifest parsers from
+detectRepositoryMeta.ts or anywhere else in the pipeline yet — they exist
+and are verified standalone (via testManifests.ts) but aren't wired into
+analyzeRepository()'s framework/dependency detection. detectRepositoryMeta.ts's
+own readDependencyNames() (package.json only, flat Set<string>) still runs
+separately and hasn't been merged with this new ManifestDependency-based
+system — that's a follow-up, not done here.
+
+**Gotcha hit while building this**: a `cat > file << EOF` heredoc run
+while `cd`'d into ~/manifest-samples instead of ~/arclux silently created
+packages/parser/rust/parseCargoToml.ts under ~/manifest-samples/packages/...
+instead of overwriting the real file — the real ~/arclux file kept its
+old (buggy, pre-fix) content even though the terminal showed no error.
+Caught only because testManifests.ts's output (13 deps) didn't match the
+expected fix. Lesson: always `pwd` before a `cat > path << EOF` if you've
+`cd`'d anywhere else in the same session — a wrong-directory heredoc
+fails silently, it doesn't error.
