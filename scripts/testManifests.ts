@@ -5,15 +5,6 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Manual verification script — runs each manifest parser against a REAL
-// manifest file downloaded from a real public repo (see ~/manifest-samples,
-// deliberately outside ~/arclux per PROGRES.md's "don't clone reference
-// repos inside the project" rule), not a hand-written fixture. Prints every
-// extracted dependency so output can be spot-checked against the source
-// file by eye.
-//
-// Run with: npx tsx scripts/testManifests.ts
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

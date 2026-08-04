@@ -21,22 +21,31 @@ const SINGLE_DEP_SECTION_PATTERN = /\.(dependencies|dev-dependencies)\.([\w-]+)$
 
 export const parseCargoToml: ManifestParser = {
   filename: "Cargo.toml",
+
   parse(content: string): ManifestDependency[] {
     const sections = parseTomlSections(content);
     const dependencies: ManifestDependency[] = [];
+
     for (const section of sections) {
       const singleDepMatch = section.name.match(SINGLE_DEP_SECTION_PATTERN);
       if (singleDepMatch) {
         const kind: ManifestDependency["kind"] = singleDepMatch[1] === "dev-dependencies" ? "dev" : "runtime";
-        dependencies.push({ name: singleDepMatch[2], versionRange: section.entries.version || undefined, kind });
+        dependencies.push({
+          name: singleDepMatch[2],
+          versionRange: section.entries.version || undefined,
+          kind,
+        });
         continue;
       }
+
       const kind = classifySection(section.name);
       if (!kind) continue;
+
       for (const [name, versionRange] of Object.entries(section.entries)) {
         dependencies.push({ name, versionRange: versionRange || undefined, kind });
       }
     }
+
     return dependencies;
   },
 };
