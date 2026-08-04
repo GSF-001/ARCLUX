@@ -13,6 +13,10 @@
 // labels floating on the physics-simulated canvas, selecting a node opens
 // this fixed two-column panel: labeled cards (name + path) grouped by
 // direction, no overlapping text regardless of fan-in count.
+//
+// Closing this panel (closeFocusPanel) is deliberately separate from
+// deselecting the node (selectNode(null)): the panel can hide while the
+// node stays highlighted in GraphCanvas.
 
 "use client";
 
@@ -59,10 +63,10 @@ function NodeCard({ node, onClick }: { node: GraphNodeData; onClick: () => void 
 }
 
 export function GraphFocusView() {
-  const { graph, selectedNodeId, selectNode } = useGraphContext();
+  const { graph, selectedNodeId, selectNode, isFocusPanelOpen, closeFocusPanel } = useGraphContext();
 
   const node = graph?.nodes.find((n) => n.id === selectedNodeId);
-  if (!node || !graph) return null;
+  if (!node || !graph || !isFocusPanelOpen) return null;
 
   const dependencies = graph.edges
     .filter((e) => e.source === node.id)
@@ -87,7 +91,7 @@ export function GraphFocusView() {
           </div>
         </div>
         <button
-          onClick={() => selectNode(null)}
+          onClick={closeFocusPanel}
           aria-label="Close focus view"
           className="rounded p-1 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
         >
