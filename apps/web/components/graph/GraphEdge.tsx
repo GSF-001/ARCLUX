@@ -18,6 +18,14 @@ export interface GraphEdgeProps {
   targetPos: GraphNodePosition;
   isHighlighted: boolean;
   /**
+   * Whether to show the type label ("imports", "calls", etc) at the
+   * edge midpoint. Deliberately separate from isHighlighted: the line
+   * still lights up on hover, but the label only shows when this edge's
+   * node is actually SELECTED — otherwise hovering a high fan-in hub
+   * pops one label per edge at once, unreadable. See GraphCanvas.tsx.
+   */
+  showLabel: boolean;
+  /**
    * Rendered radius of source/target node circles, so the line can be
    * shortened to stop cleanly at each boundary instead of ending at the
    * node's center. Defaults to the base GraphNode radius; pass the actual
@@ -74,6 +82,7 @@ export function GraphEdge({
   sourcePos,
   targetPos,
   isHighlighted,
+  showLabel,
   sourceRadius = DEFAULT_NODE_RADIUS,
   targetRadius = DEFAULT_NODE_RADIUS,
 }: GraphEdgeProps) {
@@ -101,7 +110,7 @@ export function GraphEdge({
         markerEnd={isHighlighted ? `url(#arrow-${edge.type})` : undefined}
         className="pointer-events-none"
       />
-      {isHighlighted && (
+      {showLabel && (
         <g transform={`translate(${midX}, ${midY})`} className="pointer-events-none">
           <rect
             x={-label.length * 3.1}
