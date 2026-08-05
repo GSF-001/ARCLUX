@@ -1105,3 +1105,60 @@ Caught only because testManifests.ts's output (13 deps) didn't match the
 expected fix. Lesson: always `pwd` before a `cat > path << EOF` if you've
 `cd`'d anywhere else in the same session — a wrong-directory heredoc
 fails silently, it doesn't error.
+
+## Update - manifest parser fix, export/import graph builders, call graph planning
+
+Done and merged to main this session:
+- Fixed parseCargoToml.ts bug: was missing platform-conditional sections
+  like [target.'cfg(unix)'.dependencies] and single-dep sections like
+  [target.'cfg(windows)'.dependencies.windows-sys]. Verified against real
+  tokio Cargo.toml: 13 deps before fix, 36 after, matches expected.
+- Added scripts/testManifests.ts manual verification script, tested
+  against real manifests (gin, tokio, laravel, rails, spring-petclinic).
+- Added packages/graph/buildExportGraph.ts: complement to
+  buildDependencyGraph.ts. Nodes = modules with exports, edges (type
+  "export") = module -> each importer, deduped, plus resolvedReExports
+  folded in as extra edges from original source to re-exporting module.
+- Added packages/graph/buildImportGraph.ts: weighted variant of
+  buildDependencyGraph.ts. Uses ModuleInfo.resolvedImports (not the flat
+  imports[] array) so edges carry a weight = number of import statements
+  between two modules. Note: GraphEdge has no metadata field, so kind
+  breakdown (static/dynamic/require/type-only) is NOT preserved on the
+  edge - only the count. Consumers needing that detail should read
+  resolvedImports directly.
+- Repo cleanup: deleted ~10 stale already-merged branches, removed an
+  accidentally-committed apps/web/FETCH_HEAD file (leftover git internal
+  file from an old commit, not source code).
+- Workflow change: main is now protected, direct push to main no longer
+  works. New flow: branch -> commit -> push branch -> PR on GitHub ->
+  merge -> git checkout main && git pull.
+
+STILL NOT DONE - call graph (packages/graph/buildCallGraph.ts):
+Planned but not implemented yet. Design decided:
+- RawCall { calleeName, line } added to ParsedFile as OPTIONAL field
+  (calls?), since 7 other parsers - Go, Java, Python, TS, etc - build
+  ParsedFile literals without it and would break if it were required.
+- ResolvedCall { moduleId, calleeName, line } plus calls/calledBy fields
+  added to ModuleInfo as REQUIRED (only buildIndex.ts constructs
+  ModuleInfo, so safe to make required there).
+- Known limitation to document in code: extractCallsJs will only catch
+  bare-identifier calls like foo(), NOT obj.foo() or this.foo() - property
+  access calls need type info to resolve safely, out of scope for AST-only
+  pass. Cross-file resolution in buildIndex.ts can only match a callee
+  name against namedImports already resolved for that module - calls to
+  default-imported functions can't be resolved back to their source module,
+  since RawImport does not store a local name for default imports.
+- Attempted to patch packages/shared/types.ts with a Python script this
+  session but it failed - the heredoc got cut off / corrupted when pasted
+  into the mobile terminal app, likely due to length and/or special
+  characters. No files were actually changed as a result - types.ts is
+  still in its original state. Next session should retry with shorter,
+  simpler patch commands (plain ASCII, no em-dashes, broken into smaller
+  steps) rather than one large heredoc block.
+- Files that still need changes once types.ts is patched: extractJs.ts
+  (add extractCallsJs, bare-identifier calls only, exclude "require"),
+  parseJs.ts / parseJsx.ts / parseCommonJs.ts (wire in extractCallsJs),
+  buildIndex.ts (resolve RawCall -> ResolvedCall via namedImports lookup,
+  backfill calledBy same pattern as importedBy), and finally
+  buildCallGraph.ts itself (weighted, same pattern as buildImportGraph.ts,
+  edge type "call").
