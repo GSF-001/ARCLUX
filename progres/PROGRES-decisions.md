@@ -44,3 +44,91 @@ doesn't attempt to implement duplicate logic in either of them — same
 class of risk previously flagged for `packages/ui/graphColor.ts` vs
 `theme/graphColors.ts` (that one is still an open risk; these two are now
 resolved/documented).
+
+## Update -- PLANNED (not yet built): graph node visual impact indicator
+
+**Goal**: in the dependency graph view, high-impact nodes (files with
+many consumers, e.g. logService.ts in a VS Code-scale repo with 430
+importers) should be visually distinguishable WITHOUT clicking each node
+first. Motivated by dogfooding: currently every file node is the same
+blue regardless of impact, so finding "the important files" requires
+clicking through hundreds of nodes one at a time.
+
+**Explicit non-goal, confirmed with user**: do NOT change node color by
+type. graphNodeColors (theme/graphColors.ts) currently colors nodes by
+GraphNodeType (file=blue, external-package=amber, route=purple,
+component=teal, hook=red) -- that must stay as-is, it's how users tell
+node kinds apart. Impact must be a SEPARATE visual signal layered on top
+(halo ring and/or radius size), not a replacement for type color.
+
+**Data availability, already confirmed**:
+- packages/shared/types.ts's GraphNode interface has NO importedBy/fan-in
+  field built in.
+- BUT DependencyGraph.edges (GraphEdge[], with source/target as GraphNode
+  ids) is already sent to the browser in full via GET /api/graph
+  (packages/graph/serializeGraph.ts passes graph.edges through
+  unmodified, no changes needed there).
+- Therefore: fan-in count per node can be computed CLIENT-SIDE by
+  counting how many times each node id appears as an edge's `target`
+  across graph.edges. No backend/API changes needed at all -- this is a
+  frontend-only feature.
+
+**Implementation plan, in order**:
+
+1. In `apps/web/components/graph/GraphProvider.tsx`: add a `useMemo`
+   that, whenever `graph` changes, builds `Map<nodeId, number>` by
+   iterating `graph.edges` and counting occurrences of each `edge.target`.
+   Expose this as a new `importCounts: Map<string, number>` field on
+   `GraphContextValue` (add to both the interface and the `value` object
+   near the bottom of the file, same pattern as the existing `positions`
+   field).
+
+2. In `apps/web/components/graph/GraphCanvas.tsx`: at the `<GraphNode>`
+   render call around line 308-315 (confirmed exact location -- inside
+   `{graph.nodes.map((node) => { ... return <GraphNode ... /> })}`,
+   sibling props to `isSelected`/`isHovered`), pull `importCounts` from
+   `useGraphContext()` (already imported/used elsewhere in this file
+   presumably -- verify) and pass
+   `importCount={importCounts.get(node.id) ?? 0}` as a new prop.
+
+3. In `apps/web/components/graph/GraphNode.tsx`: add `importCount: number`
+   to `GraphNodeProps`. Define tier thresholds (user's suggested starting
+   point: High >100, Medium 20-100, Low/normal <20 -- these are
+   arbitrary and should be tuned after seeing it rendered against a few
+   real repos of different sizes, e.g. python-demo vs vscode vs next.js,
+   since "100 importers" means very different things in a 50-file repo
+   vs a 15,000-file repo). For High/Medium tiers, render an additional
+   `<circle>` halo BEHIND the existing node circle (larger radius, no
+   fill, a neutral stroke color like white or amber at low opacity --
+   NOT reusing graphNodeColors, since that would collide with the
+   type-color meaning). Consider also scaling BASE_RADIUS slightly for
+   High-tier nodes. Existing isSelected halo logic
+   (`{isSelected && <circle r={radius + 5} ... />}`) is a useful
+   reference for the halo-circle pattern already used in this file --
+   don't duplicate logic, structure the new halo consistently with it.
+
+4. Test with `enableMouseInteraction`-style verification: run against
+   playground/python-demo first (small, fast iteration) to confirm no
+   crash/visual regression, THEN test against a large real repo (the
+   user has already tested vscode, react, vercel/next.js, microsoft/vscode
+   via the /new flow against localhost -- reuse one of those) to confirm
+   the tiering actually looks meaningful at scale, not just correct in
+   theory. Screenshot verification in-browser required before considering
+   this done -- typecheck alone is not sufficient evidence per this
+   project's established verification standard.
+
+5. Consider whether label text position (`x={radius + 6}` in
+   GraphNode.tsx) needs to account for the halo radius too, or if it's
+   fine referencing only the inner circle's radius -- check visually.
+
+6. Consider whether d3-force's collision detection (GraphCanvas.tsx,
+   look for wherever simulation nodes get a radius/collision force) needs
+   updating so bigger high-impact nodes don't visually overlap
+   neighboring nodes now that some nodes are bigger than others -- this
+   wasn't investigated yet, flagged as a real risk worth checking, not
+   confirmed either way.
+
+**Status**: planning/investigation only, ZERO code written yet. All file
+line numbers and current-state details above were confirmed by directly
+reading the files in this session -- safe to trust and start straight
+from step 1 above without re-investigating from scratch.
