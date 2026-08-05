@@ -853,3 +853,80 @@ Caught only because testManifests.ts's output (13 deps) didn't match the
 expected fix. Lesson: always `pwd` before a `cat > path << EOF` if you've
 `cd`'d anywhere else in the same session — a wrong-directory heredoc
 fails silently, it doesn't error.
+
+## Update - shadcn re-exports fixed, real test suite started, 3 large-repo stress tests
+
+**Fixed issue #3** (Re-export missing shadcn primitives): 5 files were
+missing from apps/web/components/ui/ — avatar.tsx, badge.tsx,
+checkbox.tsx, skeleton.tsx, switch.tsx. Added following the exact
+1-line wrapper pattern already used by button.tsx etc
+(`export * from "@/vendor-ui/shadcn/X"`), plus the matching export lines
+in index.ts. Verified with `npx tsc --noEmit -p .` before/after — the 5
+"Cannot find module" errors disappeared, no new errors introduced.
+Merged via PR #52.
+
+**Found while fixing #3, filed separately as issue #51 (not fixed yet)**:
+apps/web/components/ui/input-group.tsx and
+apps/web/vendor-ui/shadcn/input-group.tsx both fail to resolve @/ path
+aliases (@/lib/utils, @/vendor-ui/shadcn/button, @/vendor-ui/shadcn/input,
+@/vendor-ui/shadcn/textarea, and even input-group referencing itself).
+Other files using the identical @/vendor-ui/shadcn/X pattern resolve
+fine, so this looks isolated to input-group specifically, not a general
+alias bug. Not yet investigated.
+
+**Test suite started (issue #8), went from literal 0% to something real**:
+No test framework existed before this — package.json's `"test": "turbo
+run test"` script would have failed outright since no turbo.json exists
+in the repo. Installed vitest (`pnpm add -D vitest -w`), added
+vitest.config.ts pointing at tests/**/*.test.ts, changed the test script
+to `vitest run`.
+
+Wrote the first 2 real test files, both using REAL manifest files copied
+into tests/fixtures/ (not hand-written fixtures) — same go.mod (gin) and
+Cargo.toml (tokio) already verified manually via scripts/testManifests.ts
+in an earlier session, now made permanent and automatic instead of
+eyeballed:
+- tests/parser/go.test.ts — 4 tests against parseGoMod, checks the full
+  35-dependency count, confirms every dep is kind "runtime" (Go has no
+  dev-dependency concept), checks one known dependency's exact version
+  string, and checks the empty-input case.
+- tests/parser/rust.test.ts — 4 tests against parseCargoToml, checks the
+  full 36-dependency count, checks the 16 runtime / 20 dev split, and
+  specifically checks that windows-sys resolves from BOTH a runtime
+  cfg(windows) section and a dev-dependencies cfg(windows) section — this
+  is a regression guard for the exact platform-conditional-section bug
+  that was fixed earlier (13 -> 36 deps after the fix).
+
+**STILL NOT DONE**: the other 9 test files (pipeline, graph, impact,
+indexer, detector, parser/java, parser/python, parser/rust... wait rust
+is done — parser/javascript, parser/typescript) are still empty
+placeholders (0 lines, not even a license header — below the 8-line
+baseline). Merged via PR #57.
+
+**Stress-tested ARCLUX against 3 large real-world repos by cloning them
+locally and running the pipeline** (not automated, done manually via the
+web UI): microsoft/vscode, facebook/react, vercel/next.js. All 3
+completed without crashing — graph rendering, impact analysis ("this file
+needs N / affects M"), and the physics-based d3-force layout all worked
+correctly at scale (VSCode alone is hundreds of thousands of lines across
+a complex monorepo). No new bugs surfaced from these three specifically,
+but they haven't been used to generate automated test fixtures yet — that
+would be a good follow-up (same pattern as the go.mod/Cargo.toml fixtures
+above, but for TS/JS at a much larger scale).
+
+**New issues filed and assigned to new collaborators this session**:
+- #50 (assigned: xcontcom) — implement packages/graph/buildCallGraph.ts.
+  Design was already finalized in an earlier session (see decisions.md
+  if that's been migrated, or check git history of this file pre-split):
+  RawCall/ResolvedCall types, extractCallsJs bare-identifier-only
+  limitation, buildIndex.ts resolution via namedImports lookup. Not
+  started as of this writing — packages/graph/buildCallGraph.ts is still
+  the 8-line license-header-only stub, packages/shared/types.ts has zero
+  occurrences of RawCall/ResolvedCall.
+- #53 (assigned: Alitindrawan24) — new Laravel convention detector,
+  requireController (route -> controller existence check), modeled after
+  packages/rules/nextjs/requirePage.ts. Scoped deliberately small for v1:
+  only the `[UserController::class, 'index']` array-callable syntax,
+  explicitly skipping closures and the old `'UserController@index'`
+  string syntax as a documented limitation rather than trying to handle
+  every route syntax at once.
