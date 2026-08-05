@@ -29,3 +29,20 @@ Termux, tsconfig, Webpack, version-pinning quirks. See PROGRES.md for the index.
 - **Don't clone reference repos inside `~/arclux`** — they must be at the
   `~` root (`~/git-truck`, `~/madge`, `~/opencode`, `~/research/*`),
   outside the project.
+
+## Running tsc from repo root gives false @/ alias errors for apps/web
+
+`npx tsc --noEmit -p .` from ~/arclux (repo root) uses the ROOT
+tsconfig.json, which has no `@/*` path alias configured — that alias only
+exists in apps/web/tsconfig.json, scoped to that app. Running the root
+check reports 100+ "Cannot find module '@/...'" errors across nearly
+every file in apps/web/, none of which are real. The correct check for
+apps/web specifically is:
+
+  cd apps/web && npx tsc --noEmit
+
+This was the root cause of issue #51 being filed as a false positive
+(input-group.tsx reported as broken from a root-level check, shows zero
+errors when checked correctly from apps/web/). If a check from root
+surfaces a wall of `@/` alias errors, re-run from apps/web/ before
+concluding anything is actually broken.
