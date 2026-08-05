@@ -1162,3 +1162,23 @@ Planned but not implemented yet. Design decided:
   backfill calledBy same pattern as importedBy), and finally
   buildCallGraph.ts itself (weighted, same pattern as buildImportGraph.ts,
   edge type "call").
+
+## Update — parseTsx.ts and parseTsConfig.ts confirmed intentionally empty
+
+Verified, not just assumed: `packages/parser/typescript/parseTsx.ts` and
+`parseTsConfig.ts` will stay empty stubs permanently, not because they're
+"not done yet" but because their functionality already lives elsewhere:
+
+- `.tsx` parsing: handled inside `parseTs.ts` itself via
+  `ts.ScriptKind.TSX` (checked its `extensions` field and ScriptKind
+  selection logic directly).
+- tsconfig.json parsing: handled inside
+  `packages/indexer/resolveAliases.ts`, which reads tsconfig.json /
+  jsconfig.json directly (with comment/trailing-comma stripping) for
+  path-alias resolution.
+
+Both files now have a comment explaining this, so a future session
+doesn't attempt to implement duplicate logic in either of them — same
+class of risk previously flagged for `packages/ui/graphColor.ts` vs
+`theme/graphColors.ts` (that one is still an open risk; these two are now
+resolved/documented).
