@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "chokidar": "^5.0.0",
     "d3-hierarchy": "^3.1.2",
     "ignore": "^6.0.2",
     "simple-git": "^3.27.0",
