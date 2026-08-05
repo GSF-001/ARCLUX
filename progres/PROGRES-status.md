@@ -972,3 +972,39 @@ placeholder). Wiring it in and browser-testing is deliberately left as
 separate follow-up work, to keep this change's review surface to "the
 workspace components exist and typecheck" rather than also redoing the
 main repo page.
+
+## Update -- hooks/useDebounce.ts + components/search/GlobalSearch.tsx implemented
+
+useDebounce.ts: generic debounce-a-value hook (standard setTimeout/
+clearTimeout pattern). GlobalSearch.tsx: standalone search component
+hitting GET /api/search, using this hook.
+
+IMPORTANT CONTEXT: an earlier draft of GlobalSearch.tsx was floated (via
+external chat, never committed to this repo) that hardcoded
+`items: SearchItem[] = []` with a comment saying data would come from
+"SearchProvider / API" later -- meaning the search box would render and
+accept input but silently return zero results forever, looking
+functional while doing nothing. That draft was never written to disk and
+is NOT what's implemented here. This version actually calls /api/search
+and returns real results (same fuzzyScore.ts stopgap backing
+WorkspaceSearch.tsx and CommandPalette-adjacent search, with the same
+caveats -- file-path-only, no caching, re-indexes the whole repo per
+call).
+
+Deliberate overlap with components/workspace/WorkspaceSearch.tsx: both
+hit the same API with the same debounce-then-fetch shape.
+WorkspaceSearch.tsx is scoped to the workspace header (compact inline
+dropdown) and inlines its own debounce logic rather than using this new
+hook. GlobalSearch.tsx is the general-purpose version (e.g. for a global
+navbar), shows an EmptyState on zero results, and uses useDebounce. Not
+merged into one component since their result-UI differs. If this
+divergence becomes annoying to maintain, consider extracting a shared
+useRepoSearch(repoUrl, branch, query) hook both could call -- not done
+here to keep this change scoped.
+
+NOT yet wired into any page/navbar -- same status as most workspace
+components, exists and typechecks but has no real consumer yet.
+
+Verification: npx tsc --noEmit -p apps/web/tsconfig.json clean (only the
+2 pre-existing file-tree.tsx errors, unrelated). Not yet visually
+verified in-browser.
