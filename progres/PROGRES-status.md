@@ -930,3 +930,45 @@ above, but for TS/JS at a much larger scale).
   explicitly skipping closures and the old `'UserController@index'`
   string syntax as a documented limitation rather than trying to handle
   every route syntax at once.
+
+## Update -- components/workspace/* 8 stub files are now DONE
+
+Wrote all 8 files: Workspace.tsx (composition root), WorkspaceHeader.tsx,
+WorkspaceCommand.tsx, WorkspaceSearch.tsx, WorkspaceSwitcher.tsx, and
+panels/{Files,Impact,Issues}Panel.tsx.
+
+Reference used: browsed ~/git-truck/src/routes/view.tsx and RevisionSelect.tsx
+for composition/dropdown-switcher PATTERNS only (concept, not code -- that
+project is React Router SSR with a completely different loader/action
+model, not directly portable to Next.js App Router). No code copied, no
+NOTICE entry needed since nothing was adapted verbatim.
+
+Real vs honest-placeholder breakdown:
+- WorkspaceSwitcher.tsx: functional for switching between recently-viewed
+  repos (client-side list), but branch switching is NOT functional yet --
+  pipeline.ts accepts a branch param but no UI lets the user pick one.
+- WorkspaceSearch.tsx: real, hits GET /api/search (fuzzyScore.ts stopgap,
+  same caveats as documented on that route -- file-path-only, no caching,
+  re-indexes whole repo per call).
+- WorkspaceCommand.tsx: thin wrapper re-exporting the already-built
+  CommandPalette.tsx, not new behavior.
+- ImpactPanel.tsx: real, wraps the already-verified ImpactSummary.tsx.
+  Needs a moduleId, which currently only comes from WorkspaceSearch
+  selection (no file tree to click into yet).
+- FilesPanel.tsx: honest "coming soon" EmptyState, NOT a fake file tree.
+  Blocked on either fixing vendor-ui/magic-ui/file-tree.tsx's missing
+  deps (@radix-ui/react-accordion, scroll-area.tsx) or building a simpler
+  tree view from graph data directly.
+- IssuesPanel.tsx: honest "coming soon" EmptyState, NOT fake detector
+  data. Detectors themselves are 18/18 done and already run via `apps/cli
+  doctor`, but nothing exposes them over HTTP yet -- needs a new
+  /api/doctor route.
+
+Verification: npx tsc --noEmit -p apps/web/tsconfig.json clean (only the
+2 pre-existing file-tree.tsx errors, unrelated). NOT yet verified
+visually in-browser -- Workspace.tsx is not wired into any app/ route yet
+(app/[org]/[repo]/page.tsx still shows its old "coming soon, see /graph"
+placeholder). Wiring it in and browser-testing is deliberately left as
+separate follow-up work, to keep this change's review surface to "the
+workspace components exist and typecheck" rather than also redoing the
+main repo page.
