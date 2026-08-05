@@ -1,8 +1,10 @@
 # ARCLUX — Progress Summary
 
-> Paste this file at the start of any Claude chat (or `cat PROGRES.md`) so
-> Claude immediately understands the project status without needing it
-> re-explained from scratch. Update this file after every major milestone.
+> At the start of any Claude chat, read ALL of these, not just this file:
+> `cat PROGRES.md progres/PROGRES-status.md progres/PROGRES-bugs.md progres/PROGRES-decisions.md progres/PROGRES-gotchas.md`
+> This file alone is just an index -- it has almost no actual project
+> history in it anymore. Skipping the other 4 means missing most of what's
+> been learned about this codebase.
 >
 > Check current empty-file status:
 > ```bash
@@ -40,10 +42,28 @@ Next.js page but forgot to register the route").
 
 This file used to contain everything. It's now split for readability:
 
-- [progres/PROGRES-status.md](progres/PROGRES-status.md) — feature completion status, sync updates
-- [progres/PROGRES-bugs.md](progres/PROGRES-bugs.md) — bugs found and their fixes
-- [progres/PROGRES-decisions.md](progres/PROGRES-decisions.md) — design decisions and why
-- [progres/PROGRES-gotchas.md](progres/PROGRES-gotchas.md) — environment quirks (Termux, tsconfig, Webpack, version pinning)
+- [progres/PROGRES-status.md](progres/PROGRES-status.md) — feature completion status, sync updates, "here's what's done now" reports
+- [progres/PROGRES-bugs.md](progres/PROGRES-bugs.md) — a real bug was found in already-written code, and what the fix was
+- [progres/PROGRES-decisions.md](progres/PROGRES-decisions.md) — "we chose X over Y, here's why" -- design/architecture calls, not bugs
+- [progres/PROGRES-gotchas.md](progres/PROGRES-gotchas.md) — environment/tooling traps that aren't bugs in ARCLUX's own code (Termux quirks, tsconfig path resolution, Webpack config, package version pinning, terminal/paste issues)
+
+### Where does my update go? (quick decision guide)
+
+Ask in this order, stop at the first "yes":
+1. Is this about a wrong assumption in a PAST PROGRES entry getting
+   corrected, or a new package/feature reaching a milestone (done, X/Y
+   complete, newly verified)? -> **status**
+2. Did something in ARCLUX's OWN code produce wrong output/crash, and you
+   fixed it? -> **bugs**
+3. Did you choose between two real design options and want the reasoning
+   preserved (not just "it works")? -> **decisions**
+4. Is the problem actually the terminal/OS/bundler/package manager, not
+   ARCLUX's code? -> **gotchas**
+
+**Still not sure? Put it in status.md.** A slightly-misfiled status entry
+costs nothing; agonizing over the perfect category wastes a turn. Nobody
+needs to re-sort these files -- they're read together via the cat command
+above anyway.
 
 When adding a new update, put it in the file matching its category above.
 Keep this index file itself short -- it should only ever have the
