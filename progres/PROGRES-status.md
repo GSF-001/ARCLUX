@@ -1186,12 +1186,3 @@ STATUS: pushed near a chat context limit — typecheck result for these 3
 files was requested but not confirmed back before this note was written.
 Re-run `npx tsc --noEmit -p apps/web/tsconfig.json` and confirm clean
 before trusting these beyond "written, looks syntactically right."
-
-## Still empty, priority order for next session
-
-1. `packages/indexer/resolveRoutes.ts` — unblocks entry-file-awareness for detectUnusedExports/detectOrphanFiles false positives
-2. `packages/indexer/resolveExports.ts`, `resolveComponents.ts`, `resolveHooks.ts`, `resolveProviders.ts` — same family as resolveRoutes
-3. `apps/web/components/explorer/Explorer.tsx`, `DependencyList.tsx` — FileDetails.tsx already exists but isn't wired to anything, this is why
-4. `apps/web/lib/api.ts`, `graph.ts` — client fetch helpers, currently pages call fetch() inline
-5. `packages/db/*` — persistence layer, 0%, needed before any "history over time" feature
-6. `packages/indexer/updateIndex.ts`, `watchIndex.ts`, `indexSchema.ts` — incremental indexing, depends on packages/incremental being wired in first (not yet done)

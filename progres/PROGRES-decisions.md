@@ -194,3 +194,12 @@ Alitindrawan24 / parsePhpRoutes.ts) as the template to follow.
 
 This does not replace filing the GitHub issue - both are required, the
 file comment is an addition for discoverability, not a substitute.
+
+## Still empty, priority order for next session
+
+1. `packages/indexer/resolveRoutes.ts` — unblocks entry-file-awareness for detectUnusedExports/detectOrphanFiles false positives
+2. `packages/indexer/resolveExports.ts`, `resolveComponents.ts`, `resolveHooks.ts`, `resolveProviders.ts` — same family as resolveRoutes
+3. `apps/web/components/explorer/Explorer.tsx`, `DependencyList.tsx` — FileDetails.tsx already exists but isn't wired to anything, this is why
+4. `apps/web/lib/api.ts`, `graph.ts` — client fetch helpers, currently pages call fetch() inline
+5. `packages/db/*` — persistence layer, 0%, needed before any "history over time" feature
+6. `packages/indexer/updateIndex.ts`, `watchIndex.ts`, `indexSchema.ts` — incremental indexing, depends on packages/incremental being wired in first (not yet done)
