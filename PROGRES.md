@@ -1,7 +1,7 @@
 # ARCLUX — Progress Summary
 
 > At the start of any Claude chat, read ALL of these, not just this file:
-> `cat PROGRES.md progres/PROGRES-status.md progres/PROGRES-bugs.md progres/PROGRES-decisions.md progres/PROGRES-gotchas.md`
+> `cat PROGRES.md progres/PROGRES-status.md progres/PROGRES-bugs.md progres/PROGRES-decisions.md progres/PROGRES-gotchas.md progres/PROGRES-collaborators.md`
 > This file alone is just an index -- it has almost no actual project
 > history in it anymore. Skipping the other 4 means missing most of what's
 > been learned about this codebase.
@@ -46,6 +46,7 @@ This file used to contain everything. It's now split for readability:
 - [progres/PROGRES-bugs.md](progres/PROGRES-bugs.md) — a real bug was found in already-written code, and what the fix was
 - [progres/PROGRES-decisions.md](progres/PROGRES-decisions.md) — "we chose X over Y, here's why" -- design/architecture calls, not bugs
 - [progres/PROGRES-gotchas.md](progres/PROGRES-gotchas.md) — environment/tooling traps that aren't bugs in ARCLUX's own code (Termux quirks, tsconfig path resolution, Webpack config, package version pinning, terminal/paste issues)
+- [progres/PROGRES-collaborators.md](progres/PROGRES-collaborators.md) — who's assigned to what, check before assuming a file is unclaimed
 
 ### Where does my update go? (quick decision guide)
 
@@ -59,6 +60,8 @@ Ask in this order, stop at the first "yes":
    preserved (not just "it works")? -> **decisions**
 4. Is the problem actually the terminal/OS/bundler/package manager, not
    ARCLUX's code? -> **gotchas**
+5. Are you assigning a task to a collaborator, or updating the status of
+   one already assigned? -> **collaborators**
 
 **Still not sure? Put it in status.md.** A slightly-misfiled status entry
 costs nothing; agonizing over the perfect category wastes a turn. Nobody
