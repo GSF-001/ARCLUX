@@ -1,7 +1,7 @@
 # ARCLUX — Progress Summary
 
 > At the start of any Claude chat, read ALL of these, not just this file:
-> `cat PROGRES.md progres/PROGRES-status.md progres/PROGRES-bugs.md progres/PROGRES-decisions.md progres/PROGRES-gotchas.md progres/PROGRES-collaborators.md`
+> `cat PROGRES.md progres/PROGRES-status-core.md progres/PROGRES-status-detectors.md progres/PROGRES-status-web.md progres/PROGRES-status-infra.md progres/PROGRES-status-backlog.md progres/PROGRES-bugs.md progres/PROGRES-decisions.md progres/PROGRES-gotchas.md progres/PROGRES-collaborators.md`
 > This file alone is just an index -- it has almost no actual project
 > history in it anymore. Skipping the other 4 means missing most of what's
 > been learned about this codebase.
@@ -42,7 +42,11 @@ Next.js page but forgot to register the route").
 
 This file used to contain everything. It's now split for readability:
 
-- [progres/PROGRES-status.md](progres/PROGRES-status.md) — feature completion status, sync updates, "here's what's done now" reports
+- [progres/PROGRES-status-core.md](progres/PROGRES-status-core.md) — status: pipeline, parser, indexer, graph, impact, incremental
+- [progres/PROGRES-status-detectors.md](progres/PROGRES-status-detectors.md) — status: detectors
+- [progres/PROGRES-status-web.md](progres/PROGRES-status-web.md) — status: web (apps/web, graph viewer, vendor-ui, theme)
+- [progres/PROGRES-status-infra.md](progres/PROGRES-status-infra.md) — status: CLI, collaborator tooling, testing, cleanup, dogfood
+- [progres/PROGRES-status-backlog.md](progres/PROGRES-status-backlog.md) — status: backlog
 - [progres/PROGRES-bugs.md](progres/PROGRES-bugs.md) — a real bug was found in already-written code, and what the fix was
 - [progres/PROGRES-decisions.md](progres/PROGRES-decisions.md) — "we chose X over Y, here's why" -- design/architecture calls, not bugs
 - [progres/PROGRES-gotchas.md](progres/PROGRES-gotchas.md) — environment/tooling traps that aren't bugs in ARCLUX's own code (Termux quirks, tsconfig path resolution, Webpack config, package version pinning, terminal/paste issues)
