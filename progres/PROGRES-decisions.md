@@ -132,3 +132,38 @@ node kinds apart. Impact must be a SEPARATE visual signal layered on top
 line numbers and current-state details above were confirmed by directly
 reading the files in this session -- safe to trust and start straight
 from step 1 above without re-investigating from scratch.
+
+## Decision — same-package/same-namespace resolution: ONE generic pass, not per-language fixes
+
+**Context**: Go graph (Kubernetes test) and Java graph (java-demo fixture)
+both showed near-zero edges despite files clearly being related. Root
+cause confirmed identical in both `parseGo.ts` and `parseJava.ts`'s own
+comments (already documented by whoever wrote them, not discovered fresh
+here): both Go and Java let files in the same package/directory reference
+each other with ZERO import statements. `playground/go-demo`'s
+cyclic_a.go/cyclic_b.go and `playground/java-demo`'s Main.java calling
+Service/Models/Utils are both confirmed real examples of this. The parser
+only extracts what's literally written, so these relationships never
+reach `resolvePath.ts` as anything to resolve — there's no import
+statement token to feed it in the first place.
+
+**Decision**: do NOT write a Java-specific fix and a separate Go-specific
+fix. This is one general problem — "files that share an implicit scope
+need a same-scope dependency pass independent of import statements" —
+that will likely also apply to C# (`namespace`) and Rust (`mod`) once
+those parsers go further than manifest-only (`parseCsproj.ts`,
+`parseCargoToml.ts` exist; `parseCSharp.ts`/`parseRust.ts` are still
+empty). Build ONE resolution pass parameterized by "what counts as a
+shared scope" per language (directory for Go, package declaration for
+Java), not four copies of similar logic.
+
+**Not yet built** — this is a design decision recorded for whoever picks
+this up next, not an implementation. Same class of gap as
+`resolveRoutes.ts` being empty (noted in parseGo.ts's own comment as a
+parallel case).
+
+**Referenced but not portable**: cloned `javaparser/javaparser` to
+`~/research/javaparser` for its `SymbolSolver`/`TypeSolver` concepts —
+it's a JVM library, not directly adaptable to TypeScript, but worth
+reading for how a mature tool structures scope resolution before
+designing ARCLUX's own pass.
