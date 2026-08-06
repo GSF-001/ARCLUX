@@ -36,7 +36,8 @@ support yet), follow the same pattern: a small set of files with one
 genuine circular reference and one genuinely dead export, so the
 detectors have real signal to test against — not just files that happen
 to parse.
-=======
+
+----
 | Fixture | Tests | Parser/rules status | Notes |
 |---|---|---|---|
 | go-demo | Go parser, detectCircularDependency, detectUnusedExports | parser: working | Verified: 6/6 modules indexed, exports correctly extracted via uppercase-letter convention including deliberately-unused UnusedHelper. |
