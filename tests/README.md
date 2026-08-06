@@ -30,6 +30,7 @@ exact expected output. That's how tests/fixtures/Cargo.toml.tokio
 came to exist — it caught a real bug in Cargo.toml parsing
 (platform-conditional dependency sections weren't handled) before it
 shipped.
+
 =======
 Automated tests, run via Vitest. All 19 tests passing as of this writing
 (4 test files, 0 failures) - verified by actually running `npx vitest run`,
