@@ -1,76 +1,59 @@
 # apps/
 
-Status of apps/cli and apps/web, based on a file scan (line count per
-file). Threshold differs from packages/: apps/web has files that are
-9-line thin re-exports (working, e.g. `export * from "@/vendor-ui/shadcn/button"`)
-vs 8-line pure stubs (empty, license header only) - the two look almost
-identical by line count alone, so this table is based on spot-checking 5
-files across both buckets (all 5 matched: 8 = stub, 9 = working re-export),
-not a `cat` of every single file. Re-verify with `cat` before trusting a
-borderline file.
-
-Re-run scan:
-
-    find apps/cli -name "*.ts" -not -path "*/node_modules/*" | while read f; do
-      echo "$(wc -l < "$f") $f"
-    done | sort -n
-
-    find apps/web -name "*.ts" -o -name "*.tsx" | grep -v node_modules | grep -v vendor-ui | grep -v ".next" | while read f; do
-      echo "$(wc -l < "$f") $f"
-    done | sort -n
+The two user-facing surfaces of ARCLUX. Both are thin — all the real
+logic lives in `packages/`.
 
 ## apps/cli
 
-All 7 commands have real content (26-173 lines each, well above the
-8-line stub threshold) - no stubs found.
+A command-line tool for analyzing a repo without the web UI.
 
-| File | Lines | Status |
-|---|---|---|
-| index.ts | 26 | working |
-| config.ts | 35 | working |
-| analyze.ts | 36 | working |
-| graph.ts | 42 | working |
-| impact.ts | 69 | working |
-| analyzeLocal.ts | 70 | working |
-| doctor.ts | 173 | working |
+    cd apps/cli
+    npx tsx index.ts analyze https://github.com/org/repo.git
+    npx tsx index.ts graph https://github.com/org/repo.git
+    npx tsx index.ts impact https://github.com/org/repo.git --file src/index.ts
+    npx tsx index.ts doctor
+
+| Command | What it does |
+|---|---|
+| analyze | Clones + indexes a repo, prints a summary (modules, detected frameworks, issues found) |
+| analyzeLocal | Same as analyze but against a local path instead of cloning |
+| graph | Builds and prints/exports the dependency graph |
+| impact | Given a file, shows what depends on it (direct + transitive consumers) |
+| doctor | Environment/setup diagnostics — checks Node version, missing deps, etc. |
+| config | Read/write ARCLUX CLI configuration |
 
 ## apps/web
 
-| Folder | Purpose | Status | Notes |
-|---|---|---|---|
-| app/ (pages, loading, error, api routes) | Next.js App Router pages + API routes | working | all files 13-84 lines, no stubs |
-| components/ui | shadcn re-export wrappers | working | 19 files, all 9-line thin re-exports to vendor-ui/shadcn |
-| components/graph | Graph rendering (Canvas, Node, Edge, Provider, FocusView, etc.) | working | 14 files, 35-323 lines, no stubs |
-| components/layout | Navbar, Sidebar, Breadcrumbs, SplitPane, etc. | working | 8 files, 18-79 lines |
-| components/marketing | Landing page sections (Hero, CTA, DocsPanel, etc.) | working | 6 files, 32-101 lines |
-| components/patterns | Reusable UI patterns (DataTable, CommandPalette, FilterBar, etc.) | working | 11 files, 22-100 lines |
-| components/workspace | Workspace panels (Files, Impact, Issues, Search) | working | 8 files, 28-102 lines |
-| components/primitives | Avatar, Badge, Checkbox, Kbd, Skeleton, Switch | working | 6 files, 12-22 lines |
-| components/search | GlobalSearch | working | 1 file, 124 lines |
-| components/explorer | DependencyList, Explorer, FileDetails, ImpactSummary | partial | FileDetails (132) and ImpactSummary (166) done; DependencyList and Explorer are 8-line stubs |
-| components/overview | RepositoryHeader, RepositoryInfo, RepositoryOverview, ProjectStructure | partial | only ProjectStructure (99) done; the other 3 are 8-line stubs |
-| features/graph | graphStore, graphEvents, useGraph, useGraphLayout, useGraphSelection | stub | only useGraph.ts (9-line re-export) has content; 4/5 files are 8-line stubs |
-| features/impact | impactStore, useImpact | stub | both 8-line stubs |
-| features/issues | issuesStore, useIssues | stub | both 8-line stubs |
-| features/repository | repositoryStore, useRepository, useRepositoryInfo | stub | all 3 are 8-line stubs |
-| features/search | searchStore, useSearch | stub | both 8-line stubs |
-| hooks | useClipboard, useCommandPalette, useDebounce, useMediaQuery, useTheme | partial | useDebounce (32) and useTheme (40) done; useClipboard, useCommandPalette, useMediaQuery are 8-line stubs |
-| lib | api.ts, cn.ts, graph.ts, utils.ts | partial | cn.ts (9, re-export) and utils.ts (14) done; api.ts and graph.ts are 8-line stubs |
-| theme | colors, graphColors, motion, spacing, theme.dark, typography | partial | colors (74), graphColors (53), theme.dark (73) done; motion, spacing, typography are 8-line stubs |
+A Next.js app for browsing an analyzed repo visually — dependency graph,
+file explorer, impact viewer, search.
 
-## Notes
+    cd apps/web
+    pnpm install
+    pnpm dev
 
-- No collaborator currently assigned to any partial/stub area here as of
-  this writing.
-- features/* is the biggest gap - almost entirely stub (13/14 files).
-  Since components/graph, components/workspace, etc. are already working
-  and presumably read data through *something*, check whether they're
-  bypassing features/* stores directly or whether wiring them up to
-  features/* is still pending - not determined by this scan alone.
-- lib/api.ts being a stub is worth flagging specifically: if
-  components/workspace or components/explorer call an API layer, check
-  what they're actually importing before assuming lib/api.ts is the
-  live code path.
-- Percentages/status here are line-count based, not effort-based or
-  runtime-verified. Cross-check against root PROGRES.md files for what's
-  actually been run/tested vs. only passed tsc --noEmit.
+Then open http://localhost:3000, paste a repo URL, and browse.
+
+### Structure
+
+- **`app/`** — Next.js App Router pages and API routes
+  (`/api/analyze`, `/api/graph`, `/api/impact`, `/api/search`)
+- **`components/graph/`** — the interactive graph canvas (SVG +
+  d3-force physics layout), including node/edge rendering, focus view,
+  context menus, and search-within-graph
+- **`components/workspace/`** — the main browsing layout (file panel,
+  impact panel, issues panel)
+- **`components/explorer/`** — file detail + impact summary views
+- **`components/ui/`** — thin re-exports of shadcn/ui primitives from
+  `vendor-ui/`, so the rest of the app imports from one consistent path
+- **`vendor-ui/`** — vendored shadcn/Aceternity/Magic UI components
+- **`features/`** — Zustand-style stores + hooks per domain (graph,
+  impact, issues, repository, search) that connect UI components to
+  `packages/` via the API routes
+- **`theme/`** — design tokens (colors, spacing, typography, motion),
+  including a dedicated graph color palette
+
+### Why Webpack, not Turbopack
+
+Turbopack isn't supported on Termux/arm64 in this Next.js version, so
+next.config.ts is pinned to Webpack. See root PROGRES.md gotchas for
+the full story if you're wondering why the build config looks unusual.

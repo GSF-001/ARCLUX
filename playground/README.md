@@ -1,30 +1,42 @@
 # playground/
 
-Hand-written fixture repos used to verify the pipeline end-to-end against
-real (if small) code, via `scripts/testPlayground.ts <fixture-name>` -
-not unit tests, but "does this actually work on real-ish code" checks.
-See root PROGRES.md for specific verification runs already done against
-these.
+Small hand-written fixture repos, one per language/framework ARCLUX
+supports, used to sanity-check the pipeline against real-ish code:
 
-Run any fixture:
+    npx tsx scripts/testPlayground.ts go-demo
+    npx tsx scripts/testPlayground.ts python-demo
+    npx tsx scripts/testPlayground.ts react-demo
 
-    npx tsx scripts/testPlayground.ts <fixture-name>
-
-## The pattern every fixture follows
-
-Every fixture ships a `cyclicA` / `cyclicB` pair (naming varies by
-language convention: `cyclic_a.py`, `CyclicA.java`, `cyclicA.ts`, etc.)
-that calls into each other, specifically to exercise
-`detectCircularDependency`. Beyond that shared pair, each fixture adds
-its own language/framework-specific files to test other detectors
-(unused exports, orphan files, framework convention rules).
-
-If you add a new fixture, keep this pattern: include a cyclic pair, and
-leave at least one deliberately-unused export so
-`detectUnusedExports`/`detectUnusedFiles` have something to catch.
+This runs the full buildIndex -> buildDependencyGraph -> all 16
+detectors pipeline against the fixture and prints what it finds — a fast
+way to check "does this actually work" without cloning a real repo.
 
 ## Fixtures
 
+
+| Fixture | Language / framework |
+|---|---|
+| go-demo | Go |
+| java-demo | Java |
+| python-demo | Python |
+| react-demo | React (component conventions) |
+| nextjs-demo | Next.js (routing conventions) |
+| express-demo | Express (route registration) |
+| nest-demo | NestJS (module/controller wiring) |
+
+## The shared pattern
+
+Every fixture includes a cyclicA / cyclicB pair that calls into each
+other — this exists purely to give detectCircularDependency something
+to find. Most fixtures also include at least one deliberately unused
+export, so detectUnusedExports has something to flag.
+
+If you're adding a new fixture (say, for a language ARCLUX doesn't
+support yet), follow the same pattern: a small set of files with one
+genuine circular reference and one genuinely dead export, so the
+detectors have real signal to test against — not just files that happen
+to parse.
+=======
 | Fixture | Tests | Parser/rules status | Notes |
 |---|---|---|---|
 | go-demo | Go parser, detectCircularDependency, detectUnusedExports | parser: working | Verified: 6/6 modules indexed, exports correctly extracted via uppercase-letter convention including deliberately-unused UnusedHelper. |
@@ -39,3 +51,4 @@ leave at least one deliberately-unused export so
 
 No fixtures exist yet for Rust, C#, PHP, Ruby, or C++ source parsing.
 Electron and Vite convention rules also have no fixture yet.
+main

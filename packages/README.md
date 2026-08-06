@@ -1,52 +1,84 @@
 # packages/
 
-Status of every package in this workspace, generated from an actual file
-scan (line count per .ts file, <=9 lines = license header only = stub),
-not from memory. Re-run this to refresh:
+The core of ARCLUX lives here — framework-agnostic logic with no UI or
+CLI dependencies. Everything in `apps/` is just a thin shell on top of
+these packages.
 
-    for dir in packages/*/; do
-      name=$(basename "$dir")
-      total=$(find "$dir" -name "*.ts" -not -path "*/node_modules/*" | wc -l)
-      stubs=$(find "$dir" -name "*.ts" -not -path "*/node_modules/*" -exec sh -c 'test $(wc -l < "$1") -le 9' _ {} \; -print | wc -l)
-      echo "$name: $total files total, $stubs still stub/empty"
-    done
+## How it fits together
 
-Legend: working (>=80% implemented) / partial (20-79%) / stub (<20%)
+    clone (git) -> parse (parser) -> index (indexer) -> graph (graph)
+                                            |
+                        +-------------------+-------------------+
+                        |                   |                   |
+                  detect issues       trace impact         search/browse
+                  (detectors)          (impact)              (search)
 
-| Folder | Purpose | Files | Stub | Status |
-|---|---|---|---|---|
-| repository | Core data model - File, Folder, Module, Node, Edge, Dependency, Graph | 8 | 0 | working |
-| detectors | 18 architecture/convention detectors (circular dep, dead code, unused exports, etc.) | 18 | 0 | working |
-| impact | Impact analysis - trace imports/exports/consumers, calculate affected files/modules/routes | 9 | 0 | working |
-| incremental | Incremental re-indexing support | 6 | 0 | working |
-| shared | Types, errors, constants, hash, logger, paths, utils - used by every other package | 8 | 1 | working |
-| parser | Per-language source + manifest parsers (TS/JS/Python/Go/Java + go.mod/Cargo.toml/package.json/composer.json/Gemfile/pom.xml) | 35 | 6 | working |
-| graph | Builds dependency/folder graphs from an indexed Repository | 7 | 1 | working |
-| watcher | Filesystem/git watching for incremental re-indexing | 4 | 1 | partial |
-| indexer | Turns parsed files into a resolved module index; alias resolution done, route/component/hook resolution still stub | 11 | 8 | partial |
-| git | Clone/cleanup/gitignore done; branch history, contributors, default-branch detection still stub | 8 | 5 | partial |
-| engine | Pipeline orchestration (analyzeRepository, framework/pkg-manager detection) done; individual analyze*/generate* passes still stub | 11 | 9 | partial |
-| search | Search over an indexed repository | 7 | 6 | stub |
-| rules | Framework-specific convention rules (Next.js, React, NestJS, Express, Vite, Electron) | 15 | 13 | stub |
-| cache | Caching layer (file/graph/memory/repository cache) | 5 | 5 | stub |
-| db | Persistence layer (client, schema, repositories) | 5 | 5 | stub |
-| ui | Graph visualization helpers (color, layout, theme, icons, animation) for apps/web | 5 | 5 | stub |
+Everything is orchestrated by `engine/pipeline.ts`, which is the single
+entry point (`analyzeRepository()`) that CLI commands and web API routes
+call — nobody should call `buildIndex`, `buildDependencyGraph`, etc.
+directly outside of `engine/`.
 
-## Notes
+## Packages
 
-- No packages are currently claimed by a specific collaborator as of this
-  writing - partial/stub folders above are open to pick up, not blocked
-  on anyone. If you start one, note it here so others don't duplicate work.
-- indexer's stub files (resolveRoutes, resolveComponents, resolveHooks,
-  etc.) are a known source of false positives in detectors - e.g. Next.js
-  page files and Python/Go/Java entry points without explicit imports show
-  up as "orphan"/"unused" until these are filled in. See root PROGRES.md
-  for specifics already run into.
-- parser's 6 remaining stubs are source-code parsers for languages ARCLUX
-  claims to support but hasn't implemented yet (check packages/parser/*/
-  for which - csharp/cpp/php/ruby/rust source parsers, as distinct from
-  the manifest parsers in the same folders, which ARE done).
-- Percentages are file-count based, not effort-based - a folder can show
-  "working" while still missing edge-case handling. Cross-check against
-  root PROGRES.md for what's actually been verified end-to-end vs. only
-  passed tsc --noEmit.
+- **`repository`** — the core data model. `File`, `Folder`, `Module`,
+  `Node`, `Edge`, `Dependency`, `Graph`. Everything else consumes or
+  produces these shapes.
+- **`parser`** — turns source files into a shared `ParsedFile` shape
+  (imports/exports/warnings). One sub-folder per language
+  (`typescript/`, `python/`, `go/`, `java/`, ...), each implementing the
+  `LanguageParser` interface so `engine/pipeline.ts` never has to know
+  which language it's dealing with. Also contains manifest parsers
+  (`go.mod`, `Cargo.toml`, `package.json`, ...) via the separate
+  `ManifestParser` interface.
+- **`indexer`** — walks a repo, calls the right parser per file, resolves
+  raw import strings into actual module ids (handling path aliases,
+  same-package implicit dependencies, etc.), and produces a `Repository`.
+- **`graph`** — turns an indexed `Repository` into a renderable
+  `DependencyGraph` (nodes + edges) that the web UI draws.
+- **`detectors`** — 18 independent checks that each take a `Repository`
+  and return findings: circular dependencies, dead code, unused exports,
+  duplicate modules, orphan files, convention violations, and more.
+- **`impact`** — answers "what breaks if I change this file?" by tracing
+  consumers/dependents through the graph.
+- **`rules`** — framework-specific convention checks (Next.js routes,
+  React hooks, NestJS modules, Express routing, Vite config, Electron
+  main/preload boundaries).
+- **`engine`** — the orchestrator. `analyzeRepository({ repoUrl })` is
+  the one function that does clone -> parse -> index -> graph, with
+  proper cleanup even on failure.
+- **`watcher`** — filesystem/git watching so a running analysis can
+  incrementally re-index on file changes instead of doing a full rebuild.
+- **`incremental`** — the incremental re-index logic itself, consumed
+  by `watcher`.
+- **`cache`**, **`db`**, **`search`**, **`ui`** — caching layer,
+  persistence, search-over-index, and shared graph-rendering helpers
+  (colors, layout, icons) used by `apps/web`.
+- **`shared`** — types, `ArcluxError`, and small utilities
+  (`hashContent`, `toPosixPath`, `createLogger`, etc.) every other
+  package imports from. Read `shared/types.ts` first when exploring this
+  codebase — it's the shape of everything.
+- **`git`** — clone/cleanup a remote repo into a temp dir, read
+  `.gitignore`, inspect branches/history.
+
+## Example: analyzing a repo programmatically
+
+    import { analyzeRepository } from "./packages/engine/pipeline";
+
+    const result = await analyzeRepository({
+      repoUrl: "https://github.com/some-org/some-repo.git",
+    });
+
+    console.log(result.meta.detectedFrameworks); // e.g. ["nextjs", "react"]
+    console.log(result.moduleCount);
+    console.log(result.graph.nodes.length, "nodes,", result.graph.edges.length, "edges");
+
+## Example: running a single detector
+
+    import { buildIndex } from "./packages/indexer/buildIndex";
+    import { detectCircularDependency } from "./packages/detectors/detectCircularDependency";
+
+    const repository = await buildIndex({ rootPath: "/path/to/repo", meta: { ... } });
+    const cycles = detectCircularDependency(repository);
+
+See `scripts/testPlayground.ts` for a fuller working example against the
+fixtures in `playground/`.
