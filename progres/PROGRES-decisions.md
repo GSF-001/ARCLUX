@@ -203,3 +203,11 @@ file comment is an addition for discoverability, not a substitute.
 4. `apps/web/lib/api.ts`, `graph.ts` — client fetch helpers, currently pages call fetch() inline
 5. `packages/db/*` — persistence layer, 0%, needed before any "history over time" feature
 6. `packages/indexer/updateIndex.ts`, `watchIndex.ts`, `indexSchema.ts` — incremental indexing, depends on packages/incremental being wired in first (not yet done)
+
+## 2026-08-07 — DependencyList.tsx type confirmed against real API
+
+DependencyList.tsx previously had a local GraphResponse/GraphNodeResponse/GraphEdgeResponse type, written before app/api/graph/route.ts's actual response shape was checked (its own comment admitted this). Verified: DependencyGraph.nodes/edges from packages/shared/types match exactly. Replaced the local guessed type with the real shared type. Going forward: don't guess API response shapes in component files -- check the actual route.ts handler first, even if it means a short delay before writing the component.
+
+## 2026-08-07 — Next steps priority for future sessions
+
+Two concrete next steps identified this session, in suggested order: (1) Graph node visual impact indicator (halo ring for high-fan-in nodes) -- full implementation plan already documented in an earlier entry in this file (client-side importCounts via useMemo in GraphProvider.tsx, passed as importCount prop through GraphCanvas.tsx to GraphNode.tsx, rendered as an extra halo circle). Zero code written yet, ready to start from step 1. (2) Remaining inline fetch() calls that duplicate the pattern lib/api.ts's fetchJson() now centralizes -- ImpactSummary.tsx and GlobalSearch.tsx were the two examples that motivated building fetchJson() in the first place but were NOT themselves refactored to use it. Worth a follow-up pass to actually consume the helper there, plus check FileDetails.tsx and app/api/file/route.ts for the same duplicated pattern.

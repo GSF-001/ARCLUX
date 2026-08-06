@@ -229,3 +229,7 @@ Planned but not implemented yet. Design decided:
 ## 2026-08-06 — CI typecheck ran from wrong directory
 
 package.json's typecheck script ran plain 'tsc --noEmit' from repo root, breaking the @/* path alias (baseUrl is relative to apps/web/tsconfig.json). This caused ~30 false CI errors (missing react types, JSX implicit any, unresolved @/lib/utils etc.) across vendor-ui and playground/, blocking PR #108 (feat/repo-config-tooling) even though the code was fine. Fixed in PR #110 by changing the script to 'tsc --noEmit -p apps/web/tsconfig.json', matching the local dev command already documented in PROGRES-gotchas.md.
+
+## 2026-08-07 — Dead theme/globals.css, stale PROGRES.md.bak, duplicate lockfile
+
+Found and removed 3 leftover files during a routine check: apps/web/theme/globals.css (0 bytes, never imported anywhere -- app/globals.css at a different path is the one actually wired into layout.tsx), PROGRES.md.bak (outdated pre-split/pre-translate backup, superseded by progres/PROGRES-*.md), and package-lock.json (project uses pnpm per pnpm-workspace.yaml, having both lockfiles risks dependency drift -- added package-lock.json to .gitignore).
