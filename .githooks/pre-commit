@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Blok commit kalau ada header ## baru di progres/PROGRES-*.md tanpa tanggal YYYY-MM-DD
+set -e
+
+SKIP_HEADERS="Rules for using this file|Active assignments|Completed|Still empty, priority order for next session|Problems that happened before|External references already used"
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep '^progres/PROGRES-.*\.md$' || true)
+
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+FAIL=0
+for f in $STAGED; do
+  while IFS= read -r line; do
+    title=$(echo "$line" | sed 's/^## //')
+    if echo "$title" | grep -qE "$SKIP_HEADERS"; then
+      continue
+    fi
+    if ! echo "$title" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2} — '; then
+      echo "BLOCKED: $f punya header tanpa tanggal: ## $title"
+      FAIL=1
+    fi
+  done < <(grep '^## ' "$f")
+done
+
+if [ "$FAIL" -eq 1 ]; then
+  echo ""
+  echo "Commit ditolak. Pakai scripts/log-progress.sh atau tambahin tanggal manual (format: ## YYYY-MM-DD — judul)."
+  exit 1
+fi
