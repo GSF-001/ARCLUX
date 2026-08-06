@@ -1,0 +1,112 @@
+# ARCLUX Progress — Detectors
+
+See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
+
+## ✅ DONE — detectors (10/18)
+
+1. `detectCircularDependency.ts` — DFS cycle detection, adapted from `madge`
+2. `detectUnusedExports.ts` — traversal strategy adapted from `knip`,
+   fully re-implemented using `ResolvedImport`/`resolvedReExports` on
+   `ModuleInfo`
+   - **Limitation**: no reference-extraction pass (can only detect "never
+     imported", not "imported but unused"). Namespace imports are treated
+     as automatically "using everything". Aliased re-exports aren't chained
+     correctly (`RawExport` only stores the final name). Not yet
+     entry-file-aware (`resolveRoutes.ts` is still empty → false positives
+     on files like Next.js `page.tsx`).
+3. `detectOrphanFiles.ts` — file-level version of point 2 (nothing imports
+   this file at all). Subject to the same entry-file caveat.
+4. `detectLargeModules.ts` — flags files above a byte threshold (default
+   15,000). Verified against the `arclux` repo itself: 0 results currently
+   because the largest file in the repo (`file-tree.tsx`, 511 lines) is
+   only 12,840 bytes, still under the threshold — not a bug, the
+   threshold just hasn't been triggered yet.
+5. `detectDuplicateModules.ts` — groups files by content hash.
+   - **Incident already fixed**: initial threshold (`minSizeBytes = 200`)
+     was too small. An empty stub file (license header + 1 comment line)
+     in this repo turned out to be 263 bytes, not below 200 as assumed
+     when the comment was written. This caused 149 stub files to get
+     grouped into one fake "duplicate group" when tested against the real
+     repo (not caught in `python-demo`, which only has 6 files). Threshold
+     raised to 300. Still a fragile byte-based heuristic — `FileInfo` has
+     no `lineCount` or `content`, only `sizeBytes`/`hash`, so if the
+     license header format ever changes, this threshold can go stale
+     again.
+6. `detectSharedModules.ts` — flags high fan-in files (importedBy count).
+   Informational, not a "problem". Verified: found
+   `packages/shared/types.ts` (25 importers), `packages/repository/Repository.ts`
+   (23 importers) in the `arclux` repo itself — makes sense.
+7. `detectIndexFiles.ts` — flags barrel files (index.ts) that mix
+   re-exports with their own definitions.
+   - **Overlap note**: `packages/repository/Module.ts` already has
+     `isBarrelFile()`/`isEntryPoint()` with a similar concept. Not yet
+     checked whether there's logic duplication — worth verifying before
+     writing the next convention detector that might touch the same area.
+
+Verified twice: against `playground/python-demo` (small fixture) AND
+against the `arclux` repo itself via `npx tsx apps/cli/index.ts doctor .`
+(15,630 lines of real code) — the latter is what caught the threshold bug
+above, which the small fixture alone did not reveal.
+
+8. `detectLayerViolation.ts` — rule-matching concept (from-pattern /
+   to-pattern regex on folder path) adapted from sverweij/dependency-cruiser
+   (MIT), src/validate/match-folder-dependency-rule.mjs. Not a port —
+   dependency-cruiser supports arbitrary user-defined rules with regex
+   capture groups; this is a small fixed set of 2 ARCLUX-specific rules
+   (packages/* can't import apps/*, packages/shared/* can't import sibling
+   packages/*) against ARCLUX's own ModuleInfo/ResolvedImport shape, no
+   group-capture machinery. Verified with a positive control (planted a
+   fake violation, confirmed detection, reverted) — 0 violations in
+   `arclux` itself currently.
+9. `detectDeadCode.ts` — ARCLUX-original, NOT adapted from knip despite
+   investigating knip first (knip has no "dead code" issue type at all —
+   its IssueType union is granular: files/exports/types/enumMembers/etc,
+   no umbrella bucket). Deliberately scoped to NOT duplicate
+   detectOrphanFiles or detectUnusedExports: flags a module that IS
+   imported by something (not orphaned) but where EVERY one of its own
+   exports is unused (per detectUnusedExports) — i.e. likely only ever
+   imported for a side effect. Composes detectUnusedExports's output
+   rather than re-deriving usage data, so there's one source of truth for
+   "is this export used." Verified with a positive control (planted a
+   fake side-effect-only import, confirmed detection, reverted) — 0
+   findings in `arclux` itself currently.
+
+Also verified end-to-end via `doctor.ts` (9/9 detectors running together,
+not just tested one by one in isolation) against `playground/python-demo`
+and against the `arclux` repo itself.
+
+10. `detectEntryPoints.ts` — ARCLUX-original, positive classifier for
+    orphaned modules (importedBy === 0) that match a known entry-point
+    convention (Next.js App Router page/layout/loading/error/route files,
+    apps/cli/index.ts). Informational only — does not modify or suppress
+    detectOrphanFiles/detectUnusedExports findings, just lists known-good
+    matches alongside them for cross-checking. Verified against `arclux`
+    itself: 25 findings, all correct (every app/**/page.tsx, layout.tsx,
+    loading.tsx, error.tsx, route.ts under apps/web/app, plus
+    apps/cli/index.ts).
+
+Also verified end-to-end via `doctor.ts` (10/10 detectors running
+together) against `playground/python-demo` and against the `arclux` repo
+itself.
+
+**Remaining 8 still at 0%**: `detectComponentConvention`, `detectFeatureStructure`,
+`detectMissingExports`, `detectRepositoryPattern`, `detectRouteConvention`,
+`detectStoryConvention`, `detectTestConvention`, `detectUnusedFiles`.
+
+## Update — detectors 18/18 (100%), 2 production bugs NOT YET FIXED
+
+packages/detectors/* is fully 18/18. Verified via scripts/testPlayground.ts
+(now calls all 18 detectors, runs against the fixture OR the repo itself
+via `npx tsx scripts/testPlayground.ts .`).
+
+**PRODUCTION BUG, NOT YET FIXED**: detectRouteConvention found that
+apps/web/app/api/impact/route.ts AND apps/web/app/api/search/route.ts
+don't export any HTTP method (GET/POST/etc) — both endpoints are likely
+non-functional if hit.
+
+Other findings: detectRepositoryPattern found a package-level cycle
+packages/indexer <-> packages/graph. detectMissingExports found 9 shadcn
+files (button.tsx etc.) not re-exported via components/ui/index.ts.
+detectUnusedExports still has false positives on React components (not
+yet using the detectEntryPoints filter like detectUnusedFiles does).
+
