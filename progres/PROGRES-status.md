@@ -1158,3 +1158,31 @@ PROGRES.md entries - appears to have been built in a session not
 reflected in this doc's history. Re-run the scan command in
 packages/README.md periodically to keep it current; don't hand-edit the
 table without re-running it first.
+
+## Update — theme/typography.ts, spacing.ts, motion.ts written (globals.css left untouched)
+
+Three token files written from scratch: `apps/web/theme/typography.ts`
+(font size/weight/line-height scale + graph label sizes),
+`apps/web/theme/spacing.ts` (spacing scale + graph layout pixel
+constants), `apps/web/theme/motion.ts` (duration/easing + interaction
+timing constants like double-click window).
+
+**IMPORTANT — `apps/web/app/globals.css` was checked (209 lines,
+NOT a stub) and deliberately NOT touched.** It already carries the
+dark-first ARCLUX theme applied in an earlier session — do not run any
+"fill empty file" pass against it again, it only looks like a candidate
+if you trust file NAME/folder location without checking actual line
+count first (same class of mistake flagged repeatedly elsewhere in this
+doc).
+
+**NOT YET DONE**: none of these 3 new token files are actually imported
+anywhere yet — GraphCanvas.tsx's `DOUBLE_CLICK_DELAY_MS` and similar
+inline constants are still local, not migrated to import from
+motion.ts's `interactionTiming`. Wiring these in is a follow-up, kept
+out of scope here to avoid touching working interaction code just to
+satisfy new token files existing.
+
+STATUS: pushed near a chat context limit — typecheck result for these 3
+files was requested but not confirmed back before this note was written.
+Re-run `npx tsc --noEmit -p apps/web/tsconfig.json` and confirm clean
+before trusting these beyond "written, looks syntactically right."
