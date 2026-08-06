@@ -1,5 +1,2 @@
-# Ganti placeholder di bawah dengan username GitHub asli collaborator lo.
-# Format: path pattern -> @username
-# apps/web/          @USERNAME_PLACEHOLDER
-# packages/detectors/ @USERNAME_PLACEHOLDER
-# progres/            @USERNAME_PLACEHOLDER
+# Reviewer default untuk semua file
+* @Alitindrawan24 @xcontcom @svSeniorEngineer
