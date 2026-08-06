@@ -8,7 +8,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
 import { fetchGraph as fetchGraphData } from "@/lib/graph";
 import type { DependencyGraph, GraphNode as GraphNodeData } from "@/packages/shared/types";
 import type { GraphNodePosition } from "./GraphNode";
@@ -50,6 +50,11 @@ interface GraphContextValue {
   setPositions: (p: Map<string, GraphNodePosition>) => void;
   dimensions: CanvasDimensions;
   setDimensions: (d: CanvasDimensions) => void;
+  /** Fan-in count per node id, computed from graph.edges (how many edges
+   * target this node). Drives the impact halo in GraphNode.tsx -- see
+   * progres/PROGRES-decisions.md for why this is computed client-side
+   * instead of added to the backend GraphNode type. */
+  importCounts: Map<string, number>;
 }
 
 const GraphContext = createContext<GraphContextValue | null>(null);
@@ -123,6 +128,15 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     setTransform(DEFAULT_TRANSFORM);
   }, []);
 
+  const importCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!graph) return counts;
+    for (const edge of graph.edges) {
+      counts.set(edge.target, (counts.get(edge.target) ?? 0) + 1);
+    }
+    return counts;
+  }, [graph]);
+
   const value: GraphContextValue = {
     graph,
     isLoading,
@@ -144,6 +158,7 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     setPositions,
     dimensions,
     setDimensions,
+    importCounts,
   };
 
   return <GraphContext.Provider value={value}>{children}</GraphContext.Provider>;

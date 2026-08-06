@@ -44,6 +44,7 @@ export function GraphCanvas() {
     setPositions,
     dimensions,
     setDimensions,
+    importCounts,
   } = useGraphContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -313,6 +314,8 @@ export function GraphCanvas() {
                 isHovered={node.id === hoveredNodeId}
                 onClick={selectNode}
                 onHoverChange={setHoveredNodeId}
+                importCount={importCounts.get(node.id) ?? 0}
+                zoomScale={transform.scale}
               />
             );
           })}

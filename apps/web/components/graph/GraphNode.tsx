@@ -24,13 +24,44 @@ export interface GraphNodeProps {
   isHovered: boolean;
   onClick: (id: string) => void;
   onHoverChange: (id: string | null) => void;
+  /** Number of edges targeting this node (computed client-side from
+   * DependencyGraph.edges in GraphProvider.tsx). Drives the impact halo. */
+  importCount?: number;
+  /** Current viewport zoom scale from GraphTransform. The impact halo
+   * only renders past MIN_ZOOM_FOR_HALO to avoid clutter when zoomed
+   * out on dense graphs -- see progres/PROGRES-decisions.md. */
+  zoomScale?: number;
 }
 
 const BASE_RADIUS = 6;
 
-export function GraphNode({ node, position, isSelected, isHovered, onHoverChange }: GraphNodeProps) {
+// Fan-in tiers for the impact halo. Starting thresholds, not yet tuned
+// against a wide variety of real repos -- see progres/PROGRES-decisions.md.
+const IMPACT_HIGH_THRESHOLD = 100;
+const IMPACT_MEDIUM_THRESHOLD = 20;
+
+// Halo only renders once zoomed in past this scale, so overview/zoomed-out
+// views of dense graphs don't get cluttered with overlapping halos.
+const MIN_ZOOM_FOR_HALO = 1;
+
+function getImpactHaloRadius(importCount: number): number | null {
+  if (importCount > IMPACT_HIGH_THRESHOLD) return 14;
+  if (importCount >= IMPACT_MEDIUM_THRESHOLD) return 9;
+  return null;
+}
+
+export function GraphNode({
+  node,
+  position,
+  isSelected,
+  isHovered,
+  onHoverChange,
+  importCount = 0,
+  zoomScale = 1,
+}: GraphNodeProps) {
   const color = getGraphNodeColor(node.type, "dark");
   const radius = isSelected ? BASE_RADIUS + 3 : isHovered ? BASE_RADIUS + 1.5 : BASE_RADIUS;
+  const impactHaloRadius = zoomScale >= MIN_ZOOM_FOR_HALO ? getImpactHaloRadius(importCount) : null;
 
   return (
     <g
@@ -40,6 +71,16 @@ export function GraphNode({ node, position, isSelected, isHovered, onHoverChange
       onMouseLeave={() => onHoverChange(null)}
       className="cursor-pointer"
     >
+      {impactHaloRadius !== null && (
+        <circle
+          r={radius + impactHaloRadius}
+          fill="none"
+          stroke={color}
+          strokeWidth={1}
+          strokeOpacity={0.25}
+          className="pointer-events-none"
+        />
+      )}
       {isSelected && (
         <circle r={radius + 5} fill="none" stroke={color} strokeWidth={1} strokeOpacity={0.4} />
       )}
