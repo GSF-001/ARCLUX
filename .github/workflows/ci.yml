@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  typecheck:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,5 +13,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: npm run typecheck --if-present
-        # GANTI "typecheck" kalau nama script di package.json beda
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
