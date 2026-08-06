@@ -2,7 +2,7 @@
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
-## Update — Python resolver bug + TS export default double-count bug (fixed)
+## 2026-08-03 — Update — Python resolver bug + TS export default double-count bug (fixed)
 
 Tested against playground/python-demo (6-file fixture, existed already)
 and found 2 real production bugs:
@@ -39,7 +39,7 @@ express-demo, nest-demo (all immediately testable via
 scripts/testPlayground.ts), go-demo, java-demo (fixtures ready, parsers
 for these 2 languages not yet written).
 
-## Update -- ImpactSummary.tsx built and verified in-browser, plus 2 major Webpack gotchas found
+## 2026-08-04 — Update -- ImpactSummary.tsx built and verified in-browser, plus 2 major Webpack gotchas found
 
 components/explorer/ImpactSummary.tsx implemented: fetches /api/impact,
 renders total affected files, direct impact (distance === 1) and indirect
@@ -132,7 +132,7 @@ lists -- it's about telling Webpack's module rules how to treat the file
 type itself (asset/resource), so it never tries to parse it as code in
 the first place.
 
-## Update — dark theme default fix + GraphMenu consolidation
+## 2026-08-05 — Update — dark theme default fix + GraphMenu consolidation
 
 **Dark theme bug found via dogfooding**: landing page and graph viewer
 rendered light/white despite theme/arclux.json being dark-first by
@@ -169,7 +169,7 @@ changes pushed near a chat context limit. Confirm before relying on them:
 dependencies/dependents panel) was also pushed without visual
 verification in a previous update — still needs confirming.
 
-## Update - manifest parser fix, export/import graph builders, call graph planning
+## 2026-08-06 — Update - manifest parser fix, export/import graph builders, call graph planning
 
 Done and merged to main this session:
 - Fixed parseCargoToml.ts bug: was missing platform-conditional sections

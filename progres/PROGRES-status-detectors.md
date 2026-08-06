@@ -2,7 +2,7 @@
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
-## ✅ DONE — detectors (10/18)
+## 2026-08-03 — ✅ DONE — detectors (10/18)
 
 1. `detectCircularDependency.ts` — DFS cycle detection, adapted from `madge`
 2. `detectUnusedExports.ts` — traversal strategy adapted from `knip`,
@@ -93,7 +93,7 @@ itself.
 `detectMissingExports`, `detectRepositoryPattern`, `detectRouteConvention`,
 `detectStoryConvention`, `detectTestConvention`, `detectUnusedFiles`.
 
-## Update — detectors 18/18 (100%), 2 production bugs NOT YET FIXED
+## 2026-08-05 — Update — detectors 18/18 (100%), 2 production bugs NOT YET FIXED
 
 packages/detectors/* is fully 18/18. Verified via scripts/testPlayground.ts
 (now calls all 18 detectors, runs against the fixture OR the repo itself
