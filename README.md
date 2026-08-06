@@ -10,6 +10,13 @@ Dependency graph, impact analysis, and structural convention checking for your c
 
 [](#status)
 
+
+## Documentation
+
+- [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
+- [`PROGRES.md`](PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
+
 ## Status: alpha
 
 This project is under active development with a small team. Expect breaking changes, missing pieces, and stubs that are not wired up yet. See [`PROGRES.md`](PROGRES.md) (and the linked files in [`progres/`](progres/)) for a detailed, honest breakdown of what works today vs. what is still a stub — that's the up-to-date source of truth, this README is a summary.
@@ -44,7 +51,7 @@ Not yet published to npm. Clone and build locally:
 
     git clone https://github.com/GSF-001/ARCLUX.git
     cd ARCLUX
-    npm install
+    pnpm install
 
 Run CLI commands via: `npx tsx apps/cli/index.ts <command>`
 
@@ -83,7 +90,7 @@ Each stage is an independent package: parser, graph, impact, detectors, rules, e
 We use GitHub Issues to track open work. `main` is protected; all changes go through a pull request.
 
     git clone https://github.com/GSF-001/ARCLUX.git
-    cd ARCLUX && npm install
+    cd ARCLUX && pnpm install
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PROGRES.md) (plus [`progres/`](progres/)) for current project status before picking up work.
 
