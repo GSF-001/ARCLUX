@@ -2,12 +2,20 @@
 
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
 
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)](LICENSE)
-[![Status: alpha](https://img.shields.io/badge/status-alpha-black)](#status)
+[
+
+![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
+
+](LICENSE)
+[
+
+![Status: alpha](https://img.shields.io/badge/status-alpha-black)
+
+](#status)
 
 ## Status: alpha
 
-This project is under active development with a small team. Expect breaking changes, missing pieces, and stubs that are not wired up yet. See [`PROGRES.md`](PROGRES.md) for a detailed, honest breakdown of what works today vs. what is still a stub.
+This project is under active development with a small team. Expect breaking changes, missing pieces, and stubs that are not wired up yet. See [`PROGRES.md`](PROGRES.md) (and the linked files in [`progres/`](progres/)) for a detailed, honest breakdown of what works today vs. what is still a stub — that's the up-to-date source of truth, this README is a summary.
 
 What is solid right now:
 - Core pipeline (clone, parse, index, dependency graph)
@@ -16,11 +24,13 @@ What is solid right now:
 - Full impact analysis (packages/impact/* - trace consumers/dependents, affected files/modules/components/routes)
 - CLI commands: analyze, graph, impact, doctor, config
 - Web dashboard: dependency graph viewer, layout/navigation, most UI patterns and primitives
+- Verified against large real-world repositories (microsoft/vscode, facebook/react, vitejs/vite) in addition to internal fixtures
 
 What is not there yet:
-- Parsers for Go, Rust, Java, C#, C++, PHP, Ruby (only TS/TSX/Python work today)
+- Parsers for Go and Java exist but don't yet capture same-package/same-directory relationships that don't use explicit imports (a documented design gap, see `progres/PROGRES-decisions.md`)
+- Parsers for Rust, C#, C++, PHP, Ruby (dependency-manifest parsing exists for several of these; source-code parsing does not yet)
 - Framework convention rules beyond a starting Next.js rule
-- Real search (/api/search is a filename-only stopgap)
+- Real search (`/api/search` is a filename-only stopgap)
 - A handful of dashboard panels (workspace, explorer, some overview components)
 
 ## What it does
@@ -35,11 +45,11 @@ What is not there yet:
 
 Not yet published to npm. Clone and build locally:
 
-    git clone https://github.com/<org>/arclux.git
-    cd arclux
+    git clone https://github.com/GSF-001/ARCLUX.git
+    cd ARCLUX
     npm install
 
-Run CLI commands via: npx tsx apps/cli/index.ts <command>
+Run CLI commands via: `npx tsx apps/cli/index.ts <command>`
 
 ## Usage
 
@@ -73,12 +83,12 @@ Each stage is an independent package: parser, graph, impact, detectors, rules, e
 
 ## Contributing
 
-We use GitHub Issues to track open work. main is protected; all changes go through a pull request.
+We use GitHub Issues to track open work. `main` is protected; all changes go through a pull request.
 
-    git clone https://github.com/<org>/arclux.git
-    cd arclux && npm install
+    git clone https://github.com/GSF-001/ARCLUX.git
+    cd ARCLUX && npm install
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PROGRES.md) for current project status before picking up work.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PROGRES.md) (plus [`progres/`](progres/)) for current project status before picking up work.
 
 ## License
 
