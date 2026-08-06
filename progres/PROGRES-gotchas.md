@@ -46,3 +46,11 @@ This was the root cause of issue #51 being filed as a false positive
 errors when checked correctly from apps/web/). If a check from root
 surfaces a wall of `@/` alias errors, re-run from apps/web/ before
 concluding anything is actually broken.
+
+## 2026-08-06 — `main` branch has protection rule, can't push directly
+
+`git push origin main` gets rejected with `GH013: Repository rule
+violations... Changes must be made through a pull request`, even after a
+clean local fast-forward merge. Workaround: push the feature branch, open
+a PR on GitHub, merge from there. Don't assume a local merge to `main` is
+enough to publish it.
