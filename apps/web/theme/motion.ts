@@ -6,3 +6,17 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
+export const duration = {
+  fast: 150,
+  normal: 250,
+  slow: 400,
+} as const;
+
+export const easing = {
+  standard: "cubic-bezier(0.4, 0, 0.2, 1)",
+  decelerate: "cubic-bezier(0, 0, 0.2, 1)",
+} as const;
+
+export const interactionTiming = {
+  doubleClickWindow: 300,
+} as const;
