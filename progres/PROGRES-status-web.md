@@ -2,7 +2,7 @@
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
-## ✅ DONE — UI: layout, primitives, patterns (partial), marketing
+## 2026-08-03 — ✅ DONE — UI: layout, primitives, patterns (partial), marketing
 
 **`components/layout/*`** (7 files, all production-quality): `Sidebar.tsx`,
 `SplitPane.tsx` (resizable pane, pointer drag), `WorkspaceLayout.tsx`,
@@ -48,7 +48,7 @@ boilerplate), including `app/new/page.tsx`.
 `api/impact/route.ts` and `api/search/route.ts` — see update below, now
 implemented (previously 8-line stubs).
 
-## ✅ DONE — UI: graph viewer
+## 2026-08-03 — ✅ DONE — UI: graph viewer
 
 Composition root: `GraphViewport.tsx` (used in
 `app/[org]/[repo]/graph/page.tsx`, don't call `GraphCanvas` manually).
@@ -68,7 +68,7 @@ match — not yet using `fuzzyScore.ts`), `GraphSelection`, `GraphContextMenu`,
 - Double-click-zoom + context menu together haven't been tested on a real
   device
 
-## ✅ DONE — vendor-ui
+## 2026-08-03 — ✅ DONE — vendor-ui
 
 Everything in `vendor-ui/shadcn/*` (avatar, badge, button, checkbox,
 command, dialog, dropdown-menu, input, input-group, popover, select,
@@ -81,7 +81,7 @@ installed/written in full.
 
 ---
 
-## Update — /api/impact and /api/search implemented (from empty stubs)
+## 2026-08-04 — Update — /api/impact and /api/search implemented (from empty stubs)
 
 Found via dogfooding: detectRouteConvention (one of the 18 detectors)
 found that apps/web/app/api/impact/route.ts and .../search/route.ts
@@ -110,7 +110,7 @@ before trusting this: run pnpm dev in apps/web, then curl
 'localhost:3000/api/impact?repoUrl=<url>&moduleId=<path>' against a real
 small GitHub repo.
 
-## Update — components/patterns/* 8 stub files are now DONE
+## 2026-08-04 — Update — components/patterns/* 8 stub files are now DONE
 
 Wrote 8 files that were previously stubs (just an 8-line license header):
 `ConfirmDialog.tsx`, `CopyButton.tsx`, `DataTable.tsx`, `EmptyState.tsx`,
@@ -149,7 +149,7 @@ interactive ones, `cn()` from `@/lib/cn`, primitives from
 `components/patterns/*` is now 11/11 complete (including
 `CommandPalette.tsx`, which was already done by a previous session).
 
-## Update — Graph node icons + edge labels/arrows (visual polish, dogfood-driven)
+## 2026-08-05 — Update — Graph node icons + edge labels/arrows (visual polish, dogfood-driven)
 
 Requested after visually testing the graph viewer live in-browser against
 the arclux repo itself (localhost:3000, first real dogfood screenshot
@@ -204,7 +204,7 @@ to be all-file). Edge label/arrow/color change was NOT visually verified
 before merging — pushed under time pressure near a chat context limit,
 confirm in-browser before relying on it.
 
-## Update — GraphFocusView (new): replaces overlapping edge labels on high-fan-in nodes
+## 2026-08-05 — Update — GraphFocusView (new): replaces overlapping edge labels on high-fan-in nodes
 
 Dogfooding on the graph viewer against the arclux repo itself (mobile
 screenshot) showed hovering a high-fan-in node (index.ts, 85 incoming
@@ -240,7 +240,7 @@ by testing it against ourselves earlier) — this was pushed via
 you CANNOT `git push` directly to `main` anymore, always
 `git checkout -b <branch>` first.
 
-## Update -- components/workspace/* 8 stub files are now DONE
+## 2026-08-05 — Update -- components/workspace/* 8 stub files are now DONE
 
 Wrote all 8 files: Workspace.tsx (composition root), WorkspaceHeader.tsx,
 WorkspaceCommand.tsx, WorkspaceSearch.tsx, WorkspaceSwitcher.tsx, and
@@ -282,7 +282,7 @@ separate follow-up work, to keep this change's review surface to "the
 workspace components exist and typecheck" rather than also redoing the
 main repo page.
 
-## Update -- hooks/useDebounce.ts + components/search/GlobalSearch.tsx implemented
+## 2026-08-06 — Update -- hooks/useDebounce.ts + components/search/GlobalSearch.tsx implemented
 
 useDebounce.ts: generic debounce-a-value hook (standard setTimeout/
 clearTimeout pattern). GlobalSearch.tsx: standalone search component
@@ -318,7 +318,7 @@ Verification: npx tsc --noEmit -p apps/web/tsconfig.json clean (only the
 2 pre-existing file-tree.tsx errors, unrelated). Not yet visually
 verified in-browser.
 
-## Update — theme/typography.ts, spacing.ts, motion.ts written (globals.css left untouched)
+## 2026-08-06 — Update — theme/typography.ts, spacing.ts, motion.ts written (globals.css left untouched)
 
 Three token files written from scratch: `apps/web/theme/typography.ts`
 (font size/weight/line-height scale + graph label sizes),

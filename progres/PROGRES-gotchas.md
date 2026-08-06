@@ -30,7 +30,7 @@ Termux, tsconfig, Webpack, version-pinning quirks. See PROGRES.md for the index.
   `~` root (`~/git-truck`, `~/madge`, `~/opencode`, `~/research/*`),
   outside the project.
 
-## Running tsc from repo root gives false @/ alias errors for apps/web
+## 2026-08-03 — Running tsc from repo root gives false @/ alias errors for apps/web
 
 `npx tsc --noEmit -p .` from ~/arclux (repo root) uses the ROOT
 tsconfig.json, which has no `@/*` path alias configured — that alias only

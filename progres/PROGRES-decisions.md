@@ -2,7 +2,7 @@
 
 Why things were built the way they were. See PROGRES.md for the index.
 
-## Update — GitHub infra + features/graph decision
+## 2026-08-03 — Update — GitHub infra + features/graph decision
 
 **Repo infrastructure added**: branch ruleset on `main` (PR required, no
 direct push — verified by testing it against ourselves), PR + issue
@@ -25,7 +25,7 @@ state. Same class of risk as the `packages/ui/graphColor.ts` /
 `theme/graphColors.ts` naming collision noted earlier.
 
 
-## Update — parseTsx.ts and parseTsConfig.ts confirmed intentionally empty
+## 2026-08-03 — Update — parseTsx.ts and parseTsConfig.ts confirmed intentionally empty
 
 Verified, not just assumed: `packages/parser/typescript/parseTsx.ts` and
 `parseTsConfig.ts` will stay empty stubs permanently, not because they're
@@ -45,7 +45,7 @@ class of risk previously flagged for `packages/ui/graphColor.ts` vs
 `theme/graphColors.ts` (that one is still an open risk; these two are now
 resolved/documented).
 
-## Update -- PLANNED (not yet built): graph node visual impact indicator
+## 2026-08-04 — Update -- PLANNED (not yet built): graph node visual impact indicator
 
 **Goal**: in the dependency graph view, high-impact nodes (files with
 many consumers, e.g. logService.ts in a VS Code-scale repo with 430
@@ -133,7 +133,7 @@ line numbers and current-state details above were confirmed by directly
 reading the files in this session -- safe to trust and start straight
 from step 1 above without re-investigating from scratch.
 
-## Decision — same-package/same-namespace resolution: ONE generic pass, not per-language fixes
+## 2026-08-05 — Decision — same-package/same-namespace resolution: ONE generic pass, not per-language fixes
 
 **Context**: Go graph (Kubernetes test) and Java graph (java-demo fixture)
 both showed near-zero edges despite files clearly being related. Root
@@ -168,7 +168,7 @@ it's a JVM library, not directly adaptable to TypeScript, but worth
 reading for how a mature tool structures scope resolution before
 designing ARCLUX's own pass.
 
-## Decision — issues assigned to a collaborator must also be marked in-file
+## 2026-08-06 — Decision — issues assigned to a collaborator must also be marked in-file
 
 **Context**: packages/parser/php/parsePhp.ts and
 packages/parser/php/parsePhpRoutes.ts sit right next to each other.

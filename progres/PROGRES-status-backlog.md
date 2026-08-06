@@ -2,7 +2,7 @@
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
-## ❌ STILL EMPTY (8-line stub, license header only)
+## 2026-08-03 — ❌ STILL EMPTY (8-line stub, license header only)
 
 **Priority #1 — core feature — NOTE: this was previously miscategorized,
 see "packages/impact/* already done" update below**
