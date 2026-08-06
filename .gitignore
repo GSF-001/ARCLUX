@@ -6,3 +6,4 @@ build/
 .turbo/
 .env
 .env.local
+package-lock.json
