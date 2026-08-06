@@ -73,6 +73,19 @@ A slightly-misfiled status entry costs nothing; agonizing over the perfect
 category wastes a turn. Nobody needs to re-sort these files -- they're
 read together via the cat command above anyway.
 
+split/progres-status
+
+----
+
+### Entry format
+
+Every new entry in ANY of the PROGRES-*.md files must start with a
+`## YYYY-MM-DD — Short title` header (ISO date, en-dash, short
+descriptive title). No header, no untitled/undated entries -- if you
+can't summarize it in one line, the entry needs to be broken up or
+you don't understand it well enough yet to log it.
+main
+
 When adding a new update, put it in the file matching its category above.
 Keep this index file itself short -- it should only ever have the
 preamble/quick-check block plus this section.

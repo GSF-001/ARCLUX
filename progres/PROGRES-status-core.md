@@ -2,7 +2,7 @@
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
-## ✅ DONE — pipeline & core
+## 2026-08-03 — ✅ DONE — pipeline & core
 Single entry point: `packages/engine/pipeline.ts` → `analyzeRepository({ repoUrl })`.
 Don't call individual steps from outside `engine/`.
 
@@ -26,7 +26,7 @@ Don't call individual steps from outside `engine/`.
   `constants.ts`, `logger.ts`, `utils.ts`)
 - `packages/search/fuzzyScore.ts` — adapted from `cmdk` (see NOTICE)
 
-## ⚠️ PARTIAL / NEEDS VERIFICATION
+## 2026-08-03 — ⚠️ PARTIAL / NEEDS VERIFICATION
 
 **Python parsing & syntax highlighting** — works (`parsePython.ts` 203
 lines, `highlightPython.ts` 142 lines, `pythonHighlightQuery.ts` 151 lines
@@ -83,7 +83,7 @@ copied from**: git, language-server-protocol, llvm-project, sqlite,
 tree-sitter, nx, clack, shadcn-table, drizzle-orm (check which ones are
 actually cloned before assuming).
 
-## Update — packages/incremental (new foundation, not wired in yet)
+## 2026-08-03 — Update — packages/incremental (new foundation, not wired in yet)
 
 `packages/incremental/` — Cell (input), Query (memoized function with
 dependency tracking + early cutoff), Database (revision coordination).
@@ -118,7 +118,7 @@ standalone foundation that needs separate integration as a bigger next
 step, not something that's automatically used just because this file
 exists.
 
-## CORRECTION — packages/impact/* turned out to be ALREADY DONE (8/8)
+## 2026-08-04 — CORRECTION — packages/impact/* turned out to be ALREADY DONE (8/8)
 
 Previously recorded as priority #1 at 0% total. It turned out to be fully
 implemented in commit `8b69831a` (before this session even started),
@@ -153,7 +153,7 @@ yet implemented" even though the functionality already exists. Needs to
 be fixed so it actually calls `buildImpactTree`/`calculateAffectedFiles`
 etc.
 
-## Update -- JavaScript parser: parseJs/parseJsx/parseCommonJs written and registered
+## 2026-08-04 — Update -- JavaScript parser: parseJs/parseJsx/parseCommonJs written and registered
 
 packages/parser/javascript/extractJs.ts (shared) + parseJs.ts + parseJsx.ts
 + parseCommonJs.ts implemented and registered in packages/engine/pipeline.ts.
@@ -182,7 +182,7 @@ scripts/testPlayground.ts or CLI doctor -- only tsc --noEmit passed so
 far. Next session should build playground/commonjs-demo/ using patterns
 from cjs-module-lexer's test file before trusting this beyond typecheck.
 
-## Update — Go & Java parsers written and verified (parseGo.ts, parseJava.ts)
+## 2026-08-05 — Update — Go & Java parsers written and verified (parseGo.ts, parseJava.ts)
 
 packages/parser/go/parseGo.ts and packages/parser/java/parseJava.ts
 implemented (regex/line-based, not tree-sitter — no grammar wired up for
@@ -221,7 +221,7 @@ fix this for Go/Java specifically — not yet built, not scoped.
 `import demo.other.Thing;` statements) — only the same-package-only
 fixture has been verified so far.
 
-## Update — Manifest parsers built (parseGoMod, parseCargoToml, parsePackageJson, parseComposer, parseGemfile, parseGradle/parsePom, parseCsproj) + ManifestParser interface
+## 2026-08-05 — Update — Manifest parsers built (parseGoMod, parseCargoToml, parsePackageJson, parseComposer, parseGemfile, parseGradle/parsePom, parseCsproj) + ManifestParser interface
 
 New packages/parser/core/ManifestParserInterface.ts (ManifestDependency:
 name/versionRange/kind runtime|dev; ManifestParser: filename + sync parse()).
@@ -278,7 +278,7 @@ expected fix. Lesson: always `pwd` before a `cat > path << EOF` if you've
 `cd`'d anywhere else in the same session — a wrong-directory heredoc
 fails silently, it doesn't error.
 
-## Update - same-scope implicit dependencies implemented (Go/Java)
+## 2026-08-05 — Update - same-scope implicit dependencies implemented (Go/Java)
 
 Followed up on the decision recorded earlier (same-package resolution:
 one generic pass, not per-language fixes). Implemented in full this
@@ -323,7 +323,7 @@ when targeting /tmp/patch_types2.py. Fix: write the script into the
 repo directory itself (~/arclux/patch_types2.py) and delete it after
 running, instead of using /tmp.
 
-## Update - documented 3 previously-mysterious empty stub files
+## 2026-08-06 — Update - documented 3 previously-mysterious empty stub files
 
 Investigated 3 files that were 0-line-except-license-header stubs with
 no obvious purpose from surrounding code, and documented each with an
@@ -352,7 +352,7 @@ unfinished work. Before investigating an empty stub, `cat` the whole
 file first (not just `wc -l`) — some are marked intentionally empty in
 a comment, which immediately answers the question.
 
-## Update — route/export/component/hook/provider resolvers + Explorer panel
+## 2026-08-06 — Update — route/export/component/hook/provider resolvers + Explorer panel
 
 **`packages/indexer/resolveRoutes.ts`**: detects Next.js App Router entry
 files (page/layout/route/loading/error/not-found/template/default/

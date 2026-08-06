@@ -2,7 +2,7 @@
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
-## Update — First real end-to-end verification (playground/python-demo)
+## 2026-08-03 — Update — First real end-to-end verification (playground/python-demo)
 
 `playground/python-demo/` — a 6-file Python fixture (circular import,
 unused export, normal chain) + `scripts/testPlayground.ts` — a manual
@@ -34,7 +34,7 @@ plan — it's still needed for local dev testing, while the `findings[]`
 refactor is for production call sites (CLI, API). If `findings[]` gets
 added later, `testPlayground.ts` could be simplified to use it too.
 
-## Update — apps/cli (5/6 files, index.ts now has real content)
+## 2026-08-03 — Update — apps/cli (5/6 files, index.ts now has real content)
 
 `apps/cli/*` — `analyze`, `doctor`, `graph`, `config` **work and are
 verified** against `playground/python-demo` (not just tsc --noEmit).
@@ -69,7 +69,7 @@ valid in the Next.js scope. Fixed by creating a dedicated
 intentional or a leftover bug — worth checking if any other
 consumer/workspace also lacks its own tsconfig.
 
-## Update — doctor.ts now calls 10/18 detectors (updated from 9/18)
+## 2026-08-03 — Update — doctor.ts now calls 10/18 detectors (updated from 9/18)
 
 `apps/cli/doctor.ts` updated to call the 5 new detectors above in addition
 to the 5 previous ones. Still manual per-detector calls (no registry yet)
@@ -79,7 +79,7 @@ finding shape (`cycle` vs `filePath`+`line` vs `hash`+`filePaths[]` vs
 `isPureBarrel`), so a registry would need a print-adapter per detector,
 not just a list of functions.
 
-## Update — Large sync from other parallel sessions (read before assuming anything is 0%)
+## 2026-08-04 — Update — Large sync from other parallel sessions (read before assuming anything is 0%)
 
 Several Claude sessions ran in parallel using different accounts. Actual
 progress was much further along than what had been recorded here.
@@ -113,13 +113,13 @@ Lesson repeated again (already noted before, proven still relevant):
 ALWAYS cat manually before trusting old notes in this file, especially
 since other sessions may be running in parallel.
 
-## Update — duplicate PROGRESS.md file (double-S typo) deleted
+## 2026-08-04 — Update — duplicate PROGRESS.md file (double-S typo) deleted
 
 There was briefly a separate file named PROGRESS.md (not PROGRES.md) from
 another session that typo'd the filename. It has been deleted —
 PROGRES.md (single-S) remains the one official progress file.
 
-## Update — apps/cli/impact.ts confirmed to ALREADY be correct (no longer an open item)
+## 2026-08-04 — Update — apps/cli/impact.ts confirmed to ALREADY be correct (no longer an open item)
 
 Had been recorded repeatedly (3x across previous updates) as an open
 action item: "apps/cli/impact.ts is wrong, still says not yet implemented
@@ -138,7 +138,7 @@ This command composes 3 functions from packages/impact/*: traceConsumers,
 traceDependencies, calculateAffectedFiles. This action item is OFFICIALLY
 CLOSED.
 
-## Update — large-repo limitation found via dogfooding (NOT a bug, not yet addressed)
+## 2026-08-05 — Update — large-repo limitation found via dogfooding (NOT a bug, not yet addressed)
 
 Tested against `vercel/next.js` (huge) and `microsoft/TypeScript` (huge,
 lots of test fixtures) from the mobile Termux environment.
@@ -174,7 +174,7 @@ something the size of TypeScript's repo.
 Neither is built yet — this is a known gap, not scoped/prioritized
 against the rest of the backlog yet.
 
-## Update - shadcn re-exports fixed, real test suite started, 3 large-repo stress tests
+## 2026-08-05 — Update - shadcn re-exports fixed, real test suite started, 3 large-repo stress tests
 
 **Fixed issue #3** (Re-export missing shadcn primitives): 5 files were
 missing from apps/web/components/ui/ — avatar.tsx, badge.tsx,
@@ -251,7 +251,7 @@ above, but for TS/JS at a much larger scale).
   string syntax as a documented limitation rather than trying to handle
   every route syntax at once.
 
-## Update - checkCollaboratorMarkers.ts script added
+## 2026-08-05 — Update - checkCollaboratorMarkers.ts script added
 
 Built scripts/checkCollaboratorMarkers.ts to enforce the "mark
 collaborator-assigned files in-file" decision from the previous
@@ -284,7 +284,7 @@ index to include it - both the read-all-files cat command and the
 "where does my update go" decision guide now cover 5 categories, not 4.
 Merged via PR #72 (collaborators file) and #73 (marker script).
 
-## Update - collaborator marker system self-tested, bug found and fixed
+## 2026-08-06 — Update - collaborator marker system self-tested, bug found and fixed
 
 Ran a real end-to-end self-test of the collaborator marking system
 built last session (PROGRES-collaborators.md + checkCollaboratorMarkers.ts):
@@ -315,7 +315,7 @@ show up as a false-positive in checkCollaboratorMarkers.ts output
 example pattern to read, not Alitindrawan24's actual task file). Left
 unmarked on purpose, this is expected script behavior, not a bug.
 
-## Update - packages/README.md added
+## 2026-08-06 — Update - packages/README.md added
 
 Per-folder status table generated from an actual file scan (line-count
 stub detection), not memory. Snapshot: repository/detectors/impact/
@@ -327,3 +327,14 @@ reflected in this doc's history. Re-run the scan command in
 packages/README.md periodically to keep it current; don't hand-edit the
 table without re-running it first.
 
+
+## 2026-08-06 — PROGRES-status.md split into 5 topic files
+
+`progres/PROGRES-status.md` (1257 lines, single file) split into:
+`PROGRES-status-core.md`, `PROGRES-status-detectors.md`,
+`PROGRES-status-web.md`, `PROGRES-status-infra.md`,
+`PROGRES-status-backlog.md`. Split by line-range mapping, verified via
+line-count assertion before writing (no gaps/overlaps). Old file deleted.
+Root `PROGRES.md` index updated to reference the 5 new files in both the
+preamble `cat` command and the "quick decision guide" section (previously
+still pointed at the deleted `status.md`).
