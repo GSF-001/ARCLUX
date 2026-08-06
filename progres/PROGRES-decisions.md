@@ -47,6 +47,12 @@ resolved/documented).
 
 ## 2026-08-04 — Update -- PLANNED (not yet built): graph node visual impact indicator
 
+> **[STATUS UPDATE, 2026-08-07]: this plan is now implemented.** See the
+> "UPDATE: Graph impact halo — implemented" entry near the bottom of this
+> file for what actually got built and what's still open (tier thresholds
+> not yet tuned, not yet visually verified). The plan below is kept as-is
+> for historical context -- don't re-implement it.
+
 **Goal**: in the dependency graph view, high-impact nodes (files with
 many consumers, e.g. logService.ts in a VS Code-scale repo with 430
 importers) should be visually distinguishable WITHOUT clicking each node
@@ -210,8 +216,16 @@ DependencyList.tsx previously had a local GraphResponse/GraphNodeResponse/GraphE
 
 ## 2026-08-07 — Next steps priority for future sessions
 
+> **[STATUS UPDATE, 2026-08-07 later same day]: item (1) below is now
+> implemented** -- see "UPDATE: Graph impact halo — implemented" near
+> the end of this file. Item (2) is still open.
+
 Two concrete next steps identified this session, in suggested order: (1) Graph node visual impact indicator (halo ring for high-fan-in nodes) -- full implementation plan already documented in an earlier entry in this file (client-side importCounts via useMemo in GraphProvider.tsx, passed as importCount prop through GraphCanvas.tsx to GraphNode.tsx, rendered as an extra halo circle). Zero code written yet, ready to start from step 1. (2) Remaining inline fetch() calls that duplicate the pattern lib/api.ts's fetchJson() now centralizes -- ImpactSummary.tsx and GlobalSearch.tsx were the two examples that motivated building fetchJson() in the first place but were NOT themselves refactored to use it. Worth a follow-up pass to actually consume the helper there, plus check FileDetails.tsx and app/api/file/route.ts for the same duplicated pattern.
 
 ## 2026-08-07 — Graph impact halo: zoom-gated to avoid clutter
 
 Resolved an open question from the original halo-ring plan: halos only render when zoom level is past a threshold (not always-on), avoiding visual clutter/overlap when zoomed out on dense graphs. Rejected alternatives: always-on halo (overlaps neighboring nodes in dense graphs), thicker border/stroke instead of halo (loses the 'grows with importance' visual cue that a halo radius gives). Implementation-wise this means GraphNode.tsx's halo render needs access to the current transform.scale (already available via useGraphContext()) and a MIN_ZOOM_FOR_HALO constant to gate on.
+
+## 2026-08-07 — UPDATE: Graph impact halo — implemented
+
+The halo-ring plan described in the 2026-08-0X entry above (and listed as a next step in 'Next steps priority for future sessions') is now implemented: GraphNode.tsx renders an impact halo circle gated by zoomScale >= MIN_ZOOM_FOR_HALO, importCount computed via useMemo in GraphProvider.tsx from graph.edges, passed through GraphCanvas.tsx. Tier thresholds (High >100, Medium 20-100) are still unverified against real repos -- that part of the original plan remains open. Not yet visually verified in-browser as of this entry. If you're reading the older halo entries above, they're outdated -- this is the current status.
