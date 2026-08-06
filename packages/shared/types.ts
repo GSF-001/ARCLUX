@@ -79,6 +79,14 @@ export interface ParsedFile {
   file: FileInfo;
   imports: RawImport[];
   exports: RawExport[];
+  /**
+   * For languages where files sharing a directory (Go) or package
+   * declaration (Java, by convention - package must match directory per
+   * the language spec) implicitly share scope and can reference each
+   * other with ZERO import statements. Only set by parseGo.ts and
+   * parseJava.ts today. Consumed by resolveSameScopeDependencies.ts.
+   */
+  scopeId?: string;
   /** Parser-specific extras (e.g. React components found, hooks used) go here, not in the base shape */
   meta?: Record<string, unknown>;
   /** Non-fatal parse warnings (e.g. "could not parse dynamic require") */
@@ -133,6 +141,15 @@ export interface ModuleInfo {
   importedBy: string[]; // module ids that import this module
   imports: string[]; // module ids this module imports (resolved, not raw strings)
   resolvedImports: ResolvedImport[]; // identifier-level detail of `imports`
+  /**
+   * Dependencies found via resolveSameScopeDependencies.ts's regex-based
+   * whole-word scan, NOT from an actual import statement. Kept SEPARATE
+   * from `imports` on purpose: imports[] is 100 percent certain (literal
+   * from source), this is a guess that can false-positive (e.g. a name
+   * mentioned in a comment or string literal). Not yet wired into any
+   * graph builder - see PROGRES.md decisions entry.
+   */
+  implicitDependencies: string[];
 }
 
 // ─────────────────────────────────────────────

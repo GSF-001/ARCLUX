@@ -8,6 +8,7 @@
 
 import type { LanguageParser } from "../core/ParserInterface";
 import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/types";
+import { posix } from "node:path";
 
 // Regex/line-based, not a full Java grammar. Handles import statements
 // (including `static` and wildcard `.*` imports) and public-modifier
@@ -114,6 +115,6 @@ export const parseJava: LanguageParser = {
       warnings.push(`Export extraction failed: ${(err as Error).message}`);
     }
 
-    return { file, imports, exports: exportsList, warnings };
+    return { file, imports, exports: exportsList, warnings, scopeId: posix.dirname(file.relativePath) };
   },
 };

@@ -10,6 +10,7 @@ import { scanFiles } from "../parser/core/scanFiles";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { resolvePath } from "../graph/resolvePath";
 import { loadAliasConfig } from "./resolveAliases";
+import { resolveSameScopeDependencies, type ScopedFile } from "./resolveSameScopeDependencies";
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
 import { ArcluxError } from "../shared/errors";
@@ -24,9 +25,12 @@ export interface BuildIndexOptions {
  * Full indexing pass over a repository:
  * 1. scanFiles      -> list every relevant file
  * 2. parserRegistry  -> parse each file with the right language parser
- * 3. resolvePath     -> turn raw import strings into module ids (using tsconfig
+ * 3. resolveSameScopeDependencies -> for languages where scopeId is set
+ *    (Go, Java - see their parsers' doc comments), find implicit same-scope
+ *    references that never appear as an import statement at all
+ * 4. resolvePath     -> turn raw import strings into module ids (using tsconfig
  *                       path aliases from resolveAliases.ts, plus relative resolution)
- * 4. Repository      -> populated with ModuleInfo, importedBy back-references filled in
+ * 5. Repository      -> populated with ModuleInfo, importedBy back-references filled in
  *
  * This is a full rebuild. For incremental updates see watcher/changeQueue.ts + updateIndex.ts.
  */
@@ -38,8 +42,11 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
   const aliasConfig = loadAliasConfig(rootPath);
   const repository = new Repository({ ...meta, analyzedAt: new Date().toISOString() });
 
-  // Pass 1: parse every file
+  // Pass 1: parse every file. Content is kept around (contentByPath) purely
+  // for resolveSameScopeDependencies's regex scan below — pass 2 doesn't
+  // need it, only the already-extracted imports/exports.
   const parsedByPath = new Map<string, ParsedFile>();
+  const contentByPath = new Map<string, string>();
   for (const file of files) {
     const parser = parserRegistry.getParserForExtension(file.extension);
     if (!parser) continue; // no parser registered yet for this language — skip, don't crash
@@ -58,9 +65,25 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
 
     const parsed = await parser.parse(file, content);
     parsedByPath.set(file.relativePath, parsed);
+    contentByPath.set(file.relativePath, content);
   }
 
-  // Pass 2: build ModuleInfo with resolved import ids (but importedBy not filled yet)
+  // Pass 2: implicit same-scope dependencies (Go/Java files with no import
+  // statement between siblings — see resolveSameScopeDependencies.ts).
+  // Only files with a scopeId set (currently: Go, Java) participate.
+  const scopedFiles: ScopedFile[] = [];
+  for (const [relativePath, parsed] of parsedByPath) {
+    if (!parsed.scopeId) continue;
+    scopedFiles.push({
+      moduleId: relativePath,
+      scopeId: parsed.scopeId,
+      exports: parsed.exports,
+      content: contentByPath.get(relativePath) ?? "",
+    });
+  }
+  const implicitDepsByPath = resolveSameScopeDependencies(scopedFiles);
+
+  // Pass 3: build ModuleInfo with resolved import ids (but importedBy not filled yet)
   const modulesByPath = new Map<string, ModuleInfo>();
   for (const [relativePath, parsed] of parsedByPath) {
     const resolvedImportIds: string[] = [];
@@ -99,11 +122,12 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
       resolvedReExports,
       imports: resolvedImportIds,
       resolvedImports,
-      importedBy: [], // filled in pass 3
+      importedBy: [], // filled in pass 4
+      implicitDependencies: implicitDepsByPath.get(relativePath) ?? [],
     });
   }
 
-  // Pass 3: back-fill importedBy so consumers can be queried in O(1)
+  // Pass 4: back-fill importedBy so consumers can be queried in O(1)
   for (const module of modulesByPath.values()) {
     for (const importedId of module.imports) {
       const target = modulesByPath.get(importedId);
