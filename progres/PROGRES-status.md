@@ -1115,3 +1115,34 @@ category file tracking who's assigned to what) and updated PROGRES.md's
 index to include it - both the read-all-files cat command and the
 "where does my update go" decision guide now cover 5 categories, not 4.
 Merged via PR #72 (collaborators file) and #73 (marker script).
+
+## Update - collaborator marker system self-tested, bug found and fixed
+
+Ran a real end-to-end self-test of the collaborator marking system
+built last session (PROGRES-collaborators.md + checkCollaboratorMarkers.ts):
+filed issue #75 (scripts/benchmark.ts, assigned to GSF-001 as a test
+subject), ran the detection script, added the marker comment, ran again
+to confirm it disappeared from the missing-marker list. Full loop
+confirmed working.
+
+Found a real bug during this test: checkCollaboratorMarkers.ts only
+scanned an issue's body for file paths, not its title. Issue #75's
+first draft mentioned scripts/benchmark.ts only in the title, and the
+script silently missed it. Fixed by scanning title + body together.
+Confirmed this wasn't just a test-issue artifact — the fix also caught
+a real miss, packages/graph/buildCallGraph.ts (issue #50), which was
+being missed for the identical reason before the fix. Merged via #76.
+
+Also added scripts/README.md — a table explaining what every script in
+scripts/ does and its current status (working / not started), so
+"what does this do" doesn't need re-investigating each time. Covers
+testManifests.ts, testPlayground.ts, checkCollaboratorMarkers.ts
+(all working) and build.ts, benchmark.ts, generateFixtures.ts,
+release.ts (all not started / unclear purpose, noted honestly rather
+than guessed at). Merged via #77.
+
+Confirmed packages/rules/nextjs/requirePage.ts continues to correctly
+show up as a false-positive in checkCollaboratorMarkers.ts output
+(known/documented limitation - it's referenced in issue #53 only as an
+example pattern to read, not Alitindrawan24's actual task file). Left
+unmarked on purpose, this is expected script behavior, not a bug.
