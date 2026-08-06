@@ -8,6 +8,7 @@
 
 import type { LanguageParser } from "../core/ParserInterface";
 import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/types";
+import { posix } from "node:path";
 
 // Regex/line-based, not a full Go grammar (no tree-sitter-go grammar wired up
 // yet, unlike Python — see PROGRES.md gotchas for why that's non-trivial to
@@ -155,6 +156,6 @@ export const parseGo: LanguageParser = {
       warnings.push(`Export extraction failed: ${(err as Error).message}`);
     }
 
-    return { file, imports, exports: exportsList, warnings };
+    return { file, imports, exports: exportsList, warnings, scopeId: posix.dirname(file.relativePath) };
   },
 };
