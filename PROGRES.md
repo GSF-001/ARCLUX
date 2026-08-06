@@ -68,6 +68,18 @@ Ask in this order, stop at the first "yes":
 5. Are you assigning a task to a collaborator, or updating the status of
    one already assigned? -> **collaborators**
 
+**Closing out an old plan/next-step**: if you just finished something
+that an EARLIER entry in `decisions.md` described as "planned", "not yet
+built", or a "next step", don't just log a new status entry and move on
+-- that leaves the old entry looking unfinished forever. Instead:
+1. Add a new dated entry titled `UPDATE: <old title> — implemented` (or
+   `— resolved`) describing what actually got built and what's still open.
+2. Go back to the OLD entry and add a one-line blockquote pointer at the
+   top: `> **[STATUS UPDATE, YYYY-MM-DD]: this plan is now implemented.**
+   See "<new entry title>" below.` Don't delete or shorten the old entry
+   -- the plan/reasoning stays as historical context, the pointer just
+   stops it from being mistaken for still-pending work.
+
 **Still not sure which status file? Put it in PROGRES-status-core.md.**
 A slightly-misfiled status entry costs nothing; agonizing over the perfect
 category wastes a turn. Nobody needs to re-sort these files -- they're
