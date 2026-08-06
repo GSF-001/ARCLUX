@@ -57,7 +57,8 @@ This file used to contain everything. It's now split for readability:
 Ask in this order, stop at the first "yes":
 1. Is this about a wrong assumption in a PAST PROGRES entry getting
    corrected, or a new package/feature reaching a milestone (done, X/Y
-   complete, newly verified)? -> **status**
+   complete, newly verified)? -> **status** (pick the matching file:
+   core / detectors / web / infra / backlog -- see list above)
 2. Did something in ARCLUX's OWN code produce wrong output/crash, and you
    fixed it? -> **bugs**
 3. Did you choose between two real design options and want the reasoning
@@ -67,10 +68,10 @@ Ask in this order, stop at the first "yes":
 5. Are you assigning a task to a collaborator, or updating the status of
    one already assigned? -> **collaborators**
 
-**Still not sure? Put it in status.md.** A slightly-misfiled status entry
-costs nothing; agonizing over the perfect category wastes a turn. Nobody
-needs to re-sort these files -- they're read together via the cat command
-above anyway.
+**Still not sure which status file? Put it in PROGRES-status-core.md.**
+A slightly-misfiled status entry costs nothing; agonizing over the perfect
+category wastes a turn. Nobody needs to re-sort these files -- they're
+read together via the cat command above anyway.
 
 When adding a new update, put it in the file matching its category above.
 Keep this index file itself short -- it should only ever have the
