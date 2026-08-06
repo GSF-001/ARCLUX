@@ -9,7 +9,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p apps/web/tsconfig.json"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.20",
