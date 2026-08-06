@@ -1146,3 +1146,15 @@ show up as a false-positive in checkCollaboratorMarkers.ts output
 (known/documented limitation - it's referenced in issue #53 only as an
 example pattern to read, not Alitindrawan24's actual task file). Left
 unmarked on purpose, this is expected script behavior, not a bug.
+
+## Update - packages/README.md added
+
+Per-folder status table generated from an actual file scan (line-count
+stub detection), not memory. Snapshot: repository/detectors/impact/
+incremental/shared/parser/graph = working, watcher/indexer/git/engine =
+partial, search/rules/cache/db/ui = stub. Also flagged: an incremental/
+folder exists (6 files, fully done) that wasn't tracked in earlier
+PROGRES.md entries - appears to have been built in a session not
+reflected in this doc's history. Re-run the scan command in
+packages/README.md periodically to keep it current; don't hand-edit the
+table without re-running it first.
