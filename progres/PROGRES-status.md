@@ -1082,3 +1082,36 @@ Also confirmed: not every empty-looking file in this repo is
 unfinished work. Before investigating an empty stub, `cat` the whole
 file first (not just `wc -l`) — some are marked intentionally empty in
 a comment, which immediately answers the question.
+
+## Update - checkCollaboratorMarkers.ts script added
+
+Built scripts/checkCollaboratorMarkers.ts to enforce the "mark
+collaborator-assigned files in-file" decision from the previous
+session. Reads open, assigned GitHub issues via `gh issue list`,
+extracts file paths mentioned in each issue body, and checks whether
+that file's content actually references the issue number.
+
+Detection only, not auto-write — a good marker comment needs context
+(why deferred, actual scope) that a script can't meaningfully generate.
+Run it, then write the comment by hand for anything it flags.
+
+Known limitation confirmed during first real run: can't distinguish
+"file the assignee must create/modify" from "file mentioned only as a
+reference pattern to read first" - issue #53 telling Alitindrawan24 to
+read packages/rules/nextjs/requirePage.ts as an example produced a
+false-positive flag on that file. Documented in the script's own
+comment. Treat output as a starting point for manual review, not an
+authoritative list.
+
+First real run also correctly flagged packages/shared/types.ts and
+packages/parser/javascript/extractJs.ts (issue #50, xcontcom) as
+missing markers - left unmarked deliberately for now, since xcontcom
+hasn't started work on either file yet (confirmed: grep for
+RawCall/ResolvedCall in types.ts still returns 0 matches). Marking
+should happen once actual work begins there, not preemptively.
+
+Also this session: added progres/PROGRES-collaborators.md (new
+category file tracking who's assigned to what) and updated PROGRES.md's
+index to include it - both the read-all-files cat command and the
+"where does my update go" decision guide now cover 5 categories, not 4.
+Merged via PR #72 (collaborators file) and #73 (marker script).
