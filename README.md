@@ -2,16 +2,13 @@
 
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
 
-[
-
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
 
-](LICENSE)
-[
+ [](LICENSE)
 
 ![Status: alpha](https://img.shields.io/badge/status-alpha-black)
 
-](#status)
+[](#status)
 
 ## Status: alpha
 
