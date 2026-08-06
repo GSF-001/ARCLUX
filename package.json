@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.20",
+    "@radix-ui/react-scroll-area": "^1.2.18",
     "chokidar": "^5.0.0",
     "d3-hierarchy": "^3.1.2",
     "ignore": "^6.0.2",
