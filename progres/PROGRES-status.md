@@ -1186,3 +1186,72 @@ STATUS: pushed near a chat context limit — typecheck result for these 3
 files was requested but not confirmed back before this note was written.
 Re-run `npx tsc --noEmit -p apps/web/tsconfig.json` and confirm clean
 before trusting these beyond "written, looks syntactically right."
+
+## Update — route/export/component/hook/provider resolvers + Explorer panel
+
+**`packages/indexer/resolveRoutes.ts`**: detects Next.js App Router entry
+files (page/layout/route/loading/error/not-found/template/default/
+global-error) under `app/`. Returns moduleId + derived routePath (route
+groups in parentheses stripped). `getEntryModuleIds()` helper exposed for
+detectors to check `entryModuleIds.has(mod.id)`. **Not yet wired into
+`detectUnusedExports.ts`/`detectOrphanFiles.ts`** — those still have the
+entry-file false-positive caveat noted earlier in this doc until someone
+adds the 2-line skip check.
+
+**`packages/indexer/resolveExports.ts`**: resolves re-export chains beyond
+the single hop `ModuleInfo.resolvedReExports` already covers (documented
+limitation in `types.ts`'s own doc comment). Walks the chain per
+export name until it hits a non-re-export origin, with cycle detection
+(stops at last resolvable hop if a cycle is found). Inherits the same
+aliased-re-export limitation as `resolvedReExports` itself (`export {
+foo as bar }` — name tracking breaks across hops since `RawExport` only
+stores the final name) — documented in-file, not fixed here, needs parser
+layer changes.
+
+**`packages/indexer/resolveComponents.ts`, `resolveHooks.ts`,
+`resolveProviders.ts`**: naming-convention heuristics, NOT AST-based —
+no parser currently extracts "is this a component/hook/provider" as
+structured data. Components = PascalCase export name in a `.tsx`/`.jsx`
+file. Hooks = export name matching `^use[A-Z0-9]`, any extension.
+Providers = export name ending in `Provider`. Each file documents this
+limitation explicitly and says to switch to AST-derived data if/when a
+parser adds that signal — do not assume these are ground truth.
+
+**`apps/web/components/explorer/Explorer.tsx`** (new) + **`DependencyList.tsx`**
+(new): tabbed panel (File / Dependencies / Impact) wrapping the existing
+`FileDetails.tsx` and `ImpactSummary.tsx` plus the new `DependencyList.tsx`.
+Confirmed via grep before writing: zero existing consumers of `Explorer`,
+so the prop shape (`repoUrl`, `moduleId`, `branch?`, `onClose?`) is a new
+design, not an established contract — reconsider if wiring it into
+`SplitPane.tsx`/the graph route reveals a different shape is needed.
+`DependencyList.tsx` fetches `/api/graph` and filters edges client-side
+by `moduleId` — same pattern as `GraphProvider.tsx`'s `importCounts`
+memo. **Query param shape for `/api/graph` (`?repoUrl=&branch=`) was
+assumed from `/api/file`/`/api/impact`'s pattern, not confirmed against
+the actual route handler — check `app/api/graph/route.ts` before trusting
+this without testing.**
+
+**`vendor-ui/shadcn/scroll-area.tsx`** (new): was missing, blocking
+`file-tree.tsx`'s typecheck alongside a missing `@radix-ui/react-accordion`
+dependency. Standard shadcn Radix wrapper, no ARCLUX-specific logic.
+
+**Incidental fix**: `npm install` was failing repo-wide with `Cannot read
+properties of null (reading 'matches')` — root cause not fully diagnosed,
+but `rm -rf node_modules package-lock.json && npm cache clean --force &&
+npm install` resolved it (66 packages, 0 vulnerabilities). `package-lock.json`
+regenerated — check whether it's gitignored before committing it, it
+showed as untracked rather than modified, which usually means it wasn't
+tracked before.
+
+**Verification**: `cd apps/web && npx tsc --noEmit` clean across all of
+the above. **NOT visually verified in browser** — same standard gap noted
+elsewhere in this doc (typecheck alone isn't sufficient evidence).
+
+**Still not done**:
+- Resolver family (routes/exports/components/hooks/providers) not called
+  from `buildIndex.ts` — no pass 5 yet, results aren't attached to
+  `ModuleInfo` or `Repository` anywhere
+- `Explorer.tsx` not mounted on any page/route
+- `detectUnusedExports.ts`/`detectOrphanFiles.ts` not updated to consult
+  `getEntryModuleIds()` yet, so the entry-file false-positive caveat
+  still applies
