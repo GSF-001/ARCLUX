@@ -37,13 +37,14 @@ import { readFileSync, existsSync } from "node:fs";
 interface GhIssue {
   number: number;
   assignees: { login: string }[];
+  title: string;
   body: string;
 }
 
 const FILE_PATH_PATTERN = /(?:packages|apps|scripts|tests)\/[A-Za-z0-9_\-/]+\.(?:ts|tsx)/g;
 
 function getOpenAssignedIssues(): GhIssue[] {
-  const raw = execSync("gh issue list --state open --json number,assignees,body --limit 200", {
+  const raw = execSync("gh issue list --state open --json number,assignees,title,body --limit 200", {
     encoding: "utf-8",
   });
   const issues: GhIssue[] = JSON.parse(raw);
@@ -67,7 +68,7 @@ function main() {
 
   for (const issue of issues) {
     const assignee = issue.assignees.map((a) => a.login).join(", ");
-    const filePaths = extractFilePaths(issue.body);
+    const filePaths = extractFilePaths(`${issue.title}\n${issue.body}`);
 
     for (const filePath of filePaths) {
       if (!existsSync(filePath)) {
