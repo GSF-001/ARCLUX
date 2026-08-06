@@ -338,3 +338,7 @@ line-count assertion before writing (no gaps/overlaps). Old file deleted.
 Root `PROGRES.md` index updated to reference the 5 new files in both the
 preamble `cat` command and the "quick decision guide" section (previously
 still pointed at the deleted `status.md`).
+
+## 2026-08-06 — PROGRES-status.md split into 5 topic files
+
+progres/PROGRES-status.md (1257 lines) split into PROGRES-status-core.md, PROGRES-status-detectors.md, PROGRES-status-web.md, PROGRES-status-infra.md, PROGRES-status-backlog.md. Split by line-range mapping, verified via line-count assertion before writing. Root PROGRES.md updated to reference new files and require date-stamped entry headers going forward.
