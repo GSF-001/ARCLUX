@@ -1053,3 +1053,32 @@ Python patch script heredoc failed with "No such file or directory"
 when targeting /tmp/patch_types2.py. Fix: write the script into the
 repo directory itself (~/arclux/patch_types2.py) and delete it after
 running, instead of using /tmp.
+
+## Update - documented 3 previously-mysterious empty stub files
+
+Investigated 3 files that were 0-line-except-license-header stubs with
+no obvious purpose from surrounding code, and documented each with an
+in-file comment explaining its actual status, so future sessions don't
+re-investigate the same files from scratch:
+
+- packages/parser/typescript/parseTsConfig.ts — INTENTIONALLY EMPTY
+  permanently. Superseded by resolveAliases.ts, which already handles
+  tsconfig.json/jsconfig.json parsing for path alias resolution. Do not
+  implement a config parser here.
+- packages/parser/core/parseImports.ts — intentionally empty for now,
+  not confirmed dead. Every language parser (parseGo.ts, parseJava.ts,
+  extractJs.ts, parsePython.ts, parseTs.ts) implements its own
+  extractImports() independently since each language's import syntax
+  differs too much for an obvious shared generic version. Could be
+  revisited if a genuinely shared pattern emerges later.
+- packages/parser/php/parsePhp.ts — deliberately DEFERRED (not
+  abandoned, not intentionally-empty-forever). Waiting on issue #53's
+  parsePhpRoutes.ts (assigned to Alitindrawan24) to land first, so this
+  general-purpose PHP parser follows whatever regex/extraction
+  convention emerges from that PR instead of establishing a second,
+  inconsistent PHP-parsing style in parallel. Merged via PR #70.
+
+Also confirmed: not every empty-looking file in this repo is
+unfinished work. Before investigating an empty stub, `cat` the whole
+file first (not just `wc -l`) — some are marked intentionally empty in
+a comment, which immediately answers the question.
