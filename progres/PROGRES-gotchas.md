@@ -54,3 +54,11 @@ violations... Changes must be made through a pull request`, even after a
 clean local fast-forward merge. Workaround: push the feature branch, open
 a PR on GitHub, merge from there. Don't assume a local merge to `main` is
 enough to publish it.
+
+## 2026-08-06 — GitHub PR merge can use a stale commit if merged before the push finishes propagating
+
+Merging a PR on GitHub right after git push sometimes merges an earlier commit on that branch, not the latest one -- happened twice today and silently reverted fixes to CONTRIBUTING.md and .github/PULL_REQUEST_TEMPLATE.md back to an older, overwritten version. Always run 'git diff main..<branch> --stat' right before merging, and re-verify the actual file contents on main (not just git log) after every merge, especially for files edited more than once in the same PR chain.
+
+## 2026-08-06 — Stray branch-name text landed inside PROGRES.md content
+
+Found literal lines 'split/progres-status', '----', and 'main' sitting inside PROGRES.md's prose (not as code/comments) after a merge -- looked like terminal output or branch names got pasted into a file edit by mistake. Always grep a file for suspicious bare words after any merge that touches a shared doc, not just diff --stat.

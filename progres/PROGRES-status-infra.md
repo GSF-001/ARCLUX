@@ -338,3 +338,11 @@ line-count assertion before writing (no gaps/overlaps). Old file deleted.
 Root `PROGRES.md` index updated to reference the 5 new files in both the
 preamble `cat` command and the "quick decision guide" section (previously
 still pointed at the deleted `status.md`).
+
+## 2026-08-06 — log-progress.sh helper script added
+
+Created scripts/log-progress.sh: appends a dated ## YYYY-MM-DD — title entry to the correct progres/PROGRES-*.md file automatically, using the local device date. Usage: scripts/log-progress.sh <category> "title" "body". Removes the need to hand-type date headers.
+
+## 2026-08-06 — Repo config tooling added
+
+Added .github/PULL_REQUEST_TEMPLATE.md, .github/CODEOWNERS (verified against actual GitHub collaborator list via gh api repos/.../collaborators, not guessed), .gitmessage (commit message template), .githooks/pre-commit (blocks commits that add an undated header to progres/PROGRES-*.md), .editorconfig, .github/workflows/ci.yml (typecheck/lint/test on PR), and merged new sections into the existing CONTRIBUTING.md rather than overwriting it.
