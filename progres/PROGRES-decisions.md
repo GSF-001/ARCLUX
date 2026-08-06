@@ -167,3 +167,30 @@ parallel case).
 it's a JVM library, not directly adaptable to TypeScript, but worth
 reading for how a mature tool structures scope resolution before
 designing ARCLUX's own pass.
+
+## Decision — issues assigned to a collaborator must also be marked in-file
+
+**Context**: packages/parser/php/parsePhp.ts and
+packages/parser/php/parsePhpRoutes.ts sit right next to each other.
+parsePhpRoutes.ts is assigned to Alitindrawan24 via issue #53.
+Someone Browse-ing packages/parser/php/ without first checking the
+GitHub issues list has no way to know parsePhpRoutes.ts is spoken for
+- it just looks like another empty file waiting to be filled in,
+identical in appearance to a genuinely unclaimed stub.
+
+**Decision**: whenever an issue is filed that assigns a SPECIFIC file
+or narrowly-scoped task to a collaborator, also add a short comment in
+that file (or, if the file doesn't exist yet, in the most relevant
+existing sibling file) stating the issue number and assignee. Do not
+rely on the GitHub issue tracker alone to communicate this - anyone
+working directly in the codebase (a session reading files, not
+Browse-ing issues first) needs the signal to be visible at the file
+level too.
+
+Minimum content for the marker comment: issue number, assignee
+username, one line on what's being built there. See
+packages/parser/php/parsePhp.ts's comment (referencing issue #53 /
+Alitindrawan24 / parsePhpRoutes.ts) as the template to follow.
+
+This does not replace filing the GitHub issue - both are required, the
+file comment is an addition for discoverability, not a substitute.
