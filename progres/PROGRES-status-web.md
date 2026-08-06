@@ -346,3 +346,11 @@ files was requested but not confirmed back before this note was written.
 Re-run `npx tsc --noEmit -p apps/web/tsconfig.json` and confirm clean
 before trusting these beyond "written, looks syntactically right."
 
+
+## 2026-08-07 — useGraph re-export + centralized fetch helpers
+
+apps/web/features/graph/useGraph.ts implemented as a thin re-export of GraphProvider's useGraphContext() (per the 2026-08-03 decision). The other 4 files in features/graph/ stay deliberately empty but now have explanatory comments. Also implemented lib/api.ts (fetchJson helper: query params, res.ok check, error parsing) and lib/graph.ts (fetchGraph wrapping /api/graph), then refactored GraphProvider.tsx and DependencyList.tsx to use fetchGraph() instead of each having its own duplicated inline fetch block.
+
+## 2026-08-07 — useGraph re-export + centralized fetch helpers
+
+apps/web/features/graph/useGraph.ts implemented as a thin re-export of GraphProvider's useGraphContext() (per the 2026-08-03 decision). The other 4 files in features/graph/ stay deliberately empty but now have explanatory comments. Also implemented lib/api.ts (fetchJson helper: query params, res.ok check, error parsing) and lib/graph.ts (fetchGraph wrapping /api/graph), then refactored GraphProvider.tsx and DependencyList.tsx to use fetchGraph() instead of each having its own duplicated inline fetch block.
