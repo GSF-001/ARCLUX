@@ -1008,3 +1008,48 @@ components, exists and typechecks but has no real consumer yet.
 Verification: npx tsc --noEmit -p apps/web/tsconfig.json clean (only the
 2 pre-existing file-tree.tsx errors, unrelated). Not yet visually
 verified in-browser.
+
+## Update - same-scope implicit dependencies implemented (Go/Java)
+
+Followed up on the decision recorded earlier (same-package resolution:
+one generic pass, not per-language fixes). Implemented in full this
+session:
+
+- packages/shared/types.ts: added ParsedFile.scopeId (optional) and
+  ModuleInfo.implicitDependencies (required, kept SEPARATE from
+  imports[] since it's a regex heuristic that can false-positive on
+  comments/strings, not a certain import statement).
+- parseGo.ts and parseJava.ts: both now set scopeId = the file's
+  directory (posix.dirname). Confirmed via javaparser's
+  JavaParserTypeSolver.java javadoc that Java package MUST match
+  directory by language convention, so Java can reuse the exact same
+  directory-based scopeId logic as Go - no need to parse the `package`
+  statement separately.
+- packages/indexer/resolveSameScopeDependencies.ts (new): groups files
+  by scopeId, does a regex whole-word scan of each file's content
+  against sibling files' exported names. Deliberately NOT AST-aware -
+  documented limitation, not a bug to silently fix later without
+  redesigning the approach.
+- buildIndex.ts: wired in as a new pass 2 (content is now kept around
+  in contentByPath specifically to feed this pass).
+
+**STILL NOT DONE**: implicitDependencies is populated but NOT yet
+consumed by buildDependencyGraph.ts, buildImportGraph.ts, or
+buildExportGraph.ts. This means the root cause of the near-empty
+Kubernetes/Spring Boot graphs is now understood and the data exists,
+but the graph VIEW won't actually show the extra edges until a
+follow-up wires this in. That's a good next task for whoever picks
+this up.
+
+Tested against the real playground/go-demo fixtures (main.go ->
+models.go + service.go, service.go -> models.go + utils.go), 6 tests,
+including edge cases (no self-dependency despite service.go containing
+its own function name in the signature, lone file with no scope
+siblings). All merged via PR #67.
+
+**Gotcha hit and fixed this session**: `/tmp` doesn't exist in Termux
+(already noted elsewhere in gotchas.md, but re-confirmed here) - a
+Python patch script heredoc failed with "No such file or directory"
+when targeting /tmp/patch_types2.py. Fix: write the script into the
+repo directory itself (~/arclux/patch_types2.py) and delete it after
+running, instead of using /tmp.
