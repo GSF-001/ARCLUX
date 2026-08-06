@@ -4,31 +4,13 @@ import { useEffect, useState } from "react";
 import { LoadingState } from "@/components/patterns/LoadingState";
 import { ErrorState } from "@/components/patterns/ErrorState";
 import { EmptyState } from "@/components/patterns/EmptyState";
+import { fetchGraph } from "@/lib/graph";
+import type { DependencyGraph, GraphNode } from "@/packages/shared/types";
 
-// Response shape didefinisiin lokal, sama pola kayak FileDetails.tsx
-// (FileResponse) dan ImpactSummary.tsx (ImpactResponse) -- bukan import
-// dari packages/shared/types karena apps/web ke packages/ cross-boundary
-// import path belum dikonfirmasi (workspace alias / relative path belum
-// dicek). Kalau nanti ada @arclux/shared alias, field-field ini harus
-// sama persis kayak GraphNode/GraphEdge di packages/shared/types.ts.
-interface GraphNodeResponse {
-  id: string;
-  type: string;
-  label: string;
-  filePath?: string;
-}
-
-interface GraphEdgeResponse {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-}
-
-interface GraphResponse {
-  nodes: GraphNodeResponse[];
-  edges: GraphEdgeResponse[];
-}
+// Verified against app/api/graph/route.ts: DependencyGraph.nodes/edges
+// match GraphNode/GraphEdge exactly. The local GraphResponse type that
+// used to live here (a guess made before this was confirmed) is gone --
+// this now imports the real shared types via lib/graph.ts's fetchGraph().
 
 export interface DependencyListProps {
   repoUrl: string;
@@ -52,7 +34,7 @@ export interface DependencyListProps {
  * graph yang beda hidup berdampingan.
  */
 export function DependencyList({ repoUrl, moduleId, branch }: DependencyListProps) {
-  const [data, setData] = useState<GraphResponse | null>(null);
+  const [data, setData] = useState<DependencyGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,14 +45,8 @@ export function DependencyList({ repoUrl, moduleId, branch }: DependencyListProp
       setIsLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ repoUrl });
-        if (branch) params.set("branch", branch);
-
-        const res = await fetch(`/api/graph?${params.toString()}`);
-        const json = await res.json();
-
-        if (!res.ok) throw new Error(json.error ?? `Request failed with status ${res.status}`);
-        if (!cancelled) setData(json as GraphResponse);
+        const graph = await fetchGraph(repoUrl, branch);
+        if (!cancelled) setData(graph);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load dependencies");
       } finally {
@@ -93,12 +69,12 @@ export function DependencyList({ repoUrl, moduleId, branch }: DependencyListProp
   const imports = data.edges
     .filter((e) => e.type === "import" && e.source === moduleId)
     .map((e) => nodesById.get(e.target))
-    .filter((n): n is GraphNodeResponse => Boolean(n));
+    .filter((n): n is GraphNode => Boolean(n));
 
   const importedBy = data.edges
     .filter((e) => e.type === "import" && e.target === moduleId)
     .map((e) => nodesById.get(e.source))
-    .filter((n): n is GraphNodeResponse => Boolean(n));
+    .filter((n): n is GraphNode => Boolean(n));
 
   return (
     <div className="space-y-6 p-4">
@@ -114,7 +90,7 @@ function DependencySection({
   emptyMessage,
 }: {
   title: string;
-  nodes: GraphNodeResponse[];
+  nodes: GraphNode[];
   emptyMessage: string;
 }) {
   return (

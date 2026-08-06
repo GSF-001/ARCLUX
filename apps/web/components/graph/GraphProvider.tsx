@@ -9,6 +9,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { fetchGraph as fetchGraphData } from "@/lib/graph";
 import type { DependencyGraph, GraphNode as GraphNodeData } from "@/packages/shared/types";
 import type { GraphNodePosition } from "./GraphNode";
 
@@ -74,21 +75,13 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchGraph() {
+    async function loadGraph() {
       setIsLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ repoUrl });
-        if (branch) params.set("branch", branch);
-
-        const res = await fetch(`/api/graph?${params.toString()}`);
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error ?? `Request failed with status ${res.status}`);
-        }
+        const data = await fetchGraphData(repoUrl, branch);
         if (!cancelled) {
-          setGraph(data as DependencyGraph);
+          setGraph(data);
         }
       } catch (err) {
         if (!cancelled) {
@@ -99,7 +92,7 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
       }
     }
 
-    fetchGraph();
+    loadGraph();
     return () => {
       cancelled = true;
     };
