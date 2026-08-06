@@ -71,3 +71,15 @@ above anyway.
 When adding a new update, put it in the file matching its category above.
 Keep this index file itself short -- it should only ever have the
 preamble/quick-check block plus this section.
+
+## Update - packages/README.md added
+
+Per-folder status table generated from an actual file scan (line-count
+stub detection), not memory. Snapshot: repository/detectors/impact/
+incremental/shared/parser/graph = working, watcher/indexer/git/engine =
+partial, search/rules/cache/db/ui = stub. Also flagged: an incremental/
+folder exists (6 files, fully done) that wasn't tracked in earlier
+PROGRES.md entries - appears to have been built in a session not
+reflected in this doc's history. Re-run the scan command in
+packages/README.md periodically to keep it current; don't hand-edit the
+table without re-running it first.
