@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+authors:
+  - name: "ARCLUX Contributors"
+title: "ARCLUX – monorepo tooling for resolvers, watchers, and UI explorers"
+version: "0.1.0"
+date-released: "2026-08-07"
+url: "https://github.com/GSF-001/ARCLUX"
+repository-code: "https://github.com/GSF-001/ARCLUX"
+license: "Apache-2.0"
+keywords:
+  - "monorepo"
+  - "resolvers"
+  - "filesystem-watcher"
+  - "incremental-build"
+  - "react"
+  - "typescript"
+abstract: "ARCLUX provides a framework-agnostic set of resolvers (routes, components, hooks, providers) and a live Explorer UI, backed by an incremental Cell‑based watcher for fast feedback in large monorepos."
