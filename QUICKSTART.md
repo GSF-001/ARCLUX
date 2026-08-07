@@ -1,31 +1,57 @@
 # ARCLUX Quickstart
 
-## Alur kerja
+Read this first. Full details live in TOOLING.md, scripts/README.md, and CONTRIBUTING.md — this is just the fast path.
+
+## Standard workflow
+
 git checkout main
 git pull origin main
-git checkout -b tipe/nama-branch
+git checkout -b type/short-description
+
 git add file
-git commit -m "pesan"
-git push origin tipe/nama-branch
-gh pr create --repo GSF-001/ARCLUX --title "judul" --body "penjelasan"
-gh pr merge NOMOR --repo GSF-001/ARCLUX --merge --delete-branch
+git commit -m "message"
+
+git push origin type/short-description
+
+gh pr create --repo GSF-001/ARCLUX --title "title" --body "description"
+
+git diff main..type/short-description --stat
+
+gh pr merge NUMBER --repo GSF-001/ARCLUX --merge --delete-branch
+
 git checkout main
 git pull origin main
 
-## Catat progress
-Pakai script, jangan edit file progres manual.
-scripts/log-progress.sh kategori "judul singkat" "isi progress"
+Branch types: feat, fix, docs, chore, test, split, update
+main is protected — direct push will be rejected, always go through a PR.
 
-Kategori: status-core, status-detectors, status-web, status-infra, status-backlog, bugs, decisions, gotchas, collaborators
+## Logging progress
 
-Kenapa wajib pakai script: ada pre-commit hook yang nolak commit kalau entry baru gak ada tanggalnya.
+Never edit progres/PROGRES-*.md by hand. Use the script:
 
-## Sebelum kerjain file yang keliatan kosong
+scripts/log-progress.sh category "short title" "what happened"
+
+Categories: status-core, status-detectors, status-web, status-infra, status-backlog, bugs, decisions, gotchas, collaborators
+
+A pre-commit hook rejects any new entry missing a date in its header — the script always formats this correctly, manual edits often don't.
+
+## Before touching a file that looks empty
+
 npx tsx scripts/checkCollaboratorMarkers.ts
 
-Jalanin dulu, biar tau file itu udah ada yang pegang atau belum.
+Confirms whether the file is already claimed by a collaborator before you start writing in it.
 
-## 3 hal yang paling sering lupa
-1. Jangan lupa update progres sebelum lanjut task lain.
-2. Cek apps/web pakai tsconfig sendiri: cd apps/web && npx tsc --noEmit
-3. /tmp gak ada di Termux. Taro script sementara di dalam repo, hapus lagi setelah dipakai.
+## Three things people forget most
+
+1. Log progress before moving to the next task, not at the end of the session.
+2. Typecheck apps/web from inside apps/web, not repo root:
+   cd apps/web && npx tsc --noEmit
+   Running from root produces 100+ false "@/" alias errors — known, harmless, documented in PROGRES-gotchas.md.
+3. /tmp does not exist on Termux. Put throwaway scripts inside the repo folder and delete them after use.
+
+## Where things live
+
+TOOLING.md — full config/tooling reference
+scripts/README.md — what every script does
+CONTRIBUTING.md — project structure, how to add a detector or parser
+progres/PROGRES-collaborators.md — who owns what right now
