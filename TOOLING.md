@@ -172,45 +172,45 @@ git branch -D <branch-name>
 
 ## 3. PR Template (.github/PULL_REQUEST_TEMPLATE.md)
 
-Otomatis muncul isinya tiap kali bikin PR baru di GitHub. Isinya
-checklist: udah update PROGRES.md, udah dites di Termux/playground, dll.
-Nggak perlu disentuh manual — GitHub yang nampilin otomatis.
+Automatically shows up every time you open a new PR on GitHub. Contains
+a checklist: PROGRES.md updated, tested on Termux/playground, etc.
+No need to touch it manually -- GitHub displays it automatically.
 
 ---
 
 ## 4. Pre-commit hook (.githooks/pre-commit)
 
-Aktif otomatis di repo ini (udah di-set via `git config core.hooksPath
-.githooks`). Jalan tiap kali `git commit`.
+Active automatically in this repo (already set via `git config
+core.hooksPath .githooks`). Runs on every `git commit`.
 
-**Fungsinya:** kalau ada file `progres/PROGRES-*.md` yang di-stage dan
-punya header `##` baru **tanpa** tanggal (`YYYY-MM-DD`), commit
-**ditolak**. Ini jamin nggak ada lagi entry progress tanpa tanggal.
+**What it does:** if a staged `progres/PROGRES-*.md` file has a new `##`
+header **without** a date (`YYYY-MM-DD`), the commit is **rejected**.
+This guarantees no more dateless progress entries.
 
-Kalau commit lo ditolak sama hook ini, pesan errornya bakal kasih tau
-file mana dan judul entry mana yang bermasalah. Fix-nya: pakai
-`scripts/log-progress.sh` (lihat bagian 1), jangan edit manual.
+If your commit gets rejected by this hook, the error message will tell
+you which file and which entry title is the problem. The fix: use
+`scripts/log-progress.sh` (see section 1), don't edit manually.
 
 ---
 
 ## 5. Commit message template (.gitmessage)
 
-Kalau lo commit **tanpa** `-m` (cuma `git commit` doang), editor bakal
-kebuka nunjukin template format commit:
+If you commit **without** `-m` (just `git commit` alone), an editor
+opens showing the commit format template:
 
 ```
-# [kategori] Judul singkat (max 50 char)
+# [category] Short title (max 50 char)
 #
-# kategori: status | bug | decision | gotcha | infra | docs
+# category: status | bug | decision | gotcha | infra | docs
 #
-# Isi lebih detail (opsional), kenapa perubahan ini dibuat.
+# More detail (optional), why this change was made.
 ```
 
-Baris yang diawali `#` itu comment, otomatis diabaikan git. Tinggal
-tulis pesan asli di bawahnya.
+Lines starting with `#` are comments, automatically ignored by git. Just
+write the actual message below them.
 
-Kalau lo commit pakai `-m "pesan"` langsung, template ini nggak kepake
-(nggak masalah, itu opsional).
+If you commit with `-m "message"` directly, this template isn't used
+(that's fine, it's optional).
 
 ---
 
