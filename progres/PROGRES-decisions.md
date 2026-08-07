@@ -275,3 +275,28 @@ The Contributors section (contrib.rocks avatar grid) was intentionally removed f
 **Status:** In Progress
 
 Discussed but not yet started: extend the zoomScale-gating pattern already used for the impact halo (GraphNode.tsx, MIN_ZOOM_FOR_HALO) to also gate label/icon visibility at low zoom, reducing DOM/render load when zoomed out on large graphs. Rough plan discussed: very low zoom (<0.5) hides icon+label entirely (node becomes a plain dot), mid zoom (0.5-1) keeps current behavior (label only on select/hover), high zoom (>=1) optionally always shows labels for high-importance nodes. Checked reactflow-ref's Stress example for a reference pattern first -- it's a performance benchmarking harness, not an LOD implementation (React Flow handles this internally, not via example code), so no direct pattern to borrow. This is a natural extension of existing code (GraphNode.tsx's opacity={isSelected || isHovered ? ...} pattern at the label render, ~line 104), not a new subsystem. Prioritized as step 1 of 3 general performance directions discussed (graph viewer LOD/canvas rendering, pipeline parallelization+caching, new analysis features) -- graph viewer was picked first since it's the most immediately felt by users and doesn't overlap with collaborator-assigned work (call graph is assigned to xcontcom via issue #50).
+
+## 2026-08-07 — Cache package design research (packages/cache)
+
+**Status:** Not Started
+
+Not Started
+
+## 2026-08-07 — Cache package design research (packages/cache)
+
+**Status:** In Progress
+
+Researched before implementing packages/cache (CacheProvider.ts, fileCache.ts, graphCache.ts, memoryCache.ts, repositoryCache.ts -- all still 8-line stubs, zero consumers currently call any of them, no prior plan existed in progres/ for this). Checked packages/README.md and pipeline.ts/indexer -- confirmed nothing references cache yet, this is greenfield design work.
+
+Studied ~/dependency-cruiser/src/cache/ as reference (NOT for copying, for architecture ideas -- user explicitly wants ARCLUX's cache to be MORE capable than this reference, not simplified). Key findings:
+- Two invalidation strategies: MetadataStrategy (git-diff based via watskeburt/getSHA -- fast, no file reads, just asks git what changed since last SHA) vs ContentStrategy (per-file checksum comparison -- works without git but has to hash every file). MetadataStrategy is the better fit for ARCLUX since packages/git and packages/watcher already do git-diff based watching -- reuse that instead of hashing.
+- Cache format has an explicit CACHE_FORMAT_VERSION constant (numeric, bumped on breaking changes) so an old cache from a previous ARCLUX version gets safely invalidated instead of returning corrupt/incompatible results.
+- Cache dirtiness is scoped precisely: they maintain an explicit list of which CLI options/config changes should 100% invalidate cache vs which only invalidate a subset. ARCLUX equivalent: analyzeRepository({repoUrl, branch, ...}) options that affect output (branch, exclude patterns, etc) should be part of the cache key/invalidation check.
+- brotli compression at min quality (faster than gzip, still better ratio) used for on-disk cache storage, sync not async (sync is faster in this context and avoids promisifying zlib).
+
+NEXT STEPS for actually implementing packages/cache (not done yet):
+1. Design CacheProvider.ts as the orchestrator/interface (equivalent to their Cache class), with a pluggable invalidation strategy (metadata/git-diff-based as primary, matching packages/git's existing capabilities).
+2. fileCache.ts, graphCache.ts, repositoryCache.ts likely map to caching ParsedFile results, DependencyGraph results, and Repository (indexed) results respectively at different pipeline stages -- needs confirming against packages/engine/pipeline.ts's actual stage boundaries before finalizing shapes.
+3. memoryCache.ts -- in-memory layer (fast, non-persistent), likely sits in front of an optional on-disk persisted cache, need to decide if disk persistence is in scope for v1 or a later phase.
+4. Add a CACHE_FORMAT_VERSION-style constant so future cache shape changes don't silently return corrupt results to old cache format.
+5. Zero code written yet -- this entry is the research/design summary only.
