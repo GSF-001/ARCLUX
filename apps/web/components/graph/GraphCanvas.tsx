@@ -7,6 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 "use client";
+import { AnalyzingProgress } from "./AnalyzingProgress";
 
 import { useEffect, useRef, useCallback } from "react";
 import {
@@ -214,11 +215,7 @@ export function GraphCanvas() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
-        Analyzing repository…
-      </div>
-    );
+    return <AnalyzingProgress />;
   }
 
   if (error) {
