@@ -14,6 +14,11 @@ import { buildDependencyGraph } from "../graph/buildDependencyGraph";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { parseTs } from "../parser/typescript/parseTs";
 import { parsePython } from "../parser/python/parsePython";
+import { parseJs } from "../parser/javascript/parseJs";
+import { parseJsx } from "../parser/javascript/parseJsx";
+import { parseCommonJs } from "../parser/javascript/parseCommonJs";
+import { parseGo } from "../parser/go/parseGo";
+import { parseJava } from "../parser/java/parseJava";
 import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
 import { ArcluxError, isArcluxError } from "../shared/errors";
 import type { DependencyGraph, RepositoryMeta } from "../shared/types";
@@ -26,6 +31,11 @@ function ensureParsersRegistered() {
   if (parsersRegistered) return;
   parserRegistry.register(parseTs);
   parserRegistry.register(parsePython);
+  parserRegistry.register(parseJs);
+  parserRegistry.register(parseJsx);
+  parserRegistry.register(parseCommonJs);
+  parserRegistry.register(parseGo);
+  parserRegistry.register(parseJava);
   parsersRegistered = true;
 }
 

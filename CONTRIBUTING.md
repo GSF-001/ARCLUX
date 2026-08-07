@@ -100,6 +100,22 @@ others). If you adapt an algorithm or pattern from elsewhere:
 - Note explicitly, in a comment, what's different from the original and
   why
 
+## Branch naming
+
+- `split/...` — memecah file besar jadi lebih kecil
+- `fix/...` — perbaikan bug/kesalahan
+- `update/...` — update konten/dokumentasi tanpa perubahan struktur besar
+- `feat/...` — fitur/tooling baru
+
+## Logging progress
+
+Use `scripts/log-progress.sh <category> "title" "body"` instead of
+hand-editing `progres/PROGRES-*.md` files directly — it stamps the
+correct date automatically. Categories: `status-core`, `status-detectors`,
+`status-web`, `status-infra`, `status-backlog`, `bugs`, `decisions`,
+`gotchas`, `collaborators`. See the "quick decision guide" in root
+`PROGRES.md` if unsure which category fits.
+
 ## Commit messages
 
 Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`).

@@ -8,7 +8,8 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
+import { fetchGraph as fetchGraphData } from "@/lib/graph";
 import type { DependencyGraph, GraphNode as GraphNodeData } from "@/packages/shared/types";
 import type { GraphNodePosition } from "./GraphNode";
 
@@ -34,6 +35,8 @@ interface GraphContextValue {
   error: string | null;
   selectedNodeId: string | null;
   selectNode: (id: string | null) => void;
+  isFocusPanelOpen: boolean;
+  closeFocusPanel: () => void;
   hoveredNodeId: string | null;
   setHoveredNodeId: (id: string | null) => void;
   transform: GraphTransform;
@@ -47,6 +50,11 @@ interface GraphContextValue {
   setPositions: (p: Map<string, GraphNodePosition>) => void;
   dimensions: CanvasDimensions;
   setDimensions: (d: CanvasDimensions) => void;
+  /** Fan-in count per node id, computed from graph.edges (how many edges
+   * target this node). Drives the impact halo in GraphNode.tsx -- see
+   * progres/PROGRES-decisions.md for why this is computed client-side
+   * instead of added to the backend GraphNode type. */
+  importCounts: Map<string, number>;
 }
 
 const GraphContext = createContext<GraphContextValue | null>(null);
@@ -62,6 +70,7 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isFocusPanelOpen, setIsFocusPanelOpen] = useState(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [transform, setTransform] = useState<GraphTransform>(DEFAULT_TRANSFORM);
   const [contextMenuNodeId, setContextMenuNodeId] = useState<string | null>(null);
@@ -71,21 +80,13 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchGraph() {
+    async function loadGraph() {
       setIsLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ repoUrl });
-        if (branch) params.set("branch", branch);
-
-        const res = await fetch(`/api/graph?${params.toString()}`);
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error ?? `Request failed with status ${res.status}`);
-        }
+        const data = await fetchGraphData(repoUrl, branch);
         if (!cancelled) {
-          setGraph(data as DependencyGraph);
+          setGraph(data);
         }
       } catch (err) {
         if (!cancelled) {
@@ -96,11 +97,24 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
       }
     }
 
-    fetchGraph();
+    loadGraph();
     return () => {
       cancelled = true;
     };
   }, [repoUrl, branch]);
+
+  // Selecting a node highlights it AND opens the focus panel. Closing the
+  // panel (closeFocusPanel) does NOT clear selectedNodeId, so the graph
+  // highlight survives the panel closing. Only selectNode(null) — clicking
+  // empty canvas or Escape — clears both.
+  const selectNode = useCallback((id: string | null) => {
+    setSelectedNodeId(id);
+    setIsFocusPanelOpen(id !== null);
+  }, []);
+
+  const closeFocusPanel = useCallback(() => {
+    setIsFocusPanelOpen(false);
+  }, []);
 
   const zoomIn = useCallback(() => {
     setTransform((t) => ({ ...t, scale: Math.min(MAX_SCALE, t.scale * 1.2) }));
@@ -114,12 +128,23 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     setTransform(DEFAULT_TRANSFORM);
   }, []);
 
+  const importCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!graph) return counts;
+    for (const edge of graph.edges) {
+      counts.set(edge.target, (counts.get(edge.target) ?? 0) + 1);
+    }
+    return counts;
+  }, [graph]);
+
   const value: GraphContextValue = {
     graph,
     isLoading,
     error,
     selectedNodeId,
-    selectNode: setSelectedNodeId,
+    selectNode,
+    isFocusPanelOpen,
+    closeFocusPanel,
     hoveredNodeId,
     setHoveredNodeId,
     transform,
@@ -133,6 +158,7 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     setPositions,
     dimensions,
     setDimensions,
+    importCounts,
   };
 
   return <GraphContext.Provider value={value}>{children}</GraphContext.Provider>;

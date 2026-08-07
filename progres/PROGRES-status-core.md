@@ -1,0 +1,422 @@
+# ARCLUX Progress — Core (pipeline, parser, indexer, graph, impact, incremental)
+
+See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
+
+## 2026-08-03 — ✅ DONE — pipeline & core
+Single entry point: `packages/engine/pipeline.ts` → `analyzeRepository({ repoUrl })`.
+Don't call individual steps from outside `engine/`.
+
+- `packages/git/cloneRepository.ts`, `cleanupRepository.ts`, `readGitignore.ts`
+- `packages/parser/core/*` (`ParserInterface`, `ParserRegistry`, `scanFiles`,
+  `LanguageDetector`)
+- `packages/parser/typescript/parseTs.ts` (194 lines) — **note**:
+  `parseTsx.ts` and `parseTsConfig.ts` are still separate empty stubs, TSX
+  is likely already handled inside `parseTs.ts` itself — check before
+  assuming TSX can't be parsed at all.
+- `packages/parser/python/*` — `parsePython.ts`, `highlightPython.ts`,
+  `pythonHighlightQuery.ts` (see gotcha details below)
+- `packages/indexer/buildIndex.ts`, `resolveAliases.ts`
+- `packages/graph/buildDependencyGraph.ts`, `buildFolderGraph.ts`,
+  `resolvePath.ts`, `serializeGraph.ts`
+- `packages/repository/*` (`Repository`, `Module`, `File`, `Folder`, `Node`,
+  `Edge`, `Dependency`, `Graph`)
+- `packages/engine/detectRepositoryMeta.ts`
+- `packages/rules/RuleEngine.ts` + `rules/nextjs/requirePage.ts`
+- `packages/shared/*` (`types.ts`, `errors.ts`, `hash.ts`, `paths.ts`,
+  `constants.ts`, `logger.ts`, `utils.ts`)
+- `packages/search/fuzzyScore.ts` — adapted from `cmdk` (see NOTICE)
+
+## 2026-08-03 — ⚠️ PARTIAL / NEEDS VERIFICATION
+
+**Python parsing & syntax highlighting** — works (`parsePython.ts` 203
+lines, `highlightPython.ts` 142 lines, `pythonHighlightQuery.ts` 151 lines
+copied verbatim from `tree-sitter-python`, MIT — attribution in NOTICE),
+but:
+- Never tested end-to-end through the real `ParserRegistry` (only via a
+  separate experimental script)
+- Not yet visually verified in the browser (the syntax-highlight colors
+  have never actually been confirmed to attach to the right characters)
+- `FileDetails.tsx`, which uses this, is not yet wired into any page
+
+**`web-tree-sitter` gotcha** (MUST read before adding another
+tree-sitter-based language parser):
+- **Must be exactly 0.25.0**, not 0.26.x — newer versions fail to load the
+  WASM grammar (`getDylinkMetadata` ABI mismatch)
+- Must be called via `require()` (through `createRequire(import.meta.url)`),
+  not a pure `import` — otherwise "Dynamic require of fs/promises is not
+  supported" error
+- No `.d.ts`, can't be augmented via `declare module` (TS2665 error) —
+  solved with a custom type (`TSNode` interface), `require`d as `any`
+- Per-language grammar `.wasm` files live in
+  `node_modules/tree-sitter-wasms/out/`, NOT from the `~/research/tree-sitter`
+  clone (that's just a reference for concepts)
+- Parser instance MUST be a singleton (`getPythonRuntime()` promise-cache
+  pattern) — reloading the WASM per `parse()` call would be very slow
+- Query constructor differs between 2 API versions (old `language.query()`
+  vs new `new Query()`) — `highlightPython.ts` already handles the fallback
+- Python has no `export` — every top-level `function_definition`/
+  `class_definition` is treated as an "export" (heuristic, doesn't yet
+  read `__all__`)
+
+**`packages/detectors/detectUnusedExports.ts`** — see limitations in the
+detectors section above.
+
+---
+
+## External references already used
+
+Full attribution is in `NOTICE` (root). Summary:
+
+| Source | License | Nature | Became |
+|---|---|---|---|
+| `sst/opencode` | MIT | pattern re-adapted | `theme/arclux.json`, `hooks/useFilteredList.ts` |
+| `pahen/madge` | MIT | algorithm re-implemented | `detectCircularDependency.ts` |
+| `git-truck` | MIT | UX pattern re-implemented | `GraphCanvas.tsx` |
+| `sverweij/dependency-cruiser` | MIT | concept re-implemented | `RuleEngine.ts` |
+| `d3-hierarchy` | ISC | used directly | `buildFolderGraph.ts` |
+| `webpro-nl/knip` | MIT | traversal strategy re-implemented | `detectUnusedExports.ts` |
+| `tree-sitter/tree-sitter-python` | MIT | query copied verbatim | `pythonHighlightQuery.ts` |
+| `pacocoursey/cmdk` | MIT | used directly as dependency + scoring adapted | `CommandPalette.tsx`, `fuzzyScore.ts` |
+
+**Repos in `~/research` used only to read patterns/architecture, not
+copied from**: git, language-server-protocol, llvm-project, sqlite,
+tree-sitter, nx, clack, shadcn-table, drizzle-orm (check which ones are
+actually cloned before assuming).
+
+## 2026-08-03 — Update — packages/incremental (new foundation, not wired in yet)
+
+`packages/incremental/` — Cell (input), Query (memoized function with
+dependency tracking + early cutoff), Database (revision coordination).
+Principle adapted from `salsa-rs/salsa` (dual MIT/Apache-2.0) — NOT a
+port (Rust proc-macro vs runtime tracking in TS), re-implemented from
+scratch. Full attribution in the `Database.ts` comment.
+
+**Verified via a runnable demo** (`packages/incremental/demo.ts`, run with
+`npx tsx packages/incremental/demo.ts`), not just `tsc --noEmit`:
+- Memoization: repeated calls with no change = 0 recomputation
+- Dependency tracking: only Cells that are actually read trigger
+  invalidation
+- Early cutoff: `Cell.set()` with an identical value (`Object.is`) is a
+  no-op, doesn't bump the revision
+- Cycle detection: a query re-entering the same key while still computing
+  → throws, instead of an infinite loop
+
+**Known limitations (documented in the `Query.ts` comment)**:
+- Early cutoff only works for reference equality (`Object.is`) — a new
+  object with identical contents is still considered "changed". Deep-
+  equality cutoff would need a custom comparator, not yet implemented.
+- Dependency tracking during cache-hit revalidation is over-approximate
+  (query C calling A which calls B ends up depending on both A AND B
+  directly, rather than just A with B implied transitively) — safe (no
+  missed invalidations) but not maximally minimal.
+- Cycles throw, there's no fixed-point resolution for genuinely recursive
+  queries — that's treated as a caller bug, not a supported pattern.
+
+**NOT wired into any pipeline yet** — `buildIndex.ts`, `pipeline.ts`, the
+detectors, everything still runs the old way (full re-scan). This is a
+standalone foundation that needs separate integration as a bigger next
+step, not something that's automatically used just because this file
+exists.
+
+## 2026-08-04 — CORRECTION — packages/impact/* turned out to be ALREADY DONE (8/8)
+
+Previously recorded as priority #1 at 0% total. It turned out to be fully
+implemented in commit `8b69831a` (before this session even started),
+just never cross-checked against PROGRES.md. Verified via direct `cat`
+(not just `wc -l`):
+
+- `traceImports.ts` (33 lines), `traceExports.ts` (46 lines) — identifier-
+  level tracing, consistent with the same pattern as
+  `detectUnusedExports.ts` (namespace/default/named import handling)
+- `calculateAffectedFiles.ts` (66 lines) — base function
+- `calculateAffectedModules.ts`, `calculateAffectedComponents.ts`,
+  `calculateAffectedRoutes.ts` — all compose on top of
+  `calculateAffectedFiles`, not duplicated logic. `Routes` even correctly
+  converts a file path to a Next.js route path (stripping route groups
+  `(...)`)
+- `buildImpactTree.ts` (38 lines) — **has a cycle guard**
+  (`ancestors: Set`) + `maxDepth`, important because a repo can have a
+  real circular import (see
+  `playground/python-demo/cyclic_a.py` ↔ `cyclic_b.py`)
+- `traceDependencies.ts`, `traceConsumers.ts` — not manually `cat`'d yet,
+  assumed done based on the consistent pattern of the other 6 files, but
+  **re-verify before actually relying on them**
+
+**Additional lesson**: this incident is EXACTLY the same as the earlier
+`components/layout/*` incident — actual progress was further ahead than
+recorded because parallel work sessions weren't synced to PROGRES.md.
+Redundant verification (`cat`, not assumption from file name/old
+PROGRES.md) remains mandatory before starting work in any area.
+
+**Action item**: `apps/cli/impact.ts` is currently WRONG — it says "not
+yet implemented" even though the functionality already exists. Needs to
+be fixed so it actually calls `buildImpactTree`/`calculateAffectedFiles`
+etc.
+
+## 2026-08-04 — Update -- JavaScript parser: parseJs/parseJsx/parseCommonJs written and registered
+
+packages/parser/javascript/extractJs.ts (shared) + parseJs.ts + parseJsx.ts
++ parseCommonJs.ts implemented and registered in packages/engine/pipeline.ts.
+Reuses TypeScript Compiler API with ScriptKind.JS/JSX (NOT reusing
+parseTs.ts's extractors directly -- those detect TS-only syntax like
+"import type" that plain JS can never have). Detects ES import/export,
+dynamic import(), require(), and per-property CommonJS
+(module.exports.x = / exports.x =).
+
+KNOWN GAP, NOT YET FIXED: whole-object exports
+(module.exports = { a, b }) are NOT detected -- only per-property
+assignment is. This under-reports exports for a lot of real-world
+CommonJS. Confirmed common via nodejs/cjs-module-lexer's own test fixtures
+(~/research/cjs-module-lexer/test/_unit.js) during research for this
+work. Follow-up PR needed for extractWholeObjectExports() (shorthand
+props, renamed props, string-literal keys, getter exports -- spread
+props and computed keys can stay unsupported/silently skipped for now).
+
+parseCommonJs.ts is currently behavior-identical to parseJs.ts (kept
+separate on purpose -- see its own file comment -- because the
+whole-object-exports follow-up is scoped to CommonJS specifically, not
+plain JS).
+
+NOT YET DONE: no playground fixture, no end-to-end verification via
+scripts/testPlayground.ts or CLI doctor -- only tsc --noEmit passed so
+far. Next session should build playground/commonjs-demo/ using patterns
+from cjs-module-lexer's test file before trusting this beyond typecheck.
+
+## 2026-08-05 — Update — Go & Java parsers written and verified (parseGo.ts, parseJava.ts)
+
+packages/parser/go/parseGo.ts and packages/parser/java/parseJava.ts
+implemented (regex/line-based, not tree-sitter — no grammar wired up for
+either language yet, unlike Python). Registered in both
+packages/engine/pipeline.ts AND scripts/testPlayground.ts (the latter had
+been silently only registering parseTs+parsePython — same class of bug as
+files getting skipped in buildIndex.ts's "no parser registered, skip
+silently" path, worth remembering next time a new parser is added
+anywhere).
+
+**Verified via scripts/testPlayground.ts against playground/go-demo and
+playground/java-demo (not just tsc --noEmit)**:
+- 6/6 modules indexed in both fixtures (previously 0, confirming parsers
+  are now actually registered and running)
+- Export extraction confirmed correct: Go's uppercase-first-letter
+  convention (HelperA, User, Product, Slugify, UnusedHelper) and Java's
+  `public` modifier convention (class/method/field level) both extract
+  the expected names, matching what each fixture file was written to
+  contain — including the deliberately-unused UnusedHelper/unusedHelper
+  in each
+
+**EXPECTED LIMITATION, confirmed empirically, NOT a bug**: both fixtures
+show 0 graph edges despite real cross-file calls existing (cyclic_a.go
+calls HelperB in cyclic_b.go, Main.java calls Service/Models/Utils) —
+this is because Go and Java don't require any import statement between
+files in the same package/directory, so there's nothing for
+resolvePath.ts to resolve. This makes every file/export in both fixtures
+show up as a false positive in detectOrphanFiles/detectUnusedExports/
+detectUnusedFiles, same root cause class as the already-documented
+Python/main.py false positive from resolveRoutes.ts being empty. A
+"same-package implicit dependency" resolution pass would be needed to
+fix this for Go/Java specifically — not yet built, not scoped.
+
+**NOT yet tested**: real-world Go/Java repos beyond the playground fixture
+(multi-package Go with actual cross-package imports, Java with actual
+`import demo.other.Thing;` statements) — only the same-package-only
+fixture has been verified so far.
+
+## 2026-08-05 — Update — Manifest parsers built (parseGoMod, parseCargoToml, parsePackageJson, parseComposer, parseGemfile, parseGradle/parsePom, parseCsproj) + ManifestParser interface
+
+New packages/parser/core/ManifestParserInterface.ts (ManifestDependency:
+name/versionRange/kind runtime|dev; ManifestParser: filename + sync parse()).
+Distinct from LanguageParser/ParserRegistry — manifests are single
+well-known files read directly, not scanned. Generic format primitives
+added: config/parseJson.ts, config/parseToml.ts (parseTomlSections, NOT
+spec-complete TOML), config/parseYaml.ts (parseFlatYaml, unused so far).
+
+Verified against REAL manifests from public repos (gin, tokio, laravel,
+rails, spring-petclinic — downloaded to ~/manifest-samples, outside the
+repo) via scripts/testManifests.ts, not hand-written fixtures:
+- parseGoMod: 35/35 deps correct (gin's go.mod)
+- parseCargoToml: found and FIXED a real bug — first version only handled
+  flat [dependencies]/[dev-dependencies], missed tokio's many
+  [target.'cfg(...)'.dependencies] conditional sections and
+  single-dep-per-section form ([target.'cfg(windows)'.dependencies.windows-sys]).
+  Fixed via classifySection() suffix matching + SINGLE_DEP_SECTION_PATTERN.
+  13 -> 36 deps after fix, matches tokio's Cargo.toml.
+- parseComposer: 8/8 correct, php/ext-*/lib-* platform entries correctly filtered
+- parseGemfile: 82 deps found, all reported "runtime" — KNOWN LIMITATION,
+  doesn't read `group :test do...end` blocks, so gems only ever declared
+  inside a group (rubocop, mdl, sdoc group etc in rails' real Gemfile)
+  are mis-classified as runtime. Not fixed, documented in file comment.
+- parsePom (Maven): 30 found but 2 are WRONG — regex matches every
+  <dependency> in the file including ones nested inside
+  <plugin><dependencies> (checkstyle plugin's own deps), which aren't
+  real project dependencies. NOT FIXED — would need real XML tree
+  parsing to scope to the top-level <dependencies> block only, not a
+  regex. Known false-positive, documented in file comment.
+- parseGradle (Groovy DSL) — NOT yet tested against a real build.gradle,
+  only pom.xml side was verified.
+
+**Also fixed while building this**: packages/graph/buildFolderGraph.ts
+was failing tsc with "Cannot find module 'd3-hierarchy'" — dependency was
+used but never installed. Fixed with `pnpm add d3-hierarchy -w` +
+`pnpm add -D @types/d3-hierarchy -w` (-w needed because packages/* isn't
+a pnpm workspace member, only apps/* is — deps go to root package.json).
+
+**STILL NOT DONE**: nothing calls these manifest parsers from
+detectRepositoryMeta.ts or anywhere else in the pipeline yet — they exist
+and are verified standalone (via testManifests.ts) but aren't wired into
+analyzeRepository()'s framework/dependency detection. detectRepositoryMeta.ts's
+own readDependencyNames() (package.json only, flat Set<string>) still runs
+separately and hasn't been merged with this new ManifestDependency-based
+system — that's a follow-up, not done here.
+
+**Gotcha hit while building this**: a `cat > file << EOF` heredoc run
+while `cd`'d into ~/manifest-samples instead of ~/arclux silently created
+packages/parser/rust/parseCargoToml.ts under ~/manifest-samples/packages/...
+instead of overwriting the real file — the real ~/arclux file kept its
+old (buggy, pre-fix) content even though the terminal showed no error.
+Caught only because testManifests.ts's output (13 deps) didn't match the
+expected fix. Lesson: always `pwd` before a `cat > path << EOF` if you've
+`cd`'d anywhere else in the same session — a wrong-directory heredoc
+fails silently, it doesn't error.
+
+## 2026-08-05 — Update - same-scope implicit dependencies implemented (Go/Java)
+
+Followed up on the decision recorded earlier (same-package resolution:
+one generic pass, not per-language fixes). Implemented in full this
+session:
+
+- packages/shared/types.ts: added ParsedFile.scopeId (optional) and
+  ModuleInfo.implicitDependencies (required, kept SEPARATE from
+  imports[] since it's a regex heuristic that can false-positive on
+  comments/strings, not a certain import statement).
+- parseGo.ts and parseJava.ts: both now set scopeId = the file's
+  directory (posix.dirname). Confirmed via javaparser's
+  JavaParserTypeSolver.java javadoc that Java package MUST match
+  directory by language convention, so Java can reuse the exact same
+  directory-based scopeId logic as Go - no need to parse the `package`
+  statement separately.
+- packages/indexer/resolveSameScopeDependencies.ts (new): groups files
+  by scopeId, does a regex whole-word scan of each file's content
+  against sibling files' exported names. Deliberately NOT AST-aware -
+  documented limitation, not a bug to silently fix later without
+  redesigning the approach.
+- buildIndex.ts: wired in as a new pass 2 (content is now kept around
+  in contentByPath specifically to feed this pass).
+
+**STILL NOT DONE**: implicitDependencies is populated but NOT yet
+consumed by buildDependencyGraph.ts, buildImportGraph.ts, or
+buildExportGraph.ts. This means the root cause of the near-empty
+Kubernetes/Spring Boot graphs is now understood and the data exists,
+but the graph VIEW won't actually show the extra edges until a
+follow-up wires this in. That's a good next task for whoever picks
+this up.
+
+Tested against the real playground/go-demo fixtures (main.go ->
+models.go + service.go, service.go -> models.go + utils.go), 6 tests,
+including edge cases (no self-dependency despite service.go containing
+its own function name in the signature, lone file with no scope
+siblings). All merged via PR #67.
+
+**Gotcha hit and fixed this session**: `/tmp` doesn't exist in Termux
+(already noted elsewhere in gotchas.md, but re-confirmed here) - a
+Python patch script heredoc failed with "No such file or directory"
+when targeting /tmp/patch_types2.py. Fix: write the script into the
+repo directory itself (~/arclux/patch_types2.py) and delete it after
+running, instead of using /tmp.
+
+## 2026-08-06 — Update - documented 3 previously-mysterious empty stub files
+
+Investigated 3 files that were 0-line-except-license-header stubs with
+no obvious purpose from surrounding code, and documented each with an
+in-file comment explaining its actual status, so future sessions don't
+re-investigate the same files from scratch:
+
+- packages/parser/typescript/parseTsConfig.ts — INTENTIONALLY EMPTY
+  permanently. Superseded by resolveAliases.ts, which already handles
+  tsconfig.json/jsconfig.json parsing for path alias resolution. Do not
+  implement a config parser here.
+- packages/parser/core/parseImports.ts — intentionally empty for now,
+  not confirmed dead. Every language parser (parseGo.ts, parseJava.ts,
+  extractJs.ts, parsePython.ts, parseTs.ts) implements its own
+  extractImports() independently since each language's import syntax
+  differs too much for an obvious shared generic version. Could be
+  revisited if a genuinely shared pattern emerges later.
+- packages/parser/php/parsePhp.ts — deliberately DEFERRED (not
+  abandoned, not intentionally-empty-forever). Waiting on issue #53's
+  parsePhpRoutes.ts (assigned to Alitindrawan24) to land first, so this
+  general-purpose PHP parser follows whatever regex/extraction
+  convention emerges from that PR instead of establishing a second,
+  inconsistent PHP-parsing style in parallel. Merged via PR #70.
+
+Also confirmed: not every empty-looking file in this repo is
+unfinished work. Before investigating an empty stub, `cat` the whole
+file first (not just `wc -l`) — some are marked intentionally empty in
+a comment, which immediately answers the question.
+
+## 2026-08-06 — Update — route/export/component/hook/provider resolvers + Explorer panel
+
+**`packages/indexer/resolveRoutes.ts`**: detects Next.js App Router entry
+files (page/layout/route/loading/error/not-found/template/default/
+global-error) under `app/`. Returns moduleId + derived routePath (route
+groups in parentheses stripped). `getEntryModuleIds()` helper exposed for
+detectors to check `entryModuleIds.has(mod.id)`. **Not yet wired into
+`detectUnusedExports.ts`/`detectOrphanFiles.ts`** — those still have the
+entry-file false-positive caveat noted earlier in this doc until someone
+adds the 2-line skip check.
+
+**`packages/indexer/resolveExports.ts`**: resolves re-export chains beyond
+the single hop `ModuleInfo.resolvedReExports` already covers (documented
+limitation in `types.ts`'s own doc comment). Walks the chain per
+export name until it hits a non-re-export origin, with cycle detection
+(stops at last resolvable hop if a cycle is found). Inherits the same
+aliased-re-export limitation as `resolvedReExports` itself (`export {
+foo as bar }` — name tracking breaks across hops since `RawExport` only
+stores the final name) — documented in-file, not fixed here, needs parser
+layer changes.
+
+**`packages/indexer/resolveComponents.ts`, `resolveHooks.ts`,
+`resolveProviders.ts`**: naming-convention heuristics, NOT AST-based —
+no parser currently extracts "is this a component/hook/provider" as
+structured data. Components = PascalCase export name in a `.tsx`/`.jsx`
+file. Hooks = export name matching `^use[A-Z0-9]`, any extension.
+Providers = export name ending in `Provider`. Each file documents this
+limitation explicitly and says to switch to AST-derived data if/when a
+parser adds that signal — do not assume these are ground truth.
+
+**`apps/web/components/explorer/Explorer.tsx`** (new) + **`DependencyList.tsx`**
+(new): tabbed panel (File / Dependencies / Impact) wrapping the existing
+`FileDetails.tsx` and `ImpactSummary.tsx` plus the new `DependencyList.tsx`.
+Confirmed via grep before writing: zero existing consumers of `Explorer`,
+so the prop shape (`repoUrl`, `moduleId`, `branch?`, `onClose?`) is a new
+design, not an established contract — reconsider if wiring it into
+`SplitPane.tsx`/the graph route reveals a different shape is needed.
+`DependencyList.tsx` fetches `/api/graph` and filters edges client-side
+by `moduleId` — same pattern as `GraphProvider.tsx`'s `importCounts`
+memo. **Query param shape for `/api/graph` (`?repoUrl=&branch=`) was
+assumed from `/api/file`/`/api/impact`'s pattern, not confirmed against
+the actual route handler — check `app/api/graph/route.ts` before trusting
+this without testing.**
+
+**`vendor-ui/shadcn/scroll-area.tsx`** (new): was missing, blocking
+`file-tree.tsx`'s typecheck alongside a missing `@radix-ui/react-accordion`
+dependency. Standard shadcn Radix wrapper, no ARCLUX-specific logic.
+
+**Incidental fix**: `npm install` was failing repo-wide with `Cannot read
+properties of null (reading 'matches')` — root cause not fully diagnosed,
+but `rm -rf node_modules package-lock.json && npm cache clean --force &&
+npm install` resolved it (66 packages, 0 vulnerabilities). `package-lock.json`
+regenerated — check whether it's gitignored before committing it, it
+showed as untracked rather than modified, which usually means it wasn't
+tracked before.
+
+**Verification**: `cd apps/web && npx tsc --noEmit` clean across all of
+the above. **NOT visually verified in browser** — same standard gap noted
+elsewhere in this doc (typecheck alone isn't sufficient evidence).
+
+**Still not done**:
+- Resolver family (routes/exports/components/hooks/providers) not called
+  from `buildIndex.ts` — no pass 5 yet, results aren't attached to
+  `ModuleInfo` or `Repository` anywhere
+- `Explorer.tsx` not mounted on any page/route
+- `detectUnusedExports.ts`/`detectOrphanFiles.ts` not updated to consult
+  `getEntryModuleIds()` yet, so the entry-file false-positive caveat
+  still applies

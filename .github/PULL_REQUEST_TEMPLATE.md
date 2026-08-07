@@ -15,3 +15,7 @@ yang dipakai di project ini. -->
 - [ ] Dites lawan minimal 1 fixture di `playground/` (kalau nyentuh parser/detector/pipeline)
 - [ ] PROGRES.md diupdate kalau ini mengubah status file yang sebelumnya kosong/stub
 - [ ] Tidak menduplikasi file/logic yang sudah ada (cek dulu dengan `grep`/`cat`)
+- [ ] Updated relevant `progres/PROGRES-*.md` file with a dated entry (`## YYYY-MM-DD — title`)
+- [ ] Ran `scripts/log-progress.sh` instead of hand-editing PROGRES files, where applicable
+- [ ] Tested on Termux (or noted why not applicable)
+- [ ] No `empty` files introduced (check via the empty-file scan in `PROGRES.md`)

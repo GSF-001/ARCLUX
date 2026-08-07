@@ -7,6 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 "use client";
+import { AnalyzingProgress } from "./AnalyzingProgress";
 
 import { useEffect, useRef, useCallback } from "react";
 import {
@@ -44,12 +45,27 @@ export function GraphCanvas() {
     setPositions,
     dimensions,
     setDimensions,
+    importCounts,
   } = useGraphContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const graphGroupRef = useRef<SVGGElement>(null);
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const clickTimer = useRef<number | null>(null);
+  // Mirrors `transform` state but is mutated directly during a drag,
+  // bypassing React entirely, so panning never re-renders graph.nodes /
+  // graph.edges (hundreds of SVG elements) on every pointermove. State is
+  // only committed once, on pointerup, via setTransform.
+  const liveTransform = useRef(transform);
+
+  useEffect(() => {
+    liveTransform.current = transform;
+  }, [transform]);
+
+  function applyTransformToDOM(t: typeof transform) {
+    graphGroupRef.current?.setAttribute("transform", `translate(${t.x}, ${t.y}) scale(${t.scale})`);
+  }
 
   useEffect(() => {
     const el = containerRef.current;
@@ -78,7 +94,13 @@ export function GraphCanvas() {
           .distance(60)
       )
       .force("charge", forceManyBody().strength(-120))
-      .force("center", forceCenter(dimensions.width / 2, dimensions.height / 2))
+      // Fixed virtual center, NOT dimensions.width/height. The simulation's
+      // coordinate space is independent of the actual container size —
+      // panning/zooming (via `transform`) is what maps simulation space to
+      // screen space. Using a fixed center means resizing the container
+      // (e.g. a side panel opening/closing) never needs to re-run this
+      // effect, since dimensions is no longer a dependency below.
+      .force("center", forceCenter(500, 500))
       .force("collide", forceCollide(14))
       .stop();
 
@@ -90,7 +112,13 @@ export function GraphCanvas() {
       nextPositions.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
     }
     setPositions(nextPositions);
-  }, [graph, dimensions.width, dimensions.height, setPositions]);
+    // dimensions intentionally NOT a dependency anymore — see the
+    // forceCenter comment above. Previously this effect re-ran (and reset
+    // ALL node positions from scratch) any time the container resized,
+    // e.g. a side panel opening/closing. Re-centering the VIEWPORT on
+    // resize is a separate, not-yet-implemented concern that should adjust
+    // `transform`, not re-run the simulation.
+  }, [graph, setPositions]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -163,10 +191,20 @@ export function GraphCanvas() {
     const dx = e.clientX - lastPointer.current.x;
     const dy = e.clientY - lastPointer.current.y;
     lastPointer.current = { x: e.clientX, y: e.clientY };
-    setTransform((t) => ({ ...t, x: t.x + dx, y: t.y + dy }));
+    liveTransform.current = {
+      ...liveTransform.current,
+      x: liveTransform.current.x + dx,
+      y: liveTransform.current.y + dy,
+    };
+    applyTransformToDOM(liveTransform.current);
   }
 
   function handlePointerUp() {
+    if (isPanning.current) {
+      // Commit the DOM-only value to React state exactly once, at the end
+      // of the drag, instead of on every pointermove.
+      setTransform(liveTransform.current);
+    }
     isPanning.current = false;
   }
 
@@ -177,11 +215,7 @@ export function GraphCanvas() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
-        Analyzing repository…
-      </div>
-    );
+    return <AnalyzingProgress />;
   }
 
   if (error) {
@@ -217,7 +251,28 @@ export function GraphCanvas() {
         onDoubleClick={handleSvgDoubleClick}
         onContextMenu={handleSvgContextMenu}
       >
-        <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
+        <defs>
+          {[
+            ["import", "#E5E5E5"],
+            ["export", "#C9A6F5"],
+            ["call", "#8FC4FF"],
+            ["route-link", "#8FE8D8"],
+          ].map(([type, fillColor]) => (
+            <marker
+              key={type}
+              id={`arrow-${type}`}
+              viewBox="0 0 8 8"
+              refX="6"
+              refY="4"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto-start-reverse"
+            >
+              <path d="M0,0 L8,4 L0,8 Z" fill={fillColor} />
+            </marker>
+          ))}
+        </defs>
+        <g ref={graphGroupRef} transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
           {graph.edges.map((edge) => {
             const sourcePos = positions.get(edge.source);
             const targetPos = positions.get(edge.target);
@@ -227,6 +282,12 @@ export function GraphCanvas() {
               edge.target === selectedNodeId ||
               edge.source === hoveredNodeId ||
               edge.target === hoveredNodeId;
+            // Label only shows for the SELECTED node's edges, not hover —
+            // hovering a high fan-in hub was popping dozens of overlapping
+            // "imports" labels at once (see live dogfood screenshot).
+            // GraphFocusView already lists all connections cleanly on
+            // click, so the canvas label no longer needs to fire on hover
+            // too.
             return (
               <GraphEdge
                 key={edge.id}
@@ -250,6 +311,8 @@ export function GraphCanvas() {
                 isHovered={node.id === hoveredNodeId}
                 onClick={selectNode}
                 onHoverChange={setHoveredNodeId}
+                importCount={importCounts.get(node.id) ?? 0}
+                zoomScale={transform.scale}
               />
             );
           })}
