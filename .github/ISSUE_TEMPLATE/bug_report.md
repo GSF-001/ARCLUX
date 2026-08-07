@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Sesuatu yang ada tapi salah/gak sesuai ekspektasi
+about: Something that exists but is wrong/not as expected
 labels: bug
 ---
 
