@@ -229,3 +229,35 @@ Resolved an open question from the original halo-ring plan: halos only render wh
 ## 2026-08-07 — UPDATE: Graph impact halo — implemented
 
 The halo-ring plan described in the 2026-08-0X entry above (and listed as a next step in 'Next steps priority for future sessions') is now implemented: GraphNode.tsx renders an impact halo circle gated by zoomScale >= MIN_ZOOM_FOR_HALO, importCount computed via useMemo in GraphProvider.tsx from graph.edges, passed through GraphCanvas.tsx. Tier thresholds (High >100, Medium 20-100) are still unverified against real repos -- that part of the original plan remains open. Not yet visually verified in-browser as of this entry. If you're reading the older halo entries above, they're outdated -- this is the current status.
+
+## 2026-08-07 — Simulated stage progress instead of real backend streaming
+
+`apps/web/components/graph/AnalyzingProgress.tsx` (new) replaces the
+static "Analyzing repository…" text in GraphCanvas.tsx's `isLoading`
+branch. Cycles through 5 stage labels (Cloning/Scanning/Parsing/
+Resolving/Building) on a fixed timer + shows an indeterminate progress
+bar, with a "taking longer than usual" message after ~17s.
+
+**Chose client-only simulated progress over backend SSE streaming**:
+the correct fix (backend emits real stage events, e.g. via
+Server-Sent Events on /api/graph) would need analyzeRepository()'s
+pipeline to become event-emitting instead of a single synchronous
+return — a much larger change. This is a stopgap: the labels/timing are
+tuned by feel, NOT derived from real pipeline telemetry. Large repos will
+sit on the last stage indefinitely since there's no real signal to
+advance further. Documented as such in the component's own comment so
+nobody later mistakes this for actual progress reporting.
+
+Addresses the UX gap noted in status-backlog.md's large-repo dogfooding
+entry (microsoft/TypeScript's "Indexing failed" was indistinguishable
+from vercel/next.js's "just slow" until it errored, because there was no
+feedback at all).
+
+Verified: `tsc --noEmit -p apps/web/tsconfig.json` clean. NOT yet
+visually verified in-browser — pushed near a chat context limit.
+
+**Coordination note**: `git pull` before this session started fast-forwarded
+in unrelated changes to GraphCanvas.tsx/GraphNode.tsx/GraphProvider.tsx
+from another session (fan-in halo indicator feature, matches an earlier
+decisions.md plan) — merged cleanly, no conflict with this change since
+they touch different parts of the same files.
