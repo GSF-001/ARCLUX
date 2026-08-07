@@ -13,6 +13,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 
 ## Documentation
 
+- [`QUICKSTART.md`](QUICKSTART.md) — start here, fast-path workflow cheat sheet
 - [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
 - [`PROGRES.md`](PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
