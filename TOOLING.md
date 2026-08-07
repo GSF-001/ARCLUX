@@ -112,60 +112,60 @@ scripts/log-progress.sh set-status decisions "Refactor X" "Done"
 
 ## 2. Git workflow — branch protection
 
-`main` dikunci branch protection rule di GitHub. **Nggak bisa push
-langsung ke `main`**, harus lewat Pull Request.
+`main` is locked by a branch protection rule on GitHub. **You can't push
+directly to `main`**, everything goes through a Pull Request.
 
-### Alur standar:
+### Standard flow:
 
 ```bash
 git checkout main
 git pull origin main
-git checkout -b <tipe>/<deskripsi-singkat>
+git checkout -b <type>/<short-description>
 
-# ... kerjain perubahan ...
+# ... make your changes ...
 
 git add <file>
-git commit -m "pesan commit"
-git push origin <tipe>/<deskripsi-singkat>
+git commit -m "commit message"
+git push origin <type>/<short-description>
 ```
 
-Terus buka link yang muncul di output `git push` (atau ke
-`github.com/GSF-001/ARCLUX/pulls`), bikin PR, cek tab "Files changed",
-baru merge.
+Then open the link that appears in the `git push` output (or go to
+`github.com/GSF-001/ARCLUX/pulls`), open a PR, check the "Files changed"
+tab, then merge.
 
-### Penamaan branch:
+### Branch naming:
 
-- `split/...` — motong file besar jadi lebih kecil
-- `fix/...` — perbaikan bug/kesalahan
-- `update/...` — update konten/dokumentasi
-- `feat/...` — fitur/tooling baru
-- `docs/...` — dokumentasi doang
+- `split/...` — breaking a large file into smaller ones
+- `fix/...` — bug/mistake fix
+- `update/...` — content/documentation update
+- `feat/...` — new feature/tooling
+- `docs/...` — documentation only
 
-### PENTING — verifikasi sebelum merge
+### IMPORTANT — verify before merging
 
-Beberapa kali kejadian PR ke-merge tapi hasilnya ternyata versi lama
-(stale), bukan commit terakhir yang di-push. Sebelum klik "Merge pull
-request" di GitHub:
+There have been a few cases where a PR got merged but the result turned
+out to be a stale version, not the latest pushed commit. Before clicking
+"Merge pull request" on GitHub:
 
 ```bash
-git diff main..<branch-lo> --stat
+git diff main..<your-branch> --stat
 ```
 
-Baca hasilnya. Kalau ada file nunjukin banyak `-` (deletion) yang
-nggak diduga, cek isi diff-nya beneran (`git diff main..<branch> --
-<file>`) sebelum lanjut — bisa jadi nimpa isi lama yang penting.
+Read the output. If a file shows a lot of unexpected `-` (deletions),
+check the actual diff content (`git diff main..<branch> -- <file>`)
+before continuing -- it might be overwriting something important.
 
-Setelah merge, **selalu** verifikasi ulang di lokal:
+After merging, **always** verify locally again:
 
 ```bash
 git checkout main
 git pull origin main
-cat <file-yang-diubah>
+cat <changed-file>
 ```
 
-Baru hapus branch:
+Then delete the branch:
 ```bash
-git branch -D <nama-branch>
+git branch -D <branch-name>
 ```
 
 ---
