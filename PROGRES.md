@@ -1,6 +1,6 @@
 # ARCLUX — Progress Summary
 
-> At the start of any Claude chat, read ALL of these, not just this file:
+> At the start of any Claude and dev, read ALL of these, not just this file:
 > `cat PROGRES.md progres/PROGRES-status-core.md progres/PROGRES-status-detectors.md progres/PROGRES-status-web.md progres/PROGRES-status-infra.md progres/PROGRES-status-backlog.md progres/PROGRES-bugs.md progres/PROGRES-decisions.md progres/PROGRES-gotchas.md progres/PROGRES-collaborators.md`
 > This file alone is just an index -- it has almost no actual project
 > history in it anymore. Skipping the other 4 means missing most of what's
