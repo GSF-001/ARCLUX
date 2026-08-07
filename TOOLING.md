@@ -70,6 +70,43 @@ Script ini otomatis:
 hook (lihat bagian 4) yang bakal nolak commit kalau ada entry baru tanpa
 tanggal di header-nya. Script ini jamin format-nya selalu bener.
 
+### Nandain progress entry pakai status -- Not Started / In Progress / Done
+
+Tiap entry sekarang bisa punya status, biar collaborator lain gampang
+liat sekilas mana yang masih ide, mana yang lagi dikerjain, mana yang
+udah kelar -- tanpa perlu baca isi lengkap tiap entry.
+
+Nambah entry baru dengan status:
+
+```bash
+scripts/log-progress.sh <kategori> "judul" "isi" "Not Started"
+```
+
+Argumen status itu opsional -- kalau gak diisi, default-nya "Not
+Started". Status yang dipakai konsisten cuma 3: `Not Started`, `In
+Progress`, `Done`.
+
+Update status entry yang UDAH ADA (misal mulai ngerjain sesuatu, atau
+baru kelar), tanpa perlu bikin entry baru:
+
+```bash
+scripts/log-progress.sh set-status <kategori> "<judul entry>" "<status baru>"
+```
+
+Ini nyari entry berdasarkan potongan judulnya (harus unik), terus ganti
+baris `**Status:** ...`-nya di tempat -- isi entry yang lain gak
+kesentuh. Kalau entry itu belum punya baris status (entry lama sebelum
+fitur ini ada), baris status bakal otomatis ditambahin.
+
+Contoh alur kerja:
+```bash
+# Mulai ngerjain sesuatu
+scripts/log-progress.sh decisions "Refactor X" "Rencana refactor X karena Y" "In Progress"
+
+# ...beberapa jam kemudian, udah kelar...
+scripts/log-progress.sh set-status decisions "Refactor X" "Done"
+```
+
 ---
 
 ## 2. Git workflow — branch protection
