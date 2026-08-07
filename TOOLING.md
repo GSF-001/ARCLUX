@@ -1,46 +1,47 @@
-# ARCLUX — Panduan Tooling & Config
+# ARCLUX — Tooling & Config Guide
 
-File ini jelasin semua config/tooling yang ada di repo ini, buat apa,
-dan cara pakainya. Kalau bingung "ini file buat apa sih", cek di sini dulu.
+This file explains all the config/tooling in this repo, what it's for,
+and how to use it. If you're wondering "what is this file for", check here first.
 
-Baca juga `CONTRIBUTING.md` buat aturan kontribusi kode (struktur project,
-cara nambah detector/parser, dll). File ini fokus ke tooling/workflow-nya.
+Also read `CONTRIBUTING.md` for code contribution conventions (project
+structure, how to add a detector/parser, etc). This file focuses on
+tooling/workflow.
 
 ---
 
-## 1. Sistem PROGRES (progres/PROGRES-*.md)
+## 1. PROGRES system (progres/PROGRES-*.md)
 
-Semua histori kerjaan project dicatet di folder `progres/`, dipecah per
-kategori:
+All project work history is logged in the `progres/` folder, split by
+category:
 
-| File | Isinya |
+| File | Contents |
 |---|---|
-| `PROGRES-status-core.md` | Status pipeline, parser, indexer, graph, impact, incremental |
-| `PROGRES-status-detectors.md` | Status detectors |
-| `PROGRES-status-web.md` | Status apps/web, graph viewer, vendor-ui, theme |
-| `PROGRES-status-infra.md` | Status CLI, collaborator tooling, testing, cleanup, dogfood |
+| `PROGRES-status-core.md` | Status: pipeline, parser, indexer, graph, impact, incremental |
+| `PROGRES-status-detectors.md` | Status: detectors |
+| `PROGRES-status-web.md` | Status: apps/web, graph viewer, vendor-ui, theme |
+| `PROGRES-status-infra.md` | Status: CLI, collaborator tooling, testing, cleanup, dogfood |
 | `PROGRES-status-backlog.md` | Backlog |
-| `PROGRES-bugs.md` | Bug yang ketemu di kode ARCLUX sendiri + fix-nya |
-| `PROGRES-decisions.md` | Keputusan desain/arsitektur ("kita pilih X daripada Y, karena...") |
-| `PROGRES-gotchas.md` | Jebakan tooling/environment (Termux, tsconfig, Webpack, dll) — BUKAN bug di kode ARCLUX |
-| `PROGRES-collaborators.md` | Siapa pegang tugas apa |
+| `PROGRES-bugs.md` | Bugs found in ARCLUX's own code + their fixes |
+| `PROGRES-decisions.md` | Design/architecture decisions ("we chose X over Y, because...") |
+| `PROGRES-gotchas.md` | Tooling/environment traps (Termux, tsconfig, Webpack, etc) — NOT bugs in ARCLUX's code |
+| `PROGRES-collaborators.md` | Who's assigned to what |
 
-Root `PROGRES.md` itu index doang + "quick decision guide" buat nentuin
-entry masuk ke file mana.
+The root `PROGRES.md` is just an index + "quick decision guide" for
+figuring out which file an entry belongs in.
 
-### Cara nambah progress entry — PAKAI SCRIPT, JANGAN EDIT MANUAL
+### How to add a progress entry — USE THE SCRIPT, DON'T EDIT MANUALLY
 
 ```bash
-scripts/log-progress.sh <kategori> "judul singkat" "isi progress-nya"
+scripts/log-progress.sh <category> "short title" "progress details"
 ```
 
-Kategori yang valid: `status-core`, `status-detectors`, `status-web`,
+Valid categories: `status-core`, `status-detectors`, `status-web`,
 `status-infra`, `status-backlog`, `bugs`, `decisions`, `gotchas`,
 `collaborators`.
 
-Contoh:
+Example:
 ```bash
-scripts/log-progress.sh bugs "Fix parser crash on empty file" "Parser TypeScript crash kalau file kosong (cuma license header). Fixed dengan nambahin early-return check di parseTs.ts."
+scripts/log-progress.sh bugs "Fix parser crash on empty file" "TypeScript parser crashed on empty files (license header only). Fixed by adding an early-return check in parseTs.ts."
 ```
 
 ### Nutup plan lama yang udh dikerjain -- pakai close-plan
