@@ -44,6 +44,12 @@ const IMPACT_MEDIUM_THRESHOLD = 20;
 // views of dense graphs don't get cluttered with overlapping halos.
 const MIN_ZOOM_FOR_HALO = 1;
 
+// Below this zoom, node icons are too small to read and just cost a
+// render -- skip them. Part of a lightweight LOD (level-of-detail)
+// pass; see progres/PROGRES-decisions.md (2026-08-07 LOD entry) for
+// the fuller plan this is step 1 of.
+const MIN_ZOOM_FOR_ICON = 0.5;
+
 function getImpactHaloRadius(importCount: number): number | null {
   if (importCount > IMPACT_HIGH_THRESHOLD) return 14;
   if (importCount >= IMPACT_MEDIUM_THRESHOLD) return 9;
@@ -91,16 +97,18 @@ export function GraphNode({
         strokeWidth={1.5}
         opacity={isSelected || isHovered ? 1 : 0.85}
       />
-      <path
-        d={getNodeIconPath(node.type)}
-        fill="none"
-        stroke="#fff"
-        strokeWidth={0.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity={isSelected || isHovered ? 0.95 : 0.65}
-        className="pointer-events-none"
-      />
+      {zoomScale >= MIN_ZOOM_FOR_ICON && (
+        <path
+          d={getNodeIconPath(node.type)}
+          fill="none"
+          stroke="#fff"
+          strokeWidth={0.6}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={isSelected || isHovered ? 0.95 : 0.65}
+          className="pointer-events-none"
+        />
+      )}
       {(isSelected || isHovered) && (
         <text
           x={radius + 6}
