@@ -265,3 +265,7 @@ they touch different parts of the same files.
 ## 2026-08-07 — QUICKSTART.md language kept English
 
 QUICKSTART.md initially drafted in Indonesian during a mobile terminal session, per user preference for chat interaction. Decided to keep it English-only to match PROGRES.md and TOOLING.md conventions (all repo docs are English, Indonesian is only used in Claude chat sessions). No translation needed yet since the file is still short (3 sections: workflow, progress logging, pre-check for empty files).
+
+## 2026-08-07 — README Contributors section intentionally removed
+
+The Contributors section (contrib.rocks avatar grid) was intentionally removed from README.md by the user via a direct GitHub browser edit. A later session mistook this for accidental damage (based on the generic 'Update README.md' commit message, which matched the pattern of other stray browser-edit branches like GSF-001-patch-1/-2) and restored it -- this was wrong and got reverted. If README.md is missing a Contributors section in the future, that's the current intended state, not a bug to fix.
