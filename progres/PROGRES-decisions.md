@@ -261,3 +261,7 @@ in unrelated changes to GraphCanvas.tsx/GraphNode.tsx/GraphProvider.tsx
 from another session (fan-in halo indicator feature, matches an earlier
 decisions.md plan) — merged cleanly, no conflict with this change since
 they touch different parts of the same files.
+
+## 2026-08-07 — QUICKSTART.md language kept English
+
+QUICKSTART.md initially drafted in Indonesian during a mobile terminal session, per user preference for chat interaction. Decided to keep it English-only to match PROGRES.md and TOOLING.md conventions (all repo docs are English, Indonesian is only used in Claude chat sessions). No translation needed yet since the file is still short (3 sections: workflow, progress logging, pre-check for empty files).
