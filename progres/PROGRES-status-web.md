@@ -354,3 +354,7 @@ apps/web/features/graph/useGraph.ts implemented as a thin re-export of GraphProv
 ## 2026-08-07 — useGraph re-export + centralized fetch helpers
 
 apps/web/features/graph/useGraph.ts implemented as a thin re-export of GraphProvider's useGraphContext() (per the 2026-08-03 decision). The other 4 files in features/graph/ stay deliberately empty but now have explanatory comments. Also implemented lib/api.ts (fetchJson helper: query params, res.ok check, error parsing) and lib/graph.ts (fetchGraph wrapping /api/graph), then refactored GraphProvider.tsx and DependencyList.tsx to use fetchGraph() instead of each having its own duplicated inline fetch block.
+
+## 2026-08-07 — README fixes: pnpm run dev, Contributors section clarified
+
+Fixed a leftover 'npm run dev' instruction in README.md's web dashboard section (earlier npm->pnpm cleanup only caught 'npm install', missed this). Also: Contributors section was intentionally removed by user via direct GitHub edit -- a later session mistook this for accidental damage and restored it, then reverted after user clarified it was intentional. See PROGRES-decisions.md for the full context so this doesn't happen a third time.
