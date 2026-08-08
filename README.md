@@ -11,6 +11,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 [](#status)
 
 ocs/security-coc-badge
+
 [![CI](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml/badge.svg)](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 
 -----
