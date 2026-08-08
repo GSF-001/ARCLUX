@@ -10,7 +10,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 
 [](#status)
 
-[](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
+[![CI](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml/badge.svg)](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 
 
 ## Documentation
