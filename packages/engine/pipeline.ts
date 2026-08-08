@@ -19,6 +19,15 @@ import { parseJsx } from "../parser/javascript/parseJsx";
 import { parseCommonJs } from "../parser/javascript/parseCommonJs";
 import { parseGo } from "../parser/go/parseGo";
 import { parseJava } from "../parser/java/parseJava";
+import { manifestRegistry } from "../parser/core/ManifestRegistry";
+import { parsePackageJson } from "../parser/config/parsePackageJson";
+import { parseGoMod } from "../parser/go/parseGoMod";
+import { parseCargoToml } from "../parser/rust/parseCargoToml";
+import { parseGemfile } from "../parser/ruby/parseGemfile";
+import { parseComposer } from "../parser/php/parseComposer";
+import { parseCsproj } from "../parser/csharp/parseCsproj";
+import { parseGradle_, parsePom } from "../parser/java/parseGradlePom";
+import { parseRequirements } from "../parser/python/parseRequirements";
 import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
 import { ArcluxError, isArcluxError } from "../shared/errors";
 import type { DependencyGraph, RepositoryMeta } from "../shared/types";
@@ -36,6 +45,17 @@ function ensureParsersRegistered() {
   parserRegistry.register(parseCommonJs);
   parserRegistry.register(parseGo);
   parserRegistry.register(parseJava);
+
+  manifestRegistry.register(parsePackageJson);
+  manifestRegistry.register(parseGoMod);
+  manifestRegistry.register(parseCargoToml);
+  manifestRegistry.register(parseGemfile);
+  manifestRegistry.register(parseComposer);
+  manifestRegistry.register(parseCsproj);
+  manifestRegistry.register(parseGradle_);
+  manifestRegistry.register(parsePom);
+  manifestRegistry.register(parseRequirements);
+
   parsersRegistered = true;
 }
 
@@ -58,6 +78,8 @@ export interface AnalyzeRepositoryResult {
    * calculateAffectedFiles usage in api/impact/route.ts for the pattern).
    */
   repository: Repository;
+  /** Combined dependency list from every manifest file present in the repo (package.json, go.mod, etc). See ManifestRegistry.ts. */
+  dependencies: import("../parser/core/ManifestParserInterface").ManifestDependency[];
 }
 
 /** Parses "org/name" out of a git URL, for https, ssh, and shorthand forms */
@@ -129,6 +151,7 @@ export async function analyzeRepository(
       moduleCount: repository.moduleCount,
       graph,
       repository,
+      dependencies: manifestRegistry.detectDependencies(localPath),
     };
   } finally {
     // Always clean up the temp clone, even if analysis threw partway through.
