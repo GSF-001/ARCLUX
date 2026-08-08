@@ -263,3 +263,9 @@ Fixed in stages: (1) ci.yml used npm install despite project being pnpm-workspac
 **Status:** Not Started
 
 Now that CI's lint step actually runs (previously crashed before reaching it), real pre-existing issues are visible: prefer-const violations and missing useEffect deps in vendor-ui/aceternity/*.tsx, unused vars in app/api/analyze/route.ts, and two setState-called-synchronously-in-effect errors in AnalyzingProgress.tsx and GlobalSearch.tsx (react-hooks/set-state-in-effect). Not fixed yet -- next session should start here to get CI fully green.
+
+## 2026-08-08 — Manifest parsers never wired to a registry (affects ALL of them, not just new ones)
+
+**Status:** Not Started
+
+Confirmed: parseGemfile.ts, parseCargoToml.ts, parseGoMod.ts, parseComposer.ts, parsePackageJson.ts, parseCsproj.ts, parseGradlePom.ts, and now parseRequirements.ts all implement ManifestParser correctly but NONE are referenced anywhere outside their own file -- no ManifestRegistry equivalent to ParserRegistry (for LanguageParser) exists. Dependency-manifest parsing is effectively 100% dead code right now, despite several manifest parsers being 'done'. Needs a ManifestRegistry (or similar wiring into detectRepositoryMeta.ts, per ManifestParserInterface.ts's own doc comment mentioning that file) before any of this has real effect.
