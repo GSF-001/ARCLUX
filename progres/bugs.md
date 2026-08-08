@@ -245,3 +245,21 @@ Found and removed 3 leftover files during a routine check: apps/web/theme/global
 **Status:** Not Started
 
 CI lint step now runs (was crashing before due to missing turbo.json). Reveals real errors: vendor-ui/aceternity/text-generate-effect.tsx and card-hover-effect.tsx (prefer-const, missing useEffect deps, unused var 'idx'), app/api/analyze/route.ts#L56 (unused '_repository'). Not fixed yet -- separate task from the CI config fix.
+
+## 2026-08-08 — spring-boot graph showed disconnected nodes (implicitDependencies not wired)
+
+**Status:** Done
+
+Fixed: buildDependencyGraph.ts only read module.imports, never module.implicitDependencies (set by resolveSameScopeDependencies.ts for Go/Java same-package refs with no import statement). Caused Java-heavy repos like spring-boot to render all file nodes with zero edges. Fixed by adding a second edge-building pass reading implicitDependencies.
+
+## 2026-08-08 — CI failing: npm vs pnpm mismatch caused missing @types/react
+
+**Status:** Done
+
+Fixed in stages: (1) ci.yml used npm install despite project being pnpm-workspace based, causing apps/web deps like @types/react to not install correctly in CI. (2) pnpm/action-setup conflicted with package.json's packageManager field (duplicate version spec). (3) pnpm-lock.yaml was outdated vs package.json (missing @radix-ui/react-accordion, @radix-ui/react-scroll-area), causing --frozen-lockfile to fail. (4) package.json scripts still called 'turbo run ...' after turbo.json was removed in an earlier session, causing lint/dev/build to crash outright. All four now fixed -- CI reaches the actual lint/test steps instead of crashing before them.
+
+## 2026-08-08 — 10+ real lint/type errors surfaced now that CI reaches lint step
+
+**Status:** Not Started
+
+Now that CI's lint step actually runs (previously crashed before reaching it), real pre-existing issues are visible: prefer-const violations and missing useEffect deps in vendor-ui/aceternity/*.tsx, unused vars in app/api/analyze/route.ts, and two setState-called-synchronously-in-effect errors in AnalyzingProgress.tsx and GlobalSearch.tsx (react-hooks/set-state-in-effect). Not fixed yet -- next session should start here to get CI fully green.
