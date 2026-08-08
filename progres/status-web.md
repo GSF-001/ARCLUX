@@ -361,6 +361,6 @@ Fixed a leftover 'npm run dev' instruction in README.md's web dashboard section 
 
 ## 2026-08-08 — LOD step 2: label gating done
 
-**Status:** In Progress
+**Status:** Done
 
 GraphNode.tsx now gates label visibility on zoom level, matching the icon LOD from step 1: labels hidden below zoomScale 0.5, always shown above 1.5 for high-importance nodes (importCount >= IMPACT_MEDIUM_THRESHOLD), unchanged (hover/select only) in between. Not yet visually verified in-browser -- user will check separately. See decisions.md's LOD entry for the full 3-step plan; step 3 (node radius scaling at low zoom + visual verification) still open.
