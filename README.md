@@ -99,4 +99,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PRO
 
 Apache License 2.0 (c) ARCLUX Contributors
 
+## Citation
+
+If you use ARCLUX in research or other work, please cite it using the metadata in [`CITATION.cff`](CITATION.cff).
+
 
