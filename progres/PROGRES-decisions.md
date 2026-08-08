@@ -308,3 +308,23 @@ NEXT STEPS for actually implementing packages/cache (not done yet):
 **Status:** Done
 
 Both steps of the LOD plan are done and visually verified in-browser by the user: step 1 (icon gating below zoomScale 0.5) and step 2 (label gating, same threshold, plus always-show labels for high-importance nodes above zoomScale 1.5). Node radius scaling at low zoom (the optional 3rd idea mentioned in the original plan) was not implemented -- current LOD (icon+label gating) was sufficient. Considered done for now; revisit radius scaling later only if a real repo shows it's still needed.
+
+## 2026-08-08 — Cache design: git-diff strategy needs getCommitHistory.ts first
+
+**Status:** In Progress
+
+Follow-up to the earlier cache research entry: confirmed packages/git/getCommitHistory.ts is still an 8-line stub, and there's no existing function anywhere that gets the current commit SHA or lists changed files via git diff. simple-git (the library cloneRepository.ts already uses) can do this easily, but the capability itself doesn't exist yet in ARCLUX. This means the MetadataStrategy-style (git-diff based) cache invalidation approach isn't a 'just plug into packages/git' thing as initially assumed -- getCommitHistory.ts (or a new small function) needs to expose at least: current HEAD SHA, and a way to list files changed since a given SHA. Revised plan: implement that git capability first (or as part of the same PR), before or alongside CacheProvider.ts, rather than assuming it's ready to consume.
+
+## 2026-08-08 — Cache design: shallow clone conflicts with git-diff strategy
+
+**Status:** In Progress
+
+Critical finding: cloneRepository.ts defaults to depth=1 (shallow clone, only the latest commit, no history). This directly conflicts with a MetadataStrategy-style (git-diff based) cache invalidation approach, which needs to diff against a PREVIOUS commit -- with only 1 commit present locally, there's nothing to diff against on a fresh clone. 
+
+This doesn't kill the git-diff approach, but changes what it can be used for: it would only work for INCREMENTAL re-analysis of a repo ARCLUX already has a deeper local copy of (e.g. via packages/watcher's ongoing filesystem watch, which presumably keeps a persistent local clone across multiple analysis runs) -- not for a fresh one-shot analyzeRepository() call, which is the common case today (dependency-cruiser assumes it's running against the user's own full local repo, a different situation from ARCLUX cloning someone else's repo fresh each time).
+
+Revised understanding: ARCLUX's cache is more likely to help in two different ways than dependency-cruiser's single git-diff-driven design:
+1. Content-hash based caching of PARSE results (ContentStrategy-style, not MetadataStrategy) for repeat analysis of the same repo/branch within a short window -- doesn't need git history at all, just file content hashes, works fine with shallow clones.
+2. A git-diff strategy only makes sense later, once packages/watcher is doing persistent incremental watching (a repo checked out once, kept around, re-diffed on change) -- not for the current one-shot clone-analyze-cleanup flow.
+
+Practical next step: prioritize a content-hash based cache (ContentStrategy-style) for packages/cache's first implementation, since it fits ARCLUX's actual current clone behavior. Revisit git-diff based caching once/if packages/watcher's persistent-checkout behavior is implemented -- check packages/watcher's actual design before assuming it keeps repos around long-term.
