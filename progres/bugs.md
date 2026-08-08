@@ -233,3 +233,9 @@ package.json's typecheck script ran plain 'tsc --noEmit' from repo root, breakin
 ## 2026-08-07 — Dead theme/globals.css, stale PROGRES.md.bak, duplicate lockfile
 
 Found and removed 3 leftover files during a routine check: apps/web/theme/globals.css (0 bytes, never imported anywhere -- app/globals.css at a different path is the one actually wired into layout.tsx), PROGRES.md.bak (outdated pre-split/pre-translate backup, superseded by progres/PROGRES-*.md), and package-lock.json (project uses pnpm per pnpm-workspace.yaml, having both lockfiles risks dependency drift -- added package-lock.json to .gitignore).
+
+## 2026-08-08 — CI failing: react types not found in error.tsx files
+
+**Status:** Not Started
+
+6 app/**/error.tsx files fail typecheck with 'Could not find a declaration file for module react'. Pre-existing on main, unrelated to docs/security-coc-badge PR. Needs investigation next session.
