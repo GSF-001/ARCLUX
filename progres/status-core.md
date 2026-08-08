@@ -420,3 +420,21 @@ elsewhere in this doc (typecheck alone isn't sufficient evidence).
 - `detectUnusedExports.ts`/`detectOrphanFiles.ts` not updated to consult
   `getEntryModuleIds()` yet, so the entry-file false-positive caveat
   still applies
+
+## 2026-08-08 — ManifestRegistry wired into pipeline.ts
+
+**Status:** Done
+
+8 manifest parsers (packageJson, goMod, cargoToml, gemfile, composer, csproj, gradle, pom, requirements) now registered and consumed via manifestRegistry.detectDependencies() in analyzeRepository(). New 'dependencies' field on AnalyzeRepositoryResult. Fixes bug logged earlier today: manifest parsing was implemented but 100% dead code, never called by anything.
+
+## 2026-08-08 — parseRequirements.ts implemented
+
+**Status:** Done
+
+Python requirements.txt manifest parser added, following parseGemfile.ts's line-based regex pattern. Handles name, one version specifier, comments, environment markers, option flags.
+
+## 2026-08-08 — packages/cache: fileCache, repositoryCache, graphCache built but NOT wired
+
+**Status:** In Progress
+
+3 of 5 cache files implemented (fileCache.ts content-hash based per-file, repositoryCache.ts + graphCache.ts sharing a repo-level fingerprint). None are called from engine/pipeline.ts yet -- still standalone, unlike the manifest registry which is now wired in. Next session: wire these into buildIndex.ts (fileCache) and pipeline.ts (repositoryCache/graphCache), or decide this isn't worth doing yet.
