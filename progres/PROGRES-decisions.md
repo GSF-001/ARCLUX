@@ -272,6 +272,8 @@ The Contributors section (contrib.rocks avatar grid) was intentionally removed f
 
 ## 2026-08-07 — Next up: graph LOD (level-of-detail) rendering
 
+> **[STATUS UPDATE, 2026-08-08]: this plan is now implemented.** See "UPDATE: Graph LOD rendering — implemented" below.
+
 **Status:** In Progress
 
 Discussed but not yet started: extend the zoomScale-gating pattern already used for the impact halo (GraphNode.tsx, MIN_ZOOM_FOR_HALO) to also gate label/icon visibility at low zoom, reducing DOM/render load when zoomed out on large graphs. Rough plan discussed: very low zoom (<0.5) hides icon+label entirely (node becomes a plain dot), mid zoom (0.5-1) keeps current behavior (label only on select/hover), high zoom (>=1) optionally always shows labels for high-importance nodes. Checked reactflow-ref's Stress example for a reference pattern first -- it's a performance benchmarking harness, not an LOD implementation (React Flow handles this internally, not via example code), so no direct pattern to borrow. This is a natural extension of existing code (GraphNode.tsx's opacity={isSelected || isHovered ? ...} pattern at the label render, ~line 104), not a new subsystem. Prioritized as step 1 of 3 general performance directions discussed (graph viewer LOD/canvas rendering, pipeline parallelization+caching, new analysis features) -- graph viewer was picked first since it's the most immediately felt by users and doesn't overlap with collaborator-assigned work (call graph is assigned to xcontcom via issue #50).
@@ -300,3 +302,9 @@ NEXT STEPS for actually implementing packages/cache (not done yet):
 3. memoryCache.ts -- in-memory layer (fast, non-persistent), likely sits in front of an optional on-disk persisted cache, need to decide if disk persistence is in scope for v1 or a later phase.
 4. Add a CACHE_FORMAT_VERSION-style constant so future cache shape changes don't silently return corrupt results to old cache format.
 5. Zero code written yet -- this entry is the research/design summary only.
+
+## 2026-08-08 — UPDATE: Graph LOD rendering — implemented
+
+**Status:** Done
+
+Both steps of the LOD plan are done and visually verified in-browser by the user: step 1 (icon gating below zoomScale 0.5) and step 2 (label gating, same threshold, plus always-show labels for high-importance nodes above zoomScale 1.5). Node radius scaling at low zoom (the optional 3rd idea mentioned in the original plan) was not implemented -- current LOD (icon+label gating) was sufficient. Considered done for now; revisit radius scaling later only if a real repo shows it's still needed.
