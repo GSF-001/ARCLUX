@@ -239,3 +239,9 @@ Found and removed 3 leftover files during a routine check: apps/web/theme/global
 **Status:** Not Started
 
 6 app/**/error.tsx files fail typecheck with 'Could not find a declaration file for module react'. Pre-existing on main, unrelated to docs/security-coc-badge PR. Needs investigation next session.
+
+## 2026-08-08 — 10 pre-existing lint errors surfaced after turbo fix
+
+**Status:** Not Started
+
+CI lint step now runs (was crashing before due to missing turbo.json). Reveals real errors: vendor-ui/aceternity/text-generate-effect.tsx and card-hover-effect.tsx (prefer-const, missing useEffect deps, unused var 'idx'), app/api/analyze/route.ts#L56 (unused '_repository'). Not fixed yet -- separate task from the CI config fix.
