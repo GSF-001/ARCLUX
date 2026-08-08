@@ -63,6 +63,27 @@ export function buildDependencyGraph(repository: Repository): DependencyGraph {
         type: "import",
       });
     }
+
+    // Same-package/same-scope implicit dependencies (Go, Java -- see
+    // parseGo.ts/parseJava.ts's scopeId, resolveSameScopeDependencies.ts).
+    // These never appear in module.imports since there's no import
+    // statement for them at all, so they need their own pass here or
+    // the graph renders these files as disconnected islands even
+    // though they genuinely depend on each other. Fixes the bug where
+    // e.g. a Java repo like spring-boot shows all its file nodes with
+    // zero edges between them.
+    for (const implicitId of module.implicitDependencies) {
+      if (!moduleIds.has(implicitId)) continue;
+      if (seenTargets.has(implicitId)) continue; // already covered by an explicit import
+      seenTargets.add(implicitId);
+
+      edges.push({
+        id: `${module.id}->${implicitId}`,
+        source: module.id,
+        target: implicitId,
+        type: "import",
+      });
+    }
   }
 
   // Note: external package nodes are added by resolveExports.ts / a future pass,
