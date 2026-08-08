@@ -328,3 +328,9 @@ Revised understanding: ARCLUX's cache is more likely to help in two different wa
 2. A git-diff strategy only makes sense later, once packages/watcher is doing persistent incremental watching (a repo checked out once, kept around, re-diffed on change) -- not for the current one-shot clone-analyze-cleanup flow.
 
 Practical next step: prioritize a content-hash based cache (ContentStrategy-style) for packages/cache's first implementation, since it fits ARCLUX's actual current clone behavior. Revisit git-diff based caching once/if packages/watcher's persistent-checkout behavior is implemented -- check packages/watcher's actual design before assuming it keeps repos around long-term.
+
+## 2026-08-08 — packages/cache: 3 of 5 files done
+
+**Status:** In Progress
+
+fileCache.ts (content-hash based, per-ParsedFile), repositoryCache.ts (fingerprint-based, per-Repository), graphCache.ts (same fingerprint, per-DependencyGraph) all implemented and typechecked. Both repositoryCache.ts and graphCache.ts share the same fingerprint scheme (computeRepositoryFingerprint in repositoryCache.ts, derived from sorted FileInfo.hash) so they invalidate together. None wired into engine/pipeline.ts yet -- that's a separate step. Remaining: CacheProvider.ts (orchestrator) and memoryCache.ts (unclear if it's a distinct generic layer or redundant with the three content-hash caches already built -- needs more thought).

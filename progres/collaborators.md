@@ -41,3 +41,9 @@
 <!-- Move entries here once merged, keep the same format, add:
 - **Merged**: PR #N, date
 -->
+
+## 2026-08-08 — mwakidenis contributed CITATION.cff unprompted
+
+**Status:** Done
+
+4th active collaborator independently added CITATION.cff (Citation File Format) before being assigned anything. Linked it from README's License section. Assigned issue #147 (apps/web/hooks stubs) separately the same day.

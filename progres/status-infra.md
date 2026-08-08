@@ -346,3 +346,9 @@ Created scripts/log-progress.sh: appends a dated ## YYYY-MM-DD — title entry t
 ## 2026-08-06 — Repo config tooling added
 
 Added .github/PULL_REQUEST_TEMPLATE.md, .github/CODEOWNERS (verified against actual GitHub collaborator list via gh api repos/.../collaborators, not guessed), .gitmessage (commit message template), .githooks/pre-commit (blocks commits that add an undated header to progres/PROGRES-*.md), .editorconfig, .github/workflows/ci.yml (typecheck/lint/test on PR), and merged new sections into the existing CONTRIBUTING.md rather than overwriting it.
+
+## 2026-08-08 — progres/PROGRES-*.md files renamed, drop redundant prefix
+
+**Status:** Done
+
+progres/PROGRES-bugs.md etc renamed to progres/bugs.md etc (folder name already gives context, prefix was redundant). Updated all references across PROGRES.md, README.md, TOOLING.md, QUICKSTART.md, progres/README.md, and scripts/log-progress.sh (which builds the filename dynamically from category).
