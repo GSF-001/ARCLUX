@@ -50,6 +50,16 @@ const MIN_ZOOM_FOR_HALO = 1;
 // the fuller plan this is step 1 of.
 const MIN_ZOOM_FOR_ICON = 0.5;
 
+// LOD step 2: below this zoom, labels never render even on hover/select
+// -- matches the icon threshold so a fully zoomed-out node is just a
+// plain dot with no text. Above MIN_ZOOM_FOR_ALWAYS_LABEL, high-importance
+// nodes (same threshold as the impact halo's medium tier) show their
+// label always, not just on hover/select, since at that zoom level
+// there's room and it helps scanning for important files without
+// clicking each node.
+const MIN_ZOOM_FOR_LABEL = 0.5;
+const MIN_ZOOM_FOR_ALWAYS_LABEL = 1.5;
+
 function getImpactHaloRadius(importCount: number): number | null {
   if (importCount > IMPACT_HIGH_THRESHOLD) return 14;
   if (importCount >= IMPACT_MEDIUM_THRESHOLD) return 9;
@@ -109,18 +119,24 @@ export function GraphNode({
           className="pointer-events-none"
         />
       )}
-      {(isSelected || isHovered) && (
-        <text
-          x={radius + 6}
-          y={4}
-          fontSize={11}
-          fontFamily="monospace"
-          fill="#EDEDED"
-          className="pointer-events-none select-none"
-        >
-          {node.label}
-        </text>
-      )}
+      {(() => {
+        if (zoomScale < MIN_ZOOM_FOR_LABEL) return null;
+        const alwaysShow =
+          zoomScale >= MIN_ZOOM_FOR_ALWAYS_LABEL && importCount >= IMPACT_MEDIUM_THRESHOLD;
+        if (!isSelected && !isHovered && !alwaysShow) return null;
+        return (
+          <text
+            x={radius + 6}
+            y={4}
+            fontSize={11}
+            fontFamily="monospace"
+            fill="#EDEDED"
+            className="pointer-events-none select-none"
+          >
+            {node.label}
+          </text>
+        );
+      })()}
     </g>
   );
 }
