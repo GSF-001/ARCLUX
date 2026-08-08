@@ -1,7 +1,7 @@
 # ARCLUX — Progress Summary
 
 > At the start of any Claude and dev, read ALL of these, not just this file:
-> `cat PROGRES.md progres/PROGRES-status-core.md progres/PROGRES-status-detectors.md progres/PROGRES-status-web.md progres/PROGRES-status-infra.md progres/PROGRES-status-backlog.md progres/PROGRES-bugs.md progres/PROGRES-decisions.md progres/PROGRES-gotchas.md progres/PROGRES-collaborators.md`
+> `cat PROGRES.md progres/status-core.md progres/status-detectors.md progres/status-web.md progres/status-infra.md progres/status-backlog.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`
 > This file alone is just an index -- it has almost no actual project
 > history in it anymore. Skipping the other 4 means missing most of what's
 > been learned about this codebase.
@@ -42,15 +42,15 @@ Next.js page but forgot to register the route").
 
 This file used to contain everything. It's now split for readability:
 
-- [progres/PROGRES-status-core.md](progres/PROGRES-status-core.md) — status: pipeline, parser, indexer, graph, impact, incremental
-- [progres/PROGRES-status-detectors.md](progres/PROGRES-status-detectors.md) — status: detectors
-- [progres/PROGRES-status-web.md](progres/PROGRES-status-web.md) — status: web (apps/web, graph viewer, vendor-ui, theme)
-- [progres/PROGRES-status-infra.md](progres/PROGRES-status-infra.md) — status: CLI, collaborator tooling, testing, cleanup, dogfood
-- [progres/PROGRES-status-backlog.md](progres/PROGRES-status-backlog.md) — status: backlog
-- [progres/PROGRES-bugs.md](progres/PROGRES-bugs.md) — a real bug was found in already-written code, and what the fix was
-- [progres/PROGRES-decisions.md](progres/PROGRES-decisions.md) — "we chose X over Y, here's why" -- design/architecture calls, not bugs
-- [progres/PROGRES-gotchas.md](progres/PROGRES-gotchas.md) — environment/tooling traps that aren't bugs in ARCLUX's own code (Termux quirks, tsconfig path resolution, Webpack config, package version pinning, terminal/paste issues)
-- [progres/PROGRES-collaborators.md](progres/PROGRES-collaborators.md) — who's assigned to what, check before assuming a file is unclaimed
+- [progres/status-core.md](progres/status-core.md) — status: pipeline, parser, indexer, graph, impact, incremental
+- [progres/status-detectors.md](progres/status-detectors.md) — status: detectors
+- [progres/status-web.md](progres/status-web.md) — status: web (apps/web, graph viewer, vendor-ui, theme)
+- [progres/status-infra.md](progres/status-infra.md) — status: CLI, collaborator tooling, testing, cleanup, dogfood
+- [progres/status-backlog.md](progres/status-backlog.md) — status: backlog
+- [progres/bugs.md](progres/bugs.md) — a real bug was found in already-written code, and what the fix was
+- [progres/decisions.md](progres/decisions.md) — "we chose X over Y, here's why" -- design/architecture calls, not bugs
+- [progres/gotchas.md](progres/gotchas.md) — environment/tooling traps that aren't bugs in ARCLUX's own code (Termux quirks, tsconfig path resolution, Webpack config, package version pinning, terminal/paste issues)
+- [progres/collaborators.md](progres/collaborators.md) — who's assigned to what, check before assuming a file is unclaimed
 
 ### Where does my update go? (quick decision guide)
 
@@ -80,7 +80,7 @@ built", or a "next step", don't just log a new status entry and move on
    -- the plan/reasoning stays as historical context, the pointer just
    stops it from being mistaken for still-pending work.
 
-**Still not sure which status file? Put it in PROGRES-status-core.md.**
+**Still not sure which status file? Put it in status-core.md.**
 A slightly-misfiled status entry costs nothing; agonizing over the perfect
 category wastes a turn. Nobody needs to re-sort these files -- they're
 read together via the cat command above anyway.

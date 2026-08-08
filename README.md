@@ -32,7 +32,7 @@ What is solid right now:
 - Verified against large real-world repositories (microsoft/vscode, facebook/react, vitejs/vite) in addition to internal fixtures
 
 What is not there yet:
-- Parsers for Go and Java exist but don't yet capture same-package/same-directory relationships that don't use explicit imports (a documented design gap, see `progres/PROGRES-decisions.md`)
+- Parsers for Go and Java exist but don't yet capture same-package/same-directory relationships that don't use explicit imports (a documented design gap, see `progres/decisions.md`)
 - Parsers for Rust, C#, C++, PHP, Ruby (dependency-manifest parsing exists for several of these; source-code parsing does not yet)
 - Framework convention rules beyond a starting Next.js rule
 - Real search (`/api/search` is a filename-only stopgap)

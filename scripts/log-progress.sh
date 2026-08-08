@@ -29,7 +29,7 @@ if [ "${1:-}" = "close-plan" ]; then
   NEW_TITLE="$4"
   BODY="$5"
 
-  FILE="progres/PROGRES-${CATEGORY}.md"
+  FILE="progres/${CATEGORY}.md"
 
   if [ ! -f "$FILE" ]; then
     echo "ERROR: $FILE nggak ada. Cek nama kategori."
@@ -95,7 +95,7 @@ if [ "${1:-}" = "set-status" ]; then
   TITLE_MATCH="$3"
   NEW_STATUS="$4"
 
-  FILE="progres/PROGRES-${CATEGORY}.md"
+  FILE="progres/${CATEGORY}.md"
 
   if [ ! -f "$FILE" ]; then
     echo "ERROR: $FILE nggak ada. Cek nama kategori."
@@ -164,7 +164,7 @@ TITLE="$2"
 BODY="$3"
 STATUS="${4:-Not Started}"
 
-FILE="progres/PROGRES-${CATEGORY}.md"
+FILE="progres/${CATEGORY}.md"
 
 if [ ! -f "$FILE" ]; then
   echo "ERROR: $FILE nggak ada. Cek nama kategori."

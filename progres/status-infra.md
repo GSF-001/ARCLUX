@@ -278,7 +278,7 @@ hasn't started work on either file yet (confirmed: grep for
 RawCall/ResolvedCall in types.ts still returns 0 matches). Marking
 should happen once actual work begins there, not preemptively.
 
-Also this session: added progres/PROGRES-collaborators.md (new
+Also this session: added progres/collaborators.md (new
 category file tracking who's assigned to what) and updated PROGRES.md's
 index to include it - both the read-all-files cat command and the
 "where does my update go" decision guide now cover 5 categories, not 4.
@@ -287,7 +287,7 @@ Merged via PR #72 (collaborators file) and #73 (marker script).
 ## 2026-08-06 — Update - collaborator marker system self-tested, bug found and fixed
 
 Ran a real end-to-end self-test of the collaborator marking system
-built last session (PROGRES-collaborators.md + checkCollaboratorMarkers.ts):
+built last session (collaborators.md + checkCollaboratorMarkers.ts):
 filed issue #75 (scripts/benchmark.ts, assigned to GSF-001 as a test
 subject), ran the detection script, added the marker comment, ran again
 to confirm it disappeared from the missing-marker list. Full loop
@@ -331,9 +331,9 @@ table without re-running it first.
 ## 2026-08-06 — PROGRES-status.md split into 5 topic files
 
 `progres/PROGRES-status.md` (1257 lines, single file) split into:
-`PROGRES-status-core.md`, `PROGRES-status-detectors.md`,
-`PROGRES-status-web.md`, `PROGRES-status-infra.md`,
-`PROGRES-status-backlog.md`. Split by line-range mapping, verified via
+`status-core.md`, `status-detectors.md`,
+`status-web.md`, `status-infra.md`,
+`status-backlog.md`. Split by line-range mapping, verified via
 line-count assertion before writing (no gaps/overlaps). Old file deleted.
 Root `PROGRES.md` index updated to reference the 5 new files in both the
 preamble `cat` command and the "quick decision guide" section (previously

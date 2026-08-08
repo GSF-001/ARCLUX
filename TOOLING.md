@@ -16,15 +16,15 @@ category:
 
 | File | Contents |
 |---|---|
-| `PROGRES-status-core.md` | Status: pipeline, parser, indexer, graph, impact, incremental |
-| `PROGRES-status-detectors.md` | Status: detectors |
-| `PROGRES-status-web.md` | Status: apps/web, graph viewer, vendor-ui, theme |
-| `PROGRES-status-infra.md` | Status: CLI, collaborator tooling, testing, cleanup, dogfood |
-| `PROGRES-status-backlog.md` | Backlog |
-| `PROGRES-bugs.md` | Bugs found in ARCLUX's own code + their fixes |
-| `PROGRES-decisions.md` | Design/architecture decisions ("we chose X over Y, because...") |
-| `PROGRES-gotchas.md` | Tooling/environment traps (Termux, tsconfig, Webpack, etc) — NOT bugs in ARCLUX's code |
-| `PROGRES-collaborators.md` | Who's assigned to what |
+| `status-core.md` | Status: pipeline, parser, indexer, graph, impact, incremental |
+| `status-detectors.md` | Status: detectors |
+| `status-web.md` | Status: apps/web, graph viewer, vendor-ui, theme |
+| `status-infra.md` | Status: CLI, collaborator tooling, testing, cleanup, dogfood |
+| `status-backlog.md` | Backlog |
+| `bugs.md` | Bugs found in ARCLUX's own code + their fixes |
+| `decisions.md` | Design/architecture decisions ("we chose X over Y, because...") |
+| `gotchas.md` | Tooling/environment traps (Termux, tsconfig, Webpack, etc) — NOT bugs in ARCLUX's code |
+| `collaborators.md` | Who's assigned to what |
 
 The root `PROGRES.md` is just an index + "quick decision guide" for
 figuring out which file an entry belongs in.
@@ -46,7 +46,7 @@ scripts/log-progress.sh bugs "Fix parser crash on empty file" "TypeScript parser
 
 ### Closing out an old plan -- use close-plan
 
-If progres/PROGRES-decisions.md has an old entry that says "planned",
+If progres/decisions.md has an old entry that says "planned",
 "not yet built", or "next step", and you just finished that work, don't
 just add a new status entry -- the old entry will look pending forever
 if left untouched.
