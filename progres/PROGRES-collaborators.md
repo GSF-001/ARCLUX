@@ -29,6 +29,13 @@
 - **Assigned**: date
 -->
 
+### mwakidenis — issue #147
+- **Task**: Implement 3 remaining apps/web/hooks stubs
+- **Files**: `apps/web/hooks/useClipboard.ts`, `useCommandPalette.ts`, `useMediaQuery.ts`
+- **Status**: not started
+- **Assigned**: 2026-08-07
+- **Note**: 4th active collaborator, first assignment. Also independently added CITATION.cff (unprompted, unassigned contribution) before this. Profile suggests frontend/React-heavy background, picked this task to match.
+
 ## Completed
 
 <!-- Move entries here once merged, keep the same format, add:
