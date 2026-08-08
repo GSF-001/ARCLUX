@@ -357,10 +357,10 @@ apps/web/features/graph/useGraph.ts implemented as a thin re-export of GraphProv
 
 ## 2026-08-07 — README fixes: pnpm run dev, Contributors section clarified
 
-Fixed a leftover 'npm run dev' instruction in README.md's web dashboard section (earlier npm->pnpm cleanup only caught 'npm install', missed this). Also: Contributors section was intentionally removed by user via direct GitHub edit -- a later session mistook this for accidental damage and restored it, then reverted after user clarified it was intentional. See PROGRES-decisions.md for the full context so this doesn't happen a third time.
+Fixed a leftover 'npm run dev' instruction in README.md's web dashboard section (earlier npm->pnpm cleanup only caught 'npm install', missed this). Also: Contributors section was intentionally removed by user via direct GitHub edit -- a later session mistook this for accidental damage and restored it, then reverted after user clarified it was intentional. See decisions.md for the full context so this doesn't happen a third time.
 
 ## 2026-08-08 — LOD step 2: label gating done
 
 **Status:** In Progress
 
-GraphNode.tsx now gates label visibility on zoom level, matching the icon LOD from step 1: labels hidden below zoomScale 0.5, always shown above 1.5 for high-importance nodes (importCount >= IMPACT_MEDIUM_THRESHOLD), unchanged (hover/select only) in between. Not yet visually verified in-browser -- user will check separately. See PROGRES-decisions.md's LOD entry for the full 3-step plan; step 3 (node radius scaling at low zoom + visual verification) still open.
+GraphNode.tsx now gates label visibility on zoom level, matching the icon LOD from step 1: labels hidden below zoomScale 0.5, always shown above 1.5 for high-importance nodes (importCount >= IMPACT_MEDIUM_THRESHOLD), unchanged (hover/select only) in between. Not yet visually verified in-browser -- user will check separately. See decisions.md's LOD entry for the full 3-step plan; step 3 (node radius scaling at low zoom + visual verification) still open.
