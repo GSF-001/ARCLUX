@@ -5,9 +5,9 @@
   "license": "Apache-2.0",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "lint": "pnpm --filter web lint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p apps/web/tsconfig.json"
   },
