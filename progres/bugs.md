@@ -287,3 +287,9 @@ Real repos analyzed with Python showed zero graph edges despite files clearly im
 **Status:** Done
 
 Flagged by ManSio on the original issue thread after the detector was already merged. Two concrete failures: (1) case-sensitivity -- a directory named TEST/ (uppercase) matched no category at all. (2) no path-segment boundary awareness -- a directory named src-test could be misclassified since checks were plain substring containment rather than exact segment matching, silently downgrading a high-severity finding to medium. Fixed by lowercasing the full path once, splitting into segments, and checking exact set membership per segment instead of substring containment. Regression covered by two of the four new tests in tests/detector.test.ts.
+
+## 2026-08-09 — Python exports show 0 for ALL files, even ones with top-level classes (mscodebase-intelligence test)
+
+**Status:** Not Started
+
+Deeper investigation of the zero-edges issue: exportCount is 0 for literally every Python file analyzed, including files with obvious top-level class/function definitions (src/core/graph.py has 5+ top-level classes: Node, Edge, PropertyGraph, NodeLabel, EdgeType). This means the bug is in extractExports, not just resolvePath.ts -- resolvePath.ts can't create edges for exports that were never extracted in the first place. Needs investigation of parsePython.ts's extractExports function next session -- not yet checked.
