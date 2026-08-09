@@ -456,3 +456,9 @@ Python requirements.txt manifest parser added, following parseGemfile.ts's line-
 **Status:** In Progress
 
 3 of 5 cache files implemented (fileCache.ts content-hash based per-file, repositoryCache.ts + graphCache.ts sharing a repo-level fingerprint). None are called from engine/pipeline.ts yet -- still standalone, unlike the manifest registry which is now wired in. Next session: wire these into buildIndex.ts (fileCache) and pipeline.ts (repositoryCache/graphCache), or decide this isn't worth doing yet.
+
+## 2026-08-09 — packages/cache status correction: 3/5 done and wired, 2/5 still empty
+
+**Status:** In Progress
+
+Correction: a draft progress entry from another session claimed 'no code written for packages/cache yet' -- that's outdated. Actual status: fileCache.ts, repositoryCache.ts, graphCache.ts are all implemented AND wired into buildIndex.ts/pipeline.ts (confirmed via grep -- getCachedRepository/getCachedGraph are actively called). CacheProvider.ts and memoryCache.ts are still 8-line stubs (confirmed via cat), unclear if still needed given the 3 content-hash caches already cover the main use cases.
