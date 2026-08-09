@@ -293,3 +293,9 @@ Flagged by ManSio on the original issue thread after the detector was already me
 **Status:** Not Started
 
 Deeper investigation of the zero-edges issue: exportCount is 0 for literally every Python file analyzed, including files with obvious top-level class/function definitions (src/core/graph.py has 5+ top-level classes: Node, Edge, PropertyGraph, NodeLabel, EdgeType). This means the bug is in extractExports, not just resolvePath.ts -- resolvePath.ts can't create edges for exports that were never extracted in the first place. Needs investigation of parsePython.ts's extractExports function next session -- not yet checked.
+
+## 2026-08-09 — parsePython.ts: exports:[] on line 207 is inside catch block -- need to check if exception is silently thrown
+
+**Status:** Not Started
+
+Traced further: return { file, imports, exports, warnings } at the normal path DOES call extractExports() correctly. The exports:[] seen is only in the catch block (parse failure fallback). Need to check: is getPythonRuntime() or parser.parse() throwing silently for mscodebase-intelligence's files? Check warnings array in actual API response next -- if warnings has a 'Failed to parse' message, that confirms it. Not checked yet.
