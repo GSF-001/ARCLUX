@@ -43,6 +43,13 @@
 - **Assigned**: 2026-08-08
 - **Note**: 5th active collaborator. Came in via a detailed GitHub comment (not a cold invite) — starred the repo, asked sharp questions about incremental re-analysis, and suggested this exact detector idea based on real experience building mscodebase-intelligence (a mature MCP codebase-intelligence server for Zed, 1032 tests, 13.9k+ lines in src/core/ alone). Delivered a complete, well-reasoned first PR (detectAmbiguousSymbolResolution.ts) same-day, following existing repo patterns without being asked. Added to CODEOWNERS 2026-08-09 based on that first PR's quality.
 
+### ManSio — issue #186
+- **Task**: Fix Python repos showing zero graph edges (resolvePath.ts likely doesn't handle Python's dotted import style)
+- **Files**: `packages/graph/resolvePath.ts`, `packages/parser/python/parsePython.ts`
+- **Status**: not started
+- **Assigned**: 2026-08-09
+- **Note**: 2nd task for ManSio, picked to match their import-resolution/code-intelligence expertise (same domain as mscodebase-intelligence).
+
 ## Removed from CODEOWNERS (not from assignments)
 
 Alitindrawan24, xcontcom, and svSeniorEngineer removed as default PR
