@@ -36,6 +36,13 @@
 - **Assigned**: 2026-08-07
 - **Note**: 4th active collaborator, first assignment. Also independently added CITATION.cff (unprompted, unassigned contribution) before this. Profile suggests frontend/React-heavy background, picked this task to match.
 
+### ManSio — issue #176
+- **Task**: Design + implement a shadow/duplicate symbol definition detector
+- **Files**: New file under `packages/detectors/` (exact name TBD by ManSio)
+- **Status**: not started
+- **Assigned**: 2026-08-08
+- **Note**: 5th active collaborator. Came in via a detailed GitHub comment (not a cold invite) — starred the repo, asked sharp questions about incremental re-analysis, and suggested this exact detector idea based on real experience building mscodebase-intelligence (a mature MCP codebase-intelligence server for Zed, 1032 tests, 13.9k+ lines in src/core/ alone). Deliberately NOT added to CODEOWNERS yet -- want to see this first PR before granting default-reviewer access, even though the background looks strong.
+
 ## Completed
 
 <!-- Move entries here once merged, keep the same format, add:
