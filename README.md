@@ -18,8 +18,6 @@ Dependency graph, impact analysis, and structural convention checking for your c
 -----
 
 [](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
-main
-
 
 ## Documentation
 
