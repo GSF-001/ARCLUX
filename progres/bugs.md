@@ -269,3 +269,9 @@ Now that CI's lint step actually runs (previously crashed before reaching it), r
 **Status:** Not Started
 
 Confirmed: parseGemfile.ts, parseCargoToml.ts, parseGoMod.ts, parseComposer.ts, parsePackageJson.ts, parseCsproj.ts, parseGradlePom.ts, and now parseRequirements.ts all implement ManifestParser correctly but NONE are referenced anywhere outside their own file -- no ManifestRegistry equivalent to ParserRegistry (for LanguageParser) exists. Dependency-manifest parsing is effectively 100% dead code right now, despite several manifest parsers being 'done'. Needs a ManifestRegistry (or similar wiring into detectRepositoryMeta.ts, per ManifestParserInterface.ts's own doc comment mentioning that file) before any of this has real effect.
+
+## 2026-08-09 — Python repos show zero graph edges (mscodebase-intelligence test)
+
+**Status:** Not Started
+
+parsePython.ts registered correctly, extractImports() exists. But analyzing a real Python repo (ManSio/mscodebase-intelligence) shows zero edges despite files clearly importing each other. parsePython IS registered in pipeline.ts. Suspect resolvePath.ts fails to resolve Python-style imports (e.g. 'from src.core import X') to module IDs. Needs investigation next session -- check resolvePath.ts's import resolution logic against Python's import syntax specifically.
