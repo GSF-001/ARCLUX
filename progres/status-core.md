@@ -457,8 +457,19 @@ Python requirements.txt manifest parser added, following parseGemfile.ts's line-
 
 3 of 5 cache files implemented (fileCache.ts content-hash based per-file, repositoryCache.ts + graphCache.ts sharing a repo-level fingerprint). None are called from engine/pipeline.ts yet -- still standalone, unlike the manifest registry which is now wired in. Next session: wire these into buildIndex.ts (fileCache) and pipeline.ts (repositoryCache/graphCache), or decide this isn't worth doing yet.
 
+docs/correct-cache-status
+## 2026-08-09 — packages/cache status correction: 3/5 done and wired, 2/5 still empty
+
+**Status:** In Progress
+
+Correction: a draft progress entry from another session claimed 'no code written for packages/cache yet' -- that's outdated. Actual status: fileCache.ts, repositoryCache.ts, graphCache.ts are all implemented AND wired into buildIndex.ts/pipeline.ts (confirmed via grep -- getCachedRepository/getCachedGraph are actively called). CacheProvider.ts and memoryCache.ts are still 8-line stubs (confirmed via cat), unclear if still needed given the 3 content-hash caches already cover the main use cases.
+
+    ---
+    
 ## 2026-08-09 — resolveRoutes, resolveExports, resolveComponents/Hooks/Providers implemented
 
 **Status:** Not Started
 
 Five new files in packages/indexer/. resolveRoutes.ts detects Next.js App Router entry files (page/layout/route/etc under app/), exposes getEntryModuleIds() for detectors to skip false positives. resolveExports.ts walks re-export chains beyond the single hop ModuleInfo.resolvedReExports covers, with cycle detection. resolveComponents.ts, resolveHooks.ts, resolveProviders.ts are naming-convention heuristics only (PascalCase/use*/*Provider), explicitly documented as such since no parser extracts this from AST yet. None of the five are wired into buildIndex.ts pipeline yet -- results are not attached to ModuleInfo or Repository anywhere. tsc clean, not otherwise tested.
+    
+    main
