@@ -110,3 +110,9 @@ files (button.tsx etc.) not re-exported via components/ui/index.ts.
 detectUnusedExports still has false positives on React components (not
 yet using the detectEntryPoints filter like detectUnusedFiles does).
 
+
+## 2026-08-09 — detectAmbiguousSymbolResolution wired into doctor.ts; tests/detector.test.ts added
+
+**Status:** Done
+
+detectAmbiguousSymbolResolution existed since an earlier PR but was never called from doctor.ts or anywhere in the pipeline, so findings were invisible to users. Wired in following the same severity-aware print pattern as cycles/unusedExports. Also adds tests/detector.test.ts, the FIRST test file in the project (vitest, 4 tests, all passing): case-insensitive test-dir matching, src-test segment-boundary non-match, single-definition non-flagging, re-export skipping.

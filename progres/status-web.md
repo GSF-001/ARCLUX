@@ -364,3 +364,9 @@ Fixed a leftover 'npm run dev' instruction in README.md's web dashboard section 
 **Status:** Done
 
 GraphNode.tsx now gates label visibility on zoom level, matching the icon LOD from step 1: labels hidden below zoomScale 0.5, always shown above 1.5 for high-importance nodes (importCount >= IMPACT_MEDIUM_THRESHOLD), unchanged (hover/select only) in between. Not yet visually verified in-browser -- user will check separately. See decisions.md's LOD entry for the full 3-step plan; step 3 (node radius scaling at low zoom + visual verification) still open.
+
+## 2026-08-09 — Explorer.tsx tabbed panel + DependencyList.tsx, plus missing vendor component
+
+**Status:** Not Started
+
+apps/web/components/explorer/Explorer.tsx (new) wraps existing FileDetails.tsx and ImpactSummary.tsx plus new DependencyList.tsx into a tabbed panel (File/Dependencies/Impact). Zero prior consumers confirmed via grep before writing, so the prop shape is a new design, not an established contract. vendor-ui/shadcn/scroll-area.tsx was missing, blocking file-tree.tsx typecheck alongside a missing @radix-ui/react-accordion dependency; both fixed. tsc clean. Explorer.tsx not mounted on any page yet. Not visually verified in browser.
