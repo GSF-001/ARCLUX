@@ -334,3 +334,11 @@ Practical next step: prioritize a content-hash based cache (ContentStrategy-styl
 **Status:** In Progress
 
 fileCache.ts (content-hash based, per-ParsedFile), repositoryCache.ts (fingerprint-based, per-Repository), graphCache.ts (same fingerprint, per-DependencyGraph) all implemented and typechecked. Both repositoryCache.ts and graphCache.ts share the same fingerprint scheme (computeRepositoryFingerprint in repositoryCache.ts, derived from sorted FileInfo.hash) so they invalidate together. None wired into engine/pipeline.ts yet -- that's a separate step. Remaining: CacheProvider.ts (orchestrator) and memoryCache.ts (unclear if it's a distinct generic layer or redundant with the three content-hash caches already built -- needs more thought).
+
+## 2026-08-09 — ARCHITECTURE_MAP.md added: explicit core/extension boundaries
+
+**Status:** Done
+
+Added ARCHITECTURE_MAP.md defining which packages are CORE (engine, repository, shared -- changes need a decisions.md entry first) vs EXTENSION POINTS (parser, detectors, rules, cache -- safe to add to without discussion) vs FOUNDATION-NOT-WIRED (watcher, incremental). Also defines where AI/intelligence-layer work (semantic search, RAG, embeddings, agent tooling) should live: a new top-level package consuming ARCLUX's structural outputs, not woven into core packages.
+
+Motivated by onboarding ManSio (5th collaborator), whose own project (mscodebase-intelligence) is a much more elaborate codebase-intelligence system -- graph RAG, agentic search, embeddings, LSP bridge, 1000+ tests. Real risk identified: a skilled collaborator coming from an overengineered project has a natural tendency to keep adding intelligence layers to whatever codebase they touch, which could slowly pull ARCLUX away from its current strength (disciplined scope, verified against real repos) toward matching that complexity. This isn't a judgment on ManSio -- his first PR (detectAmbiguousSymbolResolution.ts) was excellent, well-scoped, and followed existing patterns exactly. The boundary is proactive, not reactive to any actual problem yet.
