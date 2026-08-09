@@ -32,6 +32,7 @@ import { detectIndexFiles } from "../../packages/detectors/detectIndexFiles";
 import { detectLayerViolation } from "../../packages/detectors/detectLayerViolation";
 import { detectDeadCode } from "../../packages/detectors/detectDeadCode";
 import { detectEntryPoints } from "../../packages/detectors/detectEntryPoints";
+import { detectAmbiguousSymbolResolution } from "../../packages/detectors/detectAmbiguousSymbolResolution";
 
 export function registerDoctorCommand(program: Command): void {
   program
@@ -56,6 +57,7 @@ export function registerDoctorCommand(program: Command): void {
         const layerViolations = detectLayerViolation(repository);
         const deadCode = detectDeadCode(repository);
         const entryPoints = detectEntryPoints(repository);
+        const ambiguousSymbols = detectAmbiguousSymbolResolution(repository);
 
         const total =
           cycles.length +
@@ -66,7 +68,8 @@ export function registerDoctorCommand(program: Command): void {
           sharedModules.length +
           indexFiles.length +
           layerViolations.length +
-          deadCode.length;
+          deadCode.length +
+          ambiguousSymbols.length;
         // entryPoints intentionally excluded from `total` / exit code —
         // it's informational (confirms known-good files), not an issue.
 
@@ -151,6 +154,18 @@ export function registerDoctorCommand(program: Command): void {
           p.log.warn(`${deadCode.length} dead code ${deadCode.length === 1 ? "candidate" : "candidates"} found:`);
           for (const f of deadCode) {
             p.log.message(`  ${f.filePath} \u2014 ${f.message}`);
+          }
+        }
+
+        if (ambiguousSymbols.length > 0) {
+          p.log.warn(
+            `${ambiguousSymbols.length} ambiguous ${ambiguousSymbols.length === 1 ? "symbol" : "symbols"} found (same name resolves to multiple definitions):`
+          );
+          for (const f of ambiguousSymbols) {
+            p.log.message(`  [${f.severity}] ${f.symbolName} \u2014 ${f.reason}`);
+            for (const d of f.definitions) {
+              p.log.message(`    ${d.modulePath}:${d.line} (${d.category})`);
+            }
           }
         }
 
