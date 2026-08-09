@@ -45,10 +45,10 @@
 
 ### ManSio — issue #186
 - **Task**: Fix Python repos showing zero graph edges (resolvePath.ts likely doesn't handle Python's dotted import style)
-- **Files**: `packages/graph/resolvePath.ts`, `packages/parser/python/parsePython.ts`
-- **Status**: not started
+- **Files**: `packages/graph/resolvePath.ts`
+- **Status**: Done, merged via PR #192
 - **Assigned**: 2026-08-09
-- **Note**: 2nd task for ManSio, picked to match their import-resolution/code-intelligence expertise (same domain as mscodebase-intelligence).
+- **Note**: 2nd task for ManSio. Confirmed root cause (resolvePath.ts didn't recognize dotted Python module paths, not a parsePython.ts issue) before writing the fix, and checked for side effects on JS/TS repos (lodash.get-style names) before shipping. Also independently caught 2 issues in their own earlier PR (#176): categorize() wasn't wired into doctor.ts, and had case-sensitivity + path-segment-boundary bugs. Both fixed via PR #193.
 
 ## Removed from CODEOWNERS (not from assignments)
 
