@@ -38,8 +38,8 @@
 
 ### ManSio — issue #176
 - **Task**: Design + implement a shadow/duplicate symbol definition detector
-- **Files**: New file under `packages/detectors/` (exact name TBD by ManSio)
-- **Status**: not started
+- **Files**: `packages/detectors/detectAmbiguousSymbolResolution.ts`
+- **Status**: PR merged (feat/ambiguous-symbol-detector)
 - **Assigned**: 2026-08-08
 - **Note**: 5th active collaborator. Came in via a detailed GitHub comment (not a cold invite) — starred the repo, asked sharp questions about incremental re-analysis, and suggested this exact detector idea based on real experience building mscodebase-intelligence (a mature MCP codebase-intelligence server for Zed, 1032 tests, 13.9k+ lines in src/core/ alone). Delivered a complete, well-reasoned first PR (detectAmbiguousSymbolResolution.ts) same-day, following existing repo patterns without being asked. Added to CODEOWNERS 2026-08-09 based on that first PR's quality.
 
