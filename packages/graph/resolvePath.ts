@@ -80,6 +80,30 @@ export function resolvePath(
   const siblingResolved = tryResolveInternal(siblingCandidate, knownFiles);
   if (siblingResolved) return siblingResolved;
 
+  // Python dotted absolute imports: `import src.core.embedder` or
+  // `from src.core import embedder` both produce a source string like
+  // "src.core.embedder" (dots, not slashes). JS/TS never uses dots as
+  // path separators, so a bare specifier containing dots is unambiguously
+  // a Python dotted module path. Convert dots → slashes and try from
+  // repo root before giving up and treating it as an external package.
+  //
+  // We only do this when the source contains a dot that isn't a leading
+  // dot (relative imports like "." and "..pkg" are already handled above
+  // by the startsWith(".") branch).
+  if (importSource.includes(".") && !importSource.startsWith(".")) {
+    const dottedAsPath = importSource.replace(/\./g, "/");
+    // Try from repo root first (absolute dotted import: `import src.core.X`)
+    const rootResolved = tryResolveInternal(dottedAsPath, knownFiles);
+    if (rootResolved) return rootResolved;
+    // Try relative to importer dir (package-relative: `from utils.helpers import X`
+    // when utils/ is a sibling of the importer)
+    const relResolved = tryResolveInternal(
+      posix.normalize(posix.join(importerDir, dottedAsPath)),
+      knownFiles
+    );
+    if (relResolved) return relResolved;
+  }
+
   const parts = importSource.split("/");
   const packageName = importSource.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
   return { type: "external", packageName };
