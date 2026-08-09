@@ -275,3 +275,15 @@ Confirmed: parseGemfile.ts, parseCargoToml.ts, parseGoMod.ts, parseComposer.ts, 
 **Status:** Not Started
 
 parsePython.ts registered correctly, extractImports() exists. But analyzing a real Python repo (ManSio/mscodebase-intelligence) shows zero edges despite files clearly importing each other. parsePython IS registered in pipeline.ts. Suspect resolvePath.ts fails to resolve Python-style imports (e.g. 'from src.core import X') to module IDs. Needs investigation next session -- check resolvePath.ts's import resolution logic against Python's import syntax specifically.
+
+## 2026-08-09 — Python dotted absolute imports silently dropped in resolvePath.ts
+
+**Status:** Done
+
+Real repos analyzed with Python showed zero graph edges despite files clearly importing each other. Root cause (found by ManSio, issue #186): parsePython.ts correctly extracts dotted import strings like src.core.embedder, but resolvePath.ts only recognized relative paths and slash-based specifiers, so any bare specifier containing a dot fell through to the external-package branch and the edge was silently dropped. Fixed by converting dots to slashes and trying both repo-root and importer-relative resolution before falling back to external. Side effect confirmed harmless: a bare specifier like lodash.get now also hits this branch, tries lodash/get.py, fails, falls through to external as before -- no-op for JS/TS repos. Merged via PR #192, closes #186.
+
+## 2026-08-09 — categorize() in detectAmbiguousSymbolResolution used case-sensitive substring matching, not segment matching
+
+**Status:** Done
+
+Flagged by ManSio on the original issue thread after the detector was already merged. Two concrete failures: (1) case-sensitivity -- a directory named TEST/ (uppercase) matched no category at all. (2) no path-segment boundary awareness -- a directory named src-test could be misclassified since checks were plain substring containment rather than exact segment matching, silently downgrading a high-severity finding to medium. Fixed by lowercasing the full path once, splitting into segments, and checking exact set membership per segment instead of substring containment. Regression covered by two of the four new tests in tests/detector.test.ts.

@@ -62,3 +62,9 @@ Merging a PR on GitHub right after git push sometimes merges an earlier commit o
 ## 2026-08-06 — Stray branch-name text landed inside PROGRES.md content
 
 Found literal lines 'split/progres-status', '----', and 'main' sitting inside PROGRES.md's prose (not as code/comments) after a merge -- looked like terminal output or branch names got pasted into a file edit by mistake. Always grep a file for suspicious bare words after any merge that touches a shared doc, not just diff --stat.
+
+## 2026-08-09 — npm install failed with corrupted lockfile; package.json still declares pnpm+turbo
+
+**Status:** Not Started
+
+npm install was failing repo-wide with "Cannot read properties of null (reading matches)". Fixed via rm -rf node_modules package-lock.json, npm cache clean --force, npm install. Separately: package.json currently declares packageManager pnpm@9.15.0 -- project uses pnpm as established in TOOLING.md, this npm troubleshooting was likely done by a session unaware of that. Flagging so a future session does not assume npm without checking TOOLING.md first.
