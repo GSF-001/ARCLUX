@@ -165,8 +165,18 @@ function extractExports(root: TSNode, warnings: string[]): RawExport[] {
 
   try {
     for (let i = 0; i < root.namedChildren.length; i++) {
-      const node = root.namedChildren[i];
+      let node = root.namedChildren[i];
       if (!node) continue;
+
+      // Decorated class/function (e.g. @dataclass, @app.route) is wrapped
+      // in a decorated_definition node -- the actual class_definition /
+      // function_definition sits as its child, not as a sibling at root
+      // level. Without unwrapping this, every decorated top-level
+      // definition is silently skipped (root export count seen as 0 on
+      // files that are mostly @dataclass classes).
+      if (node.type === "decorated_definition") {
+        node = node.childForFieldName("definition") ?? node;
+      }
 
       if (node.type === "function_definition" || node.type === "class_definition") {
         const name = node.childForFieldName("name");
