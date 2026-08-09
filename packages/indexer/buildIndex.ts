@@ -13,6 +13,7 @@ import { loadAliasConfig } from "./resolveAliases";
 import { resolveSameScopeDependencies, type ScopedFile } from "./resolveSameScopeDependencies";
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
+import { getCachedParsedFile, setCachedParsedFile } from "../cache/fileCache";
 import { ArcluxError } from "../shared/errors";
 import type { RepositoryMeta, ModuleInfo, ParsedFile, ResolvedImport } from "../shared/types";
 
@@ -63,7 +64,10 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
       });
     }
 
-    const parsed = await parser.parse(file, content);
+    const cached = getCachedParsedFile(file.relativePath, content);
+    const parsed = cached ?? (await parser.parse(file, content));
+    if (!cached) setCachedParsedFile(file.relativePath, content, parsed);
+
     parsedByPath.set(file.relativePath, parsed);
     contentByPath.set(file.relativePath, content);
   }

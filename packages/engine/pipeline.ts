@@ -20,6 +20,9 @@ import { parseCommonJs } from "../parser/javascript/parseCommonJs";
 import { parseGo } from "../parser/go/parseGo";
 import { parseJava } from "../parser/java/parseJava";
 import { manifestRegistry } from "../parser/core/ManifestRegistry";
+import { scanFiles } from "../parser/core/scanFiles";
+import { computeRepositoryFingerprint, getCachedRepository, setCachedRepository } from "../cache/repositoryCache";
+import { getCachedGraph, setCachedGraph } from "../cache/graphCache";
 import { parsePackageJson } from "../parser/config/parsePackageJson";
 import { parseGoMod } from "../parser/go/parseGoMod";
 import { parseCargoToml } from "../parser/rust/parseCargoToml";
@@ -126,24 +129,45 @@ export async function analyzeRepository(
       analyzedAt: new Date().toISOString(),
     };
 
-    let repository: Repository;
-    try {
-      repository = await buildIndex({ rootPath: localPath, meta });
-    } catch (err) {
-      throw isArcluxError(err)
-        ? err
-        : new ArcluxError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
-    }
+    // Cheap up-front scan (hashing only, not parsing) to compute a
+    // fingerprint of the repo's current content. If it matches what we
+    // cached last time for this repoUrl+branch, skip the expensive
+    // buildIndex/buildDependencyGraph work entirely. See
+    // progres/decisions.md's cache research entries for why this is
+    // content-hash based rather than git-diff based.
+    const scannedFiles = scanFiles(localPath);
+    const fingerprint = computeRepositoryFingerprint(scannedFiles);
 
+    let repository: Repository;
     let graph: DependencyGraph;
-    try {
-      graph = buildDependencyGraph(repository);
-    } catch (err) {
-      throw new ArcluxError({
-        code: "GRAPH_BUILD_FAILED",
-        message: "Graph construction failed",
-        cause: err,
-      });
+
+    const cachedRepository = getCachedRepository(options.repoUrl, meta.defaultBranch, fingerprint);
+    const cachedGraph = getCachedGraph(options.repoUrl, meta.defaultBranch, fingerprint);
+
+    if (cachedRepository && cachedGraph) {
+      repository = cachedRepository;
+      graph = cachedGraph;
+    } else {
+      try {
+        repository = await buildIndex({ rootPath: localPath, meta });
+      } catch (err) {
+        throw isArcluxError(err)
+          ? err
+          : new ArcluxError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
+      }
+
+      try {
+        graph = buildDependencyGraph(repository);
+      } catch (err) {
+        throw new ArcluxError({
+          code: "GRAPH_BUILD_FAILED",
+          message: "Graph construction failed",
+          cause: err,
+        });
+      }
+
+      setCachedRepository(options.repoUrl, meta.defaultBranch, fingerprint, repository);
+      setCachedGraph(options.repoUrl, meta.defaultBranch, fingerprint, graph);
     }
 
     return {
