@@ -43,6 +43,15 @@
 - **Assigned**: 2026-08-08
 - **Note**: 5th active collaborator. Came in via a detailed GitHub comment (not a cold invite) — starred the repo, asked sharp questions about incremental re-analysis, and suggested this exact detector idea based on real experience building mscodebase-intelligence (a mature MCP codebase-intelligence server for Zed, 1032 tests, 13.9k+ lines in src/core/ alone). Deliberately NOT added to CODEOWNERS yet -- want to see this first PR before granting default-reviewer access, even though the background looks strong.
 
+## Removed from CODEOWNERS (not from assignments)
+
+Alitindrawan24, xcontcom, and svSeniorEngineer removed as default PR
+reviewers on 2026-08-09 after 3-5 days with zero commits/PRs against
+their assigned issues (#53, #3, #50, #2). They keep their issue
+assignments -- this only removes their default-reviewer status so PRs
+don't sit waiting on review from inactive accounts. Re-add to
+CODEOWNERS if/when they become active again.
+
 ## Completed
 
 <!-- Move entries here once merged, keep the same format, add:
