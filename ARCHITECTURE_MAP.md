@@ -6,49 +6,39 @@ a new capability (search, intelligence layers, RAG, etc), not just
 fixing/completing an existing stub.
 
 ## Layers
-packages/
-├── engine/       ← CORE — the orchestrator (analyzeRepository()).
-│                    Changes here need a decisions.md entry first, not
-│                    just a PR. This is the one file everything else
-│                    depends on; breaking it breaks everything.
-├── repository/   ← CORE — the domain model (Repository, ModuleInfo).
-│                    Same rule as engine/: discuss before changing shape.
-├── shared/       ← CORE — types.ts is the shape of everything else.
-│                    Adding fields is usually fine; changing/removing
-│                    existing ones needs a decisions.md entry.
-├── parser/       ← EXTENSION POINT — new language support goes here,
-│                    one subfolder per language, implementing
-│                    LanguageParser. Safe to add to without discussion.
-├── indexer/      ← CORE-ADJACENT — resolves imports into a Repository.
-│                    New resolver passes (routes, components, etc) are
-│                    fine to add; changing buildIndex.ts's pass order
-│                    needs care, later passes depend on earlier ones.
-├── graph/        ← CORE-ADJACENT — turns a Repository into a
-│                    DependencyGraph. New graph VARIANTS (buildCallGraph,
-│                    buildImportGraph) are extensions; changing
-│                    buildDependencyGraph.ts's core shape is not.
-├── detectors/    ← EXTENSION POINT — each detector is independent,
-│                    takes a Repository, returns findings. Safe to add
-│                    a new one without discussion (see
-│                    detectAmbiguousSymbolResolution.ts for the pattern).
-├── impact/       ← CORE-ADJACENT — consumer/dependent tracing.
-├── cache/        ← EXTENSION POINT — additive by nature, a cache
-│                    miss should always fall back to the uncached path.
-├── search/       ← MOSTLY STUB — see progres/status-*.md for current
-│                    state before assuming this is a place to add
-│                    semantic search / embeddings / RAG. See "Where
-│                    intelligence layers go" below.
-├── watcher/,
-├── incremental/  ← FOUNDATION, NOT WIRED IN YET — see decisions.md,
-│                    don't build on top of these until they're
-│                    actually connected to engine/pipeline.ts.
-└── rules/        ← EXTENSION POINT — one subfolder per framework,
-independent convention checks.
-apps/
-├── cli/          ← SURFACE — consumes engine/, no business logic here.
-└── web/          ← SURFACE — consumes engine/ via API routes, no
-business logic in components. Graph rendering
-(SVG/d3-force) lives here, not in packages/graph/.
+
+### packages/ — CORE (changes need a decisions.md entry first)
+
+- `engine/` — the orchestrator (`analyzeRepository()`). Everything else depends on this.
+- `repository/` — the domain model (`Repository`, `ModuleInfo`).
+- `shared/` — `types.ts` is the shape of everything. Adding fields is fine; changing/removing needs a decisions.md entry.
+
+### packages/ — CORE-ADJACENT (care needed, but not a full stop)
+
+- `indexer/` — resolves imports into a `Repository`. New resolver passes (routes, components, etc) are fine to add. Changing `buildIndex.ts`'s pass order needs care — later passes depend on earlier ones.
+- `graph/` — turns a `Repository` into a `DependencyGraph`. New graph variants (`buildCallGraph`, `buildImportGraph`) are extensions. Changing `buildDependencyGraph.ts`'s core shape is not.
+- `impact/` — consumer/dependent tracing.
+
+### packages/ — EXTENSION POINTS (safe to add to without discussion)
+
+- `parser/` — new language support, one subfolder per language, implements `LanguageParser`.
+- `detectors/` — each detector is independent, takes a `Repository`, returns findings. See `detectAmbiguousSymbolResolution.ts` for the pattern.
+- `cache/` — additive by nature. A cache miss should always fall back to the uncached path.
+- `rules/` — one subfolder per framework, independent convention checks.
+
+### packages/ — MOSTLY STUB
+
+- `search/` — see `progres/status-*.md` for current state before assuming this is the place to add semantic search/embeddings/RAG. See "Where intelligence layers go" below.
+
+### packages/ — FOUNDATION, NOT WIRED IN YET
+
+- `watcher/`, `incremental/` — see `decisions.md`. Don't build on top of these until they're actually connected to `engine/pipeline.ts`.
+
+### apps/ — SURFACES (consume packages/, no business logic here)
+
+- `cli/` — consumes `engine/`.
+- `web/` — consumes `engine/` via API routes. Graph rendering (SVG/d3-force) lives here, not in `packages/graph/`.
+
 ## Where intelligence/AI layers go
 
 ARCLUX's job is building an accurate STRUCTURAL model of a codebase:
