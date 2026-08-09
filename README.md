@@ -1,7 +1,8 @@
 # ARCLUX🐳
+![alt text](https://github.com/GSF-001/ARCLUX/blob/main/apps/web/public/IMG-20260809-WA0028.jpg?raw=true)
+
+---
 ### OPEN SOURCE
-
-
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
 
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
