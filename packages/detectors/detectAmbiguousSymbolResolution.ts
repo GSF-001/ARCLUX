@@ -22,9 +22,9 @@ import type { Repository } from "../repository/Repository";
 // ─────────────────────────────────────────────
 
 export type SymbolCategory =
-  | "source"    // src/, lib/, core/, app/ — real production code
-  | "test"      // test/, __tests__/, *.test.ts, *.spec.ts
-  | "example"   // examples/, demo/
+  | "source"    // src/, lib/, core/, app/, apps/ — real production code
+  | "test"      // test/, tests/, __tests__/, *.test.ts, *.spec.ts
+  | "example"   // examples/, example/, demo/
   | "fixture"   // fixtures/, __fixtures__/
   | "mock"      // mocks/, __mocks__/
   | "script"    // scripts/, tools/
@@ -66,8 +66,37 @@ export interface AmbiguousSymbolFinding {
 // Internal helpers
 // ─────────────────────────────────────────────
 
+const TEST_DIR_SEGMENTS = new Set(["test", "tests", "__tests__"]);
+const TEST_FILE_SUFFIXES = [
+  ".test.ts",
+  ".test.tsx",
+  ".test.js",
+  ".spec.ts",
+  ".spec.tsx",
+  ".spec.js",
+];
+const FIXTURE_DIR_SEGMENTS = new Set(["fixtures", "__fixtures__"]);
+const MOCK_DIR_SEGMENTS = new Set(["mocks", "__mocks__"]);
+const EXAMPLE_DIR_SEGMENTS = new Set(["examples", "example", "demo"]);
+const SCRIPT_DIR_SEGMENTS = new Set(["scripts", "tools"]);
+const SOURCE_DIR_SEGMENTS = new Set(["src", "lib", "core", "app", "apps"]);
+
 /**
  * Assign a category to a module based on its relative path.
+ *
+ * FIXED (previously reported): the original implementation matched via
+ * plain substring (`p.includes("/test/")`), which has two bugs:
+ *   1. Case-sensitive — "TEST/foo.ts" never matched any category.
+ *   2. No segment-boundary awareness — a directory named "src-test" doesn't
+ *      contain the substring "/test/" (no matching slash before "test"),
+ *      so it silently fell through category checks. Conversely, a nested
+ *      substring like "app" inside an unrelated folder name could spuriously
+ *      match a check like `.includes("/app/")` in other edge cases.
+ *
+ * Fix: lowercase the whole path once, split into path segments, and check
+ * SET MEMBERSHIP of exact segment names — not substring containment. File
+ * suffix checks (test/spec) are matched against the lowercased filename
+ * directly, which is inherently boundary-safe (endsWith).
  *
  * Checks are ordered from most-specific to least-specific so that a path
  * like "src/__tests__/foo.test.ts" is classified as "test" (it matches the
@@ -77,53 +106,24 @@ export interface AmbiguousSymbolFinding {
  * source definition.
  */
 function categorize(relativePath: string): SymbolCategory {
-  const p = relativePath.replace(/\\/g, "/"); // normalise Windows paths
+  const normalized = relativePath.replace(/\\/g, "/").toLowerCase();
+  const segments = normalized.split("/");
+  const fileName = segments[segments.length - 1] ?? "";
 
-  // Test files — check both directory names AND file suffixes
   if (
-    p.includes("/test/") ||
-    p.includes("/tests/") ||
-    p.includes("/__tests__/") ||
-    p.endsWith(".test.ts") ||
-    p.endsWith(".test.tsx") ||
-    p.endsWith(".test.js") ||
-    p.endsWith(".spec.ts") ||
-    p.endsWith(".spec.tsx") ||
-    p.endsWith(".spec.js")
-  )
+    segments.some((seg) => TEST_DIR_SEGMENTS.has(seg)) ||
+    TEST_FILE_SUFFIXES.some((suffix) => fileName.endsWith(suffix))
+  ) {
     return "test";
+  }
 
-  // Fixtures
-  if (p.includes("/fixtures/") || p.includes("/__fixtures__/"))
-    return "fixture";
-
-  // Mocks
-  if (p.includes("/mocks/") || p.includes("/__mocks__/"))
-    return "mock";
-
-  // Examples / demos
-  if (
-    p.includes("/examples/") ||
-    p.includes("/example/") ||
-    p.includes("/demo/")
-  )
-    return "example";
-
-  // Scripts / tooling
-  if (p.includes("/scripts/") || p.includes("/tools/"))
-    return "script";
+  if (segments.some((seg) => FIXTURE_DIR_SEGMENTS.has(seg))) return "fixture";
+  if (segments.some((seg) => MOCK_DIR_SEGMENTS.has(seg))) return "mock";
+  if (segments.some((seg) => EXAMPLE_DIR_SEGMENTS.has(seg))) return "example";
+  if (segments.some((seg) => SCRIPT_DIR_SEGMENTS.has(seg))) return "script";
 
   // Real source — checked last so the test/fixture/mock overrides above win
-  if (
-    p.includes("/src/") ||
-    p.startsWith("src/") ||
-    p.includes("/lib/") ||
-    p.startsWith("lib/") ||
-    p.includes("/core/") ||
-    p.includes("/app/") ||
-    p.includes("/apps/")
-  )
-    return "source";
+  if (segments.some((seg) => SOURCE_DIR_SEGMENTS.has(seg))) return "source";
 
   return "other";
 }
@@ -154,17 +154,13 @@ export function detectAmbiguousSymbolResolution(
   repository: Repository,
   { includeDefaultExports = false }: { includeDefaultExports?: boolean } = {}
 ): AmbiguousSymbolFinding[] {
-  // symbolName -> list of (moduleId, relativePath, line, category)
   const byName = new Map<string, AmbiguousDefinition[]>();
 
   for (const module of repository.getAllModules()) {
     const category = categorize(module.file.relativePath);
 
     for (const exp of module.exports) {
-      // Re-exports are forwarding, not defining — skip them
       if (exp.kind === "re-export") continue;
-
-      // Default exports are universally multi-defined; skip unless opted in
       if (exp.kind === "default" && !includeDefaultExports) continue;
 
       const definition: AmbiguousDefinition = {
@@ -189,7 +185,6 @@ export function detectAmbiguousSymbolResolution(
     const nonSourceDefs = definitions.filter((d) => d.category !== "source");
 
     if (sourceDefs.length > 0 && nonSourceDefs.length > 0) {
-      // High: real source definition shadowed by test/example/fixture/mock/script
       const shadowCategories = [
         ...new Set(nonSourceDefs.map((d) => d.category)),
       ].join(", ");
@@ -201,7 +196,6 @@ export function detectAmbiguousSymbolResolution(
         definitions,
       });
     } else if (sourceDefs.length >= 2) {
-      // Medium: multiple definitions all in source paths
       findings.push({
         symbolName,
         severity: "medium",
@@ -209,7 +203,6 @@ export function detectAmbiguousSymbolResolution(
         definitions: sourceDefs,
       });
     } else if (definitions.length >= 2) {
-      // Low: multiple non-source definitions (test helper duplicated, etc.)
       findings.push({
         symbolName,
         severity: "low",
@@ -219,12 +212,7 @@ export function detectAmbiguousSymbolResolution(
     }
   }
 
-  // Sort: high first, then medium, then low; ties alphabetical by symbol name
-  const order: Record<AmbiguousSeverity, number> = {
-    high: 0,
-    medium: 1,
-    low: 2,
-  };
+  const order: Record<AmbiguousSeverity, number> = { high: 0, medium: 1, low: 2 };
 
   return findings.sort(
     (a, b) =>
