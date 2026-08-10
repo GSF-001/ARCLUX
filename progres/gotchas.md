@@ -74,3 +74,9 @@ npm install was failing repo-wide with "Cannot read properties of null (reading 
 **Status:** Done
 
 pnpm test -- --runInBand fails since Vitest 4.1.10 has no such option. Plain pnpm test is correct for this project: 5 test files passed, 23 tests passed.
+
+## 2026-08-11 — GraphFocusView.tsx and GraphProvider.tsx had not been read since the PROGRES.md entry marking them unverified in-browser
+
+**Status:** Done
+
+A much earlier decisions.md/status entry (GraphMenu consolidation session) explicitly flagged GraphFocusView.tsx as pushed near a chat context limit, typecheck-only, not visually verified in-browser. This session is the first time it was actually exercised by a real user against a real large-fan-in file (25 affected files) -- both bugs found (dead back-button icon, silent 12-item cap) were exactly the kind of thing a typecheck-only "looks done" status hides. Lesson: when a PROGRES entry says "not yet visually verified," treat any bug report against that component as plausible even if the code "looks" complete on read -- do not assume the component is solid just because it compiled and was merged.
