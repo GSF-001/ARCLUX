@@ -1,54 +1,104 @@
-# ARCLUX Roadmap
+# ARCLUX — Roadmap Blueprint
 
-Long-term direction, separate from decisions.md (which is "why we
-chose X over Y" for things already decided/done) and status-*.md
-(current implementation status). This file is where we're headed.
+> Long-term direction. Not decisions.md (why past choices were made),
+> not status-*.md (current implementation state). This is where
+> ARCLUX is headed, and why.
 
-## Core principle
+---
 
-ARCLUX stays a deterministic structural-truth engine — no AI/ML
-inside core packages. See ARCHITECTURE_MAP.md for the enforced
-boundary. Intelligence/semantic layers are welcome, but as a separate
-consumer package, not woven into engine/parser/graph/detectors.
+## Core Principle
 
-## Phase 0 — Reliability (in progress)
+**ARCLUX stays a deterministic structural-truth engine.**
+No AI/ML inside core packages — ever.
 
-- Python parsing/edges silent-failure bugs (wasm path root cause found
-  and fixed; some follow-up may still be needed by another session)
-- General "does the pipeline actually work against large real repos"
-  hardening
+Every fact ARCLUX reports must be traceable to real parsed code:
+an import statement, an export declaration, a resolved path.
+Not a guess. Not a probability. A fact.
 
-## Phase 1 — Structural search
+Intelligence/semantic layers are welcome — as a separate consumer
+package (`packages/intelligence/`), never woven into
+`engine/`, `parser/`, `graph/`, or `detectors/`.
+See `ARCHITECTURE_MAP.md` for the enforced boundary.
 
-Upgrade search from filename-matching (fuzzyScore.ts) to graph-aware:
-a match should surface not just the file, but its structural context
-(imports, exports, consumers, dependencies, affected routes) using
-data ARCLUX already computes (buildDependencyGraph, impact/*).
+---
 
-## Phase 2 — Architecture health score
+## Phase 0 — Reliability
+**Status: In Progress**
 
-Aggregate the 18 existing detectors into a single health view instead
-of a flat problem list: per-category scores (structural integrity,
-dependency hygiene, layer consistency, dead code, convention
-consistency) plus a ranked risk-areas list. Scores derived purely from
-detector findings -- no AI, no subjective weighting invented from
-nowhere.
+The foundation has to be trustworthy before anything gets built on it.
 
-## Phase 3 — Optional intelligence (not started, no urgency)
+- Python parsing/edges silent-failure bugs
+  (wasm path root cause found and fixed — follow-up verification
+  may still be needed)
+- Hardening: does the pipeline hold up against large real repos,
+  not just fixtures
 
-A new packages/intelligence/ package (see ARCHITECTURE_MAP.md) for
-anyone who wants to build semantic search / RAG / embeddings on top
-of ARCLUX's structural output. Not core team's priority -- open to
-contributions here (e.g. from ManSio) but not being pursued
-proactively.
+---
 
-## Phase 4 — External integrations (later, if ever)
+## Phase 1 — Structural Search
+**Status: Not Started**
 
-LSP bridge, MCP/agent interface, IDE integration. Deliberately last --
-bringing this in early risks blurring "who's the source of truth" for
-the parse -> index -> graph -> impact -> detect pipeline.
+Search today matches filenames (`fuzzyScore.ts`). That's not enough.
 
-## Vision items (no phase assigned, long-term)
+A match should surface structural context ARCLUX already computes:
+imports, exports, consumers, dependencies, affected routes —
+not just "here's a file with that name in it."
 
-- TUI (terminal UI) as a third consumer of engine/, alongside CLI and
-  web. See decisions.md's TUI entry for the original discussion.
+---
+
+## Phase 2 — Architecture Health Score
+**Status: Not Started**
+
+18 detectors already exist. Right now they produce a flat list:
+"17 problems found." That's a report, not a diagnosis.
+
+Turn detector findings into a health view:
+Structural integrity     94%
+Dependency hygiene        88%
+Layer consistency          91%
+Dead code                  97%
+Risk areas
+packages/auth  — 4 high fan-out modules
+packages/api   — circular dependency chain
+Every number here comes from real detector output.
+No AI-invented scoring, no subjective weighting from nowhere.
+
+---
+
+## Phase 3 — Optional Intelligence
+**Status: Not Started, no urgency**
+
+A new `packages/intelligence/` package for anyone who wants to build
+semantic search, embeddings, or RAG on top of ARCLUX's structural
+output. Open to contribution (e.g. from collaborators building their
+own intelligence layers elsewhere) — not a priority for the core team
+to build proactively.
+
+---
+
+## Phase 4 — External Integrations
+**Status: Later, if ever**
+
+LSP bridge, MCP/agent interface, IDE integration.
+
+Deliberately last. Bringing this in early risks blurring who owns
+the source of truth for parse → index → graph → impact → detect.
+
+---
+
+## Vision (no phase assigned)
+
+- **TUI** — a third consumer of `engine/`, alongside CLI and web.
+  Terminal-native, keyboard-driven. See `decisions.md` for the
+  original discussion.
+
+---
+
+## License
+
+This roadmap, like the rest of ARCLUX, is released under the
+Apache License 2.0. See [`LICENSE`](../LICENSE) at the repo root.
+
+Nothing here is a promise or a commitment — it's direction, not
+a contract. Phases can reorder, merge, or drop entirely as real
+usage teaches us something the plan didn't anticipate.
