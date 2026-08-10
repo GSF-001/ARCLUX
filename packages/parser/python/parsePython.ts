@@ -8,6 +8,7 @@
 
 import { createRequire } from "node:module";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import type { LanguageParser } from "../core/ParserInterface";
 import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/types";
 
@@ -62,14 +63,27 @@ export function getPythonRuntime(): Promise<PythonRuntime> {
     runtimePromise = (async () => {
       await Parser.init();
       const parser = new Parser();
-      // Resolve via package.json (not the .wasm file directly) -- resolving
-      // the .wasm path itself matches next.config.ts's `test: /\.wasm$/`
-      // webpack rule even with serverExternalPackages set, which rewrites
-      // the resolved value into a virtual "(rsc)/..." asset path instead
-      // of a real filesystem path, breaking Language.load() at runtime.
-      // package.json never matches that rule, so this sidesteps it.
-      const packageJsonPath = nodeRequire.resolve("tree-sitter-wasms/package.json");
-      const wasmPath = path.join(path.dirname(packageJsonPath), "out", "tree-sitter-python.wasm");
+      // nodeRequire.resolve() returns a path relative to the webpack
+      // bundle location instead of a real filesystem path when running
+      // inside Next.js's webpack runtime (confirmed via debug logging: it
+      // returned "../node_modules/..." instead of an absolute path,
+      // causing existsSync() to fail and Language.load() to throw a
+      // low-level WASM binding error with no useful stack trace). Reading
+      // the installed version from tree-sitter-wasms/package.json (which
+      // DOES resolve correctly -- only the .wasm's OWN resolve() call was
+      // broken) keeps this from silently drifting if the dependency is
+      // ever bumped, while still building the final path from
+      // process.cwd(), which Next.js keeps absolute and consistent with
+      // outputFileTracingRoot in next.config.ts.
+      const wasmPackageJson = JSON.parse(
+        readFileSync(nodeRequire.resolve("tree-sitter-wasms/package.json"), "utf-8")
+      ) as { version: string };
+      const wasmPath = path.join(
+        process.cwd(),
+        "../../node_modules/.pnpm",
+        `tree-sitter-wasms@${wasmPackageJson.version}`,
+        "node_modules/tree-sitter-wasms/out/tree-sitter-python.wasm"
+      );
       const language = await Language.load(wasmPath);
       parser.setLanguage(language);
       return { parser, language };

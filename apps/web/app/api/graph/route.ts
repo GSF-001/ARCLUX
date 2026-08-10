@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result.graph, { status: 200 });
   } catch (err) {
     if (isArcluxError(err)) {
-      return NextResponse.json({ error: err.message, code: err.code }, { status: 502 });
+      console.error("ArcluxError in /api/graph:", err.message, "cause:", err.cause);
+      return NextResponse.json({ error: err.message, code: err.code, cause: String(err.cause) }, { status: 502 });
     }
     console.error("Unexpected error in /api/graph:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
