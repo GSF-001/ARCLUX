@@ -28,17 +28,17 @@
 "use client";
 
 import { X, ArrowLeft, AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useGraphContext } from "./GraphProvider";
 import { getGraphNodeColor } from "@/theme/graphColors";
 import { getNodeIconPath } from "./nodeIcons";
 import type { GraphNode as GraphNodeData } from "@/packages/shared/types";
 
-const MAX_CARDS_PER_SIDE = 12;
-
 // Reuses the existing "hook" node color (#E06C75 dark) as the impact/
 // warning accent, rather than introducing a new color not in
 // theme/graphColors.ts's palette.
 const IMPACT_COLOR = "#E06C75";
+const INITIAL_VISIBLE = 30;
 
 function NodeIcon({ node, size = 16 }: { node: GraphNodeData; size?: number }) {
   const color = getGraphNodeColor(node.type, "dark");
@@ -87,7 +87,18 @@ function NodeCard({
 }
 
 export function GraphFocusView() {
-  const { graph, selectedNodeId, selectNode, isFocusPanelOpen, closeFocusPanel } = useGraphContext();
+  const { graph, selectedNodeId, selectNode, isFocusPanelOpen, closeFocusPanel, goBackFocus, canGoBack } = useGraphContext();
+
+  const [depsExpanded, setDepsExpanded] = useState(false);
+  const [dependentsExpanded, setDependentsExpanded] = useState(false);
+
+  // Collapse both sides again whenever the focused node changes, so
+  // navigating to a new file (via a card click or the back button)
+  // doesn't carry over a previous file's "show all" state.
+  useEffect(() => {
+    setDepsExpanded(false);
+    setDependentsExpanded(false);
+  }, [selectedNodeId]);
 
   const node = graph?.nodes.find((n) => n.id === selectedNodeId);
   if (!node || !graph || !isFocusPanelOpen) return null;
@@ -106,6 +117,15 @@ export function GraphFocusView() {
     <div className="absolute inset-4 z-20 flex flex-col overflow-hidden rounded-lg border border-neutral-800 bg-black/95 backdrop-blur-sm">
       <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
+          {canGoBack && (
+            <button
+              onClick={goBackFocus}
+              aria-label="Back to previous file"
+              className="shrink-0 rounded p-1 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
           <NodeIcon node={node} size={20} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-neutral-100">{node.label}</p>
@@ -127,7 +147,6 @@ export function GraphFocusView() {
         <div className="flex flex-col overflow-hidden">
           <div className="flex flex-col gap-0.5 border-b border-neutral-800 px-3 py-2.5">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
-              <ArrowLeft className="h-3 w-3" />
               This file needs ({dependencies.length})
             </div>
             <p className="text-[10px] text-neutral-600">Files {node.label} imports</p>
@@ -136,13 +155,16 @@ export function GraphFocusView() {
             {dependencies.length === 0 && (
               <p className="px-1 text-xs text-neutral-600">No outgoing dependencies.</p>
             )}
-            {dependencies.slice(0, MAX_CARDS_PER_SIDE).map((dep) => (
+            {(depsExpanded ? dependencies : dependencies.slice(0, INITIAL_VISIBLE)).map((dep) => (
               <NodeCard key={dep.id} node={dep} onClick={() => selectNode(dep.id)} />
             ))}
-            {dependencies.length > MAX_CARDS_PER_SIDE && (
-              <p className="px-1 pt-1 text-xs text-neutral-600">
-                +{dependencies.length - MAX_CARDS_PER_SIDE} more
-              </p>
+            {!depsExpanded && dependencies.length > INITIAL_VISIBLE && (
+              <button
+                onClick={() => setDepsExpanded(true)}
+                className="w-full px-1 pt-1 text-left text-xs text-neutral-400 hover:text-neutral-200 hover:underline"
+              >
+                +{dependencies.length - INITIAL_VISIBLE} more
+              </button>
             )}
           </div>
         </div>
@@ -159,13 +181,17 @@ export function GraphFocusView() {
             {dependents.length === 0 && (
               <p className="px-1 text-xs text-neutral-600">Nothing imports this file.</p>
             )}
-            {dependents.slice(0, MAX_CARDS_PER_SIDE).map((dep) => (
+            {(dependentsExpanded ? dependents : dependents.slice(0, INITIAL_VISIBLE)).map((dep) => (
               <NodeCard key={dep.id} node={dep} onClick={() => selectNode(dep.id)} accent />
             ))}
-            {dependents.length > MAX_CARDS_PER_SIDE && (
-              <p className="px-1 pt-1 text-xs text-neutral-600">
-                +{dependents.length - MAX_CARDS_PER_SIDE} more
-              </p>
+            {!dependentsExpanded && dependents.length > INITIAL_VISIBLE && (
+              <button
+                onClick={() => setDependentsExpanded(true)}
+                className="w-full px-1 pt-1 text-left text-xs hover:underline"
+                style={{ color: IMPACT_COLOR }}
+              >
+                +{dependents.length - INITIAL_VISIBLE} more
+              </button>
             )}
           </div>
         </div>

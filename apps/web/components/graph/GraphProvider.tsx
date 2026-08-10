@@ -8,7 +8,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { fetchGraph as fetchGraphData } from "@/lib/graph";
 import type { DependencyGraph, GraphNode as GraphNodeData } from "@/packages/shared/types";
 import type { GraphNodePosition } from "./GraphNode";
@@ -37,6 +37,16 @@ interface GraphContextValue {
   selectNode: (id: string | null) => void;
   isFocusPanelOpen: boolean;
   closeFocusPanel: () => void;
+  /** Stack of previously focused node ids, most recent last. Pushed to
+   * whenever selectNode() switches to a DIFFERENT node while one was
+   * already selected (navigating between focus cards), not on the
+   * initial selection or on selectNode(null). */
+  focusHistory: string[];
+  /** Pops the last entry off focusHistory and selects it, without
+   * re-pushing the node being navigated away from (that would make
+   * back/forward loop instead of unwind). No-op if history is empty. */
+  goBackFocus: () => void;
+  canGoBack: boolean;
   hoveredNodeId: string | null;
   setHoveredNodeId: (id: string | null) => void;
   transform: GraphTransform;
@@ -71,6 +81,12 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
   const [error, setError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isFocusPanelOpen, setIsFocusPanelOpen] = useState(false);
+  const [focusHistory, setFocusHistory] = useState<string[]>([]);
+  // Ref mirror of selectedNodeId so selectNode (a stable useCallback with
+  // an empty dep array) can read the CURRENT value without needing
+  // selectedNodeId in its deps -- avoids the callback identity changing on
+  // every selection, which several children rely on being stable.
+  const selectedNodeIdRef = useRef<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [transform, setTransform] = useState<GraphTransform>(DEFAULT_TRANSFORM);
   const [contextMenuNodeId, setContextMenuNodeId] = useState<string | null>(null);
@@ -108,8 +124,28 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
   // highlight survives the panel closing. Only selectNode(null) — clicking
   // empty canvas or Escape — clears both.
   const selectNode = useCallback((id: string | null) => {
+    const prev = selectedNodeIdRef.current;
+    if (id === null) {
+      // Deselecting (empty canvas click / Escape) starts a fresh browsing
+      // session -- old history no longer makes sense to "go back" into.
+      setFocusHistory([]);
+    } else if (prev !== null && prev !== id) {
+      setFocusHistory((h) => [...h, prev]);
+    }
+    selectedNodeIdRef.current = id;
     setSelectedNodeId(id);
     setIsFocusPanelOpen(id !== null);
+  }, []);
+
+  const goBackFocus = useCallback(() => {
+    setFocusHistory((h) => {
+      if (h.length === 0) return h;
+      const previousId = h[h.length - 1];
+      selectedNodeIdRef.current = previousId;
+      setSelectedNodeId(previousId);
+      setIsFocusPanelOpen(true);
+      return h.slice(0, -1);
+    });
   }, []);
 
   const closeFocusPanel = useCallback(() => {
@@ -145,6 +181,9 @@ export function GraphProvider({ repoUrl, branch, children }: GraphProviderProps)
     selectNode,
     isFocusPanelOpen,
     closeFocusPanel,
+    focusHistory,
+    goBackFocus,
+    canGoBack: focusHistory.length > 0,
     hoveredNodeId,
     setHoveredNodeId,
     transform,
