@@ -474,3 +474,88 @@ is local-only, awaiting review before any push/PR.
 - Verify's severity policy is untuned (LAB 2)
 - No cache for local-path analysis (LAB 3) — fine for now, revisit if
   slow on large repos
+
+## 2026-08-11 — PLANNED (not yet built) — LAB 4/5/6: Stable Core Contract, Engine/API boundary, External consumers
+
+**Status: planning only, ZERO code written.** This session (that built
+LAB 1/2/3 — see the entry above) ran near its context limit right as
+this was being scoped out, so it's recorded here as a plan for the
+*next* session to execute with full context, rather than started and
+left half-finished. Same discipline as the earlier "graph node visual
+impact indicator" plan in this file — plan fully, execute in a
+dedicated pass.
+
+**Do not skip straight to writing code from this plan.** The
+instruction that came with it, verbatim in spirit: map the current
+system before adding anything new.
+
+```
+CURRENT ARCLUX
+      ↓
+existing engine
+      ↓
+existing graph
+      ↓
+existing impact
+      ↓
+existing detectors
+      ↓
+existing CLI
+      ↓
+NEW BOUNDARIES
+      ↓
+diff / verify / policy
+```
+
+i.e. whoever picks this up should re-read pipeline.ts, graph/, impact/,
+detectors/, and the current CLI commands (including diff.ts and
+verify.ts from LAB 1/2) FIRST, confirm what's really there the same
+way LAB 1-3 did (direct file reads, not assumptions from old docs),
+THEN design the boundary — not the reverse.
+
+### LAB 4 — Stable Core Contract
+
+Goal: a single stable shape for `AnalysisResult`, `Graph`, `Impact`,
+`Issue`, `Rule` that CLI/API/future consumers all depend on, instead of
+each command reaching into `packages/*` internals directly (current
+state: e.g. `verify.ts` imports 10 individual detector functions +
+`RuleEngine` directly — works, but every consumer re-does this
+wiring).
+
+### LAB 5 — Engine/API boundary
+
+```
+CLI
+ ↓
+Engine
+ ↓
+Core
+```
+
+Formalize that CLI (and eventually API, IDE, etc — see LAB 6) only
+talks to an Engine layer, never to `packages/parser`, `packages/graph`,
+`packages/detectors` etc directly. `pipeline.ts`'s `analyzeRepository()`
+is already close to this for the analyze step (post-LAB-3 merge) — LAB
+5 is likely about extending that same pattern to diff/verify/detect,
+not introducing a new mechanism.
+
+### LAB 6 — External consumers
+
+CLI, IDE, CI, SDK — multiple consumers of the same Engine boundary from
+LAB 5. Not started, no design yet beyond the name.
+
+### Ground rule carried over from LAB 1-3, still applies
+
+- Experiment on a branch (`feat/*` or similar), never touch `main`
+  directly.
+- `main` stays exactly at `origin/main` until a reviewed PR merges —
+  confirmed true as of this entry: LAB 1/2/3 sat on
+  `feat/diff-lab1-mvp`, local-only, for the entire time they were being
+  built, and were only pushed (as a branch, not to main) once the user
+  explicitly decided to.
+- The workflow that worked for LAB 1-3 and should repeat for LAB 4-6:
+  code → test → (optionally) benchmark → if it breaks, reset the branch
+  and try again. Cheap to experiment because main is never at risk.
+- Confirm real file state before writing code (grep/cat, not memory of
+  old docs) — this caught the rule-stub gap (LAB 2) and the 2-vs-7
+  parser bug (LAB 3). Assume more gaps like that exist elsewhere.
