@@ -63,25 +63,23 @@ export function getPythonRuntime(): Promise<PythonRuntime> {
     runtimePromise = (async () => {
       await Parser.init();
       const parser = new Parser();
-      // nodeRequire.resolve() returns a path relative to the webpack
-      // bundle location instead of a real filesystem path when running
-      // inside Next.js's webpack runtime (confirmed via debug logging: it
-      // returned "../node_modules/..." instead of an absolute path,
-      // causing existsSync() to fail and Language.load() to throw a
-      // low-level WASM binding error with no useful stack trace). Reading
-      // the installed version from tree-sitter-wasms/package.json (which
-      // DOES resolve correctly -- only the .wasm's OWN resolve() call was
-      // broken) keeps this from silently drifting if the dependency is
-      // ever bumped, while still building the final path from
-      // process.cwd(), which Next.js keeps absolute and consistent with
-      // outputFileTracingRoot in next.config.ts.
-      const wasmPackageJson = JSON.parse(
-        readFileSync(nodeRequire.resolve("tree-sitter-wasms/package.json"), "utf-8")
-      ) as { version: string };
+      // nodeRequire.resolve() ITSELF returns a path relative to the
+      // webpack bundle location (not a real filesystem path) when running
+      // inside Next.js's webpack runtime -- confirmed via debug logging,
+      // and confirmed AGAIN when a later "cleanup" pass reintroduced
+      // nodeRequire.resolve() to read tree-sitter-wasms/package.json
+      // dynamically, silently regressing this exact bug. DO NOT call
+      // nodeRequire.resolve() anywhere in this function, for any file,
+      // including package.json -- it is not reliable in this runtime,
+      // full stop. Hardcoded version below (matches pnpm ls output);
+      // update PYTHON_WASM_VERSION if tree-sitter-wasms is ever bumped.
+      // Known limitation (tracked in gotchas): this path shape is
+      // pnpm-specific and will not work under npm/yarn.
+      const PYTHON_WASM_VERSION = "0.1.13";
       const wasmPath = path.join(
         process.cwd(),
         "../../node_modules/.pnpm",
-        `tree-sitter-wasms@${wasmPackageJson.version}`,
+        `tree-sitter-wasms@${PYTHON_WASM_VERSION}`,
         "node_modules/tree-sitter-wasms/out/tree-sitter-python.wasm"
       );
       const language = await Language.load(wasmPath);
