@@ -366,3 +366,111 @@ Cloned cytoscape.js (open source, unlike Obsidian which was considered but is cl
 **Status:** Not Started
 
 Source: GPT roadmap discussion after reviewing ARCLUX architecture map + file sizes, refined further after ManSio suggested keeping the two projects separate. Core decision: do not try to turn ARCLUX into MSCodeBase. ARCLUX stays parse -> index -> graph -> impact -> detect, verifiable and AI-free. Any semantic/RAG/embedding layer becomes packages/intelligence/, sitting ON TOP of Repository + DependencyGraph as a consumer, never inside core. Flow: Repository and DependencyGraph feed packages/intelligence, which then branches into semantic search, context builder, and optional RAG -- core stays the single source of truth underneath all three. Phased roadmap agreed: Phase 0 reliability (python edges -- already fixed this session, wasmPath pnpm-only portability -- still open, silent scan failures in scanFiles.ts -- still open, parser test coverage), Phase 1 structural search (graph-aware search: fuzzyScore.ts + buildImportGraph/ExportGraph/CallGraph already exist, extend GlobalSearch to return structural context -- imports/exports/consumers/routes -- not just filename matches), Phase 2 architecture intelligence (turn the 18 existing detectors into a scored health view -- structural integrity / dependency hygiene / layer consistency percentages derived from real detector output, not AI-generated), Phase 3 optional intelligence (packages/intelligence/ -- embeddings, semantic search, RAG, agent-facing tools -- explicitly deprioritized, not started until Phase 0-2 are solid), Phase 4 external integrations (LSP bridge, MCP/agent interface -- deferred, risk of blurring "who is the source of truth" if added too early).
+
+## 2026-08-11 — LAB 1/2/3 — diff, verify, and analyzeLocal/pipeline merge (all on feat/diff-lab1-mvp, NOT pushed yet)
+
+**Context**: after the ARIES→ARCLUX rename, the temptation was to treat
+the original ARIES blueprint (11 parsers, 9-layer event engine, full
+web UI) as a from-scratch spec — a "1 year project" framing. Decision
+made instead: ARCLUX already has ~80% of the needed machinery built.
+Cut scope into 3 small LABs that prove the existing pipeline works,
+rather than building new abstractions speculatively. See
+roadmap.md's "Core Principle" — this is that principle applied to
+process, not just architecture.
+
+### LAB 1 — `arclux diff <refA> <refB> [repoPath]`
+
+New files: `packages/diff/types.ts`, `gitDiff.ts`, `architecturalDiff.ts`,
+`apps/cli/diff.ts`. Registered in `apps/cli/index.ts`.
+
+**Honest scope limit, documented in architecturalDiff.ts's own header**:
+this does NOT build two separate dependency graphs (one at refA, one at
+refB) and diff them — that would require checking out each ref into a
+clean state and running the full pipeline twice, not built. What it
+DOES do: get changed-files list from `git diff --name-status` (cheap),
+then run existing `traceConsumers` against the CURRENT working tree for
+each changed file that still exists. Answers "what's affected by files
+that changed" using today's graph, not "did the graph itself differ."
+Upgrading to true dual-graph comparison is a separate, larger task.
+
+Verified working: tested against ARCLUX's own repo, `HEAD~5 HEAD`
+correctly traced GraphFocusView.tsx/GraphProvider.tsx changes to 9
+consumer files (GraphCanvas, GraphViewport, etc).
+
+### LAB 2 — `arclux verify [path]`
+
+New file: `apps/cli/verify.ts`. Registered in `apps/cli/index.ts`.
+
+Combines the same 10 detectors `doctor.ts` runs with `packages/rules/
+RuleEngine.ts`'s `runRules()`, into one PASS/FAIL verdict (exit code 0/1).
+
+**Important finding, confirmed by direct inspection (not assumed)**: of
+13 rule files across nextjs/react/nestjs/express/vite/electron, only
+`packages/rules/nextjs/requirePage.ts` (60 lines) is actually
+implemented. The other 12 are copyright-header-only stubs — 8 lines,
+zero `export` statement. `verify.ts`'s header comment documents this
+explicitly so a future session doesn't assume they're wired in.
+Rule/detectedFrameworks string matching confirmed working correctly
+(tested: `frameworks checked: nextjs, react` matched
+`appliesToFramework: "nextjs"` on requirePage without any mismatch).
+
+**Still not built**: severity policy is minimal — any detector finding
+OR any rule *error* fails the build; rule *warnings* are shown but
+don't fail it. Not yet tuned against real usage.
+
+### LAB 3 — merge `analyzeLocal.ts` into `pipeline.ts`
+
+This one wasn't a new feature — it closed a duplication gap that
+`analyzeLocal.ts`'s own header comment had already flagged ("once
+[pipeline.ts] refactor lands, THIS FILE should be deleted"). Confirmed
+via direct read that no parallel-session refactor had actually landed
+before doing this (git log showed no such merge to main).
+
+**Real bug found and fixed as a side effect of the merge**:
+`analyzeLocal.ts`'s `ensureParsersRegistered()` only registered
+`parseTs` and `parsePython` — 2 of pipeline.ts's 7 language parsers.
+Every CLI command (`diff`, `verify`, `doctor`, `impact`, `graph`,
+`analyze`, `config`) was silently never parsing JS/JSX/CommonJS/Go/Java
+files, only TS and Python, since analyzeLocal.ts was CLI's only entry
+point. Post-merge, all CLI commands go through the same
+`ensureParsersRegistered()` as the web/API remote flow (all 7 parsers +
+9 manifest parsers).
+
+**Also removed**: `packages/engine/analyzeRepository.ts` — was a
+copyright-header-only empty stub, confusingly named almost identically
+to the real `analyzeRepository()` function that lives in `pipeline.ts`.
+
+**API change**: `analyzeRepository()` in pipeline.ts now takes
+`{ repoUrl }` OR `{ localPath }` (throws if both or neither given).
+Remote-URL code path (`analyzeRemoteRepository`) is a direct extraction
+of the pre-existing clone→index→graph→cache→cleanup logic — unchanged
+behavior, just moved into its own function so the public
+`analyzeRepository()` can route to it or to the new
+`analyzeLocalPath()`. Web app / `/api/analyze` callers unaffected
+(still call with `{ repoUrl, branch }`, same shape as before).
+
+**No caching for local-path analysis** — deliberate, not an oversight.
+`repositoryCache.ts`/`graphCache.ts` are keyed by repoUrl+branch, which
+doesn't map to a bare local directory a developer is actively editing.
+Documented as a possible future gap if `arclux` commands feel slow on
+large local repos — not ruled out, just not built.
+
+Verified: `tsc --noEmit` clean (zero errors) after the merge touched 9
+files (pipeline.ts + 7 CLI commands + 2 deletions). `verify`/`diff`/
+`doctor` all re-tested working post-merge; detector counts shifted
+slightly (428→430 in `apps/web`) as expected from the additional files
+now in scope, not a regression.
+
+### Current state
+
+All 3 LABs committed to `feat/diff-lab1-mvp`, 3 commits
+(`43013a75`, `ccd1d5b8`, `3926d61f`). **Not pushed to origin.** Branch
+is local-only, awaiting review before any push/PR.
+
+### Open follow-ups, not done yet (don't assume these are handled)
+
+- True dual-graph diff (LAB 1's documented scope limit)
+- 12/13 empty rule stubs (LAB 2) — only requirePage is real
+- Verify's severity policy is untuned (LAB 2)
+- No cache for local-path analysis (LAB 3) — fine for now, revisit if
+  slow on large repos
