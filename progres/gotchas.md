@@ -68,3 +68,9 @@ Found literal lines 'split/progres-status', '----', and 'main' sitting inside PR
 **Status:** Not Started
 
 npm install was failing repo-wide with "Cannot read properties of null (reading matches)". Fixed via rm -rf node_modules package-lock.json, npm cache clean --force, npm install. Separately: package.json currently declares packageManager pnpm@9.15.0 -- project uses pnpm as established in TOOLING.md, this npm troubleshooting was likely done by a session unaware of that. Flagging so a future session does not assume npm without checking TOOLING.md first.
+
+## 2026-08-10 — Vitest does not support Jest-style --runInBand flag
+
+**Status:** Done
+
+pnpm test -- --runInBand fails since Vitest 4.1.10 has no such option. Plain pnpm test is correct for this project: 5 test files passed, 23 tests passed.
