@@ -13,7 +13,7 @@
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { analyzeLocalDirectory } from "./analyzeLocal";
+import { analyzeRepository } from "../../packages/engine/pipeline";
 
 export function registerConfigCommand(program: Command): void {
   program
@@ -22,7 +22,7 @@ export function registerConfigCommand(program: Command): void {
     .argument("[path]", "path to the repository root", ".")
     .action(async (targetPath: string) => {
       try {
-        const { meta } = await analyzeLocalDirectory(targetPath);
+        const { meta } = await analyzeRepository({ localPath: targetPath });
         p.log.info(`name: ${meta.name}`);
         p.log.info(`frameworks: ${meta.detectedFrameworks.join(", ") || "none detected"}`);
         p.log.info(`packageManager: ${meta.packageManager}`);

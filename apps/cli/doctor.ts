@@ -21,7 +21,7 @@
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { analyzeLocalDirectory } from "./analyzeLocal";
+import { analyzeRepository } from "../../packages/engine/pipeline";
 import { detectCircularDependency } from "../../packages/detectors/detectCircularDependency";
 import { detectUnusedExports } from "../../packages/detectors/detectUnusedExports";
 import { detectOrphanFiles } from "../../packages/detectors/detectOrphanFiles";
@@ -44,7 +44,7 @@ export function registerDoctorCommand(program: Command): void {
       spinner.start(`Running detectors on ${targetPath}`);
 
       try {
-        const { repository } = await analyzeLocalDirectory(targetPath);
+        const { repository } = await analyzeRepository({ localPath: targetPath });
         spinner.stop("Detectors finished");
 
         const cycles = detectCircularDependency(repository);

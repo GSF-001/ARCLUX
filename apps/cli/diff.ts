@@ -14,7 +14,7 @@
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { analyzeLocalDirectory } from "./analyzeLocal";
+import { analyzeRepository } from "../../packages/engine/pipeline";
 import { computeArchitecturalDiff } from "../../packages/diff/architecturalDiff";
 import type { ChangeStatus } from "../../packages/diff/types";
 
@@ -35,7 +35,7 @@ export function registerDiffCommand(program: Command): void {
       const spinner = p.spinner();
       spinner.start(`Analyzing diff between ${refA} and ${refB}`);
       try {
-        const { repository } = await analyzeLocalDirectory(repoPath);
+        const { repository } = await analyzeRepository({ localPath: repoPath });
 
         const result = computeArchitecturalDiff(repository, repoPath, refA, refB);
 

@@ -9,7 +9,7 @@
 import type { Command } from "commander";
 import { writeFileSync } from "node:fs";
 import * as p from "@clack/prompts";
-import { analyzeLocalDirectory } from "./analyzeLocal";
+import { analyzeRepository } from "../../packages/engine/pipeline";
 
 export function registerGraphCommand(program: Command): void {
   program
@@ -21,7 +21,7 @@ export function registerGraphCommand(program: Command): void {
       const spinner = p.spinner();
       spinner.start(`Building graph for ${targetPath}`);
       try {
-        const { graph } = await analyzeLocalDirectory(targetPath);
+        const { graph } = await analyzeRepository({ localPath: targetPath });
         spinner.stop("Graph built");
 
         if (options.output) {

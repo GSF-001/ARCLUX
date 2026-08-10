@@ -21,7 +21,7 @@
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { analyzeLocalDirectory } from "./analyzeLocal";
+import { analyzeRepository } from "../../packages/engine/pipeline";
 import { detectCircularDependency } from "../../packages/detectors/detectCircularDependency";
 import { detectUnusedExports } from "../../packages/detectors/detectUnusedExports";
 import { detectOrphanFiles } from "../../packages/detectors/detectOrphanFiles";
@@ -45,7 +45,7 @@ export function registerVerifyCommand(program: Command): void {
       spinner.start(`Verifying ${targetPath}`);
 
       try {
-        const { repository, meta } = await analyzeLocalDirectory(targetPath);
+        const { repository, meta } = await analyzeRepository({ localPath: targetPath });
 
         // Same 10 detectors doctor.ts runs (detectEntryPoints excluded on
         // purpose here too — it's informational, not a pass/fail signal).
