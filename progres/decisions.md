@@ -348,3 +348,9 @@ Motivated by onboarding ManSio (5th collaborator), whose own project (mscodebase
 **Status:** Not Started
 
 Idea discussed, not started: ARCLUX's engine/ (analyzeRepository()) already returns pure data (DependencyGraph, Repository) decoupled from any UI -- CLI and web dashboard are both just consumers of that same output. A TUI (terminal UI, think lazygit/htop-style keyboard-driven interface) would be a natural third consumer: same engine/, same data, different rendering layer. Candidate library: ink (React for terminal) or blessed, not researched yet. This is long-term vision, not scoped work -- no research done, no library chosen, no timeline. Revisit once core detector/parser coverage feels solid enough to justify a new surface.
+
+## 2026-08-10 — External review from ManSio (MSCodeBase) — 4 findings to verify
+
+**Status:** Not Started
+
+Collaborator ManSio reviewed parsePython.ts + scanFiles.ts, found 4 potential issues, NONE verified yet by us: (1) relative imports with leading dots 'from ..utils import X' may not resolve correctly if tree-sitter strips the dots before resolvePath.ts sees it — highest priority, likely to produce wrong edges on real repos. (2) parsePython.ts has zero test files, unlike Go/Rust parsers. (3) scanFiles.ts has catch{} blocks that silently drop unreadable files with no warning — same class as the wasm silent-failure gotcha. (4) wasmPath in parsePython.ts is hardcoded to a pnpm-specific node_modules path (.pnpm/tree-sitter-wasms@version/...) — will silently fail under npm/yarn installs. Next session: verify each against parsePython.ts/scanFiles.ts directly before fixing anything, per usual verification standard (cat/grep the actual code, don't just trust the review).

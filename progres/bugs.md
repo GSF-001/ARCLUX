@@ -325,3 +325,9 @@ Confirmed: resolving tree-sitter-wasms .wasm path directly matched next.config.t
 **Status:** Done
 
 A cycle was reported once per node still unresolved when the outer loop's for-of reached it -- a 2-node cycle produced 2 identical findings, a 3-node cycle produced 3. Fixed via canonicalizeCycle() (rotate to lexicographically smallest node) + a seenCycles dedup set. No interface changes. Reported and fixed by ManSio, landed with their test cases.
+
+## 2026-08-10 — nodeRequire.resolve() returns non-absolute path for tree-sitter-python.wasm inside Next.js webpack runtime
+
+**Status:** Done
+
+Root cause of graph.edges=0 across ALL Python repos in the browser, despite direct tsx testing showing the parser/resolvePath/buildDependencyGraph logic was correct (607 edges for mscodebase-intelligence). nodeRequire.resolve("tree-sitter-wasms/package.json") returns a path relative to the webpack bundle location, not a real filesystem path, when running inside Next.js dev/build (confirmed via step-by-step console.error debugging: it returned "../node_modules/..." which existsSync() correctly reported as not existing). This made Language.load() throw an opaque WASM binding error ("invalid type: unit value, expected usize") that was caught by parsePython.ts outer try/catch and silently returned empty imports/exports per file, with the warnings array never surfaced anywhere in the API response. A second contributing factor made this hard to diagnose: apps/web/app/api/graph/route.ts skipped console.error for ArcluxError responses, so even the generic "Indexing failed" wrapper error never appeared in server logs -- had to add cause to the JSON response to see it. Fixed by building the wasm path from process.cwd() instead of nodeRequire.resolve(), still reading the installed version dynamically from tree-sitter-wasms own package.json to avoid hardcoding. Verified end-to-end against a real running dev server: 607 edges for mscodebase-intelligence.
