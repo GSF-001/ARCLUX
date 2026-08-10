@@ -354,3 +354,9 @@ Idea discussed, not started: ARCLUX's engine/ (analyzeRepository()) already retu
 **Status:** Not Started
 
 Collaborator ManSio reviewed parsePython.ts + scanFiles.ts, found 4 potential issues, NONE verified yet by us: (1) relative imports with leading dots 'from ..utils import X' may not resolve correctly if tree-sitter strips the dots before resolvePath.ts sees it — highest priority, likely to produce wrong edges on real repos. (2) parsePython.ts has zero test files, unlike Go/Rust parsers. (3) scanFiles.ts has catch{} blocks that silently drop unreadable files with no warning — same class as the wasm silent-failure gotcha. (4) wasmPath in parsePython.ts is hardcoded to a pnpm-specific node_modules path (.pnpm/tree-sitter-wasms@version/...) — will silently fail under npm/yarn installs. Next session: verify each against parsePython.ts/scanFiles.ts directly before fixing anything, per usual verification standard (cat/grep the actual code, don't just trust the review).
+
+## 2026-08-11 — Cytoscape.js researched as UI/UX reference for graph rendering
+
+**Status:** Done
+
+Cloned cytoscape.js (open source, unlike Obsidian which was considered but is closed-source) to research graph visualization patterns. Found src/extensions/renderer/canvas/layered-texture-cache.mjs -- a sophisticated multi-layer texture caching system with zoom-tier caching, per-frame render budgets (deqCost/deqAvgCost), and priority-queue-based texture refresh. Too complex/different (Canvas-based) to adopt wholesale into ARCLUX's SVG renderer, but extracted one directly-applicable principle: don't re-render elements whose own state hasn't changed. Applied as GraphNode.tsx's React.memo wrap. Full layered-caching-style system remains a possible future direction if SVG proves insufficient at larger scale (see the earlier canvas-vs-SVG discussion in this file's history), not pursued now.
