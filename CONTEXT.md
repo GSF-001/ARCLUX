@@ -1,0 +1,98 @@
+# ARCLUX — Context Brief
+
+> Tempel file ini di awal SETIAP sesi Claude baru. Ini ringkasan kurasi,
+> bukan arsip. Detail lengkap tetap ada di progres/*.md dan PROGRES.md —
+> buka file itu HANYA kalau context brief ini gak cukup jawab pertanyaan.
+> File ini di-OVERWRITE tiap akhir sesi (bukan di-append) — buang yang
+> udah gak relevan, masukin yang baru. Target selalu di bawah ~200 baris.
+
+## Apa ini
+ARCLUX = tool analisis codebase. Clone repo → parse → index → build
+dependency graph → visualisasi interaktif di browser. Filosofi:
+"workspace, bukan dashboard" — hindari istilah HealthScore/Analytics/
+Dashboard.
+
+## Stack & environment
+- Monorepo: apps/web (Next.js 16, App Router, **Webpack bukan Turbopack**
+  — gak support Termux arm64), packages/* (framework-agnostic)
+- Package manager: **pnpm** (bukan npm)
+- Parsing: TypeScript Compiler API (TS/TSX) + web-tree-sitter (Python)
+- Graph render: SVG + d3-force
+- Environment: **Termux di Android** — gak ada `/tmp`, pakai `~` sebagai
+  gantinya
+- Lisensi Apache 2.0 — file stub baseline-nya 8 baris (header lisensi),
+  bukan 0 baris, jadi "kosong" = ≤9 baris bukan `==0`
+
+## Arsitektur ringkas
+packages/git, parser (per-bahasa: ts/py/js/go/java, manifest parsers),
+indexer (buildIndex, resolveRoutes/Exports/Components/Hooks/Providers),
+graph (buildDependencyGraph/ImportGraph/ExportGraph, buildCallGraph
+belum), engine (pipeline.ts = satu-satunya entry point analyzeRepository),
+detectors (18/18 selesai, wired ke apps/cli/doctor.ts), impact (8/8
+selesai), repository, db (0%), cache (0%, ada design conflict — lihat
+bawah), shared/types.ts (kamus tipe wajib dipakai semua package).
+apps/web/components: graph/ (GraphCanvas, GraphProvider, GraphFocusView),
+explorer/, workspace/, overview/, vendor-ui/ (shadcn+aceternity+magic-ui).
+
+## Yang udah solid — jangan disentuh tanpa alasan kuat
+- packages/engine/pipeline.ts (satu entry point, jangan panggil step
+  individual dari luar engine/)
+- Parser TS/Python/JS/Go/Java + manifest parsers (TAPI manifest parser
+  belum di-wire ke registry manapun — dead code sampai ada yang motong
+  jalan itu)
+- 18/18 detectors, GraphCanvas/GraphProvider/GraphFocusView (history nav
+  + expand-on-demand udah di-fix & diverifikasi browser)
+
+## GOTCHA KRITIS — baca ini sebelum debug apapun
+1. **`nodeRequire.resolve()` TIDAK BISA DIPERCAYA di runtime webpack
+   Next.js** — balikin path relatif ke lokasi bundle, bukan absolute
+   filesystem path. Ini udah bikin bug yang sama 2x (sekali asli, sekali
+   regresi pas "cleanup"). Kalau butuh resolve path native asset
+   (`.wasm`, dll) di server-side Next.js code, JANGAN pakai
+   `nodeRequire.resolve()` sama sekali — build path dari `process.cwd()`.
+2. **Next.js dev server port suka geser + zombie process numpuk.**
+   Kalau curl/test dapet response kosong/aneh, JANGAN asumsi itu bug
+   kode — cek dulu `ps aux | grep node` (harus kosong sebelum start
+   ulang) dan pastiin port yang dites PERSIS sama dengan yang muncul di
+   baris `Local: http://localhost:XXXX`. Ini penyebab kebingungan
+   paling sering sepanjang sesi-sesi kemarin.
+3. **Selalu `cat` file dulu sebelum patch** — jangan asumsi isi file
+   dari draft/issue/percakapan sebelumnya, walau keliatan "pasti sama".
+   File bisa udah berubah dari sesi lain / PR lain.
+4. Patch pakai python3 heredoc + verifikasi `anchor count == 1` sebelum
+   nulis (abort kalau 0 atau >1) — pola aman yang udah terbukti.
+   `set +H` dulu di awal sesi biar bash gak makan karakter `!` di
+   heredoc.
+5. Error yang ketangkep `ArcluxError` di API routes **gak otomatis
+   ke-log** ke server console — kalau debug error yang gak keliatan di
+   log, cek dulu apa error-handling-nya sengaja skip `console.error`.
+6. Testing lewat `tsx` langsung (`analyzeRepository`/`buildIndex`)
+   SKIP TOTAL webpack — itu cuma buktiin logic Node-nya bener, BUKAN
+   buktiin jalan di runtime Next.js beneran. Dua-duanya harus dites
+   terpisah, bug bisa ada di salah satu doang.
+7. Komponen yang progress notes-nya bilang "typecheck-only, belum
+   diverifikasi visual" — anggap serius kalau ada bug report soal itu,
+   walau kodenya "kelihatan" udah bener pas dibaca.
+8. `wasmPath` sekarang hardcoded ke struktur pnpm
+   (`node_modules/.pnpm/tree-sitter-wasms@VERSION/...`) — bakal patah
+   kalau pindah ke npm/yarn.
+
+## Prioritas aktif sekarang
+1. `packages/db/*` — 0%, belum ada persistence layer sama sekali
+2. `packages/cache/*` — 0%, ADA DESIGN CONFLICT belum resolved:
+   strategi MetadataStrategy (git-diff) butuh clone persisten, tapi
+   `pipeline.ts` selalu hapus clone abis selesai (`cleanupRepository`
+   di `finally`). Opsi A (ubah lifecycle clone jadi persisten) vs
+   Opsi B (pakai ContentStrategy/file-hash dulu) — belum diputusin.
+3. Python: `from ..utils import X` (relative import 2+ level) belum
+   ketest, kemungkinan gak keresolve bener di `resolvePath.ts`
+4. Zero test coverage buat `parsePython.ts` (Go/Rust udah ada test)
+5. `scanFiles.ts` ada 3 `catch {}` diam-diam yang bisa drop file tanpa
+   warning — kelas bug yang sama kayak wasm issue (data hilang, gak
+   ada sinyal)
+6. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
+   GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
+
+## Kalau butuh detail lebih dalam
+`cat PROGRES.md progres/PROGRES-status-*.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`
+— progres/ tetap arsip lengkap, JANGAN dihapus/dipangkas.
