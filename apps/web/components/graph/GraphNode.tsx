@@ -8,6 +8,7 @@
 
 "use client";
 
+import { memo } from "react";
 import { getGraphNodeColor } from "@/theme/graphColors";
 import { getNodeIconPath } from "./nodeIcons";
 import type { GraphNode as GraphNodeData } from "@/packages/shared/types";
@@ -66,7 +67,7 @@ function getImpactHaloRadius(importCount: number): number | null {
   return null;
 }
 
-export function GraphNode({
+function GraphNodeComponent({
   node,
   position,
   isSelected,
@@ -140,3 +141,11 @@ export function GraphNode({
     </g>
   );
 }
+
+// Memoized: without this, every GraphNode instance re-renders whenever
+// GraphCanvas.tsx's transform state changes (pan/zoom), even if that
+// specific node's own props (position, selection, hover, importCount)
+// haven't changed. On a graph with hundreds of nodes, that's hundreds
+// of unnecessary re-renders per pan/zoom frame. Default shallow-compare
+// is sufficient here since all props are primitives or stable references.
+export const GraphNode = memo(GraphNodeComponent);
