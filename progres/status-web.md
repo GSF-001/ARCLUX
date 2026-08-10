@@ -376,3 +376,9 @@ apps/web/components/explorer/Explorer.tsx (new) wraps existing FileDetails.tsx a
 **Status:** In Progress
 
 Confirmed pnpm typecheck (tsc --noEmit -p apps/web/tsconfig.json) passes clean, and pnpm test passes 5 test files / 23 tests. Direct analyzeRepository() via tsx produces 323 nodes and 607 edges for ManSio/mscodebase-intelligence, proving parser/indexer/resolvePath/buildDependencyGraph work outside Next.js. Running Next.js 16.2.12 with webpack on localhost, the real /api/graph request (verified via curl, not just browser) returns HTTP 200 with 323 nodes but 0 edges for the same repo. Therefore the issue is narrowed to the Next.js server runtime/request path or webpack-specific behavior, not the core graph engine -- no code fix applied yet. Leading hypothesis, not yet confirmed: the earlier .wasm webpack fix (see gotchas 2026-08-04 entry) may not be effective inside the real webpack-bundled runtime that serves browser requests, even though it works when called directly via tsx (which bypasses webpack entirely). getPythonRuntime() could be silently failing and hitting the catch-all in parsePython.ts, which returns empty imports/exports with only a warnings[] message -- DependencyGraph has no field to surface that to the API response. Next step: inspect the pnpm run dev terminal log at the exact moment an /api/graph request is made, looking for ENOENT or "Failed to parse" lines, before writing any fix.
+
+## 2026-08-11 — GraphNode memoized to reduce re-renders
+
+**Status:** Done
+
+GraphNode.tsx wrapped in React.memo -- previously every node instance re-rendered on any GraphCanvas.tsx transform change (pan/zoom), even when that node's own props were unchanged. On graphs with hundreds of nodes this meant hundreds of wasted re-renders per pan/zoom frame. Default shallow compare sufficient since props are primitives/stable refs. Not benchmarked with before/after numbers, just a structural fix based on an obvious gap.
