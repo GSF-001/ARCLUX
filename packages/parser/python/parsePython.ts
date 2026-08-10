@@ -7,6 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import { createRequire } from "node:module";
+import path from "node:path";
 import type { LanguageParser } from "../core/ParserInterface";
 import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/types";
 
@@ -61,7 +62,14 @@ export function getPythonRuntime(): Promise<PythonRuntime> {
     runtimePromise = (async () => {
       await Parser.init();
       const parser = new Parser();
-      const wasmPath = nodeRequire.resolve("tree-sitter-wasms/out/tree-sitter-python.wasm");
+      // Resolve via package.json (not the .wasm file directly) -- resolving
+      // the .wasm path itself matches next.config.ts's `test: /\.wasm$/`
+      // webpack rule even with serverExternalPackages set, which rewrites
+      // the resolved value into a virtual "(rsc)/..." asset path instead
+      // of a real filesystem path, breaking Language.load() at runtime.
+      // package.json never matches that rule, so this sidesteps it.
+      const packageJsonPath = nodeRequire.resolve("tree-sitter-wasms/package.json");
+      const wasmPath = path.join(path.dirname(packageJsonPath), "out", "tree-sitter-python.wasm");
       const language = await Language.load(wasmPath);
       parser.setLanguage(language);
       return { parser, language };
