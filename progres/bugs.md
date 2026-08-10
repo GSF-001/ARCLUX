@@ -290,6 +290,8 @@ Flagged by ManSio on the original issue thread after the detector was already me
 
 ## 2026-08-09 — Python exports show 0 for ALL files, even ones with top-level classes (mscodebase-intelligence test)
 
+> **[STATUS UPDATE, 2026-08-10]: this plan is now implemented.** See "UPDATE: Python parsing silently fails due to wasm path resolution matching webpack's .wasm rule — implemented" below.
+
 **Status:** Not Started
 
 Deeper investigation of the zero-edges issue: exportCount is 0 for literally every Python file analyzed, including files with obvious top-level class/function definitions (src/core/graph.py has 5+ top-level classes: Node, Edge, PropertyGraph, NodeLabel, EdgeType). This means the bug is in extractExports, not just resolvePath.ts -- resolvePath.ts can't create edges for exports that were never extracted in the first place. Needs investigation of parsePython.ts's extractExports function next session -- not yet checked.
@@ -299,3 +301,15 @@ Deeper investigation of the zero-edges issue: exportCount is 0 for literally eve
 **Status:** Not Started
 
 Traced further: return { file, imports, exports, warnings } at the normal path DOES call extractExports() correctly. The exports:[] seen is only in the catch block (parse failure fallback). Need to check: is getPythonRuntime() or parser.parse() throwing silently for mscodebase-intelligence's files? Check warnings array in actual API response next -- if warnings has a 'Failed to parse' message, that confirms it. Not checked yet.
+
+## 2026-08-09 — extractExports() in parsePython.ts skipped decorated top-level definitions
+
+**Status:** Not Started
+
+root cause of exportCount 0 across most Python files (e.g. mscodebase-intelligence src/core/graph.py). tree-sitter wraps @decorator-annotated class/function_definition inside a decorated_definition node instead of exposing it directly as a root.namedChildren sibling -- the type check only looked for function_definition/class_definition directly, so anything decorated was silently skipped. Not an exception-swallowing bug (the earlier "check catch block" hypothesis was not it) -- pure logic gap, no error ever thrown. Fixed by unwrapping decorated_definition to its childForFieldName("definition") before the type check.
+
+## 2026-08-10 — UPDATE: Python parsing silently fails due to wasm path resolution matching webpack's .wasm rule — implemented
+
+**Status:** Done
+
+Root cause confirmed and fixed via PR #[isi setelah tau nomor]: resolving tree-sitter-wasms .wasm path directly matched next.config.ts's webpack .wasm rule, rewriting the path into a virtual asset reference that broke Language.load() at runtime. This caused Python parsing to silently fail for every file (caught by parsePython.ts's try/catch), returning empty imports AND exports with no visible error. Fixed by resolving via package.json instead. Verified against a real 323-file Python repo: graph.edges.length went from 0 to 607.
