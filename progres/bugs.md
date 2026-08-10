@@ -313,3 +313,15 @@ root cause of exportCount 0 across most Python files (e.g. mscodebase-intelligen
 **Status:** Done
 
 Root cause confirmed and fixed via PR #[isi setelah tau nomor]: resolving tree-sitter-wasms .wasm path directly matched next.config.ts's webpack .wasm rule, rewriting the path into a virtual asset reference that broke Language.load() at runtime. This caused Python parsing to silently fail for every file (caught by parsePython.ts's try/catch), returning empty imports AND exports with no visible error. Fixed by resolving via package.json instead. Verified against a real 323-file Python repo: graph.edges.length went from 0 to 607.
+
+## 2026-08-10 — Python parsing silently failed due to wasm path matching webpack rule (ROOT CAUSE FOUND)
+
+**Status:** Done
+
+Confirmed: resolving tree-sitter-wasms .wasm path directly matched next.config.ts's webpack .wasm rule, rewriting it into a virtual asset path that broke Language.load() at runtime. Every Python file silently returned empty imports AND exports (caught by parsePython.ts's try/catch, no visible error). This was the actual root cause behind the exportCount:0 and zero-graph-edges bugs -- not primarily a resolvePath.ts issue, though PR #192's dotted-import fix was still necessary once parsing actually started working. Fixed by resolving tree-sitter-wasms/package.json instead of the .wasm file directly. Verified against a real 323-file Python repo: graph.edges.length went from 0 to 607, 838 resolved imports across 199 modules.
+
+## 2026-08-10 — detectCircularDependency reported duplicate cycles (fixed via ManSio, issue #207)
+
+**Status:** Done
+
+A cycle was reported once per node still unresolved when the outer loop's for-of reached it -- a 2-node cycle produced 2 identical findings, a 3-node cycle produced 3. Fixed via canonicalizeCycle() (rotate to lexicographically smallest node) + a seenCycles dedup set. No interface changes. Reported and fixed by ManSio, landed with their test cases.
