@@ -24,6 +24,8 @@ Dependency graph, impact analysis, and structural convention checking for your c
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
 - [`PROGRES.md`](PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
 - [`ARCHITECTURE_MAP.md`](ARCHITECTURE_MAP.md) — boundary map for the codebase, read before adding new capabilities
+- [`CONTEXT.md`](CONTEXT.md) — compact session-start brief for a new Claude session (paste at the start of every session)
+- [`progres/roadmap.md`](progres/roadmap.md) — long-term direction, phased
 
 ## Status: alpha
 
