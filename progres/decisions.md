@@ -559,3 +559,9 @@ LAB 5. Not started, no design yet beyond the name.
 - Confirm real file state before writing code (grep/cat, not memory of
   old docs) — this caught the rule-stub gap (LAB 2) and the 2-vs-7
   parser bug (LAB 3). Assume more gaps like that exist elsewhere.
+
+## 2026-08-12 — LAB 4 MVP built: runAllChecks() stable contract
+
+**Status:** In Progress
+
+packages/engine/contract.ts added on feat/diff-lab1-mvp (still local/branch-only, not merged to main). Wraps the 10 detectors + requirePage rule verify.ts already runs into one runAllChecks(repository) call returning normalized Issue[] (source/checkId/severity/message) instead of consumers importing 10 detector functions individually. Hit one signature mismatch during build: runRules() needs a 3rd detectedFrameworks arg, pulled from repository.meta.detectedFrameworks. tsc clean after fix. Not yet wired into verify.ts itself (that's LAB 5's job, formalizing CLI -> Engine -> Core boundary) -- this session only built the contract, not the migration.
