@@ -2,6 +2,12 @@
 ### OPEN SOURCE
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
 
+
+
+![ARCLUX Demo](.github/assets/demo.gif)
+
+
+
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
 
  [](LICENSE)
