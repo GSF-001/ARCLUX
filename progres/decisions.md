@@ -565,3 +565,162 @@ LAB 5. Not started, no design yet beyond the name.
 **Status:** In Progress
 
 packages/engine/contract.ts added on feat/diff-lab1-mvp (still local/branch-only, not merged to main). Wraps the 10 detectors + requirePage rule verify.ts already runs into one runAllChecks(repository) call returning normalized Issue[] (source/checkId/severity/message) instead of consumers importing 10 detector functions individually. Hit one signature mismatch during build: runRules() needs a 3rd detectedFrameworks arg, pulled from repository.meta.detectedFrameworks. tsc clean after fix. Not yet wired into verify.ts itself (that's LAB 5's job, formalizing CLI -> Engine -> Core boundary) -- this session only built the contract, not the migration.
+
+## 2026-08-12 — LAB 4 — External repository validation + Python parser WASM fix
+
+**Status: Verified — pushed to `feat/diff-lab1-mvp`**
+
+LAB 4 Stable Core Contract was validated against an external repository rather
+than only ARCLUX itself. The test target was Django, cloned locally at
+`~/django`.
+
+### External repository test
+
+Initial ARCLUX analysis of Django:
+
+- 3,039 modules indexed
+- 3,039 graph nodes
+- Initial graph contained only 3 edges
+
+This exposed a real Python analysis problem: Django is predominantly Python,
+so a 3-edge graph for a 3,039-module repository was clearly suspicious.
+
+### Root cause investigation
+
+Direct inspection confirmed:
+
+- `parsePython` exists and is registered by `engine/pipeline.ts`.
+- `LanguageParser` correctly exposes Python through `.py`.
+- `resolvePath.ts` already contains Python-specific resolution for:
+  - `__init__.py`
+  - sibling imports
+  - explicit relative imports
+  - dotted Python module paths
+- Direct invocation of `parsePython` initially returned zero imports with:
+
+`ENOENT: ... tree-sitter-wasms/.../tree-sitter-python.wasm`
+
+The WASM file itself was confirmed to exist inside the pnpm store.
+
+`require.resolve("tree-sitter-wasms/out/tree-sitter-python.wasm")`
+also confirmed the correct runtime path.
+
+### Fix
+
+`packages/parser/python/parsePython.ts` contained an incorrect WASM
+path calculation.
+
+The path was corrected to resolve the pnpm-installed
+`tree-sitter-wasms@0.1.13` Python grammar from the actual ARCLUX working
+directory.
+
+No parser architecture was redesigned. The fix was isolated to the runtime
+WASM path.
+
+### Parser verification
+
+Direct Python parser execution against:
+
+`django/db/models/base.py`
+
+successfully returned Python imports with no warnings.
+
+Examples observed included:
+
+- `collections`
+- `functools`
+- `itertools`
+- `asgiref.sync`
+- `django`
+- `django.apps`
+- `django.conf`
+- `django.core`
+- `django.core.exceptions`
+- `django.db`
+- `django.db.models`
+- `django.db.models.constants`
+- `django.db.models.deletion`
+- `django.db.models.expressions`
+- `django.db.models.fetch_modes`
+- `django.db.models.fields.composite`
+- `django.db.models.fields.related`
+
+### Full Django graph verification
+
+After the fix:
+
+- 3,039 modules indexed
+- 3,039 graph nodes
+- **7,734 dependency edges**
+
+This is a major validation change from the previous 3-edge result and
+demonstrates that the Python parser and Python path-resolution machinery are
+actually participating in full-repository graph construction.
+
+### LAB 4 contract verification
+
+`runAllChecks(repository)` was also executed against Django.
+
+Observed result:
+
+- modules: 3,039
+- issues: 11,452
+- errors: 11,452
+- warnings: 0
+- passed: false
+
+Issue distribution observed:
+
+- unusedExports: 7,788
+- orphanFiles: 2,453
+- ambiguousSymbolResolution: 522
+- largeModules: 327
+- sharedModules: 225
+- circularDependency: 104
+- deadCode: 24
+- duplicateModules: 9
+
+These results are recorded as detector output, not automatically interpreted
+as proof that Django itself is defective. The purpose of this test was to
+validate that ARCLUX can process a large external Python repository and
+produce normalized analysis/check output.
+
+### Important engineering finding
+
+The first failed Django analysis was not treated as a successful test.
+The unusually low graph edge count triggered investigation.
+
+The workflow was:
+
+1. Analyze external repository.
+2. Detect suspicious result.
+3. Inspect parser registration.
+4. Inspect Python parser.
+5. Test parser directly on a real Django file.
+6. Trace failure to missing WASM path.
+7. Confirm WASM package actually exists.
+8. Fix only the path resolution.
+9. Re-run the full repository analysis.
+10. Confirm graph increased from 3 edges to 7,734 edges.
+11. Run the stable check contract against the external repository.
+
+This confirms the LAB process is capable of finding real integration bugs
+that would not necessarily appear from TypeScript compilation alone.
+
+### Commit
+
+`5e3748a7 fix: resolve Python tree-sitter wasm path`
+
+Branch:
+
+`feat/diff-lab1-mvp`
+
+Remote branch was confirmed synchronized with the local HEAD after push.
+
+### Current conclusion
+
+LAB 4 is not merely a type/interface exercise.
+
+The stable Engine contract was exercised against a real, large,
+external Python repository and the test uncovered and fixed an actual
+runtime integration bug in the existing Python parser.
