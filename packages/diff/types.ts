@@ -6,3 +6,9 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
+export type ChangeStatus = "added" | "modified" | "deleted";
+
+export interface ChangedFile {
+  path: string;
+  status: ChangeStatus;
+}

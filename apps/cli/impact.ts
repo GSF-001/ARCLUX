@@ -13,7 +13,7 @@
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { analyzeLocalDirectory } from "./analyzeLocal";
+import { analyzeRepository } from "../../packages/engine/pipeline";
 import { traceConsumers } from "../../packages/impact/traceConsumers";
 import { traceDependencies } from "../../packages/impact/traceDependencies";
 import { calculateAffectedFiles } from "../../packages/impact/calculateAffectedFiles";
@@ -28,7 +28,7 @@ export function registerImpactCommand(program: Command): void {
       const spinner = p.spinner();
       spinner.start(`Analyzing impact of ${file}`);
       try {
-        const { repository } = await analyzeLocalDirectory(repoPath);
+        const { repository } = await analyzeRepository({ localPath: repoPath });
 
         if (!repository.getModule(file)) {
           spinner.stop("Analysis complete");

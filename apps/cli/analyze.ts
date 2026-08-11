@@ -8,7 +8,7 @@
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { analyzeLocalDirectory } from "./analyzeLocal";
+import { analyzeRepository } from "../../packages/engine/pipeline";
 
 export function registerAnalyzeCommand(program: Command): void {
   program
@@ -19,7 +19,7 @@ export function registerAnalyzeCommand(program: Command): void {
       const spinner = p.spinner();
       spinner.start(`Analyzing ${targetPath}`);
       try {
-        const { repository, meta, graph } = await analyzeLocalDirectory(targetPath);
+        const { repository, meta, graph } = await analyzeRepository({ localPath: targetPath });
         spinner.stop("Analysis complete");
 
         p.log.info(`Repository: ${meta.name}`);

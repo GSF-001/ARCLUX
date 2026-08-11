@@ -7,6 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { cloneRepository } from "../git/cloneRepository";
 import { cleanupRepository } from "../git/cleanupRepository";
 import { buildIndex } from "../indexer/buildIndex";
@@ -63,7 +64,18 @@ function ensureParsersRegistered() {
 }
 
 export interface AnalyzeRepositoryOptions {
-  repoUrl: string;
+  /**
+   * Remote repo to clone-analyze-cleanup. Provide this OR localPath,
+   * never both — analyzeRepository() throws if both or neither are set.
+   */
+  repoUrl?: string;
+  /**
+   * A directory already on disk to analyze directly — no clone, no
+   * cleanup, no cache (see analyzeLocalPath()'s comment for why no
+   * cache). This is the CLI use case (arclux diff/verify/doctor/etc
+   * pointed at a local checkout).
+   */
+  localPath?: string;
   branch?: string;
 }
 
@@ -102,20 +114,109 @@ export function parseOrgAndName(repoUrl: string): { org: string; name: string } 
  * The single entry point for "analyze this repo". Everything else (CLI command,
  * API route, future queue worker) should call THIS, not the individual steps —
  * that keeps clone/cleanup lifecycle correct in exactly one place.
+ *
+ * LAB 3 (2026-08-11): merged in what used to be apps/cli/analyzeLocal.ts,
+ * a separate local-path-only orchestration path that duplicated most of
+ * this file's logic (documented as a known, intentional gap in its own
+ * header comment — this merge is that gap being closed). Two behavior
+ * changes as a direct result, both intentional:
+ *   1. Local-path analysis (CLI) now registers all 7 language parsers +
+ *      9 manifest parsers, same as the remote flow. Previously
+ *      analyzeLocal.ts only registered parseTs + parsePython — JS/JSX/
+ *      CommonJS/Go/Java files were silently unparsed for every CLI
+ *      command (diff, verify, doctor, impact, graph, analyze, config).
+ *   2. Local-path analysis returns the full AnalyzeRepositoryResult
+ *      shape (includes `dependencies` now), not the narrower
+ *      LocalAnalysisResult analyzeLocal.ts used to return.
  */
 export async function analyzeRepository(
   options: AnalyzeRepositoryOptions
 ): Promise<AnalyzeRepositoryResult> {
   ensureParsersRegistered();
 
-  const { org, name } = parseOrgAndName(options.repoUrl);
+  if (options.localPath && options.repoUrl) {
+    throw new Error("analyzeRepository: provide either repoUrl or localPath, not both.");
+  }
+
+  if (options.localPath) {
+    return analyzeLocalPath(options.localPath);
+  }
+
+  if (!options.repoUrl) {
+    throw new Error("analyzeRepository: repoUrl or localPath is required.");
+  }
+
+  return analyzeRemoteRepository(options.repoUrl, options.branch);
+}
+
+/**
+ * Local-path flow: no git clone, no cleanup, no cache.
+ *
+ * No caching on purpose: the fingerprint/cache system (repositoryCache.ts,
+ * graphCache.ts) is keyed by repoUrl+branch, which doesn't map cleanly to
+ * a bare local directory a developer is actively editing. Caching stale
+ * results mid-edit would be worse than the cost of re-indexing. Revisit
+ * if `arclux` commands feel slow on large local repos — that's a real
+ * possible follow-up, not ruled out, just not built here.
+ */
+async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryResult> {
+  const resolvedPath = path.resolve(localPath);
+
+  const meta: RepositoryMeta = {
+    id: "local",
+    org: "local",
+    name: path.basename(resolvedPath),
+    defaultBranch: "local",
+    rootPath: resolvedPath,
+    detectedFrameworks: detectFrameworks(resolvedPath),
+    packageManager: detectPackageManager(resolvedPath),
+    analyzedAt: new Date().toISOString(),
+  };
+
+  let repository: Repository;
+  try {
+    repository = await buildIndex({ rootPath: resolvedPath, meta });
+  } catch (err) {
+    throw isArcluxError(err)
+      ? err
+      : new ArcluxError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
+  }
+
+  let graph: DependencyGraph;
+  try {
+    graph = buildDependencyGraph(repository);
+  } catch (err) {
+    throw new ArcluxError({
+      code: "GRAPH_BUILD_FAILED",
+      message: "Graph construction failed",
+      cause: err,
+    });
+  }
+
+  return {
+    meta: repository.meta,
+    moduleCount: repository.moduleCount,
+    graph,
+    repository,
+    dependencies: manifestRegistry.detectDependencies(resolvedPath),
+  };
+}
+
+/**
+ * Remote-URL flow: clone → index → graph → cache → cleanup.
+ * Behavior unchanged from before LAB 3 — this is the pre-existing logic,
+ * only extracted into its own named function so analyzeRepository() can
+ * route to it or to analyzeLocalPath() based on options.
+ */
+async function analyzeRemoteRepository(
+  repoUrl: string,
+  branch?: string
+): Promise<AnalyzeRepositoryResult> {
+  const { org, name } = parseOrgAndName(repoUrl);
   let localPath: string | undefined;
 
   try {
-    const cloneResult = await cloneRepository({
-      repoUrl: options.repoUrl,
-      branch: options.branch,
-    });
+    const cloneResult = await cloneRepository({ repoUrl, branch });
     localPath = cloneResult.localPath;
 
     const meta: RepositoryMeta = {
@@ -141,8 +242,8 @@ export async function analyzeRepository(
     let repository: Repository;
     let graph: DependencyGraph;
 
-    const cachedRepository = getCachedRepository(options.repoUrl, meta.defaultBranch, fingerprint);
-    const cachedGraph = getCachedGraph(options.repoUrl, meta.defaultBranch, fingerprint);
+    const cachedRepository = getCachedRepository(repoUrl, meta.defaultBranch, fingerprint);
+    const cachedGraph = getCachedGraph(repoUrl, meta.defaultBranch, fingerprint);
 
     if (cachedRepository && cachedGraph) {
       repository = cachedRepository;
@@ -166,8 +267,8 @@ export async function analyzeRepository(
         });
       }
 
-      setCachedRepository(options.repoUrl, meta.defaultBranch, fingerprint, repository);
-      setCachedGraph(options.repoUrl, meta.defaultBranch, fingerprint, graph);
+      setCachedRepository(repoUrl, meta.defaultBranch, fingerprint, repository);
+      setCachedGraph(repoUrl, meta.defaultBranch, fingerprint, graph);
     }
 
     return {

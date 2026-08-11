@@ -11,6 +11,8 @@ import { Command } from "commander";
 import { registerAnalyzeCommand } from "./analyze";
 import { registerGraphCommand } from "./graph";
 import { registerImpactCommand } from "./impact";
+import { registerDiffCommand } from "./diff";
+import { registerVerifyCommand } from "./verify";
 import { registerDoctorCommand } from "./doctor";
 import { registerConfigCommand } from "./config";
 
@@ -20,6 +22,8 @@ program.name("arclux").description("Repository intelligence CLI").version("0.1.0
 registerAnalyzeCommand(program);
 registerGraphCommand(program);
 registerImpactCommand(program);
+registerDiffCommand(program);
+registerVerifyCommand(program);
 registerDoctorCommand(program);
 registerConfigCommand(program);
 
