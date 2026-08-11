@@ -15,6 +15,7 @@ file:
 | `decisions.md` | Keputusan desain: "kita pilih X daripada Y, karena..." |
 | `gotchas.md` | Jebakan tooling/environment (Termux, tsconfig, dll) -- bukan bug di kode ARCLUX |
 | `collaborators.md` | Siapa pegang tugas apa |
+| `roadmap.md` | Arah jangka panjang, dibagi per fase |
 
 Setiap entry di file-file ini sekarang bisa punya status
 (`Not Started` / `In Progress` / `Done`) -- cek `TOOLING.md` di root
