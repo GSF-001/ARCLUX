@@ -76,11 +76,8 @@ export function getPythonRuntime(): Promise<PythonRuntime> {
       // Known limitation (tracked in gotchas): this path shape is
       // pnpm-specific and will not work under npm/yarn.
       const PYTHON_WASM_VERSION = "0.1.13";
-      const wasmPath = path.join(
-        process.cwd(),
-        "../../node_modules/.pnpm",
-        `tree-sitter-wasms@${PYTHON_WASM_VERSION}`,
-        "node_modules/tree-sitter-wasms/out/tree-sitter-python.wasm"
+      const wasmPath = require.resolve(
+        "tree-sitter-wasms/out/tree-sitter-python.wasm"
       );
       const language = await Language.load(wasmPath);
       parser.setLanguage(language);
