@@ -724,3 +724,9 @@ LAB 4 is not merely a type/interface exercise.
 The stable Engine contract was exercised against a real, large,
 external Python repository and the test uncovered and fixed an actual
 runtime integration bug in the existing Python parser.
+
+## 2026-08-13 — Platform layer scaffold added
+
+**Status:** Not Started
+
+Added scaffold-only folder structure for a new additive platform layer (runtime, services, scheduler, environment, workspace, terminal, storage, networking, security, system, diagnostics, editor, language, orchestration) plus matching apps/cli commands and apps/web API routes. Files are Apache-header-only stubs, no logic yet. Per ARCHITECTURE_MAP.md, this consumes existing core (engine/graph/impact/parser) rather than duplicating it — implementation to follow incrementally.
