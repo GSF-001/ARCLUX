@@ -98,11 +98,11 @@ node kinds apart. Impact must be a SEPARATE visual signal layered on top
 
 2. In `apps/web/components/graph/GraphCanvas.tsx`: at the `&lt;GraphNode>`
    render call around line 308-315 (confirmed exact location -- inside
-   `{graph.nodes.map((node) => { ... return &lt;GraphNode ... /> })}`,
+   `&#123;graph.nodes.map((node) => &#123; ... return &lt;GraphNode ... /> &#125;)&#125;`,
    sibling props to `isSelected`/`isHovered`), pull `importCounts` from
    `useGraphContext()` (already imported/used elsewhere in this file
    presumably -- verify) and pass
-   `importCount={importCounts.get(node.id) ?? 0}` as a new prop.
+   `importCount=&#123;importCounts.get(node.id) ?? 0&#125;` as a new prop.
 
 3. In `apps/web/components/graph/GraphNode.tsx`: add `importCount: number`
    to `GraphNodeProps`. Define tier thresholds (user's suggested starting
@@ -116,7 +116,7 @@ node kinds apart. Impact must be a SEPARATE visual signal layered on top
    NOT reusing graphNodeColors, since that would collide with the
    type-color meaning). Consider also scaling BASE_RADIUS slightly for
    High-tier nodes. Existing isSelected halo logic
-   (`{isSelected && &lt;circle r={radius + 5} ... />}`) is a useful
+   (`&#123;isSelected && &lt;circle r=&#123;radius + 5&#125; ... />&#125;`) is a useful
    reference for the halo-circle pattern already used in this file --
    don't duplicate logic, structure the new halo consistently with it.
 
@@ -130,7 +130,7 @@ node kinds apart. Impact must be a SEPARATE visual signal layered on top
    this done -- typecheck alone is not sufficient evidence per this
    project's established verification standard.
 
-5. Consider whether label text position (`x={radius + 6}` in
+5. Consider whether label text position (`x=&#123;radius + 6&#125;` in
    GraphNode.tsx) needs to account for the halo radius too, or if it's
    fine referencing only the inner circle's radius -- check visually.
 
@@ -448,13 +448,13 @@ copyright-header-only empty stub, confusingly named almost identically
 to the real `analyzeRepository()` function that lives in `pipeline.ts`.
 
 **API change**: `analyzeRepository()` in pipeline.ts now takes
-`{ repoUrl }` OR `{ localPath }` (throws if both or neither given).
+`&#123; repoUrl &#125;` OR `&#123; localPath &#125;` (throws if both or neither given).
 Remote-URL code path (`analyzeRemoteRepository`) is a direct extraction
 of the pre-existing clone→index→graph→cache→cleanup logic — unchanged
 behavior, just moved into its own function so the public
 `analyzeRepository()` can route to it or to the new
 `analyzeLocalPath()`. Web app / `/api/analyze` callers unaffected
-(still call with `{ repoUrl, branch }`, same shape as before).
+(still call with `&#123; repoUrl, branch &#125;`, same shape as before).
 
 **No caching for local-path analysis** — deliberate, not an oversight.
 `repositoryCache.ts`/`graphCache.ts` are keyed by repoUrl+branch, which
