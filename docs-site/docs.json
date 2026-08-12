@@ -96,5 +96,13 @@
         "href": "https://github.com/GSF-001/ARCLUX"
       }
     ]
+  },
+  "fonts": {
+    "heading": {
+      "family": "Fraunces"
+    },
+    "body": {
+      "family": "Inter"
+    }
   }
 }
