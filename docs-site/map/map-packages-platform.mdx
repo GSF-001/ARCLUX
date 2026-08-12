@@ -138,6 +138,8 @@ impact/parser), gak duplikasi. Lihat ARCHITECTURE_MAP.md.
 | open.ts | Buka file/impact/dependency dari CLI |
 | edit.ts | Trigger editor context |
 | recover.ts | Trigger recovery manager |
+| health.ts | Tampilkan status kesehatan via HealthMonitor |
+| package.ts | Install/remove/list platform package via package-manager |
 
 ## apps/web/app/api/ (baru)
 | File | Tanggung jawab |
@@ -148,3 +150,37 @@ impact/parser), gak duplikasi. Lihat ARCHITECTURE_MAP.md.
 | diagnostics/route.ts | API diagnostic engine |
 | notifications/route.ts | API notification stream |
 | editor/route.ts | API editor context/navigation |
+
+## packages/kernel/
+| File | Tanggung jawab |
+|---|---|
+| Kernel.ts | Core process kernel: nyatuin process table, signal bus, service registry |
+| ProcessTable.ts | Tabel in-memory proses yang lagi jalan |
+| SignalBus.ts | Pub/sub sinyal antar-subsistem level kernel |
+| ServiceRegistry.ts | Registry nama service ke instance yang jalan |
+| introspection/ProcSnapshot.ts | Snapshot process table di satu titik waktu |
+| introspection/formatProcTree.ts | Format ProcSnapshot jadi tree yang bisa dibaca |
+
+## packages/semantic-diff/
+| File | Tanggung jawab |
+|---|---|
+| SemanticDiff.ts | Pipeline utama: text → symbol → AST → dependency → impact → architectural |
+| SymbolDiff.ts | Diff symbol (rename/type-changed/removed) antar-versi |
+| AstDiff.ts | Diff AST node antar-versi file |
+| DependencyDiff.ts | Diff dependency edge yang kena dampak (pakai packages/diff + graph) |
+| DiffRenderer.ts | Render hasil semantic diff jadi output yang bisa dibaca |
+
+## packages/notifications/
+| File | Tanggung jawab |
+|---|---|
+| NotificationManager.ts | Dispatch notifikasi ke channel yang terdaftar |
+| Notification.ts | Shape satu notifikasi (title, body, severity) |
+| NotificationChannel.ts | Interface channel pengiriman notifikasi (editor, CLI, web) |
+
+## packages/package-manager/
+| File | Tanggung jawab |
+|---|---|
+| PackageManager.ts | Install/remove/list platform package |
+| PackageManifest.ts | Shape manifest satu platform package (nama, versi, deps) |
+| PackageResolver.ts | Resolve dependency graph & version constraint |
+| PackageState.ts | Track state install/pending/failed platform package |
