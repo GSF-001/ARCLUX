@@ -57,6 +57,9 @@ What is not there yet:
 
 ## Install (from source)
 
+> [!NOTE]
+> Installation via npm is deprecated. Use one of the recommended methods below.
+
 Not yet published to npm. Clone and build locally:
 
     git clone https://github.com/GSF-001/ARCLUX.git
