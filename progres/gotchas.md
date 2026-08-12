@@ -86,3 +86,9 @@ A much earlier decisions.md/status entry (GraphMenu consolidation session) expli
 **Status:** Not Started
 
 git remote show origin menunjukkan HEAD branch repo ini ARCLUX.main. Sempat push beberapa commit (scaffold platform layer + docs map) ke main tanpa sadar itu bukan branch default. Ketauan pas GitHub nawarin Compare antara main dan ARCLUX.main. Fix: isi main digabung ke ARCLUX.main. Selalu cek git remote show origin | grep 'HEAD branch' di awal sesi baru.
+
+## 2026-08-13 — Default branch repo adalah ARCLUX.main, bukan main
+
+**Status:** Not Started
+
+git remote show origin menunjukkan HEAD branch repo ini ARCLUX.main. Sempat push beberapa commit (scaffold platform layer + docs map) ke main tanpa sadar itu bukan branch default. Ketauan pas GitHub nawarin Compare antara main dan ARCLUX.main. Fix: isi main digabung ke ARCLUX.main. Selalu cek git remote show origin | grep 'HEAD branch' di awal sesi baru.

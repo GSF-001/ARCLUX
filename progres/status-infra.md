@@ -358,3 +358,9 @@ progres/PROGRES-bugs.md etc renamed to progres/bugs.md etc (folder name already 
 **Status:** Done
 
 docs-site/map/map-packages-platform.mdx sekarang punya tabel tanggung jawab tiap file, section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file konkret plus dependency ke packages/engine, parser, diff, impact yang sudah ada, diagram arah dependency satu arah, dan daftar file existing yang perlu diedit nanti (apps/cli/index.ts, apps/web/lib/api.ts). Status: dokumentasi selesai, logic belum diisi.
+
+## 2026-08-13 — Platform layer docs map lengkap
+
+**Status:** Done
+
+docs-site/map/map-packages-platform.mdx sekarang punya tabel tanggung jawab tiap file, section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file konkret plus dependency ke packages/engine, parser, diff, impact yang sudah ada, diagram arah dependency satu arah, dan daftar file existing yang perlu diedit nanti (apps/cli/index.ts, apps/web/lib/api.ts). Status: dokumentasi selesai, logic belum diisi.
