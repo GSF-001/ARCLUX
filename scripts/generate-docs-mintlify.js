@@ -94,8 +94,8 @@ function extractSection(content, headingRegex) {
 
 console.log('== ARCLUX Docs (Mintlify) -- generating content from repo ==\n');
 
-if (!fs.existsSync(DOCS_OUT) || !fs.existsSync(path.join(DOCS_OUT, 'mint.json'))) {
-  console.error('ERROR: docs-site/mint.json belum ada. Jalankan 01-reset-and-scaffold-mintlify.sh dulu.');
+if (!fs.existsSync(DOCS_OUT) || !fs.existsSync(path.join(DOCS_OUT, 'docs.json'))) {
+  console.error('ERROR: docs-site/docs.json belum ada. Jalankan 01-reset-and-scaffold-mintlify.sh dulu.');
   process.exit(1);
 }
 
