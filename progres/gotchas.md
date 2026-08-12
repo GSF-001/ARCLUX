@@ -80,3 +80,17 @@ pnpm test -- --runInBand fails since Vitest 4.1.10 has no such option. Plain pnp
 **Status:** Done
 
 A much earlier decisions.md/status entry (GraphMenu consolidation session) explicitly flagged GraphFocusView.tsx as pushed near a chat context limit, typecheck-only, not visually verified in-browser. This session is the first time it was actually exercised by a real user against a real large-fan-in file (25 affected files) -- both bugs found (dead back-button icon, silent 12-item cap) were exactly the kind of thing a typecheck-only "looks done" status hides. Lesson: when a PROGRES entry says "not yet visually verified," treat any bug report against that component as plausible even if the code "looks" complete on read -- do not assume the component is solid just because it compiled and was merged.
+
+## 2026-08-13 — Repo default branch is ARCLUX.main, not main
+
+`git remote show origin` menunjukkan HEAD branch repo ini adalah
+`ARCLUX.main`, bukan `main`. Sempat push beberapa commit (platform
+layer scaffold + docs map) ke `main` tanpa sadar itu bukan branch
+default, jadi hasilnya nggak langsung kelihatan sebagai kerjaan utama di
+GitHub. Ketauan pas GitHub nawarin "Compare" antara `main` dan
+`ARCLUX.main` dan base-nya ke-set `ARCLUX.main`.
+
+Fix: konten `main` digabung ke `ARCLUX.main` (jadi `ARCLUX.main`
+sekarang superset). Selanjutnya kerja langsung dari `ARCLUX.main`.
+Selalu cek dengan `git remote show origin | grep "HEAD branch"` di awal
+sesi baru sebelum push, supaya nggak kejadian lagi.
