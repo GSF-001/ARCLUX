@@ -28,7 +28,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 - [`CONTEXT.md`](CONTEXT.md) — project brief at a glance: stack, architecture, current state.
 - [`progres/roadmap.md`](progres/roadmap.md) — long-term direction, phased
 
-## Status: alpha
+## Status: Mature product 
 
 This project is under active development with a small team. Expect breaking changes, missing pieces, and stubs that are not wired up yet. See [`PROGRES.md`](PROGRES.md) (and the linked files in [`progres/`](progres/)) for a detailed, honest breakdown of what works today vs. what is still a stub — that's the up-to-date source of truth, this README is a summary.
 
@@ -48,7 +48,7 @@ What is not there yet:
 - Real search (`/api/search` is a filename-only stopgap)
 - A handful of dashboard panels (workspace, explorer, some overview components)
 
-## What it does
+## What it does 
 
 - Builds a dependency graph (imports, exports, folders) from static analysis
 - Traces impact - what is affected if you change file X
