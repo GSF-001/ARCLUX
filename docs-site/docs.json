@@ -29,41 +29,51 @@
       {
         "group": "Progress Detail",
         "pages": [
-          "progres-readme",
-          "progres-bugs",
-          "progres-collaborators",
-          "progres-decisions",
-          "progres-gotchas",
-          "progres-roadmap",
-          "progres-status-backlog",
-          "progres-status-core",
-          "progres-status-detectors",
-          "progres-status-infra",
-          "progres-status-web"
+          "progres/progres-readme",
+          "progres/progres-bugs",
+          "progres/progres-collaborators",
+          "progres/progres-decisions",
+          "progres/progres-gotchas",
+          "progres/progres-roadmap",
+          "progres/progres-status-backlog",
+          "progres/progres-status-core",
+          "progres/progres-status-detectors",
+          "progres/progres-status-infra",
+          "progres/progres-status-web"
         ]
       },
       {
         "group": "Codebase Map",
         "pages": [
-          "map-packages-cache",
-          "map-packages-db",
-          "map-packages-detectors",
-          "map-packages-diff",
-          "map-packages-engine",
-          "map-packages-git",
-          "map-packages-graph",
-          "map-packages-impact",
-          "map-packages-incremental",
-          "map-packages-indexer",
-          "map-packages-parser",
-          "map-packages-repository",
-          "map-packages-rules",
-          "map-packages-search",
-          "map-packages-shared",
-          "map-packages-ui",
-          "map-packages-watcher",
-          "map-apps-cli",
-          "map-apps-web"
+          {
+            "group": "Packages",
+            "pages": [
+              "map/map-packages-cache",
+              "map/map-packages-db",
+              "map/map-packages-detectors",
+              "map/map-packages-diff",
+              "map/map-packages-engine",
+              "map/map-packages-git",
+              "map/map-packages-graph",
+              "map/map-packages-impact",
+              "map/map-packages-incremental",
+              "map/map-packages-indexer",
+              "map/map-packages-parser",
+              "map/map-packages-repository",
+              "map/map-packages-rules",
+              "map/map-packages-search",
+              "map/map-packages-shared",
+              "map/map-packages-ui",
+              "map/map-packages-watcher"
+            ]
+          },
+          {
+            "group": "Apps",
+            "pages": [
+              "map/map-apps-cli",
+              "map/map-apps-web"
+            ]
+          }
         ]
       }
     ]
