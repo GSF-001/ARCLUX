@@ -184,3 +184,71 @@ impact/parser), gak duplikasi. Lihat ARCHITECTURE_MAP.md.
 | PackageManifest.ts | Shape manifest satu platform package (nama, versi, deps) |
 | PackageResolver.ts | Resolve dependency graph & version constraint |
 | PackageState.ts | Track state install/pending/failed platform package |
+
+## Blueprint Integration — Alur Editor
+
+Diagram asli (lihat decisions.md): Developer ketik → Editor →
+incremental analysis → Error/Symbol/Dependency → Diagnostics →
+Impact Engine → Affected Files → Notification → developer diarahkan
+ke file+line.
+
+| Tahap | File platform (baru) | Konsumsi dari (existing) |
+|---|---|---|
+| Editor menangkap keystroke | packages/editor/EditContext.ts, CodeNavigator.ts | — |
+| Incremental analysis | packages/language/LanguageService.ts | packages/engine/analyzeFile.ts (existing) |
+| Error detection | packages/diagnostics/DiagnosticEngine.ts | packages/detectors/* (existing) |
+| Symbol resolution | packages/language/SymbolEngine.ts | packages/engine/analyzeModule.ts (existing) |
+| Dependency resolution | packages/language/SyntaxEngine.ts | packages/engine/analyzeDependency.ts (existing) |
+| Diagnostics aggregation | packages/diagnostics/DiagnosticEngine.ts, ErrorLocation.ts | — |
+| Impact engine | packages/editor/ImpactNavigator.ts | packages/engine/analyzeImpact.ts (existing) |
+| Affected files/lines/symbols | packages/diagnostics/FixSuggestion.ts | packages/impact/* (existing, cek map-packages-impact.mdx) |
+| Notification | packages/notifications/NotificationManager.ts | — |
+| Navigasi ke file+line | packages/editor/CodeNavigator.ts | — |
+
+## Blueprint Integration — Semantic Diff Pipeline
+
+Diagram asli: Text Diff → Symbol Diff → AST Diff → Dependency Diff →
+Impact Diff → Architectural Diff.
+
+| Tahap | File platform (baru) | Konsumsi dari (existing) |
+|---|---|---|
+| Text Diff | packages/semantic-diff/SemanticDiff.ts (entry) | packages/diff/gitDiff.ts (existing) |
+| Symbol Diff | packages/semantic-diff/SymbolDiff.ts | packages/engine/analyzeModule.ts (existing) |
+| AST Diff | packages/semantic-diff/AstDiff.ts | packages/parser/* (existing, cek map-packages-parser.mdx) |
+| Dependency Diff | packages/semantic-diff/DependencyDiff.ts | packages/diff/architecturalDiff.ts (existing) |
+| Impact Diff | packages/semantic-diff/DependencyDiff.ts (lanjutan) | packages/engine/analyzeImpact.ts (existing) |
+| Architectural Diff | packages/semantic-diff/SemanticDiff.ts (final stage) | packages/diff/architecturalDiff.ts (existing) |
+| Render output | packages/semantic-diff/DiffRenderer.ts | — |
+
+**Catatan penting:** semantic-diff TIDAK bikin parser/graph engine kedua.
+Semua tahap di atas WAJIB memanggil fungsi existing di packages/engine
+dan packages/diff, bukan reimplementasi. Kalau nemu diri lu nulis AST
+walking baru di sini, itu tanda salah arah — harusnya panggil
+packages/parser yang udah ada.
+
+## Blueprint Integration — Arsitektur Besar
+ARCLUX ENGINE (existing, JANGAN diduplikasi)
+packages/engine, graph, impact, detectors, diff, search, rules, watcher
+↓ dikonsumsi oleh
+PLATFORM LAYER (baru, layer ini)
+packages/runtime, kernel, services, scheduler, environment, workspace,
+terminal, storage, networking, security, system, package-manager,
+notifications
+↓ dikonsumsi oleh
+DEVELOPER LAYER (baru, interface)
+packages/editor, language, semantic-diff, diagnostics
+- apps/cli/commands/* (baru)
+- apps/web/app/api/* (baru)
+Arah dependency SATU ARAH: Developer Layer → Platform Layer → ARCLUX
+Engine. Platform Layer tidak boleh reimplement logic yang udah ada di
+Engine. Engine tidak boleh depend balik ke Platform Layer (supaya
+engine tetap bisa dipakai standalone via CLI existing tanpa perlu
+platform layer nyala).
+
+## File existing yang perlu di-edit (bukan file baru, tapi kena sentuh)
+
+| File existing | Perubahan yang dibutuhkan |
+|---|---|
+| apps/cli/index.ts | Daftarin command baru: run, ps, service, logs, proc, workspace, env, diagnose, open, edit, recover, health, package |
+| apps/web/lib/api.ts | Cek apakah perlu shared client/middleware buat API routes baru (runtime, processes, services, dst) |
+
