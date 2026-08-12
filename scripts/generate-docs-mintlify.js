@@ -209,8 +209,21 @@ const context = readIfExists('CONTEXT.md');
             if (clean) names.add(clean);
           });
         }
-        return { file: c, exports: [...names] };
+        const reReExport = /export\s*\*\s*from\s*['"]([^'"]+)['"]/g;
+        const reExports = [];
+        while ((m = reReExport.exec(src))) reExports.push(m[1]);
+        const hasDefault = /export\s+default\s+/.test(src);
+        return { file: c, exports: [...names], reExports, hasDefault };
       }
+    }
+    return null;
+  }
+
+  function findPackageReadme(dir) {
+    const candidates = ['README.md', 'readme.md'];
+    for (const c of candidates) {
+      const p = path.join(dir, c);
+      if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8').trim();
     }
     return null;
   }
@@ -234,12 +247,23 @@ const context = readIfExists('CONTEXT.md');
       }
       const exp = scanExports(dir);
       let body = `## ${groupDir}/${name}\n\n`;
-      body += description ? `${description}\n\n` : '_Belum ada deskripsi di package.json._\n\n';
-      if (exp && exp.exports.length) {
+      if (description) {
+        body += `${description}\n\n`;
+      } else {
+        const pkgReadme = findPackageReadme(dir);
+        if (pkgReadme) {
+          body += `${pkgReadme}\n\n`;
+        } else {
+          body += '_Belum ada deskripsi di package.json atau README.md._\n\n';
+        }
+      }
+      if (exp && (exp.exports.length || exp.reExports.length || exp.hasDefault)) {
         body += `**Exports** (dari \`${exp.file}\`):\n\n`;
         exp.exports.forEach((e) => (body += `- \`${e}\`\n`));
+        exp.reExports.forEach((r) => (body += `- re-exports from \`${r}\`\n`));
+        if (exp.hasDefault) body += `- \`default\` export\n`;
       } else if (exp) {
-        body += `_Entry point \`${exp.file}\` ditemukan, tapi tidak ada named export terdeteksi._\n`;
+        body += `_Entry point \`${exp.file}\` ditemukan, tapi tidak ada export terdeteksi._\n`;
       } else {
         body += `_Tidak ada file entry point (index.ts/js) ditemukan._\n`;
       }
