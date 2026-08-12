@@ -1,13 +1,11 @@
-# ARCLUX🐳
-### OPEN SOURCE
+# ARCLUX 🐳
+- OPEN SOURCE
+
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
 
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
-
  [](LICENSE)
-
 ![Status: alpha](https://img.shields.io/badge/status-alpha-black)
-
 [](#status)
 
 [![CI](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml/badge.svg)](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
@@ -19,8 +17,9 @@ Dependency graph, impact analysis, and structural convention checking for your c
 [](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 
 ## Documentation
+> [!NOTE]
+>  **[Browse the full docs site](https://arclux-os.mintlify.site)** — same content, searchable and organized
 
-- **[Browse the full docs site](https://arclux-os.mintlify.site)** — same content, searchable and organized
 - [`QUICKSTART.md`](QUICKSTART.md) — start here, fast-path workflow cheat sheet
 - [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
