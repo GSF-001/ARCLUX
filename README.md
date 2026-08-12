@@ -59,6 +59,9 @@ What is not there yet:
 
 ## Install (from source)
 
+> [!NOTE]
+> Installation via npm is deprecated. Use one of the recommended methods below.
+
 Not yet published to npm. Clone and build locally:
 
     git clone https://github.com/GSF-001/ARCLUX.git
@@ -107,8 +110,8 @@ We use GitHub Issues to track open work. `main` is protected; all changes go thr
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PROGRES.md) (plus [`progres/`](progres/)) for current project status before picking up work.
 
 ## License
-
 Apache License 2.0 (c) ARCLUX Contributors
+- [`SECURITY.md`](SECURITY.md) 
 
 ## Citation
 
