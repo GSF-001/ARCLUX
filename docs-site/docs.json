@@ -23,7 +23,8 @@
           "architecture",
           "stack",
           "status",
-          "gotchas"
+          "gotchas",
+          "tooling"
         ]
       },
       {
