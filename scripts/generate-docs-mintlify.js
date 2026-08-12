@@ -255,4 +255,38 @@ const context = readIfExists('CONTEXT.md');
   if (mapPages.length) console.log(`  info codebase map pages: ${mapPages.join(', ')} -- tambahkan ke docs.json nav`);
 }
 
+// Tooling & Config Guide
+{
+  const tooling = readIfExists('TOOLING.md');
+  const body = tooling ? stripFrontmatter(tooling) : '_TOOLING.md tidak ditemukan di root repo._';
+  writeDoc('tooling.mdx', 'Tooling & Config Guide', 'Semua config/tooling di repo ini dijelaskan', body);
+}
+
+// Override intro.mdx with punchy hand-written copy (runs after auto-generated version above)
+{
+  const introBody = [
+    '# ARCLUX -- see through your codebase before it breaks',
+    '',
+    "Every codebase accumulates debt nobody can see until it's too late -- circular dependencies, dead code, files nobody remembers touching. ARCLUX builds a live dependency graph of your repo, traces the blast radius of every change, and catches structural rot before it ships.",
+    '',
+    '## What it actually does',
+    '',
+    '- Maps every import, export, and folder into one dependency graph',
+    '- Traces impact -- change one file, see everything downstream',
+    '- Catches 18 classes of structural bugs: circular deps, dead code, orphan files, layer violations, and more',
+    '- Enforces framework conventions, starting with Next.js',
+    '- Parses TypeScript, JavaScript, and Python -- more on the way',
+    '',
+    'CLI-first, with a web dashboard for when you want to see the shape of things.',
+    '',
+    '```bash',
+    'npx tsx apps/cli/index.ts analyze',
+    '```',
+    '',
+    "**Status: alpha.** Core pipeline, all 18 detectors, and full impact analysis are solid -- verified against real-world repos like `vscode`, `react`, and `vite`. Search and a few dashboard panels are still catching up. [See the full status ->](/progres/progres-status-core)",
+    ''
+  ].join('\n');
+  writeDoc('intro.mdx', 'Intro', 'See through your codebase before it breaks', introBody);
+}
+
 console.log('\n== Selesai. Halaman ke-generate ke docs-site/*.mdx ==');
