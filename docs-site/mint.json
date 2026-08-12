@@ -1,0 +1,33 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "ARCLUX",
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0070F3",
+    "light": "#3f8fff",
+    "dark": "#0070F3",
+    "background": {
+      "dark": "#000000"
+    }
+  },
+  "modeToggle": {
+    "default": "dark",
+    "isHidden": true
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/GSF-001/ARCLUX"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": ["intro", "usage"]
+    },
+    {
+      "group": "Reference",
+      "pages": ["architecture", "stack", "status", "gotchas"]
+    }
+  ]
+}

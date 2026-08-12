@@ -1,0 +1,88 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "ARCLUX",
+  "colors": {
+    "primary": "#0070F3",
+    "light": "#3f8fff",
+    "dark": "#0070F3"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "intro",
+          "usage"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "architecture",
+          "stack",
+          "status",
+          "gotchas"
+        ]
+      },
+      {
+        "group": "Progress Detail",
+        "pages": [
+          "progres-readme",
+          "progres-bugs",
+          "progres-collaborators",
+          "progres-decisions",
+          "progres-gotchas",
+          "progres-roadmap",
+          "progres-status-backlog",
+          "progres-status-core",
+          "progres-status-detectors",
+          "progres-status-infra",
+          "progres-status-web"
+        ]
+      },
+      {
+        "group": "Codebase Map",
+        "pages": [
+          "map-packages-cache",
+          "map-packages-db",
+          "map-packages-detectors",
+          "map-packages-diff",
+          "map-packages-engine",
+          "map-packages-git",
+          "map-packages-graph",
+          "map-packages-impact",
+          "map-packages-incremental",
+          "map-packages-indexer",
+          "map-packages-parser",
+          "map-packages-repository",
+          "map-packages-rules",
+          "map-packages-search",
+          "map-packages-shared",
+          "map-packages-ui",
+          "map-packages-watcher",
+          "map-apps-cli",
+          "map-apps-web"
+        ]
+      }
+    ]
+  },
+  "appearance": {
+    "default": "dark",
+    "strict": true
+  },
+  "background": {
+    "color": {
+      "dark": "#000000"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/GSF-001/ARCLUX"
+      }
+    ]
+  }
+}
