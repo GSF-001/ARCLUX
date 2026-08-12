@@ -246,6 +246,7 @@ const context = readIfExists('CONTEXT.md');
         } catch (e) {}
       }
       const exp = scanExports(dir);
+      const hasPkgJson = fs.existsSync(pkgPath);
       let body = `## ${groupDir}/${name}\n\n`;
       if (description) {
         body += `${description}\n\n`;
@@ -253,8 +254,21 @@ const context = readIfExists('CONTEXT.md');
         const pkgReadme = findPackageReadme(dir);
         if (pkgReadme) {
           body += `${pkgReadme}\n\n`;
+        } else if (!hasPkgJson) {
+          body += `_Tidak ada package.json (bukan package standar Node)._\n\n`;
         } else {
           body += '_Belum ada deskripsi di package.json atau README.md._\n\n';
+        }
+      }
+      if (!exp) {
+        const entries = fs.readdirSync(dir).filter((f) => !f.startsWith('.'));
+        if (entries.length) {
+          body += `**Isi folder:**\n\n`;
+          entries.forEach((e) => {
+            const isDir = fs.statSync(path.join(dir, e)).isDirectory();
+            body += `- \`${e}\`${isDir ? '/' : ''}\n`;
+          });
+          body += `\n`;
         }
       }
       if (exp && (exp.exports.length || exp.reExports.length || exp.hasDefault)) {
