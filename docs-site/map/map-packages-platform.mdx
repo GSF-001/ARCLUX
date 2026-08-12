@@ -1,0 +1,186 @@
+# Platform Layer — File Map
+
+Reference untuk scaffold platform layer (lihat decisions.md: "Platform
+layer scaffold added"). Semua file di bawah masih stub kosong — pakai
+tabel ini buat inget apa yang harus diisi tiap file pas mulai kerja.
+
+Prinsip: layer ini CONSUME core ARCLUX yang udah ada (engine/graph/
+impact/parser), gak duplikasi. Lihat ARCHITECTURE_MAP.md.
+
+## packages/runtime/
+| File | Tanggung jawab |
+|---|---|
+| RuntimeManager.ts | Entry point ngatur runtime keseluruhan |
+| ProcessManager.ts | Spawn/kill/track proses |
+| ProcessSpec.ts | Definisi shape config satu proses |
+| ProcessState.ts | State proses (running/stopped/crashed dll) |
+| ProcessOutput.ts | Capture stdout/stderr proses |
+
+## packages/services/
+| File | Tanggung jawab |
+|---|---|
+| ServiceManager.ts | Start/stop/restart service |
+| ServiceDefinition.ts | Shape config satu service |
+| ServiceState.ts | State service saat ini |
+| ServiceDependency.ts | Relasi antar-service (A butuh B nyala dulu) |
+
+## packages/scheduler/
+| File | Tanggung jawab |
+|---|---|
+| JobScheduler.ts | Jadwalin & jalanin job |
+| Job.ts | Shape satu job |
+| JobQueue.ts | Antrian job |
+| JobState.ts | Status job (pending/running/done/failed) |
+
+## packages/environment/
+| File | Tanggung jawab |
+|---|---|
+| EnvironmentManager.ts | Kelola environment aktif |
+| EnvironmentDetector.ts | Deteksi environment (Termux/CI/dll) |
+| EnvironmentProfile.ts | Shape config satu environment |
+| EnvironmentVariables.ts | Kelola env vars |
+
+## packages/workspace/
+| File | Tanggung jawab |
+|---|---|
+| WorkspaceManager.ts | Entry point workspace (project+env+service+proses) |
+| WorkspaceState.ts | State keseluruhan workspace |
+| WorkspaceSession.ts | Sesi kerja aktif di workspace |
+| WorkspaceSnapshot.ts | Snapshot state workspace buat restore |
+
+## packages/terminal/
+| File | Tanggung jawab |
+|---|---|
+| TerminalManager.ts | Kelola sesi terminal |
+| CommandExecutor.ts | Eksekusi command |
+| CommandSession.ts | Shape satu sesi command |
+| ShellEnvironment.ts | Env buat shell yang dijalanin |
+
+## packages/storage/
+| File | Tanggung jawab |
+|---|---|
+| SnapshotManager.ts | Simpan/restore snapshot state |
+| CacheManager.ts | Cache layer platform (BEDA dari packages/cache/ core) |
+| ArtifactStore.ts | Simpan artifact hasil build/analisis |
+| RecoveryManager.ts | Recovery dari crash/state korup |
+
+## packages/networking/
+| File | Tanggung jawab |
+|---|---|
+| PortManager.ts | Alokasi & track port yang dipakai service |
+| ServiceEndpoint.ts | Shape endpoint satu service |
+| NetworkRegistry.ts | Registry semua endpoint aktif |
+| ConnectionManager.ts | Kelola koneksi antar-service |
+
+## packages/security/
+| File | Tanggung jawab |
+|---|---|
+| PermissionManager.ts | Cek permission aksi |
+| PolicyEngine.ts | Evaluasi policy/rule akses |
+| Capability.ts | Shape satu capability/izin |
+| Sandbox.ts | Isolasi eksekusi proses/command |
+
+## packages/system/
+| File | Tanggung jawab |
+|---|---|
+| SystemManager.ts | State terpusat: workspace+proc+service+env+repo+index+diagnostics+jobs+health |
+| SystemState.ts | Shape state sistem |
+| ConfigurationStore.ts | Simpan config sistem |
+| HealthMonitor.ts | Pantau kesehatan komponen |
+
+## packages/diagnostics/
+| File | Tanggung jawab |
+|---|---|
+| DiagnosticEngine.ts | Hub: error → ErrorLocation → graph → impact → FixSuggestion |
+| ErrorLocation.ts | Shape lokasi error (file:line) |
+| ErrorContext.ts | Konteks sekitar error |
+| FixSuggestion.ts | Saran perbaikan |
+| DiagnosticEvent.ts | Event diagnostic buat notifikasi |
+
+## packages/editor/
+| File | Tanggung jawab |
+|---|---|
+| CodeNavigator.ts | Navigasi ke file/line relevan |
+| ImpactNavigator.ts | Navigasi ke daftar affected files (pakai packages/impact/) |
+| SymbolProvider.ts | Sumber info symbol buat editor |
+| LineContext.ts | Konteks baris kode tertentu |
+| EditContext.ts | Konteks sesi editing developer |
+
+## packages/language/
+| File | Tanggung jawab |
+|---|---|
+| LanguageService.ts | Entry point language intelligence, konsumsi packages/parser/ yang ada |
+| SymbolEngine.ts | Symbol → type/declaration/imports/consumers |
+| SyntaxEngine.ts | Analisis syntax (pakai parser existing) |
+| CompletionEngine.ts | Auto-complete |
+| FormattingEngine.ts | Format kode |
+| DiffEngine.ts | Semantic diff (text→symbol→AST→dependency→impact→architectural) |
+
+## packages/orchestration/
+| File | Tanggung jawab |
+|---|---|
+| PlatformOrchestrator.ts | Lem utama: watcher→index→graph→impact→diagnostics→runtime→UI |
+| EventRouter.ts | Routing event antar-modul platform |
+| TaskOrchestrator.ts | Koordinasi multi-step task |
+| RecoveryOrchestrator.ts | Koordinasi recovery pas ada failure |
+
+## apps/cli/commands/ (baru)
+| File | Tanggung jawab |
+|---|---|
+| run.ts | Jalanin service/proses |
+| ps.ts | List proses aktif |
+| service.ts | CRUD/control service |
+| logs.ts | Tail/lihat logs |
+| proc.ts | Detail satu proses |
+| workspace.ts | Kelola workspace |
+| env.ts | Kelola environment |
+| diagnose.ts | Trigger diagnostic engine |
+| open.ts | Buka file/impact/dependency dari CLI |
+| edit.ts | Trigger editor context |
+| recover.ts | Trigger recovery manager |
+| health.ts | Tampilkan status kesehatan via HealthMonitor |
+| package.ts | Install/remove/list platform package via package-manager |
+
+## apps/web/app/api/ (baru)
+| File | Tanggung jawab |
+|---|---|
+| runtime/route.ts | API runtime state |
+| processes/route.ts | API list/control proses |
+| services/route.ts | API list/control service |
+| diagnostics/route.ts | API diagnostic engine |
+| notifications/route.ts | API notification stream |
+| editor/route.ts | API editor context/navigation |
+
+## packages/kernel/
+| File | Tanggung jawab |
+|---|---|
+| Kernel.ts | Core process kernel: nyatuin process table, signal bus, service registry |
+| ProcessTable.ts | Tabel in-memory proses yang lagi jalan |
+| SignalBus.ts | Pub/sub sinyal antar-subsistem level kernel |
+| ServiceRegistry.ts | Registry nama service ke instance yang jalan |
+| introspection/ProcSnapshot.ts | Snapshot process table di satu titik waktu |
+| introspection/formatProcTree.ts | Format ProcSnapshot jadi tree yang bisa dibaca |
+
+## packages/semantic-diff/
+| File | Tanggung jawab |
+|---|---|
+| SemanticDiff.ts | Pipeline utama: text → symbol → AST → dependency → impact → architectural |
+| SymbolDiff.ts | Diff symbol (rename/type-changed/removed) antar-versi |
+| AstDiff.ts | Diff AST node antar-versi file |
+| DependencyDiff.ts | Diff dependency edge yang kena dampak (pakai packages/diff + graph) |
+| DiffRenderer.ts | Render hasil semantic diff jadi output yang bisa dibaca |
+
+## packages/notifications/
+| File | Tanggung jawab |
+|---|---|
+| NotificationManager.ts | Dispatch notifikasi ke channel yang terdaftar |
+| Notification.ts | Shape satu notifikasi (title, body, severity) |
+| NotificationChannel.ts | Interface channel pengiriman notifikasi (editor, CLI, web) |
+
+## packages/package-manager/
+| File | Tanggung jawab |
+|---|---|
+| PackageManager.ts | Install/remove/list platform package |
+| PackageManifest.ts | Shape manifest satu platform package (nama, versi, deps) |
+| PackageResolver.ts | Resolve dependency graph & version constraint |
+| PackageState.ts | Track state install/pending/failed platform package |
