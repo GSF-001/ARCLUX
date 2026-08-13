@@ -8,23 +8,6 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-/**
- * ProcessManager — spawns and tracks real OS processes for ARCLUX's own
- * internal services (web server, watcher, indexer). This is ARCLUX's
- * fork-mode equivalent of PM2's God.forkMode (lib/God/ForkMode.js):
- * child_process.spawn + stdout/stderr capture + exit handling + IPC
- * message forwarding, all broadcast through the kernel's SignalBus
- * (mirrors God.bus.emit('log:out' / 'log:err' / 'process:msg', ...)).
- *
- * Deliberately NOT ported from PM2:
- * - Cluster mode (cluster.fork() for multi-instance load balancing) —
- *   see lib/God/ClusterMode.js in the PM2 reference clone. ARCLUX's
- *   internal services are single-instance; add this later if a real
- *   need for multi-instance load balancing shows up.
- * - Log file persistence to disk, PID file writing, dayjs-formatted
- *   timestamps, JSON log type toggle, uid/gid, Windows-specific options.
- */
-
 import { spawn, type ChildProcess } from "node:child_process";
 import type { Kernel } from "../kernel/Kernel";
 import { ProcessStatus } from "../kernel/ProcessTable";
@@ -59,7 +42,6 @@ export class ProcessManager {
     });
 
     this.children.set(spec.id, { spec, child });
-
     this.kernel.updateProcessStatus(spec.id, ProcessStatus.ONLINE);
     const entry = this.kernel.processTable.get(spec.id);
     if (entry) {
@@ -68,46 +50,26 @@ export class ProcessManager {
     }
 
     child.stdout?.on("data", (data: Buffer) => {
-      this.kernel.signalBus.emit("log:out", {
-        processId: spec.id,
-        name: spec.name,
-        data: data.toString(),
-        at: Date.now(),
-      });
+      this.kernel.signalBus.emit("log:out", { processId: spec.id, name: spec.name, data: data.toString(), at: Date.now() });
     });
 
     child.stderr?.on("data", (data: Buffer) => {
-      this.kernel.signalBus.emit("log:err", {
-        processId: spec.id,
-        name: spec.name,
-        data: data.toString(),
-        at: Date.now(),
-      });
+      this.kernel.signalBus.emit("log:err", { processId: spec.id, name: spec.name, data: data.toString(), at: Date.now() });
     });
 
     child.on("message", (msg: unknown) => {
-      this.kernel.signalBus.emit("process:msg", {
-        processId: spec.id,
-        name: spec.name,
-        data: msg,
-        at: Date.now(),
-      });
+      this.kernel.signalBus.emit("process:msg", { processId: spec.id, name: spec.name, data: msg, at: Date.now() });
     });
 
     child.once("exit", (code, signal) => {
       const exitedAbnormally = code !== 0 && code !== null;
-      this.kernel.updateProcessStatus(
-        spec.id,
-        exitedAbnormally ? ProcessStatus.ERRORED : ProcessStatus.STOPPED,
-        code ?? undefined
-      );
+      this.kernel.updateProcessStatus(spec.id, exitedAbnormally ? ProcessStatus.ERRORED : ProcessStatus.STOPPED, code ?? undefined);
       this.children.delete(spec.id);
 
       const shouldRestart =
         spec.autorestart !== false &&
         exitedAbnormally &&
-        (this.kernel.processTable.get(spec.id)?.restarts ?? 0) <
-          (spec.maxRestarts ?? 15); // 15 matches PM2's default unstable_restarts ceiling
+        (this.kernel.processTable.get(spec.id)?.restarts ?? 0) < (spec.maxRestarts ?? 15);
 
       if (shouldRestart) {
         this.kernel.processTable.incrementRestarts(spec.id);
@@ -116,12 +78,7 @@ export class ProcessManager {
     });
 
     child.once("error", (err) => {
-      this.kernel.signalBus.emit("process:error", {
-        processId: spec.id,
-        name: spec.name,
-        error: err.message,
-        at: Date.now(),
-      });
+      this.kernel.signalBus.emit("process:error", { processId: spec.id, name: spec.name, error: err.message, at: Date.now() });
     });
   }
 
@@ -135,6 +92,6 @@ export class ProcessManager {
   send(id: string, message: unknown): boolean {
     const tracked = this.children.get(id);
     if (!tracked || !tracked.child.connected) return false;
-    return tracked.child.send(message);
+    return tracked.child.send(message as any);
   }
 }
