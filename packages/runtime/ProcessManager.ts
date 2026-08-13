@@ -1,5 +1,5 @@
 /**
- * Copyright 2026 ARCLUX
+ * Copyright 2026 Mikatoshi
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,11 +43,7 @@ export class ProcessManager {
 
     this.children.set(spec.id, { spec, child });
     this.kernel.updateProcessStatus(spec.id, ProcessStatus.ONLINE);
-    const entry = this.kernel.processTable.get(spec.id);
-    if (entry) {
-      entry.pid = child.pid ?? null;
-      entry.startedAt = Date.now();
-    }
+    this.kernel.setProcessRuntimeInfo(spec.id, { pid: child.pid ?? null, startedAt: Date.now() });
 
     child.stdout?.on("data", (data: Buffer) => {
       this.kernel.signalBus.emit("log:out", { processId: spec.id, name: spec.name, data: data.toString(), at: Date.now() });
