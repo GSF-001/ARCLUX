@@ -352,3 +352,9 @@ Added .github/PULL_REQUEST_TEMPLATE.md, .github/CODEOWNERS (verified against act
 **Status:** Done
 
 progres/PROGRES-bugs.md etc renamed to progres/bugs.md etc (folder name already gives context, prefix was redundant). Updated all references across PROGRES.md, README.md, TOOLING.md, QUICKSTART.md, progres/README.md, and scripts/log-progress.sh (which builds the filename dynamically from category).
+
+## 2026-08-13 — Editor and diagnostics layers implemented, pending merge
+
+**Status:** In Progress
+
+Implemented packages/editor/ (CodeNavigator, ImpactNavigator, SymbolProvider, LineContext, EditContext) and packages/diagnostics/ (ErrorLocation, DiagnosticEngine wrapping 3 detector adapters -- circularDependency, deadCode, ambiguousSymbolResolution -- ErrorContext, DiagnosticEvent, FixSuggestion). Wired into CLI via apps/cli/diagnose.ts, registered in apps/cli/index.ts. Verified working end-to-end with 'npx tsx apps/cli/index.ts diagnose .' (62 real findings against this repo itself). All detector adapters call real functions from packages/detectors/* and packages/impact/* -- no reimplementation, no mocked data. Two things still open: (1) branch 'feat/diagnostics-layer' has all of this work but is NOT YET MERGED to main as of this entry -- verify before assuming it's live. (2) FixSuggestion.ts only covers the 3 wired checkIds; other 15 detectors not yet wired into diagnostics/ -- read each detector's actual return shape before adding, they are NOT uniform (confirmed: circularDependency has no line info, deadCode has file but no line, ambiguousSymbolResolution has real line info per definition).
