@@ -352,3 +352,36 @@ Added .github/PULL_REQUEST_TEMPLATE.md, .github/CODEOWNERS (verified against act
 **Status:** Done
 
 progres/PROGRES-bugs.md etc renamed to progres/bugs.md etc (folder name already gives context, prefix was redundant). Updated all references across PROGRES.md, README.md, TOOLING.md, QUICKSTART.md, progres/README.md, and scripts/log-progress.sh (which builds the filename dynamically from category).
+
+ main
+## 2026-08-13 — Editor and diagnostics layers implemented, pending merge
+
+**Status:** In Progress
+
+Implemented packages/editor/ (CodeNavigator, ImpactNavigator, SymbolProvider, LineContext, EditContext) and packages/diagnostics/ (ErrorLocation, DiagnosticEngine wrapping 3 detector adapters -- circularDependency, deadCode, ambiguousSymbolResolution -- ErrorContext, DiagnosticEvent, FixSuggestion). Wired into CLI via apps/cli/diagnose.ts, registered in apps/cli/index.ts. Verified working end-to-end with 'npx tsx apps/cli/index.ts diagnose .' (62 real findings against this repo itself). All detector adapters call real functions from packages/detectors/* and packages/impact/* -- no reimplementation, no mocked data. Two things still open: (1) branch 'feat/diagnostics-layer' has all of this work but is NOT YET MERGED to main as of this entry -- verify before assuming it's live. (2) FixSuggestion.ts only covers the 3 wired checkIds; other 15 detectors not yet wired into diagnostics/ -- read each detector's actual return shape before adding, they are NOT uniform (confirmed: circularDependency has no line info, deadCode has file but no line, ambiguousSymbolResolution has real line info per definition).
+
+ docs/log-today-progress-v2
+## 2026-08-13 — Platform layer docs map lengkap
+
+**Status:** Done
+
+docs-site/map/map-packages-platform.mdx sekarang punya tabel tanggung jawab tiap file, section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file konkret plus dependency ke packages/engine, parser, diff, impact yang sudah ada, diagram arah dependency satu arah, dan daftar file existing yang perlu diedit nanti (apps/cli/index.ts, apps/web/lib/api.ts). Status: dokumentasi selesai, logic belum diisi.
+
+## 2026-08-13 — Platform layer docs map lengkap
+
+**Status:** Done
+
+docs-site/map/map-packages-platform.mdx sekarang punya tabel tanggung jawab tiap file, section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file konkret plus dependency ke packages/engine, parser, diff, impact yang sudah ada, diagram arah dependency satu arah, dan daftar file existing yang perlu diedit nanti (apps/cli/index.ts, apps/web/lib/api.ts). Status: dokumentasi selesai, logic belum diisi.
+
+## 2026-08-13 — Platform layer docs map complete
+
+`docs-site/map/map-packages-platform.mdx` sekarang punya: (1) tabel
+tanggung jawab tiap file per package platform layer, (2) section
+"Blueprint Integration" yang memetakan alur editor dan semantic-diff
+pipeline ke file konkret + dependency existing engine, (3) diagram arah
+dependency satu arah (Developer Layer → Platform Layer → ARCLUX Engine),
+(4) daftar file existing yang perlu diedit nanti (`apps/cli/index.ts`
+buat register command baru, cek `apps/web/lib/api.ts` buat shared
+middleware). Status: dokumentasi selesai, implementasi logic belum
+dimulai.
+ARCLUX.main

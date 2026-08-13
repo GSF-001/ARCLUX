@@ -1,3 +1,7 @@
+feat/editor-layer
+=======
+feat/diagnostics-layer
+ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +32,10 @@ export interface DiagnosticFinding {
   locations: ErrorLocation[];
 }
 
+feat/editor-layer
 /** detectCircularDependency returns { cycle: string[] } -- module ids only, no line info at all. */
+
+ARCLUX.main
 function adaptCircularDependency(repository: Repository): DiagnosticFinding[] {
   const results = detectCircularDependency(repository);
 
@@ -43,7 +50,10 @@ function adaptCircularDependency(repository: Repository): DiagnosticFinding[] {
   }));
 }
 
+ feat/editor-layer
 /** detectDeadCode returns { filePath, unusedExportCount, importedByCount, message } -- file-level, no line. */
+
+ARCLUX.main
 function adaptDeadCode(repository: Repository): DiagnosticFinding[] {
   const results = detectDeadCode(repository);
 
@@ -58,7 +68,10 @@ function adaptDeadCode(repository: Repository): DiagnosticFinding[] {
   });
 }
 
+ feat/editor-layer
 /** detectAmbiguousSymbolResolution returns real line info per definition -- use it directly, no fallback needed. */
+
+ARCLUX.main
 function adaptAmbiguousSymbolResolution(repository: Repository): DiagnosticFinding[] {
   const results = detectAmbiguousSymbolResolution(repository);
 
@@ -77,3 +90,19 @@ export function runDiagnostics(repository: Repository): DiagnosticFinding[] {
     ...adaptAmbiguousSymbolResolution(repository),
   ];
 }
+feat/editor-layer
+
+
+/**
+ * Copyright 2026 ARCLUX
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+// Scaffold: diagnostics/DiagnosticEngine — not yet implemented.
+ ARCLUX.main
+ ARCLUX.main
