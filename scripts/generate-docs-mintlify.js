@@ -284,7 +284,7 @@ const context = readIfExists('CONTEXT.md');
       }
       const slug = `map-${groupDir}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const filename = `${slug}.mdx`;
-      writeDoc(filename, `${groupDir}/${name}`, description || `Ringkasan ${groupDir}/${name}`, body, 'map');
+      writeDoc(filename, name, description || `Ringkasan ${groupDir}/${name}`, body, 'map');
       pageNames.push(filename.replace('.mdx', ''));
     });
     return pageNames;
