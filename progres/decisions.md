@@ -470,7 +470,8 @@ is local-only, awaiting review before any push/PR.
 ### Open follow-ups, not done yet (don't assume these are handled)
 
 - True dual-graph diff (LAB 1's documented scope limit)
-- 12/13 empty rule stubs (LAB 2) — only requirePage is real
+- ~~12/13 empty rule stubs (LAB 2) — only requirePage is real~~ — **DONE 2026-08-13**: all 10 stubs implemented,
+  13 rules wired into verify.ts/contract.ts; only react/requirePropsTyping remains a documented deferral
 - Verify's severity policy is untuned (LAB 2)
 - No cache for local-path analysis (LAB 3) — fine for now, revisit if
   slow on large repos

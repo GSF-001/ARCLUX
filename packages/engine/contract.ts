@@ -17,6 +17,9 @@
 // Scope: this is ONLY the contract + aggregation function. It does NOT
 // change verify.ts/diff.ts's own behavior or the underlying detectors --
 // see LAB 5 for formalizing the CLI -> Engine -> Core boundary itself.
+//
+// Rules wired here must mirror apps/cli/verify.ts: all implemented rules,
+// never stubs (react/requirePropsTyping is a documented deferral).
 
 import type { Repository } from "../repository/Repository";
 import { detectCircularDependency } from "../detectors/detectCircularDependency";
@@ -31,6 +34,18 @@ import { detectDeadCode } from "../detectors/detectDeadCode";
 import { detectAmbiguousSymbolResolution } from "../detectors/detectAmbiguousSymbolResolution";
 import { runRules } from "../rules/RuleEngine";
 import { requirePage } from "../rules/nextjs/requirePage";
+import { requireRoute } from "../rules/nextjs/requireRoute";
+import { requireIndexUpdate } from "../rules/nextjs/requireIndexUpdate";
+import { requireLayoutUpdate } from "../rules/nextjs/requireLayoutUpdate";
+import { requireMetadata } from "../rules/nextjs/requireMetadata";
+import { requireControllerBinding } from "../rules/nestjs/requireControllerBinding";
+import { requireModuleRegistration } from "../rules/nestjs/requireModuleRegistration";
+import { requireRouteRegistration } from "../rules/express/requireRouteRegistration";
+import { requireEntryConfig } from "../rules/vite/requireEntryConfig";
+import { requireMainProcessBinding } from "../rules/electron/requireMainProcessBinding";
+import { requirePreloadExposure } from "../rules/electron/requirePreloadExposure";
+import { requireComponentExport } from "../rules/react/requireComponentExport";
+import { requireHookRules } from "../rules/react/requireHookRules";
 
 /** Severity that a single Issue carries. "error" should fail a build/CI check, "warning" should not. */
 export type IssueSeverity = "error" | "warning";
@@ -54,10 +69,10 @@ export interface RunAllChecksResult {
 
 /**
  * Runs the same 10 detectors doctor.ts/verify.ts already run, plus the
- * rule engine (currently only requirePage.ts is real -- see that file's
- * own comment; the other 12 rule stubs are NOT wired in here on purpose).
- * Returns one normalized Issue[] list instead of 10 separate detector
- * outputs + a separate rule engine result.
+ * rule engine with all 13 implemented rules (the only non-wired rule file
+ * is react/requirePropsTyping.ts, a documented deferral). Returns one
+ * normalized Issue[] list instead of 10 separate detector outputs + a
+ * separate rule engine result.
  */
 export function runAllChecks(repository: Repository): RunAllChecksResult {
   const issues: Issue[] = [];
@@ -87,7 +102,25 @@ export function runAllChecks(repository: Repository): RunAllChecksResult {
     }
   }
 
-  const ruleResults = runRules(repository, [requirePage], repository.meta.detectedFrameworks);
+  const ruleResults = runRules(
+    repository,
+    [
+      requirePage,
+      requireRoute,
+      requireIndexUpdate,
+      requireLayoutUpdate,
+      requireMetadata,
+      requireControllerBinding,
+      requireModuleRegistration,
+      requireRouteRegistration,
+      requireEntryConfig,
+      requireMainProcessBinding,
+      requirePreloadExposure,
+      requireComponentExport,
+      requireHookRules,
+    ],
+    repository.meta.detectedFrameworks
+  );
   for (const result of ruleResults) {
     issues.push({
       source: "rule",
