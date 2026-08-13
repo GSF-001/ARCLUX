@@ -1,4 +1,7 @@
+feat/editor-layer
+
 feat/diagnostics-layer
+ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +20,10 @@ import type { DiagnosticFinding } from "./DiagnosticEngine";
 
 export interface FindingWithContext {
   finding: DiagnosticFinding;
+<<<<<< feat/editor-layer
+  /** Impact for each distinct moduleId referenced in finding.locations. */
+
+ARCLUX.main
   impactByModuleId: Record<string, ImpactNavigationResult>;
 }
 
@@ -34,6 +41,8 @@ export function attachImpactContext(repository: Repository, finding: DiagnosticF
 export function attachImpactContextToAll(repository: Repository, findings: DiagnosticFinding[]): FindingWithContext[] {
   return findings.map((f) => attachImpactContext(repository, f));
 }
+feat/editor-layer
+
 
 /**
  * Copyright 2026 ARCLUX
@@ -46,4 +55,5 @@ export function attachImpactContextToAll(repository: Repository, findings: Diagn
  */
 
 // Scaffold: diagnostics/ErrorContext — not yet implemented.
+ARCLUX.main
 ARCLUX.main

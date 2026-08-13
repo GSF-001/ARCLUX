@@ -1,4 +1,7 @@
+feat/editor-layer
+
 feat/diagnostics-layer
+ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -9,7 +12,13 @@ feat/diagnostics-layer
 //
 // Flattens a FindingWithContext into a notification-ready shape: one
 // event per location, carrying just enough to jump straight to file+line
+feat/editor-layer
+// and show affected-file count. Consumers (apps/cli, apps/web) render
+// this, they don't re-derive it from DiagnosticFinding/ImpactNavigationResult
+// themselves.
+
 // and show affected-file count.
+ARCLUX.main
 
 import type { FindingWithContext } from "./ErrorContext";
 import type { DiagnosticSeverity } from "./DiagnosticEngine";
@@ -43,6 +52,8 @@ export function toDiagnosticEvents(withContext: FindingWithContext): DiagnosticE
 export function toDiagnosticEventsForAll(withContextList: FindingWithContext[]): DiagnosticEvent[] {
   return withContextList.flatMap(toDiagnosticEvents);
 }
+feat/editor-layer
+
 
 /**
  * Copyright 2026 ARCLUX
@@ -55,4 +66,5 @@ export function toDiagnosticEventsForAll(withContextList: FindingWithContext[]):
  */
 
 // Scaffold: diagnostics/DiagnosticEvent — not yet implemented
+  ARCLUX.main
   ARCLUX.main

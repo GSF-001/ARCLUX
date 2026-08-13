@@ -1,4 +1,7 @@
+feat/editor-layer
+
 feat/diagnostics-layer
+ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +33,8 @@ export function fileLevelLocation(moduleId: string, filePath: string): ErrorLoca
 export function preciseLocation(moduleId: string, filePath: string, line: number): ErrorLocation {
   return { moduleId, filePath, line, locationPrecision: "line" };
 }
+feat/editor-layer
+
 
 /**
  * Copyright 2026 ARCLUX
@@ -43,3 +48,4 @@ export function preciseLocation(moduleId: string, filePath: string, line: number
 
 // Scaffold: diagnostics/ErrorLocation — not yet implemented.
  ARCLUX.main
+ARCLUX.main
