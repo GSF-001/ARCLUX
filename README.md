@@ -11,6 +11,9 @@ Dependency graph, impact analysis, and structural convention checking for your c
 [![CI](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml/badge.svg)](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-live-3f8fff)](https://arclux-os.mintlify.site)
 
+<p align="center">
+  <img src="assets/demo.gif" alt="ARCLUX CLI in action: arclux analyze . and arclux doctor" />
+</p>
 
 -----
 
@@ -35,7 +38,7 @@ This project is under active development with a small team. Expect breaking chan
 What is solid right now:
 - Core pipeline (clone, parse, index, dependency graph)
 - TypeScript/TSX and Python parsing
-- All 18 structural detectors (circular deps, dead code, orphan files, duplicate modules, layer violations, entry points, and more)
+- 19 structural detectors (circular deps, dead code, orphan files, duplicate modules, layer violations, entry points, component/route/story/test conventions, and more) — `arclux doctor` runs all of them; `arclux verify` gates on the core 10 for its PASS/FAIL verdict
 - Full impact analysis (packages/impact/* - trace consumers/dependents, affected files/modules/components/routes)
 - CLI commands: analyze, graph, impact, doctor, config
 - Web dashboard: dependency graph viewer, layout/navigation, most UI patterns and primitives
@@ -44,7 +47,6 @@ What is solid right now:
 What is not there yet:
 - Parsers for Go and Java exist but don't yet capture same-package/same-directory relationships that don't use explicit imports (a documented design gap, see `progres/decisions.md`)
 - Parsers for Rust, C#, C++, PHP, Ruby (dependency-manifest parsing exists for several of these; source-code parsing does not yet)
-- Framework convention rules beyond a starting Next.js rule
 - Real search (`/api/search` is a filename-only stopgap)
 - A handful of dashboard panels (workspace, explorer, some overview components)
 
@@ -52,8 +54,8 @@ What is not there yet:
 
 - Builds a dependency graph (imports, exports, folders) from static analysis
 - Traces impact - what is affected if you change file X
-- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (18 detectors)
-- Enforces framework conventions (Next.js today, more frameworks planned)
+- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (19 detectors — run them all with `arclux doctor`)
+- Enforces framework conventions (13 rules: Next.js, NestJS, Express, Vite, Electron, React — `arclux verify` gates on them)
 - Parses TypeScript, JavaScript, and Python today; more languages planned
 
 ## Install (from source)

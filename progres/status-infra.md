@@ -317,6 +317,10 @@ unmarked on purpose, this is expected script behavior, not a bug.
 
 ## 2026-08-06 — Update - packages/README.md added
 
+> **[STATUS UPDATE, 2026-08-13]: `rules/` is no longer a stub** — all 10
+> remaining rule files implemented and wired (see status-backlog.md's
+> 2026-08-13 UPDATE entry). The scan below reflects the state as of 2026-08-06.
+
 Per-folder status table generated from an actual file scan (line-count
 stub detection), not memory. Snapshot: repository/detectors/impact/
 incremental/shared/parser/graph = working, watcher/indexer/git/engine =
@@ -353,6 +357,13 @@ Added .github/PULL_REQUEST_TEMPLATE.md, .github/CODEOWNERS (verified against act
 
 progres/PROGRES-bugs.md etc renamed to progres/bugs.md etc (folder name already gives context, prefix was redundant). Updated all references across PROGRES.md, README.md, TOOLING.md, QUICKSTART.md, progres/README.md, and scripts/log-progress.sh (which builds the filename dynamically from category).
 
+ main
+## 2026-08-13 — Editor and diagnostics layers implemented, pending merge
+
+**Status:** In Progress
+
+Implemented packages/editor/ (CodeNavigator, ImpactNavigator, SymbolProvider, LineContext, EditContext) and packages/diagnostics/ (ErrorLocation, DiagnosticEngine wrapping 3 detector adapters -- circularDependency, deadCode, ambiguousSymbolResolution -- ErrorContext, DiagnosticEvent, FixSuggestion). Wired into CLI via apps/cli/diagnose.ts, registered in apps/cli/index.ts. Verified working end-to-end with 'npx tsx apps/cli/index.ts diagnose .' (62 real findings against this repo itself). All detector adapters call real functions from packages/detectors/* and packages/impact/* -- no reimplementation, no mocked data. Two things still open: (1) branch 'feat/diagnostics-layer' has all of this work but is NOT YET MERGED to main as of this entry -- verify before assuming it's live. (2) FixSuggestion.ts only covers the 3 wired checkIds; other 15 detectors not yet wired into diagnostics/ -- read each detector's actual return shape before adding, they are NOT uniform (confirmed: circularDependency has no line info, deadCode has file but no line, ambiguousSymbolResolution has real line info per definition).
+
  docs/log-today-progress-v2
 ## 2026-08-13 — Platform layer docs map lengkap
 
@@ -378,3 +389,15 @@ buat register command baru, cek `apps/web/lib/api.ts` buat shared
 middleware). Status: dokumentasi selesai, implementasi logic belum
 dimulai.
 ARCLUX.main
+
+## 2026-08-13 — Dogfood ARCLUX on Django
+
+**Status:** scripts/log-progress.sh
+
+Stress-tested ARCLUX on the Django repository: 3,039 modules and 7,734 dependency edges analyzed in ~30s on Termux/Android. Impact analysis traced django/db/models/lookups.py to 1,319 affected files. Diagnostic analysis reached the current Node.js heap limit (~1 GB) after ~50s, establishing a real-world stress boundary.
+
+## 2026-08-13 — Django stress test
+
+**Status:** done
+
+ARCLUX indexed 3039 modules and 7734 dependency edges in ~30s; impact traced django/db/models/lookups.py to 1319 affected files; diagnose reached Node heap limit on Termux.

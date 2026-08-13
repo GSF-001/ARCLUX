@@ -8,4 +8,13 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: runtime/ProcessSpec — not yet implemented.
+export interface ProcessSpec {
+  id: string;
+  name: string;
+  command: string;
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+  autorestart?: boolean;
+  maxRestarts?: number;
+}

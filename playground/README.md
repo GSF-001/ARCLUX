@@ -7,7 +7,7 @@ supports, used to sanity-check the pipeline against real-ish code:
     npx tsx scripts/testPlayground.ts python-demo
     npx tsx scripts/testPlayground.ts react-demo
 
-This runs the full buildIndex -> buildDependencyGraph -> all 16
+This runs the full buildIndex -> buildDependencyGraph -> all 19
 detectors pipeline against the fixture and prints what it finds — a fast
 way to check "does this actually work" without cloning a real repo.
 
@@ -43,10 +43,10 @@ to parse.
 | go-demo | Go parser, detectCircularDependency, detectUnusedExports | parser: working | Verified: 6/6 modules indexed, exports correctly extracted via uppercase-letter convention including deliberately-unused UnusedHelper. |
 | java-demo | Java parser, detectCircularDependency, detectUnusedExports | parser: working | Verified: 6/6 modules indexed, public-modifier exports correctly extracted including deliberately-unused unusedHelper. |
 | python-demo | Python parser (tree-sitter), detectCircularDependency, detectUnusedExports | parser: working | Uses web-tree-sitter + WASM grammar, not regex - see PROGRES.md gotchas for why this was non-trivial on Termux/Webpack. |
-| express-demo | TS/JS parser, Express convention rules | parser: working, rules: stub | packages/rules/express/ is a stub per packages/README.md. |
-| nest-demo | TS parser, NestJS convention rules | parser: working, rules: stub | packages/rules/nestjs/ is stub. |
-| nextjs-demo | TSX parser, Next.js convention rules | parser: working, rules: stub | packages/rules/nextjs/ is stub. |
-| react-demo | TSX parser, React convention rules | parser: working, rules: stub | packages/rules/react/ is stub. |
+| express-demo | TS/JS parser, Express convention rules | parser: working, rules: implemented | requireRouteRegistration flags unregistered routers. |
+| nest-demo | TS parser, NestJS convention rules | parser: working, rules: implemented | requireControllerBinding + requireModuleRegistration (module-graph BFS from app.module.ts). |
+| nextjs-demo | TSX parser, Next.js convention rules | parser: working, rules: implemented | requirePage/requireRoute/requireLayoutUpdate (root layout)/requireMetadata/requireIndexUpdate. |
+| react-demo | TSX parser, React convention rules | parser: working, rules: 2/3 | requireComponentExport + requireHookRules implemented; requirePropsTyping deferred (needs parser-level parameter info). |
 
 ## What's NOT covered here
 

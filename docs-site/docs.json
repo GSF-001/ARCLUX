@@ -13,7 +13,8 @@
       {
         "group": "Getting Started",
         "pages": [
-          "intro",
+          "overview",
+          "quickstart",
           "usage"
         ]
       },
@@ -52,29 +53,49 @@
               "map/map-packages-cache",
               "map/map-packages-db",
               "map/map-packages-detectors",
+              "map/map-packages-diagnostics",
               "map/map-packages-diff",
+              "map/map-packages-editor",
               "map/map-packages-engine",
+              "map/map-packages-environment",
               "map/map-packages-git",
               "map/map-packages-graph",
               "map/map-packages-impact",
               "map/map-packages-incremental",
               "map/map-packages-indexer",
+              "map/map-packages-kernel",
+              "map/map-packages-language",
+              "map/map-packages-networking",
+              "map/map-packages-notifications",
+              "map/map-packages-orchestration",
+              "map/map-packages-package-manager",
               "map/map-packages-parser",
               "map/map-packages-platform",
               "map/map-packages-repository",
               "map/map-packages-rules",
+              "map/map-packages-runtime",
+              "map/map-packages-scheduler",
               "map/map-packages-search",
+              "map/map-packages-security",
+              "map/map-packages-semantic-diff",
+              "map/map-packages-services",
               "map/map-packages-shared",
+              "map/map-packages-storage",
+              "map/map-packages-system",
+              "map/map-packages-terminal",
               "map/map-packages-ui",
-              "map/map-packages-watcher"
-            ]
+              "map/map-packages-watcher",
+              "map/map-packages-workspace"
+            ],
+            "defaultOpen": false
           },
           {
             "group": "Apps",
             "pages": [
               "map/map-apps-cli",
               "map/map-apps-web"
-            ]
+            ],
+            "defaultOpen": false
           }
         ]
       }
