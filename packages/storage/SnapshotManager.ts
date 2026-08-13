@@ -11,7 +11,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import type { ProcessEntry } from "../kernel/ProcessTable";
+import type { ProcessEntry } from "../shared/types";
 
 /**
  * File-based persistence for kernel process state.

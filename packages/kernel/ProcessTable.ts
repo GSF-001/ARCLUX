@@ -8,28 +8,20 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-export const ProcessStatus = {
-  LAUNCHING: "launching",
-  ONLINE: "online",
-  STOPPING: "stopping",
-  STOPPED: "stopped",
-  ERRORED: "errored",
-} as const;
+// ProcessStatus/ProcessStatusValue/ProcessEntry moved to packages/shared/types.ts
+// (2026-08-14, issue #312) — re-exported here so existing kernel importers stay
+// unchanged. Storage imports them directly from shared to break the package cycle.
+import {
+  ProcessStatus,
+  type ProcessStatusValue,
+  type ProcessEntry,
+} from "../shared/types";
 
-export type ProcessStatusValue = (typeof ProcessStatus)[keyof typeof ProcessStatus];
-
-export interface ProcessEntry {
-  id: string;
-  pid: number | null;
-  name: string;
-  command: string;
-  args: string[];
-  cwd: string;
-  status: ProcessStatusValue;
-  startedAt: number | null;
-  restarts: number;
-  lastExitCode: number | null;
-}
+export {
+  ProcessStatus,
+  type ProcessStatusValue,
+  type ProcessEntry,
+} from "../shared/types";
 
 export class ProcessTable {
   private entries = new Map<string, ProcessEntry>();
