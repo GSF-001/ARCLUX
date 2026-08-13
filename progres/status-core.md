@@ -485,3 +485,15 @@ packages/kernel/ (ProcessTable, SignalBus, ServiceRegistry, Kernel) dan packages
 **Status:** In Progress
 
 Kernel.ts, ProcessTable.ts, SignalBus.ts, ServiceRegistry.ts, ProcessManager.ts, ProcessSpec.ts, RuntimeManager.ts semua berisi logic asli berdasarkan referensi PM2 (God.js, ForkMode.js). apps/cli/commands/run.ts terhubung ke RuntimeManager sebagai integrasi pertama. Sempat ada insiden git reset --hard yang menghapus kerjaan tanpa sengaja, sudah dipulihkan penuh dan diverifikasi lolos tsc --noEmit. Belum ditest end-to-end (arclux run web belum pernah dijalankan beneran).
+
+## 2026-08-13 — Add process persistence for ps command
+
+**Status:** Done
+
+Kernel now persists ProcessEntry records to ~/.arclux/pids/*.json on register/update (packages/storage/SnapshotManager.ts, new). readLiveProcessRecords() live-checks each PID via process.kill(pid, 0) and self-deletes stale records instead of trusting on-disk state blindly — pattern read from forever's getAllProcesses/getSockets (not copied, re-implemented for file-based instead of socket-based IPC). Kernel.shutdown() now also cleans up its own records. Wired apps/cli/commands/ps.ts to read persisted records directly (CLI runs as a separate process from whatever registered the process, so it can't share Kernel memory) and registered it in apps/cli/index.ts. Added ProcSnapshot.snapshotFromEntries() so both live in-memory ProcessTable and cross-process disk records can produce the same ProcSnapshot shape.
+
+## 2026-08-13 — Cross-process process visibility via file-based persistence
+
+**Status:** Done
+
+Added packages/storage/SnapshotManager.ts: writes one JSON record per process to ~/.arclux/pids/<id>.json on register/update, reads live-check each PID via process.kill(pid, 0) and self-deletes stale records. Pattern read from forever's getAllProcesses/getSockets (see NOTICE), re-implemented with plain files instead of socket IPC. Wired into Kernel.ts (registerProcess/updateProcessStatus/removeProcess/shutdown all persist), packages/kernel/introspection/ProcSnapshot.ts (added snapshotFromEntries for cross-process use), and apps/cli/commands/ps.ts (reads disk records directly, registered in apps/cli/index.ts).
