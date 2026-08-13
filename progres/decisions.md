@@ -35,7 +35,9 @@ Verified, not just assumed: `packages/parser/typescript/parseTsx.ts` and
   `ts.ScriptKind.TSX` (checked its `extensions` field and ScriptKind
   selection logic directly).
 - tsconfig.json parsing: handled inside
-  `packages/indexer/resolveAliases.ts`, which reads tsconfig.json /
+  `packages/graph/resolveAliases.ts` (moved from packages/indexer/ on
+  2026-08-13, fix for issue #2 circular dependency indexer<->graph),
+  which reads tsconfig.json /
   jsconfig.json directly (with comment/trailing-comma stripping) for
   path-alias resolution.
 
