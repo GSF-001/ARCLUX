@@ -474,6 +474,12 @@ Five new files in packages/indexer/. resolveRoutes.ts detects Next.js App Router
     
     main
 
+## 2026-08-13 — Kernel diperbaiki + RuntimeManager wiring ke CLI
+
+**Status:** In Progress
+
+Kernel.ts diperbaiki: import ProcessStatus yang salah diganti ke ProcessStatusValue. RuntimeManager.ts baru dibuat sebagai titik integrasi tunggal Kernel + ProcessManager. apps/cli/commands/run.ts sekarang memanggil RuntimeManager.startService() untuk service web sebagai proof-of-concept integrasi pertama. Belum ditest jalan end-to-end, baru lolos tsc --noEmit.
+
 ## 2026-08-13 — Kernel & ProcessManager diimplementasi pakai referensi PM2
 
 **Status:** Done

@@ -8,6 +8,12 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
+/**
+ * `arclux run <name>` — start a named internal service via RuntimeManager.
+ * Currently supports "web" (apps/web dev server). Add more named specs
+ * here as other internal services (watcher, indexer) get wired in.
+ */
+
 import { RuntimeManager } from "../../../packages/runtime/RuntimeManager";
 import type { ProcessSpec } from "../../../packages/runtime/ProcessSpec";
 

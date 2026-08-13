@@ -8,6 +8,14 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
+/**
+ * RuntimeManager — top-level entry point for the platform runtime.
+ * Wires Kernel (process table, signal bus, service registry) together
+ * with ProcessManager (actual OS process spawning). This is what
+ * apps/cli/commands/run.ts and future apps/web/app/api/runtime/route.ts
+ * should call into, instead of touching Kernel/ProcessManager directly.
+ */
+
 import { Kernel } from "../kernel/Kernel";
 import { ProcessManager } from "./ProcessManager";
 import type { ProcessSpec } from "./ProcessSpec";

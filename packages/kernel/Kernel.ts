@@ -8,6 +8,11 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
+/**
+ * Kernel — orchestrates ProcessTable, SignalBus, ServiceRegistry. ARCLUX's
+ * equivalent of PM2's God object, scoped to ARCLUX's own internal services.
+ */
+
 import { ProcessTable, type ProcessEntry, type ProcessStatusValue } from "./ProcessTable";
 import { SignalBus } from "./SignalBus";
 import { ServiceRegistry, type ServiceHandle } from "./ServiceRegistry";
