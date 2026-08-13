@@ -58,6 +58,8 @@ function makeModule(
     importedBy: [],
     imports: [],
     resolvedImports: [],
+    calls: [],
+    calledBy: [],
     implicitDependencies: [],
     ...overrides,
   };

@@ -14,9 +14,10 @@ Termux, tsconfig, Webpack, version-pinning quirks. See PROGRES.md for the index.
 - **Dead code piling up**: 2 differently-named files doing the same thing
   (`graph/resolveAlias.ts` vs `indexer/resolveAliases.ts`) because of
   parallel sessions without sync. Lesson: ALWAYS `cat`/`grep` first before
-  writing a new file that could overlap. **Same risk still exists** for
-  `packages/ui/graphColor.ts` vs `theme/graphColors.ts` — not yet cleaned
-  up.
+  writing a new file that could overlap. The same class of risk existed
+  for `packages/ui/graphColor.ts` vs `theme/graphColors.ts` — **cleaned
+  up 2026-08-14 (issue #11): the stub was deleted, `theme/graphColors.ts`
+  is the single source.**
 - **`wc -l` is misleading**: a file with just the Apache 2.0 license
   header has a baseline of 8 lines even when empty. The "empty" threshold
   is `≤9`, not `==0`. Always `cat` a suspicious file before recording its

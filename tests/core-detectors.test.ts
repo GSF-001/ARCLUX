@@ -14,6 +14,7 @@ import { describe, it, expect } from "vitest";
 import { Repository } from "../packages/repository/Repository";
 import { detectCircularDependency } from "../packages/detectors/detectCircularDependency";
 import { detectUnusedExports } from "../packages/detectors/detectUnusedExports";
+import { detectOrphanFiles } from "../packages/detectors/detectOrphanFiles";
 import type { ModuleInfo, RepositoryMeta, FileInfo, RawExport } from "../packages/shared/types";
 
 function makeFile(relativePath: string): FileInfo {
@@ -56,6 +57,8 @@ function makeModule(
     importedBy: opts.importedBy ?? [],
     imports,
     resolvedImports: opts.resolvedImports ?? imports.map((moduleId) => ({ moduleId, namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 })),
+    calls: [],
+    calledBy: [],
     implicitDependencies: [],
   };
 }
@@ -140,5 +143,61 @@ describe("detectUnusedExports", () => {
     const findings = detectUnusedExports(repo);
     expect(findings).toHaveLength(1);
     expect(findings[0].exportKind).toBe("default");
+  });
+
+  it("does not flag exports of a Next.js App Router entry file (page.tsx) — issue #4", () => {
+    const repo = makeRepository([
+      makeModule("apps/web/app/dashboard/page.tsx", { exports: [defaultExport("Dashboard"), named("metadata")] }),
+    ]);
+    expect(detectUnusedExports(repo)).toHaveLength(0);
+  });
+
+  it("does not flag exports of a Next.js route.ts API entry file — issue #4", () => {
+    const repo = makeRepository([makeModule("apps/web/app/api/impact/route.ts", { exports: [named("GET")] })]);
+    expect(detectUnusedExports(repo)).toHaveLength(0);
+  });
+
+  it("still flags a non-entry orphan module's exports", () => {
+    const repo = makeRepository([
+      makeModule("apps/web/app/dashboard/page.tsx", { exports: [defaultExport("Dashboard")] }),
+      makeModule("src/dead.ts", { exports: [named("lonely")] }),
+    ]);
+    const findings = detectUnusedExports(repo);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].filePath).toBe("src/dead.ts");
+  });
+
+  it("does not flag the CLI entry point (apps/cli/index.ts) — issue #4", () => {
+    const repo = makeRepository([makeModule("apps/cli/index.ts", { exports: [named("main")] })]);
+    expect(detectUnusedExports(repo)).toHaveLength(0);
+  });
+});
+
+describe("detectOrphanFiles", () => {
+  it("flags a file nothing imports", () => {
+    const repo = makeRepository([makeModule("src/dead.ts")]);
+    const findings = detectOrphanFiles(repo);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].filePath).toBe("src/dead.ts");
+  });
+
+  it("does not flag a Next.js App Router entry file as orphan — issue #4", () => {
+    const repo = makeRepository([makeModule("apps/web/app/dashboard/page.tsx")]);
+    expect(detectOrphanFiles(repo)).toHaveLength(0);
+  });
+
+  it("does not flag the CLI entry point as orphan — issue #4", () => {
+    const repo = makeRepository([makeModule("apps/cli/index.ts")]);
+    expect(detectOrphanFiles(repo)).toHaveLength(0);
+  });
+
+  it("still flags a non-entry file with no importers", () => {
+    const repo = makeRepository([
+      makeModule("apps/web/app/dashboard/page.tsx"),
+      makeModule("src/truly-orphaned.ts"),
+    ]);
+    const findings = detectOrphanFiles(repo);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].filePath).toBe("src/truly-orphaned.ts");
   });
 });

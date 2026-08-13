@@ -48,6 +48,8 @@ function makeModule(relativePath: string, exports: RawExport[] = []): ModuleInfo
     importedBy: [],
     imports: [],
     resolvedImports: [],
+    calls: [],
+    calledBy: [],
     implicitDependencies: [],
   };
 }

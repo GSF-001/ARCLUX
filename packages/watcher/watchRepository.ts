@@ -13,17 +13,17 @@
 //
 // - One Cell holds a single "revision token" (just a counter, bumped on
 //   every flushed change batch) for the WHOLE watched directory, not one
-//   Cell per file. A single Query wraps the entire analyzeLocalDirectory()
-//   call and reads that Cell.
+//   Cell per file. A single Query wraps the entire analyzeRepository()
+//   call (localPath flow) and reads that Cell.
 // - Consequence: ANY change anywhere in the tree invalidates the ENTIRE
-//   cached analysis, triggering a full re-run of analyzeLocalDirectory()
+//   cached analysis, triggering a full re-run of analyzeRepository()
 //   (which itself does a full buildIndex() rebuild — see buildIndex.ts,
 //   it has no partial-update mode). This is NOT what "incremental" means
 //   in the packages/incremental sense of per-Cell fine-grained
 //   invalidation — it only gives you ONE real benefit: if the watcher
 //   fires (e.g. on restart, or a save that didn't actually change file
 //   contents) but nothing has changed, the cached Query result is reused
-//   and analyzeLocalDirectory() does NOT re-run at all.
+//   and analyzeRepository() does NOT re-run at all.
 // - True per-file granular incrementality (only re-parsing changed files,
 //   reusing cached ModuleInfo for untouched ones) would require
 //   buildIndex.ts itself to be rewritten around Cell/Query internally,
@@ -36,12 +36,12 @@ import { Cell } from "../incremental/Cell";
 import { Query } from "../incremental/Query";
 import { watchFilesystem, type FilesystemWatcher } from "./watchFilesystem";
 import { createChangeQueue, type ChangeQueue } from "./changeQueue";
-import { analyzeLocalDirectory, type LocalAnalysisResult } from "../../apps/cli/analyzeLocal";
+import { analyzeRepository, type AnalyzeRepositoryResult } from "../engine/pipeline";
 
 export interface RepositoryWatcher {
   /** Returns the current analysis, running it only if the tree has
    * changed since the last call (or this is the first call). */
-  getAnalysis(): Promise<LocalAnalysisResult>;
+  getAnalysis(): Promise<AnalyzeRepositoryResult>;
   close(): Promise<void>;
 }
 
@@ -66,7 +66,7 @@ export function watchRepository(rootPath: string): RepositoryWatcher {
   // across cache hits, not on Query having any real async-awareness.
   const analysisQuery = new Query(db, () => {
     revisionToken.get(); // register as a dependency, ignore the value itself
-    return analyzeLocalDirectory(rootPath);
+    return analyzeRepository({ localPath: rootPath });
   });
 
   const queue: ChangeQueue = createChangeQueue(() => {
@@ -78,7 +78,7 @@ export function watchRepository(rootPath: string): RepositoryWatcher {
   });
 
   return {
-    getAnalysis(): Promise<LocalAnalysisResult> {
+    getAnalysis(): Promise<AnalyzeRepositoryResult> {
       return analysisQuery.get();
     },
     async close(): Promise<void> {

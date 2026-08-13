@@ -19,15 +19,17 @@ Automated tests, run with Vitest (https://vitest.dev).
 - **`watcher/`** — debounce/dedup behavior for the file-change queue
   that powers incremental re-indexing, using Vitest's fake timers.
 - **Root-level suites** — detectors (unit + the 8 doctor-wired
-  detectors + scanFiles cycle guard), the rule engine (all 13
-  implemented rules), impact analysis (`calculateAffectedFiles`), the
-  dependency graph builder, the analyze summary, and the pipeline entry
-  point (`analyzeRepository({ localPath })` end-to-end against a temp
-  repo with package.json framework detection).
+  detectors + scanFiles cycle guard), the rule engine (all 14
+  implemented rules, incl. laravel/requireController from issue #53),
+  impact analysis (`calculateAffectedFiles`), the call graph
+  (issue #50), the search engine (issue #9), the dependency graph
+  builder, the analyze summary, and the pipeline entry point
+  (`analyzeRepository({ localPath })` end-to-end against a temp repo
+  with package.json framework detection).
 
 ## Status
 
-141 tests across 20 files, all passing (`npx vitest run`).
+191 tests across 23 files, all passing (`npx vitest run`).
 
 ## Test files
 
@@ -35,15 +37,18 @@ Automated tests, run with Vitest (https://vitest.dev).
 |---|---|---|
 | detector.test.ts | 4 | detectAmbiguousSymbolResolution core cases |
 | detectors-wired.test.ts | 17 | the 8 detectors wired into doctor.ts |
-| core-detectors.test.ts | 6 | core detector helpers/behaviors |
+| core-detectors.test.ts | 14 | core detector helpers/behaviors (incl. entry-point filtering, issues #4/#7) |
 | scanFiles-cycle.test.ts | 1 | junction/symlink cycle guard in scanFiles |
 | rules.test.ts | 10 | RuleEngine + requirePage + 2 react rules |
 | rules-frameworks.test.ts | 37 | the 10 framework rules (nextjs x4, nestjs x2, express, vite, electron x2) |
+| rules-laravel.test.ts | 8 | laravel/requireController (issue #53): controller existence, v1 scope |
 | graph.test.ts | 6 | buildDependencyGraph: dedup, external drops, implicit edges |
+| graph-callgraph.test.ts | 15 | buildCallGraph + extractCallsJs (issue #50): bare calls, weight, calledBy |
 | impact.test.ts | 5 | calculateAffectedFiles: transitive, diamond, notFound |
 | indexer.test.ts | 5 | buildIndex end-to-end on a real temp dir |
 | pipeline.test.ts | 3 | analyzeRepository localPath: frameworks, index, graph, manifest deps |
 | analyze-summary.test.ts | 2 | CLI analyze summary formatting |
+| search.test.ts | 19 | packages/search engine (issue #9): index build, ranking, filters, session |
 | parser/typescript.test.ts | 7 | parseTs import/export kinds |
 | parser/javascript.test.ts | 6 | parseJs / parseJsx / parseCommonJs |
 | parser/python.test.ts | 5 | parsePython (tree-sitter) imports/exports |

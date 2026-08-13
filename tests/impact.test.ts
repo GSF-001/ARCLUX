@@ -48,6 +48,8 @@ function makeChain(...ids: string[]): Repository {
       importedBy: [],
       imports: [],
       resolvedImports: [],
+      calls: [],
+      calledBy: [],
       implicitDependencies: [],
     });
   }
@@ -110,6 +112,8 @@ describe("calculateAffectedFiles", () => {
       importedBy: [],
       imports: [],
       resolvedImports: [],
+      calls: [],
+      calledBy: [],
       implicitDependencies: [],
     };
     repo.addModule(c);

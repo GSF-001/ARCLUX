@@ -1,7 +1,8 @@
 # Contributing to ARCLUX
 
-ARCLUX is alpha software (`v0.1.0-alpha`). The core pipeline, all 18
-detectors, full impact analysis, and the CLI are working and verified.
+ARCLUX is alpha software (`v0.1.0-alpha`). The core pipeline, all 19
+detectors, full impact analysis, the search engine, 14 framework rules,
+and the CLI are working and verified.
 Other-language parsers, the search engine, and several UI areas are still
 stubs. Check `PROGRES.md` at the repo root for the current, detailed
 status before assuming anything is done or missing — it's updated after
@@ -74,9 +75,10 @@ for one with documented known limitations. Each detector should:
   pattern used by existing detectors)
 - Register in `apps/cli/doctor.ts` so it runs as part of `arclux doctor`
 - If entry points matter for your detector's accuracy, use
-  `detectEntryPoints.ts`'s output to filter false positives — several
-  existing detectors don't do this yet and have documented false
-  positives as a result; don't repeat that if you can avoid it
+  `detectEntryPoints.ts`'s output and/or `getEntryModuleIds()` from
+  `packages/indexer/resolveRoutes.ts` to filter false positives —
+  `detectUnusedExports.ts` and `detectOrphanFiles.ts` already do this
+  (issue #4); follow the same pattern
 
 ## Adding a language parser
 

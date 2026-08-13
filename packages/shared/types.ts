@@ -71,6 +71,20 @@ export interface RawExport {
   line: number;
 }
 
+/**
+ * One bare-identifier call site: `foo(...)` where the callee is a plain
+ * Identifier and NOT a property access (`obj.foo()`), `this.foo()`, or
+ * `require(...)`. Extracted by packages/parser/javascript/extractJs.ts's
+ * extractCallsJs (issue #50). Deliberately carries no argument info — the
+ * call graph only needs who is called, not with what.
+ */
+export interface RawCall {
+  /** Callee identifier text, e.g. "foo" in `foo(1, 2)` */
+  calleeName: string;
+  /** Line number in source file (1-indexed) */
+  line: number;
+}
+
 // ─────────────────────────────────────────────
 // Process runtime (kernel + storage)
 // ─────────────────────────────────────────────
@@ -113,6 +127,14 @@ export interface ParsedFile {
   file: FileInfo;
   imports: RawImport[];
   exports: RawExport[];
+  /**
+   * Bare-identifier call sites found by the JS-family parsers
+   * (parseJs/parseJsx/parseCommonJs -> extractCallsJs). Optional because
+   * most language parsers do not extract call sites yet — only the JS
+   * family populates it today. Consumed by buildIndex.ts pass 3, which
+   * resolves each callee against the module's named imports.
+   */
+  calls?: RawCall[];
   /**
    * For languages where files sharing a directory (Go) or package
    * declaration (Java, by convention - package must match directory per
@@ -158,6 +180,21 @@ export interface ResolvedImport {
   line: number;
 }
 
+/**
+ * A RawCall whose callee name matched a named import of the calling module,
+ * resolved to the module that exports it. Built by buildIndex.ts pass 3
+ * (named import name -> target moduleId). A RawCall whose callee is not
+ * among the module's named imports is dropped there (unresolvable — e.g.
+ * a local function or a default-imported function) and never reaches the
+ * call graph.
+ */
+export interface ResolvedCall {
+  /** Module id of the module that exports the callee */
+  moduleId: string;
+  calleeName: string;
+  line: number;
+}
+
 export interface ModuleInfo {
   id: string; // stable id, usually = relativePath
   file: FileInfo;
@@ -175,6 +212,18 @@ export interface ModuleInfo {
   importedBy: string[]; // module ids that import this module
   imports: string[]; // module ids this module imports (resolved, not raw strings)
   resolvedImports: ResolvedImport[]; // identifier-level detail of `imports`
+  /**
+   * Resolved call sites in this module: callee -> module that exports it
+   * (via named import). REQUIRED (not optional) per issue #50 — every
+   * ModuleInfo carries an empty array when the source language's parser
+   * does not extract calls (only the JS family does today). Known
+   * limitations of the resolution are documented in extractJs.ts's
+   * extractCallsJs doc comment: calls of default-imported functions and
+   * `obj.foo()`/`this.foo()` calls are never resolved.
+   */
+  calls: ResolvedCall[];
+  /** Module ids that call this module's exported functions — back-filled by buildIndex.ts pass 4, mirrors `importedBy` */
+  calledBy: string[];
   /**
    * Dependencies found via resolveSameScopeDependencies.ts's regex-based
    * whole-word scan, NOT from an actual import statement. Kept SEPARATE

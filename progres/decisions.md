@@ -782,3 +782,42 @@ ke `packages/engine/`, `packages/parser/`, `packages/diff/`,
 `packages/impact/` yang sudah ada. Masih open: belum ada satupun logic
 diisi, ini murni struktur file + dokumentasi peta dependency.
 ARCLUX.main
+
+## 2026-08-14 — Issue #6 decision: coarse watchRepository first, true per-file incremental deferred
+
+**Context:** packages/incremental (Cell/Query/Database, salsa-inspired)
+and packages/watcher are built and verified standalone but not wired
+into the real pipeline; buildIndex does a full rebuild on every call.
+Issue #6 asked to wire them in.
+
+**Decision (owner-approved 2026-08-14):** do the coarse version —
+`watchRepository` wraps `analyzeRepository({ localPath })` in one
+Cell/Query pair keyed on a change-batch revision token. ANY change in
+the tree invalidates the whole cached analysis (full re-run), so the
+only real win is skipping re-analysis when nothing changed. This is
+what watchRepository already does (import fixed to the pipeline API in
+this session). True per-file granularity (only re-parse changed files,
+reuse cached ModuleInfo) would require rewriting buildIndex itself
+around Cell/Query internally — a much larger change, deliberately
+out of scope. Revisit if `arclux` commands feel slow on large local
+repos.
+
+**Alternatives rejected:** (A) close #6 with no code — rejected because
+watchRepository is now functional and cheap to keep; (B) rewrite
+buildIndex around Cell/Query now — rejected as too large/risky while
+new parsers (PHP) and rules are landing; risks conflicting with the
+current pass structure.
+
+## 2026-08-14 — Call graph: TS-parser call extraction is a follow-up
+
+**Context:** issue #50 implemented `extractCallsJs` per its spec — wired
+only into the JS-family parsers (parseJs/parseJsx/parseCommonJs). The
+arclux repo itself is TS-only, so buildCallGraph yields 0 call edges on
+it (verified; JS fixtures produce edges correctly).
+
+**Decision:** keep the issue's spec (bare-identifier calls in JS) as the
+v1 scope. Wiring an equivalent `extractCallsTs` into parseTs (and the
+other TS-family parsers) is a separate, smaller follow-up — file it as
+an issue when a contributor picks it up. Known limitations documented
+in the code: default-imported callees unresolvable, `obj.foo()` /
+`this.foo()` not captured (AST-only, no type info).

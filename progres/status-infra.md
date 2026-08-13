@@ -50,6 +50,12 @@ Built with `commander` (routing) + `@clack/prompts` (output/spinner).
 exception as `scripts/testPlayground.ts` — legitimate for a local-path
 call site, not for the production remote-repo flow.
 
+> **[STATUS UPDATE, 2026-08-14]: this entry is resolved — analyzeLocal.ts
+> was merged into pipeline.ts on 2026-08-11 (LAB 3, see decisions.md).
+> `analyzeRepository({ localPath })` is now the one entry point. The
+> stale import left behind in packages/watcher/watchRepository.ts was
+> fixed in this session (now calls `analyzeRepository({ localPath })`).**
+
 **Explicit action item**: another session was reportedly planning a
 `pipeline.ts` refactor (adding `findings[]` + local-path support to
 `AnalyzeRepositoryResult`). Once that lands, `analyzeLocal.ts` should be
