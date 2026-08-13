@@ -171,7 +171,7 @@ dynamic import(), require(), and per-property CommonJS
 (module.exports.x = / exports.x =).
 
 KNOWN GAP, NOT YET FIXED: whole-object exports
-(module.exports = { a, b }) are NOT detected -- only per-property
+(module.exports = &#123; a, b &#125;) are NOT detected -- only per-property
 assignment is. This under-reports exports for a lot of real-world
 CommonJS. Confirmed common via nodejs/cjs-module-lexer's own test fixtures
 (~/research/cjs-module-lexer/test/_unit.js) during research for this
@@ -275,13 +275,13 @@ own readDependencyNames() (package.json only, flat Set&lt;string>) still runs
 separately and hasn't been merged with this new ManifestDependency-based
 system — that's a follow-up, not done here.
 
-**Gotcha hit while building this**: a `cat > file &lt;&lt; EOF` heredoc run
+**Gotcha hit while building this**: a `cat > file << EOF` heredoc run
 while `cd`'d into ~/manifest-samples instead of ~/arclux silently created
 packages/parser/rust/parseCargoToml.ts under ~/manifest-samples/packages/...
 instead of overwriting the real file — the real ~/arclux file kept its
 old (buggy, pre-fix) content even though the terminal showed no error.
 Caught only because testManifests.ts's output (13 deps) didn't match the
-expected fix. Lesson: always `pwd` before a `cat > path &lt;&lt; EOF` if you've
+expected fix. Lesson: always `pwd` before a `cat > path << EOF` if you've
 `cd`'d anywhere else in the same session — a wrong-directory heredoc
 fails silently, it doesn't error.
 
@@ -375,8 +375,8 @@ the single hop `ModuleInfo.resolvedReExports` already covers (documented
 limitation in `types.ts`'s own doc comment). Walks the chain per
 export name until it hits a non-re-export origin, with cycle detection
 (stops at last resolvable hop if a cycle is found). Inherits the same
-aliased-re-export limitation as `resolvedReExports` itself (`export {
-foo as bar }` — name tracking breaks across hops since `RawExport` only
+aliased-re-export limitation as `resolvedReExports` itself (`export &#123;
+foo as bar &#125;` — name tracking breaks across hops since `RawExport` only
 stores the final name) — documented in-file, not fixed here, needs parser
 layer changes.
 
