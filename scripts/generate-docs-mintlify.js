@@ -478,4 +478,62 @@ const context = readIfExists('CONTEXT.md');
   writeDoc('architecture.mdx', 'Architecture', 'Boundary map: core, extension points, what\'s safe to touch', archBody);
 }
 
+
+// Override status.mdx: concise English index, not a wall of text
+{
+  const statusBody = [
+    "This is an index. The real history lives in `progres/*.md` -- read all of them, not just this page.",
+    '',
+    '<Note>',
+    'At the start of any session: `cat PROGRES.md progres/status-core.md progres/status-detectors.md progres/status-web.md progres/status-infra.md progres/status-backlog.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`',
+    '',
+    'Skipping the detail files means missing most of what has actually been learned about this codebase.',
+    '</Note>',
+    '',
+    '## What this is',
+    '',
+    'ARCLUX is a codebase analysis tool: clone repo -> parse -> index -> build dependency graph -> interactive browser visualization. It shows how files and modules connect, what breaks if you change something, and which conventions are being violated.',
+    '',
+    '## Stack',
+    '',
+    '- **Monorepo**: `apps/web` (Next.js 16, App Router, Webpack -- not Turbopack, unsupported on Termux arm64), `packages/*` (framework-agnostic core logic)',
+    '- **UI**: React, Tailwind v4, shadcn/ui (Base UI variant) + Aceternity + Magic UI',
+    '- **Graph rendering**: SVG + `d3-force`',
+    '- **Parsing**: TypeScript Compiler API (TS/TSX) + `web-tree-sitter` (Python)',
+    '- **Environment**: Termux on Android, not desktop',
+    '- **License**: Apache 2.0',
+    '',
+    '## Progress detail',
+    '',
+    '<CardGroup cols={2}>',
+    '  <Card title="Core status" icon="gears" href="/progres/progres-status-core">',
+    '    Pipeline, parser, indexer, graph, impact, incremental',
+    '  </Card>',
+    '  <Card title="Detectors status" icon="magnifying-glass" href="/progres/progres-status-detectors">',
+    '    All 18 structural detectors',
+    '  </Card>',
+    '  <Card title="Web status" icon="window" href="/progres/progres-status-web">',
+    '    apps/web, graph viewer, vendor-ui, theme',
+    '  </Card>',
+    '  <Card title="Infra status" icon="wrench" href="/progres/progres-status-infra">',
+    '    CLI, collaborator tooling, testing, cleanup',
+    '  </Card>',
+    '  <Card title="Backlog" icon="list-check" href="/progres/progres-status-backlog">',
+    '    What is planned but not started',
+    '  </Card>',
+    '  <Card title="Bugs" icon="bug" href="/progres/progres-bugs">',
+    '    Real bugs found in ARCLUX\'s own code, and their fixes',
+    '  </Card>',
+    '  <Card title="Decisions" icon="scale-balanced" href="/progres/progres-decisions">',
+    '    "We chose X over Y, here\'s why" -- design calls, not bugs',
+    '  </Card>',
+    '  <Card title="Gotchas" icon="triangle-exclamation" href="/gotchas">',
+    '    Environment/tooling traps, not bugs in ARCLUX\'s code',
+    '  </Card>',
+    '</CardGroup>',
+    ''
+  ].join('\n');
+  writeDoc('status.mdx', 'Status & Progress', 'Current progress, open bugs, priorities', statusBody);
+}
+
 console.log('\n== Selesai. Halaman ke-generate ke docs-site/*.mdx ==');
