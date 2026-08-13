@@ -1,0 +1,8 @@
+{
+  "name": "react-demo",
+  "private": true,
+  "description": "ARCLUX playground fixture: React component conventions",
+  "dependencies": {
+    "react": "^18.0.0"
+  }
+}

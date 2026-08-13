@@ -14,9 +14,9 @@
 # POSIX shells replace it with `alias arclux='npx tsx apps/cli/index.ts'`.
 
 Output demo.gif
-Set Width 1200
-Set Height 700
-Set FontSize 24
+Set Width 1300
+Set Height 760
+Set FontSize 20
 Set Framerate 30
 Set TypingSpeed 10ms
 Set Shell cmd

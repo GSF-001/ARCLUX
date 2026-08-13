@@ -12,14 +12,14 @@
 // they don't flip verify's verdict) with the rule engine
 // (packages/rules/RuleEngine.ts) into a single PASS/FAIL verdict.
 //
-// Rule coverage, confirmed by direct inspection (2026-08-11), NOT
+// Rule coverage, confirmed by direct inspection (2026-08-13), NOT
 // assumed: of 13 rule files across nextjs/react/nestjs/express/vite/
-// electron, only packages/rules/nextjs/requirePage.ts has a real
-// implementation (60 lines). The other 12 are copyright-header-only
-// stubs (8 lines, no `export` statement at all) — importing any of
-// them would fail at compile time. Do NOT add them to `rules` below
-// until they're actually implemented. This file only wires up
-// requirePage on purpose, not by oversight.
+// electron, 3 have real implementations — nextjs/requirePage.ts,
+// react/requireComponentExport.ts, react/requireHookRules.ts. The other
+// 10 are stubs (react/requirePropsTyping is a documented deferral — it
+// needs parser-level parameter information). Do NOT add a stub to
+// `rules` below until it's actually implemented; this file only wires up
+// implemented rules on purpose.
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
@@ -36,6 +36,8 @@ import { detectDeadCode } from "../../packages/detectors/detectDeadCode";
 import { detectAmbiguousSymbolResolution } from "../../packages/detectors/detectAmbiguousSymbolResolution";
 import { runRules } from "../../packages/rules/RuleEngine";
 import { requirePage } from "../../packages/rules/nextjs/requirePage";
+import { requireComponentExport } from "../../packages/rules/react/requireComponentExport";
+import { requireHookRules } from "../../packages/rules/react/requireHookRules";
 
 export function registerVerifyCommand(program: Command): void {
   program
@@ -75,7 +77,7 @@ export function registerVerifyCommand(program: Command): void {
           ambiguousSymbols.length;
 
         // Rule engine — see file header: only requirePage is real right now.
-        const ruleViolations = runRules(repository, [requirePage], meta.detectedFrameworks);
+        const ruleViolations = runRules(repository, [requirePage, requireComponentExport, requireHookRules], meta.detectedFrameworks);
         const ruleErrors = ruleViolations.filter((v) => v.severity === "error");
         const ruleWarnings = ruleViolations.filter((v) => v.severity === "warning");
 
