@@ -385,3 +385,15 @@ buat register command baru, cek `apps/web/lib/api.ts` buat shared
 middleware). Status: dokumentasi selesai, implementasi logic belum
 dimulai.
 ARCLUX.main
+
+## 2026-08-13 — Dogfood ARCLUX on Django
+
+**Status:** scripts/log-progress.sh
+
+Stress-tested ARCLUX on the Django repository: 3,039 modules and 7,734 dependency edges analyzed in ~30s on Termux/Android. Impact analysis traced django/db/models/lookups.py to 1,319 affected files. Diagnostic analysis reached the current Node.js heap limit (~1 GB) after ~50s, establishing a real-world stress boundary.
+
+## 2026-08-13 — Django stress test
+
+**Status:** Not Started
+
+ARCLUX indexed 3039 modules and 7734 dependency edges in ~30s; impact traced django/db/models/lookups.py to 1319 affected files; diagnose reached Node heap limit on Termux.
