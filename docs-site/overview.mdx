@@ -1,5 +1,5 @@
 ---
-title: "Intro"
+title: "Overview"
 description: "See through your codebase before it breaks"
 ---
 
@@ -31,6 +31,16 @@ Or start the web dashboard:
 cd apps/web
 pnpm run dev
 ```
+
+<Warning>
+Jalan di Termux (Android) arm64: `apps/web` pakai Webpack, bukan Turbopack --
+Turbopack belum didukung di arsitektur ini. Jangan tambahkan `--turbo` ke script dev.
+</Warning>
+
+<Note>
+Parsing TypeScript/TSX pakai TypeScript Compiler API, parsing Python pakai
+`web-tree-sitter`. Kalau nambah bahasa baru, cek `packages/parser/` dulu sebelum bikin parser baru.
+</Note>
 
 ## What it actually does
 

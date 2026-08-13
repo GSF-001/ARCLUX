@@ -111,16 +111,8 @@ if (!fs.existsSync(DOCS_OUT) || !fs.existsSync(path.join(DOCS_OUT, 'docs.json'))
 const readme = readIfExists('README.md');
 const context = readIfExists('CONTEXT.md');
 
-{
-  let body = '';
-  if (readme) {
-    const cut = readme.search(/^#+\s*(Installation|Usage|Getting Started|Quickstart)/im);
-    body += stripFrontmatter(cut > -1 ? readme.slice(0, cut) : readme);
-  }
-  if (context) body += `\n\n## Context tambahan\n\n${stripFrontmatter(context)}`;
-  if (!body.trim()) body = '_README.md tidak ditemukan di root repo._';
-  writeDoc('intro.mdx', 'Intro', firstLine(body, 140) || 'Ringkasan project ARCLUX', body);
-}
+// intro.mdx draft dihapus -- overview.mdx (hand-written, di bawah) yang jadi satu-satunya
+// sumber halaman ini. Draft otomatis dari README selalu ketimpa versi hand-written itu juga.
 
 {
   let body = '';
@@ -339,6 +331,16 @@ const context = readIfExists('CONTEXT.md');
     'pnpm run dev',
     '```',
     '',
+    '<Warning>',
+    'Jalan di Termux (Android) arm64: `apps/web` pakai Webpack, bukan Turbopack --',
+    'Turbopack belum didukung di arsitektur ini. Jangan tambahkan `--turbo` ke script dev.',
+    '</Warning>',
+    '',
+    '<Note>',
+    'Parsing TypeScript/TSX pakai TypeScript Compiler API, parsing Python pakai',
+    '`web-tree-sitter`. Kalau nambah bahasa baru, cek `packages/parser/` dulu sebelum bikin parser baru.',
+    '</Note>',
+    '',
     '## What it actually does',
     '',
     '<CardGroup cols={2}>',
@@ -387,7 +389,7 @@ const context = readIfExists('CONTEXT.md');
     '</CardGroup>',
     ''
   ].join('\n');
-  writeDoc('intro.mdx', 'Intro', 'See through your codebase before it breaks', introBody);
+  writeDoc('overview.mdx', 'Overview', 'See through your codebase before it breaks', introBody);
 }
 
 console.log('\n== Selesai. Halaman ke-generate ke docs-site/*.mdx ==');
