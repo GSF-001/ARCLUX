@@ -40,7 +40,7 @@ export function toDiagnosticEvents(withContext: FindingWithContext): DiagnosticE
     filePath: loc.filePath,
     line: loc.line,
     locationPrecision: loc.locationPrecision,
-    affectedFileCount: impactByModuleId[loc.moduleId]?.totalAffected ?? 0,
+    affectedFileCount: impactByModuleId[loc.moduleId] ?? 0,
   }));
 }
 

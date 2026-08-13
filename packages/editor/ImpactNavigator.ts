@@ -22,6 +22,20 @@ export interface ImpactNavigationResult {
   tree: ImpactTreeNode | null;
 }
 
+/**
+ * Lightweight version of getImpactNavigation: skips buildImpactTree and
+ * skips materializing the full `affected` NavigationTarget array -- both
+ * expensive and unused by callers that only need the count (e.g. diagnose
+ * command's affectedFileCount). Use this when you don't need the tree or
+ * the full affected-files list, just the total.
+ */
+export function getImpactCount(repository: Repository, moduleId: string): number {
+  const consumerTrace = traceConsumers(repository, moduleId);
+  if (consumerTrace.notFound) return 0;
+  const affectedResult: ImpactResult = calculateAffectedFiles(repository, moduleId);
+  return affectedResult.totalAffected;
+}
+
 export function getImpactNavigation(repository: Repository, moduleId: string): ImpactNavigationResult {
   const consumerTrace = traceConsumers(repository, moduleId);
   if (consumerTrace.notFound) {
