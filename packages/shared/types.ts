@@ -71,6 +71,40 @@ export interface RawExport {
   line: number;
 }
 
+// ─────────────────────────────────────────────
+// Process runtime (kernel + storage)
+// ─────────────────────────────────────────────
+
+/**
+ * Lifecycle states of an internal service process, PM2-inspired.
+ * Moved here from packages/kernel/ProcessTable.ts (2026-08-14) so
+ * packages/storage can persist process records without importing from
+ * packages/kernel — fixes issue #312 (storage <-> kernel package cycle).
+ */
+export const ProcessStatus = {
+  LAUNCHING: "launching",
+  ONLINE: "online",
+  STOPPING: "stopping",
+  STOPPED: "stopped",
+  ERRORED: "errored",
+} as const;
+
+export type ProcessStatusValue = (typeof ProcessStatus)[keyof typeof ProcessStatus];
+
+/** One tracked process in the runtime's process table / persisted pid record. */
+export interface ProcessEntry {
+  id: string;
+  pid: number | null;
+  name: string;
+  command: string;
+  args: string[];
+  cwd: string;
+  status: ProcessStatusValue;
+  startedAt: number | null;
+  restarts: number;
+  lastExitCode: number | null;
+}
+
 /**
  * Output of a single file parse. This is the CONTRACT every language parser
  * (parseJs, parseTs, parsePython, ...) must return, regardless of language.
