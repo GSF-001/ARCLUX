@@ -1,7 +1,3 @@
-feat/editor-layer
-
-feat/diagnostics-layer
-ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,26 +22,27 @@ export interface ErrorLocation {
   locationPrecision: "line" | "file";
 }
 
-export function fileLevelLocation(moduleId: string, filePath: string): ErrorLocation {
-  return { moduleId, filePath, line: 1, locationPrecision: "file" };
+export function fileLevelLocation(
+  moduleId: string,
+  filePath: string,
+): ErrorLocation {
+  return {
+    moduleId,
+    filePath,
+    line: 1,
+    locationPrecision: "file",
+  };
 }
 
-export function preciseLocation(moduleId: string, filePath: string, line: number): ErrorLocation {
-  return { moduleId, filePath, line, locationPrecision: "line" };
+export function preciseLocation(
+  moduleId: string,
+  filePath: string,
+  line: number,
+): ErrorLocation {
+  return {
+    moduleId,
+    filePath,
+    line,
+    locationPrecision: "line",
+  };
 }
-feat/editor-layer
-
-
-/**
- * Copyright 2026 ARCLUX
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- */
-
-// Scaffold: diagnostics/ErrorLocation — not yet implemented.
- ARCLUX.main
-ARCLUX.main

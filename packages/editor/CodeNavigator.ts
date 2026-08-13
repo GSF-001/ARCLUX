@@ -1,7 +1,4 @@
-feat/diagnostics-layer
 
-feat/editor-layer
-ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +50,6 @@ export function listDirectConsumerTargets(repository: Repository, moduleId: stri
     return { moduleId: consumerId, filePath: consumer?.file.relativePath ?? consumerId };
   });
 }
-feat/diagnostics-layer
 
 
 /**
@@ -66,6 +62,3 @@ feat/diagnostics-layer
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: editor/CodeNavigator — not yet implemented.
-ARCLUX.main
-ARCLUX.main

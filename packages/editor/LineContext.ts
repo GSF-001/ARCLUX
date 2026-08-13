@@ -1,7 +1,4 @@
-feat/diagnostics-layer
 
-feat/editor-layer
- ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +25,6 @@ export function getLineContext(repository: Repository, moduleId: string, line: n
     hasParserWarning: false,
   };
 }
-feat/diagnostics-layer
 
 
 /**
@@ -41,6 +37,3 @@ feat/diagnostics-layer
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: editor/LineContext — not yet implemented.
-ARCLUX.main
-ARCLUX.main
