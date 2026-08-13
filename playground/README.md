@@ -7,7 +7,7 @@ supports, used to sanity-check the pipeline against real-ish code:
     npx tsx scripts/testPlayground.ts python-demo
     npx tsx scripts/testPlayground.ts react-demo
 
-This runs the full buildIndex -> buildDependencyGraph -> all 16
+This runs the full buildIndex -> buildDependencyGraph -> all 19
 detectors pipeline against the fixture and prints what it finds — a fast
 way to check "does this actually work" without cloning a real repo.
 
