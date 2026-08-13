@@ -99,7 +99,7 @@ only), never written at all.
 Design: AnalyzeRepositoryResult now carries a `repository` field (a full
 Repository instance, NOT a plain object). IMPORTANT — this field is
 server-side only. Repository.modules is a private Map, so if
-JSON.stringify'd as-is it silently becomes {} (not a crash, silent data
+JSON.stringify'd as-is it silently becomes &#123;&#125; (not a crash, silent data
 loss). apps/web/app/api/analyze/route.ts (which has worked for a while)
 was patched to strip the `repository` field before responding, so the
 JSON shape doesn't silently change now that this field exists.
@@ -133,7 +133,7 @@ interactive ones, `cn()` from `@/lib/cn`, primitives from
   primitives from `components/ui/`, with props APIs matched exactly to
   the real shape (`DialogContent`, `SheetContent side="bottom"`, etc. —
   checked from vendor-ui source first, not guessed).
-- `DataTable` is built from a native `&lt;table>` + Tailwind — there's no
+- `DataTable` is built from a native `<table>` + Tailwind — there's no
   shadcn `table.tsx` primitive in `vendor-ui/` yet.
 - `FilterBar` deliberately does not use `Badge` (not yet wrapped in
   `components/ui/`, still an open item from `detectMissingExports`),
@@ -186,8 +186,8 @@ Fixes:
 - `apps/web/components/graph/GraphEdge.tsx` — highlighted edges now show
   an arrowhead (SVG marker) and a type label ("imports"/"exports"/
   "calls"/"routes to") at the midpoint.
-- `apps/web/components/graph/GraphCanvas.tsx` — registers 4 `&lt;marker>`
-  defs (one per edge type) in `&lt;defs>`, referenced by GraphEdge via
+- `apps/web/components/graph/GraphCanvas.tsx` — registers 4 `<marker>`
+  defs (one per edge type) in `<defs>`, referenced by GraphEdge via
   `markerEnd`.
 
 **Known limitation, not fixed in this change**: line endpoints are node
@@ -245,13 +245,13 @@ same caveat as the earlier edge-label/arrow update.
 by testing it against ourselves earlier) — this was pushed via
 `feat/graph-focus-view` branch + PR, not direct push. Any future session:
 you CANNOT `git push` directly to `main` anymore, always
-`git checkout -b &lt;branch>` first.
+`git checkout -b <branch>` first.
 
 ## 2026-08-05 — Update -- components/workspace/* 8 stub files are now DONE
 
 Wrote all 8 files: Workspace.tsx (composition root), WorkspaceHeader.tsx,
 WorkspaceCommand.tsx, WorkspaceSearch.tsx, WorkspaceSwitcher.tsx, and
-panels/{Files,Impact,Issues}Panel.tsx.
+panels/&#123;Files,Impact,Issues&#125;Panel.tsx.
 
 Reference used: browsed ~/git-truck/src/routes/view.tsx and RevisionSelect.tsx
 for composition/dropdown-switcher PATTERNS only (concept, not code -- that

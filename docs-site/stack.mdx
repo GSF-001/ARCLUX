@@ -160,7 +160,7 @@ git diff main..<your-branch> --stat
 ```
 
 Read the output. If a file shows a lot of unexpected `-` (deletions),
-check the actual diff content (`git diff main..&lt;branch> -- &lt;file>`)
+check the actual diff content (`git diff main..<branch> -- <file>`)
 before continuing -- it might be overwriting something important.
 
 After merging, **always** verify locally again:

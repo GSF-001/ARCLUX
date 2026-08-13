@@ -39,6 +39,14 @@ function mdxSafe(text) {
 
   out = out.replace(/<!--/g, '\u0000CMTOPEN\u0000').replace(/-->/g, '\u0000CMTCLOSE\u0000');
 
+  // Inline code (single backticks): braces di dalamnya literal — lindungi dari
+  // brace-escape di bawah, biar tidak jadi &#123; (entity tidak didecode di code span).
+  const inlineCode = [];
+  out = out.replace(/`[^`\n]+`/g, (m) => {
+    inlineCode.push(m);
+    return `\u0000CODE${inlineCode.length - 1}\u0000`;
+  });
+
   // Proteksi tag komponen Mintlify: <Card ...>, </Card>, <CardGroup cols={2}>, <Tabs>, dll.
   // Konvensi Mintlify: nama komponen selalu diawali huruf kapital.
   const jsxTags = [];
@@ -47,10 +55,18 @@ function mdxSafe(text) {
     return `\u0000JSX${jsxTags.length - 1}\u0000`;
   });
 
+  // Kurung kurawal di teks biasa diparse MDX sebagai ekspresi JSX (acorn gagal
+  // pada `...` dst) — escape. Ekspresi di dalam JSX tag yang dilindungi
+  // (<Card cols={2}>) dikembalikan mentah dan tetap hidup.
+  out = out.replace(/\{/g, '&#123;').replace(/\}/g, '&#125;');
+
   out = out.replace(/</g, '&lt;');
 
   out = out.replace(/\u0000JSX(\d+)\u0000/g, (m, i) => jsxTags[Number(i)]);
-  out = out.replace(/\u0000CMTOPEN\u0000/g, '<!--').replace(/\u0000CMTCLOSE\u0000/g, '-->');
+  out = out.replace(/\u0000CODE(\d+)\u0000/g, (m, i) => inlineCode[Number(i)]);
+  // HTML comment <!-- --> tidak valid di MDX (Mintlify menolaknya saat deploy) —
+  // kembalikan sebagai MDX comment {/* ... */}.
+  out = out.replace(/\u0000CMTOPEN\u0000/g, '{/*').replace(/\u0000CMTCLOSE\u0000/g, '*/}');
   out = out.replace(/\u0000AUTOLINK(\d+)\u0000/g, (m, i) => autolinks[Number(i)]);
   out = out.replace(/\u0000FENCE(\d+)\u0000/g, (m, i) => fenceBlocks[Number(i)]);
 
