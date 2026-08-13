@@ -1,0 +1,129 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "ARCLUX",
+  "colors": {
+    "primary": "#0070F3",
+    "light": "#3f8fff",
+    "dark": "#0070F3"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "overview",
+          "quickstart",
+          "usage"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "architecture",
+          "stack",
+          "status",
+          "gotchas",
+          "tooling"
+        ]
+      },
+      {
+        "group": "Progress Detail",
+        "pages": [
+          "progres/progres-readme",
+          "progres/progres-bugs",
+          "progres/progres-collaborators",
+          "progres/progres-decisions",
+          "progres/progres-gotchas",
+          "progres/progres-roadmap",
+          "progres/progres-status-backlog",
+          "progres/progres-status-core",
+          "progres/progres-status-detectors",
+          "progres/progres-status-infra",
+          "progres/progres-status-web"
+        ]
+      },
+      {
+        "group": "Codebase Map",
+        "pages": [
+          {
+            "group": "Packages",
+            "pages": [
+              "map/map-packages-cache",
+              "map/map-packages-db",
+              "map/map-packages-detectors",
+              "map/map-packages-diagnostics",
+              "map/map-packages-diff",
+              "map/map-packages-editor",
+              "map/map-packages-engine",
+              "map/map-packages-environment",
+              "map/map-packages-git",
+              "map/map-packages-graph",
+              "map/map-packages-impact",
+              "map/map-packages-incremental",
+              "map/map-packages-indexer",
+              "map/map-packages-kernel",
+              "map/map-packages-language",
+              "map/map-packages-networking",
+              "map/map-packages-notifications",
+              "map/map-packages-orchestration",
+              "map/map-packages-package-manager",
+              "map/map-packages-parser",
+              "map/map-packages-platform",
+              "map/map-packages-repository",
+              "map/map-packages-rules",
+              "map/map-packages-runtime",
+              "map/map-packages-scheduler",
+              "map/map-packages-search",
+              "map/map-packages-security",
+              "map/map-packages-semantic-diff",
+              "map/map-packages-services",
+              "map/map-packages-shared",
+              "map/map-packages-storage",
+              "map/map-packages-system",
+              "map/map-packages-terminal",
+              "map/map-packages-ui",
+              "map/map-packages-watcher",
+              "map/map-packages-workspace"
+            ],
+            "defaultOpen": false
+          },
+          {
+            "group": "Apps",
+            "pages": [
+              "map/map-apps-cli",
+              "map/map-apps-web"
+            ],
+            "defaultOpen": false
+          }
+        ]
+      }
+    ]
+  },
+  "appearance": {
+    "default": "dark",
+    "strict": true
+  },
+  "background": {
+    "color": {
+      "dark": "#000000"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/GSF-001/ARCLUX"
+      }
+    ]
+  },
+  "fonts": {
+    "heading": {
+      "family": "Fraunces"
+    },
+    "body": {
+      "family": "Inter"
+    }
+  }
+}

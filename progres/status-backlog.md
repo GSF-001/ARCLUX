@@ -2,6 +2,16 @@
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
+## 2026-08-13 — UPDATE: framework rule stubs — implemented
+
+All 10 remaining rule stubs in `packages/rules/*` (nextjs x4, nestjs x2,
+express, vite, electron x2) are now implemented, wired into
+`apps/cli/verify.ts` and `packages/engine/contract.ts` (13 rules total,
+react/requirePropsTyping remains a documented deferral). Test coverage
+for issue #8 completed: graph, impact, indexer, pipeline, and per-language
+parser suites — 141 tests / 20 files, vitest green. See the old entry
+below for the historical stub list.
+
 ## 2026-08-03 — ❌ STILL EMPTY (8-line stub, license header only)
 
 **Priority #1 — core feature — NOTE: this was previously miscategorized,
@@ -60,3 +70,9 @@ see "packages/impact/* already done" update below**
 
 ---
 
+
+## 2026-08-11 — Explorer.tsx exists but never mounted, likely contributes to weak first impression
+
+**Status:** Not Started
+
+Confirmed via grep: zero references to Explorer in apps/web/app. Component exists, works standalone, but no page renders it. Worth prioritizing -- a working workspace/explorer view is probably what makes ARCLUX feel alive to new visitors vs just a graph viewer.

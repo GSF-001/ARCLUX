@@ -6,18 +6,19 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// LAB 2 MVP — combines existing detectors (same 10 doctor.ts already
-// runs) with the rule engine (packages/rules/RuleEngine.ts) into a
-// single PASS/FAIL verdict.
+// LAB 2 MVP — combines existing detectors (the same 10 core detectors
+// doctor.ts also runs — this is the deliberate PASS/FAIL subset; the 8
+// convention/usage detectors doctor.ts runs on top are informational, so
+// they don't flip verify's verdict) with the rule engine
+// (packages/rules/RuleEngine.ts) into a single PASS/FAIL verdict.
 //
-// Rule coverage, confirmed by direct inspection (2026-08-11), NOT
-// assumed: of 13 rule files across nextjs/react/nestjs/express/vite/
-// electron, only packages/rules/nextjs/requirePage.ts has a real
-// implementation (60 lines). The other 12 are copyright-header-only
-// stubs (8 lines, no `export` statement at all) — importing any of
-// them would fail at compile time. Do NOT add them to `rules` below
-// until they're actually implemented. This file only wires up
-// requirePage on purpose, not by oversight.
+// Rule coverage, confirmed by direct inspection (2026-08-13), NOT
+// assumed: of 14 rule files across nextjs/react/nestjs/express/vite/
+// electron, 13 have real implementations (all of nextjs/nestjs/express/
+// vite/electron plus the 2 react rules); the only non-implemented file is
+// react/requirePropsTyping.ts, a documented deferral — it needs
+// parser-level parameter information. Every rule below in `rules` is
+// implemented; stubs are never wired in on purpose.
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
@@ -34,6 +35,18 @@ import { detectDeadCode } from "../../packages/detectors/detectDeadCode";
 import { detectAmbiguousSymbolResolution } from "../../packages/detectors/detectAmbiguousSymbolResolution";
 import { runRules } from "../../packages/rules/RuleEngine";
 import { requirePage } from "../../packages/rules/nextjs/requirePage";
+import { requireRoute } from "../../packages/rules/nextjs/requireRoute";
+import { requireIndexUpdate } from "../../packages/rules/nextjs/requireIndexUpdate";
+import { requireLayoutUpdate } from "../../packages/rules/nextjs/requireLayoutUpdate";
+import { requireMetadata } from "../../packages/rules/nextjs/requireMetadata";
+import { requireControllerBinding } from "../../packages/rules/nestjs/requireControllerBinding";
+import { requireModuleRegistration } from "../../packages/rules/nestjs/requireModuleRegistration";
+import { requireRouteRegistration } from "../../packages/rules/express/requireRouteRegistration";
+import { requireEntryConfig } from "../../packages/rules/vite/requireEntryConfig";
+import { requireMainProcessBinding } from "../../packages/rules/electron/requireMainProcessBinding";
+import { requirePreloadExposure } from "../../packages/rules/electron/requirePreloadExposure";
+import { requireComponentExport } from "../../packages/rules/react/requireComponentExport";
+import { requireHookRules } from "../../packages/rules/react/requireHookRules";
 
 export function registerVerifyCommand(program: Command): void {
   program
@@ -72,8 +85,27 @@ export function registerVerifyCommand(program: Command): void {
           deadCode.length +
           ambiguousSymbols.length;
 
-        // Rule engine — see file header: only requirePage is real right now.
-        const ruleViolations = runRules(repository, [requirePage], meta.detectedFrameworks);
+        // Rule engine — all 13 implemented rules (see file header);
+        // framework filtering happens inside runRules via detectedFrameworks.
+        const ruleViolations = runRules(
+          repository,
+          [
+            requirePage,
+            requireRoute,
+            requireIndexUpdate,
+            requireLayoutUpdate,
+            requireMetadata,
+            requireControllerBinding,
+            requireModuleRegistration,
+            requireRouteRegistration,
+            requireEntryConfig,
+            requireMainProcessBinding,
+            requirePreloadExposure,
+            requireComponentExport,
+            requireHookRules,
+          ],
+          meta.detectedFrameworks
+        );
         const ruleErrors = ruleViolations.filter((v) => v.severity === "error");
         const ruleWarnings = ruleViolations.filter((v) => v.severity === "warning");
 

@@ -80,7 +80,7 @@ Full attribution is in `NOTICE` (root). Summary:
 
 **Repos in `~/research` used only to read patterns/architecture, not
 copied from**: git, language-server-protocol, llvm-project, sqlite,
-tree-sitter, nx, clack, shadcn-table, drizzle-orm (check which ones are
+tree-sitter, nx, clack, shadcn-table, drizzle-orm, forever, pm2 (check which ones are
 actually cloned before assuming).
 
 ## 2026-08-03 — Update — packages/incremental (new foundation, not wired in yet)
@@ -473,3 +473,27 @@ Correction: a draft progress entry from another session claimed 'no code written
 Five new files in packages/indexer/. resolveRoutes.ts detects Next.js App Router entry files (page/layout/route/etc under app/), exposes getEntryModuleIds() for detectors to skip false positives. resolveExports.ts walks re-export chains beyond the single hop ModuleInfo.resolvedReExports covers, with cycle detection. resolveComponents.ts, resolveHooks.ts, resolveProviders.ts are naming-convention heuristics only (PascalCase/use*/*Provider), explicitly documented as such since no parser extracts this from AST yet. None of the five are wired into buildIndex.ts pipeline yet -- results are not attached to ModuleInfo or Repository anywhere. tsc clean, not otherwise tested.
     
     main
+
+## 2026-08-13 — Kernel & ProcessManager diimplementasi pakai referensi PM2
+
+**Status:** Done
+
+packages/kernel/ (ProcessTable, SignalBus, ServiceRegistry, Kernel) dan packages/runtime/ProcessManager.ts sekarang berisi logic asli, bukan stub. Dibangun dengan clone referensi PM2 (github.com/Unitech/pm2, lib/God.js dan lib/God/ForkMode.js) untuk pattern proses: spawn via child_process.spawn, tracking pid/status, capture stdout/stderr, IPC message forwarding, exit handling dengan auto-restart. Status naming (launching/online/stopping/stopped/errored) mengikuti konvensi PM2. Event bus pakai Node EventEmitter bawaan, bukan EventEmitter2 seperti PM2. Sengaja TIDAK diporting: cluster mode (lib/God/ClusterMode.js, belum dibutuhkan), log file persistence ke disk, PID file writing, uid/gid options. Scoped untuk service internal ARCLUX (web server, watcher, indexer).
+
+## 2026-08-13 — Kernel & RuntimeManager selesai, integrasi ke CLI
+
+**Status:** In Progress
+
+Kernel.ts, ProcessTable.ts, SignalBus.ts, ServiceRegistry.ts, ProcessManager.ts, ProcessSpec.ts, RuntimeManager.ts semua berisi logic asli berdasarkan referensi PM2 (God.js, ForkMode.js). apps/cli/commands/run.ts terhubung ke RuntimeManager sebagai integrasi pertama. Sempat ada insiden git reset --hard yang menghapus kerjaan tanpa sengaja, sudah dipulihkan penuh dan diverifikasi lolos tsc --noEmit. Belum ditest end-to-end (arclux run web belum pernah dijalankan beneran).
+
+## 2026-08-13 — Add process persistence for ps command
+
+**Status:** Done
+
+Kernel now persists ProcessEntry records to ~/.arclux/pids/*.json on register/update (packages/storage/SnapshotManager.ts, new). readLiveProcessRecords() live-checks each PID via process.kill(pid, 0) and self-deletes stale records instead of trusting on-disk state blindly — pattern read from forever's getAllProcesses/getSockets (not copied, re-implemented for file-based instead of socket-based IPC). Kernel.shutdown() now also cleans up its own records. Wired apps/cli/commands/ps.ts to read persisted records directly (CLI runs as a separate process from whatever registered the process, so it can't share Kernel memory) and registered it in apps/cli/index.ts. Added ProcSnapshot.snapshotFromEntries() so both live in-memory ProcessTable and cross-process disk records can produce the same ProcSnapshot shape.
+
+## 2026-08-13 — Cross-process process visibility via file-based persistence
+
+**Status:** Done
+
+Added packages/storage/SnapshotManager.ts: writes one JSON record per process to ~/.arclux/pids/<id>.json on register/update, reads live-check each PID via process.kill(pid, 0) and self-deletes stale records. Pattern read from forever's getAllProcesses/getSockets (see NOTICE), re-implemented with plain files instead of socket IPC. Wired into Kernel.ts (registerProcess/updateProcessStatus/removeProcess/shutdown all persist), packages/kernel/introspection/ProcSnapshot.ts (added snapshotFromEntries for cross-process use), and apps/cli/commands/ps.ts (reads disk records directly, registered in apps/cli/index.ts).

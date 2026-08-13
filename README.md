@@ -1,29 +1,35 @@
-# ARCLUX🐳
-### OPEN SOURCE
+# ARCLUX 🐳
+- OPEN SOURCE
+
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
 
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
-
  [](LICENSE)
-
 ![Status: alpha](https://img.shields.io/badge/status-alpha-black)
-
 [](#status)
 
 [![CI](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml/badge.svg)](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-live-3f8fff)](https://arclux-os.mintlify.site)
 
+<p align="center">
+  <img src="assets/demo.gif" alt="ARCLUX CLI in action: arclux analyze . and arclux doctor" />
+</p>
 
 -----
 
 [](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 
 ## Documentation
-
+> [!NOTE]
+>  **[Browse the full docs site](https://arclux-os.mintlify.site)** — same content, searchable and organized
+-----
 - [`QUICKSTART.md`](QUICKSTART.md) — start here, fast-path workflow cheat sheet
 - [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
 - [`PROGRES.md`](PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
 - [`ARCHITECTURE_MAP.md`](ARCHITECTURE_MAP.md) — boundary map for the codebase, read before adding new capabilities
+- [`CONTEXT.md`](CONTEXT.md) — project brief at a glance: stack, architecture, current state.
+- [`progres/roadmap.md`](progres/roadmap.md) — long-term direction, phased
 
 ## Status: alpha
 
@@ -32,7 +38,7 @@ This project is under active development with a small team. Expect breaking chan
 What is solid right now:
 - Core pipeline (clone, parse, index, dependency graph)
 - TypeScript/TSX and Python parsing
-- All 18 structural detectors (circular deps, dead code, orphan files, duplicate modules, layer violations, entry points, and more)
+- 19 structural detectors (circular deps, dead code, orphan files, duplicate modules, layer violations, entry points, component/route/story/test conventions, and more) — `arclux doctor` runs all of them; `arclux verify` gates on the core 10 for its PASS/FAIL verdict
 - Full impact analysis (packages/impact/* - trace consumers/dependents, affected files/modules/components/routes)
 - CLI commands: analyze, graph, impact, doctor, config
 - Web dashboard: dependency graph viewer, layout/navigation, most UI patterns and primitives
@@ -41,7 +47,6 @@ What is solid right now:
 What is not there yet:
 - Parsers for Go and Java exist but don't yet capture same-package/same-directory relationships that don't use explicit imports (a documented design gap, see `progres/decisions.md`)
 - Parsers for Rust, C#, C++, PHP, Ruby (dependency-manifest parsing exists for several of these; source-code parsing does not yet)
-- Framework convention rules beyond a starting Next.js rule
 - Real search (`/api/search` is a filename-only stopgap)
 - A handful of dashboard panels (workspace, explorer, some overview components)
 
@@ -49,11 +54,14 @@ What is not there yet:
 
 - Builds a dependency graph (imports, exports, folders) from static analysis
 - Traces impact - what is affected if you change file X
-- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (18 detectors)
-- Enforces framework conventions (Next.js today, more frameworks planned)
+- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (19 detectors — run them all with `arclux doctor`)
+- Enforces framework conventions (13 rules: Next.js, NestJS, Express, Vite, Electron, React — `arclux verify` gates on them)
 - Parses TypeScript, JavaScript, and Python today; more languages planned
 
 ## Install (from source)
+
+> [!NOTE]
+> Installation via npm is deprecated. Use one of the recommended methods below.
 
 Not yet published to npm. Clone and build locally:
 
@@ -103,8 +111,8 @@ We use GitHub Issues to track open work. `main` is protected; all changes go thr
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PROGRES.md) (plus [`progres/`](progres/)) for current project status before picking up work.
 
 ## License
-
 Apache License 2.0 (c) ARCLUX Contributors
+- [`SECURITY.md`](SECURITY.md) 
 
 ## Citation
 

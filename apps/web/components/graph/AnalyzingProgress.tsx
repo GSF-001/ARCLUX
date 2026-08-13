@@ -29,8 +29,11 @@ const STAGES = [
 const STAGE_DURATION_MS = 2500;
 
 export function AnalyzingProgress() {
-  const [stageIndex, setStageIndex] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
+
+  // stageIndex is a pure function of elapsedMs — derive it instead of
+  // syncing it via an effect (react-hooks/set-state-in-effect).
+  const stageIndex = Math.min(STAGES.length - 1, Math.floor(elapsedMs / STAGE_DURATION_MS));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -38,11 +41,6 @@ export function AnalyzingProgress() {
     }, 100);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const nextIndex = Math.min(STAGES.length - 1, Math.floor(elapsedMs / STAGE_DURATION_MS));
-    setStageIndex(nextIndex);
-  }, [elapsedMs]);
 
   const isTakingAWhile = elapsedMs > STAGES.length * STAGE_DURATION_MS + 5000;
 

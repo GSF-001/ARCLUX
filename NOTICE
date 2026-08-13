@@ -29,3 +29,11 @@ their respective repositories.
   The fuzzy-match scoring algorithm in packages/search/fuzzyScore.ts is
   separately adapted (re-typed to TypeScript, renamed) from this project's
   src/command-score.ts.
+
+- forever (https://github.com/foreverjs/forever) — MIT License
+  Read for reference on cross-process state visibility (getAllProcesses/
+  getSockets pattern: scan a directory of per-process records, verify
+  liveness before trusting a record, self-clean stale entries). ARCLUX's
+  packages/storage/SnapshotManager.ts re-implements this concept using
+  plain JSON files + process.kill(pid, 0) liveness checks instead of
+  forever's UNIX-socket-based IPC — no code copied, pattern only.
