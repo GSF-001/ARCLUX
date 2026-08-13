@@ -8,4 +8,40 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: runtime/RuntimeManager — not yet implemented.
+/**
+ * RuntimeManager — top-level entry point for the platform runtime.
+ * Wires Kernel (process table, signal bus, service registry) together
+ * with ProcessManager (actual OS process spawning). This is what
+ * apps/cli/commands/run.ts and future apps/web/app/api/runtime/route.ts
+ * should call into, instead of touching Kernel/ProcessManager directly.
+ */
+
+import { Kernel } from "../kernel/Kernel";
+import { ProcessManager } from "./ProcessManager";
+import type { ProcessSpec } from "./ProcessSpec";
+
+export class RuntimeManager {
+  readonly kernel = new Kernel();
+  readonly processManager: ProcessManager;
+
+  constructor() {
+    this.processManager = new ProcessManager(this.kernel);
+  }
+
+  startService(spec: ProcessSpec): void {
+    this.processManager.start(spec);
+    this.kernel.registerService({
+      name: spec.name,
+      processId: spec.id,
+      registeredAt: Date.now(),
+    });
+  }
+
+  stopService(id: string): void {
+    this.processManager.stop(id);
+  }
+
+  listProcesses() {
+    return this.kernel.processTable.list();
+  }
+}

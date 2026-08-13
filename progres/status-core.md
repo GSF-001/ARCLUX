@@ -473,3 +473,9 @@ Correction: a draft progress entry from another session claimed 'no code written
 Five new files in packages/indexer/. resolveRoutes.ts detects Next.js App Router entry files (page/layout/route/etc under app/), exposes getEntryModuleIds() for detectors to skip false positives. resolveExports.ts walks re-export chains beyond the single hop ModuleInfo.resolvedReExports covers, with cycle detection. resolveComponents.ts, resolveHooks.ts, resolveProviders.ts are naming-convention heuristics only (PascalCase/use*/*Provider), explicitly documented as such since no parser extracts this from AST yet. None of the five are wired into buildIndex.ts pipeline yet -- results are not attached to ModuleInfo or Repository anywhere. tsc clean, not otherwise tested.
     
     main
+
+## 2026-08-13 — Kernel diperbaiki + RuntimeManager wiring ke CLI
+
+**Status:** In Progress
+
+Kernel.ts diperbaiki: import ProcessStatus yang salah diganti ke ProcessStatusValue. RuntimeManager.ts baru dibuat sebagai titik integrasi tunggal Kernel + ProcessManager. apps/cli/commands/run.ts sekarang memanggil RuntimeManager.startService() untuk service web sebagai proof-of-concept integrasi pertama. Belum ditest jalan end-to-end, baru lolos tsc --noEmit.
