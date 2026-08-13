@@ -317,6 +317,10 @@ unmarked on purpose, this is expected script behavior, not a bug.
 
 ## 2026-08-06 — Update - packages/README.md added
 
+> **[STATUS UPDATE, 2026-08-13]: `rules/` is no longer a stub** — all 10
+> remaining rule files implemented and wired (see status-backlog.md's
+> 2026-08-13 UPDATE entry). The scan below reflects the state as of 2026-08-06.
+
 Per-folder status table generated from an actual file scan (line-count
 stub detection), not memory. Snapshot: repository/detectors/impact/
 incremental/shared/parser/graph = working, watcher/indexer/git/engine =
