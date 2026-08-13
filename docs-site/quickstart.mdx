@@ -1,0 +1,75 @@
+---
+title: "Quickstart"
+description: "Clone, install, and run your first analysis in a few minutes"
+---
+
+Welcome to ARCLUX. This guide gets you from a fresh clone to your first dependency graph in a few minutes.
+
+## Before you begin
+
+Make sure you have:
+
+- **Node.js** and **pnpm** installed
+- **Git** installed
+- A codebase you want to analyze (your own repo, or clone something like `vscode` or `react` to try it out)
+
+<Note>
+This guide covers running ARCLUX locally in your terminal. The web dashboard (Step 3 below) requires the same local setup — there's no hosted version yet.
+</Note>
+
+<Steps>
+  <Step title="Clone the repo">
+    ARCLUX isn't published to npm yet, so you build it locally.
+
+    ```bash
+    git clone https://github.com/GSF-001/ARCLUX.git
+    cd ARCLUX
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    pnpm install
+    ```
+  </Step>
+
+  <Step title="Run your first analysis">
+    Point the CLI at any local path:
+
+    ```bash
+    npx tsx apps/cli/index.ts analyze [path]
+    ```
+
+    This parses the target codebase, builds the dependency graph, and runs all 18 structural detectors (circular dependencies, dead code, orphan files, layer violations, and more).
+  </Step>
+
+  <Step title="Explore the graph in your browser (optional)">
+    ```bash
+    cd apps/web
+    pnpm run dev
+    ```
+
+    Open the printed local URL to browse the interactive dependency graph, trace impact, and view file details.
+
+    <Warning>
+    Running in Termux (Android) on arm64: `apps/web` uses Webpack, not Turbopack — Turbopack isn't supported on this architecture. Don't add `--turbo` to the dev script.
+    </Warning>
+  </Step>
+</Steps>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Overview" icon="compass" href="/overview">
+    What ARCLUX actually does and its current alpha status
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    How the pipeline fits together: parser to graph to detectors
+  </Card>
+  <Card title="Status & Progress" icon="chart-line" href="/status">
+    What's solid, what's a stub, and what's actively being worked on
+  </Card>
+  <Card title="Codebase Map" icon="folder-tree" href="/map/map-apps-cli">
+    Browse every package and app in the monorepo
+  </Card>
+</CardGroup>
