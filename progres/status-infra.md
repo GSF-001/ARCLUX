@@ -394,6 +394,6 @@ Stress-tested ARCLUX on the Django repository: 3,039 modules and 7,734 dependenc
 
 ## 2026-08-13 — Django stress test
 
-**Status:** Not Started
+**Status:** done
 
 ARCLUX indexed 3039 modules and 7734 dependency edges in ~30s; impact traced django/db/models/lookups.py to 1319 affected files; diagnose reached Node heap limit on Termux.
