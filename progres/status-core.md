@@ -80,7 +80,7 @@ Full attribution is in `NOTICE` (root). Summary:
 
 **Repos in `~/research` used only to read patterns/architecture, not
 copied from**: git, language-server-protocol, llvm-project, sqlite,
-tree-sitter, nx, clack, shadcn-table, drizzle-orm (check which ones are
+tree-sitter, nx, clack, shadcn-table, drizzle-orm, forever, pm2 (check which ones are
 actually cloned before assuming).
 
 ## 2026-08-03 — Update — packages/incremental (new foundation, not wired in yet)
