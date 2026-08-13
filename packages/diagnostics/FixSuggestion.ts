@@ -1,4 +1,3 @@
-feat/diagnostics-layer
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,5 +48,3 @@ export function getFixSuggestions(findings: DiagnosticFinding[]): FixSuggestion[
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: diagnostics/FixSuggestion — not yet implemented.
- ARCLUX.main
