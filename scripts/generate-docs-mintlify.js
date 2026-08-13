@@ -39,8 +39,17 @@ function mdxSafe(text) {
 
   out = out.replace(/<!--/g, '\u0000CMTOPEN\u0000').replace(/-->/g, '\u0000CMTCLOSE\u0000');
 
+  // Proteksi tag komponen Mintlify: <Card ...>, </Card>, <CardGroup cols={2}>, <Tabs>, dll.
+  // Konvensi Mintlify: nama komponen selalu diawali huruf kapital.
+  const jsxTags = [];
+  out = out.replace(/<\/?[A-Z][A-Za-z0-9]*(?:\s+[^<>]*)?\/?>/g, (m) => {
+    jsxTags.push(m);
+    return `\u0000JSX${jsxTags.length - 1}\u0000`;
+  });
+
   out = out.replace(/</g, '&lt;');
 
+  out = out.replace(/\u0000JSX(\d+)\u0000/g, (m, i) => jsxTags[Number(i)]);
   out = out.replace(/\u0000CMTOPEN\u0000/g, '<!--').replace(/\u0000CMTCLOSE\u0000/g, '-->');
   out = out.replace(/\u0000AUTOLINK(\d+)\u0000/g, (m, i) => autolinks[Number(i)]);
   out = out.replace(/\u0000FENCE(\d+)\u0000/g, (m, i) => fenceBlocks[Number(i)]);
