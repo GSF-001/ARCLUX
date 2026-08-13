@@ -60,6 +60,7 @@
               "map/map-packages-incremental",
               "map/map-packages-indexer",
               "map/map-packages-parser",
+              "map/map-packages-platform",
               "map/map-packages-repository",
               "map/map-packages-rules",
               "map/map-packages-search",
@@ -95,5 +96,13 @@
         "href": "https://github.com/GSF-001/ARCLUX"
       }
     ]
+  },
+  "fonts": {
+    "heading": {
+      "family": "Fraunces"
+    },
+    "body": {
+      "family": "Inter"
+    }
   }
 }
