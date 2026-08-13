@@ -8,4 +8,31 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: kernel/ServiceRegistry — not yet implemented.
+export interface ServiceHandle {
+  name: string;
+  processId: string;
+  registeredAt: number;
+}
+
+export class ServiceRegistry {
+  private services = new Map<string, ServiceHandle>();
+
+  register(handle: ServiceHandle): void {
+    if (this.services.has(handle.name)) {
+      throw new Error(`ServiceRegistry: service "${handle.name}" is already registered`);
+    }
+    this.services.set(handle.name, handle);
+  }
+
+  unregister(name: string): boolean {
+    return this.services.delete(name);
+  }
+
+  resolve(name: string): ServiceHandle | undefined {
+    return this.services.get(name);
+  }
+
+  list(): ServiceHandle[] {
+    return Array.from(this.services.values());
+  }
+}

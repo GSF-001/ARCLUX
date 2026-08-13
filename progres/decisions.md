@@ -724,3 +724,58 @@ LAB 4 is not merely a type/interface exercise.
 The stable Engine contract was exercised against a real, large,
 external Python repository and the test uncovered and fixed an actual
 runtime integration bug in the existing Python parser.
+
+## 2026-08-13 — Platform layer scaffold added
+
+docs/log-today-progress-v2
+> **[STATUS UPDATE, 2026-08-13]: this plan is now implemented.** See "UPDATE: Platform layer scaffold added — implemented — implemented" below.
+
+> **[STATUS UPDATE, 2026-08-13]: this plan is now implemented.** See "UPDATE: Platform layer scaffold added — implemented — implemented" below.
+
+> **[STATUS UPDATE, 2026-08-13]: this plan is now implemented.** See "UPDATE: Platform layer scaffold added — implemented" below.
+
+ARCLUX.main
+
+**Status:** Not Started
+
+Added scaffold-only folder structure for a new additive platform layer (runtime, services, scheduler, environment, workspace, terminal, storage, networking, security, system, diagnostics, editor, language, orchestration) plus matching apps/cli commands and apps/web API routes. Files are Apache-header-only stubs, no logic yet. Per ARCHITECTURE_MAP.md, this consumes existing core (engine/graph/impact/parser) rather than duplicating it — implementation to follow incrementally.
+
+docs/log-today-progress-v2
+## 2026-08-13 — UPDATE: Platform layer scaffold added — implemented — implemented
+
+**Status:** Done
+
+Rencana awal baru sebagian ke-scaffold: package runtime, services, scheduler, environment, workspace, terminal, storage, networking, security, system, diagnostics, editor, language, orchestration sudah ada, tapi ketinggalan packages/kernel, packages/semantic-diff, packages/notifications, packages/package-manager, dan CLI command health.ts + package.ts. Semua sudah ditambahkan (stub-only). Juga ditambahkan docs-site/map/map-packages-platform.mdx section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file platform layer beserta dependency ke engine yang sudah ada. Masih open: belum ada logic diisi, murni struktur file + dokumentasi peta dependency.
+
+## 2026-08-13 — UPDATE: Platform layer scaffold added — implemented — implemented
+
+**Status:** Done
+
+Rencana awal baru sebagian ke-scaffold: package runtime, services, scheduler, environment, workspace, terminal, storage, networking, security, system, diagnostics, editor, language, orchestration sudah ada, tapi ketinggalan packages/kernel, packages/semantic-diff, packages/notifications, packages/package-manager, dan CLI command health.ts + package.ts. Semua sudah ditambahkan (stub-only). Juga ditambahkan docs-site/map/map-packages-platform.mdx section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file platform layer beserta dependency ke engine yang sudah ada. Masih open: belum ada logic diisi, murni struktur file + dokumentasi peta dependency.
+
+## 2026-08-13 — UPDATE: Platform layer scaffold added — implemented
+
+Rencana awal (lihat entry "Platform layer scaffold added" di atas) baru
+sebagian ke-scaffold saat pertama kali dibuat: package `runtime`,
+`services`, `scheduler`, `environment`, `workspace`, `terminal`,
+`storage`, `networking`, `security`, `system`, `diagnostics`,
+`editor`, `language`, `orchestration` sudah ada, tapi ketinggalan:
+`packages/kernel/` (Kernel, ProcessTable, SignalBus, ServiceRegistry,
+introspection), `packages/semantic-diff/` (SemanticDiff, SymbolDiff,
+AstDiff, DependencyDiff, DiffRenderer), `packages/notifications/`
+(NotificationManager, Notification, NotificationChannel),
+`packages/package-manager/` (PackageManager, PackageManifest,
+PackageResolver, PackageState), dan CLI command `health.ts` +
+`package.ts`.
+
+Semua sudah ditambahkan (stub-only, sama seperti scaffold awal — Apache
+header + comment placeholder, belum ada logic). Juga ditambahkan
+`docs-site/map/map-packages-platform.mdx` section "Blueprint
+Integration" yang memetakan setiap tahap alur editor (developer ketik →
+incremental analysis → diagnostics → impact → notification) dan
+semantic-diff pipeline (text→symbol→AST→dependency→impact→
+architectural) ke file platform layer yang sesuai, plus dependency-nya
+ke `packages/engine/`, `packages/parser/`, `packages/diff/`,
+`packages/impact/` yang sudah ada. Masih open: belum ada satupun logic
+diisi, ini murni struktur file + dokumentasi peta dependency.
+ARCLUX.main

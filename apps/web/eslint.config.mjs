@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored third-party UI components (Aceternity reference) — not
+    // authored in-house, don't lint against our own rules.
+    "vendor-ui/**",
   ]),
 ]);
 
