@@ -1,4 +1,7 @@
+feat/diagnostics-layer
+
 feat/editor-layer
+ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +45,8 @@ export function getFileSymbols(repository: Repository, moduleId: string): Symbol
 export function getSymbolsAtLine(repository: Repository, moduleId: string, line: number): SymbolInfo[] {
   return getFileSymbols(repository, moduleId).filter((s) => s.line === line);
 }
+feat/diagnostics-layer
+
 
 /**
  * Copyright 2026 ARCLUX
@@ -54,4 +59,5 @@ export function getSymbolsAtLine(repository: Repository, moduleId: string, line:
  */
 
 // Scaffold: editor/SymbolProvider — not yet implemented.
+ARCLUX.main
 ARCLUX.main

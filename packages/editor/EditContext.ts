@@ -1,4 +1,7 @@
+feat/diagnostics-layer
+
 feat/editor-layer
+ARCLUX.main
 // Copyright 2026 Mikatoshi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +42,8 @@ export function switchFile(
 ): EditSession {
   return { ...session, activeModuleId: moduleId, cursor };
 }
+feat/diagnostics-layer
+
 
 /**
  * Copyright 2026 ARCLUX
@@ -51,4 +56,5 @@ export function switchFile(
  */
 
 // Scaffold: editor/EditContext — not yet implemented.
+ARCLUX.main
 ARCLUX.main
