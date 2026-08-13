@@ -6,9 +6,11 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// LAB 2 MVP — combines existing detectors (same 10 doctor.ts already
-// runs) with the rule engine (packages/rules/RuleEngine.ts) into a
-// single PASS/FAIL verdict.
+// LAB 2 MVP — combines existing detectors (the same 10 core detectors
+// doctor.ts also runs — this is the deliberate PASS/FAIL subset; the 8
+// convention/usage detectors doctor.ts runs on top are informational, so
+// they don't flip verify's verdict) with the rule engine
+// (packages/rules/RuleEngine.ts) into a single PASS/FAIL verdict.
 //
 // Rule coverage, confirmed by direct inspection (2026-08-11), NOT
 // assumed: of 13 rule files across nextjs/react/nestjs/express/vite/

@@ -35,7 +35,7 @@ This project is under active development with a small team. Expect breaking chan
 What is solid right now:
 - Core pipeline (clone, parse, index, dependency graph)
 - TypeScript/TSX and Python parsing
-- All 18 structural detectors (circular deps, dead code, orphan files, duplicate modules, layer violations, entry points, and more)
+- 19 structural detectors (circular deps, dead code, orphan files, duplicate modules, layer violations, entry points, component/route/story/test conventions, and more) — `arclux doctor` runs all of them; `arclux verify` gates on the core 10 for its PASS/FAIL verdict
 - Full impact analysis (packages/impact/* - trace consumers/dependents, affected files/modules/components/routes)
 - CLI commands: analyze, graph, impact, doctor, config
 - Web dashboard: dependency graph viewer, layout/navigation, most UI patterns and primitives
@@ -52,7 +52,7 @@ What is not there yet:
 
 - Builds a dependency graph (imports, exports, folders) from static analysis
 - Traces impact - what is affected if you change file X
-- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (18 detectors)
+- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (19 detectors — run them all with `arclux doctor`)
 - Enforces framework conventions (Next.js today, more frameworks planned)
 - Parses TypeScript, JavaScript, and Python today; more languages planned
 

@@ -48,21 +48,21 @@ export interface HighlightToken {
  * just duplicate) spans correctly needs a real interval tree. Out of scope
  * for this first pass — those characters just render as plain text.
  */
-const CAPTURE_PRIORITY: Array<{ name: string; token: SyntaxTokenType }> = [
-  { name: "function.builtin", token: "property" },
-  { name: "function.method", token: "property" },
-  { name: "function", token: "property" },
-  { name: "constructor", token: "type" },
-  { name: "type", token: "type" },
-  { name: "constant.builtin", token: "constant" },
-  { name: "constant", token: "constant" },
-  { name: "number", token: "constant" },
-  { name: "property", token: "property" },
-  { name: "comment", token: "comment" },
-  { name: "string", token: "string" },
-  { name: "keyword", token: "keyword" },
-  { name: "operator", token: "operator" },
-  { name: "variable", token: "variable" },
+const CAPTURE_PRIORITY: Array<{ name: string; kind: SyntaxTokenType }> = [
+  { name: "function.builtin", kind: "property" },
+  { name: "function.method", kind: "property" },
+  { name: "function", kind: "property" },
+  { name: "constructor", kind: "type" },
+  { name: "type", kind: "type" },
+  { name: "constant.builtin", kind: "constant" },
+  { name: "constant", kind: "constant" },
+  { name: "number", kind: "constant" },
+  { name: "property", kind: "property" },
+  { name: "comment", kind: "comment" },
+  { name: "string", kind: "string" },
+  { name: "keyword", kind: "keyword" },
+  { name: "operator", kind: "operator" },
+  { name: "variable", kind: "variable" },
 ];
 
 const PRIORITY_INDEX = new Map(CAPTURE_PRIORITY.map((c, i) => [c.name, i]));
@@ -136,7 +136,7 @@ export async function highlightPythonSource(source: string): Promise<HighlightTo
       startIndex: cap.startIndex,
       endIndex: cap.endIndex,
       text: cap.text,
-      tokenType: CAPTURE_PRIORITY[PRIORITY_INDEX.get(cap.name)!].token,
+      tokenType: CAPTURE_PRIORITY[PRIORITY_INDEX.get(cap.name)!].kind,
     }))
     .sort((a, b) => a.startIndex - b.startIndex);
 }
