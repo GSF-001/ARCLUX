@@ -123,3 +123,20 @@ yet using the detectEntryPoints filter like detectUnusedFiles does).
 **Status:** Done
 
 detectAmbiguousSymbolResolution existed since an earlier PR but was never called from doctor.ts or anywhere in the pipeline, so findings were invisible to users. Wired in following the same severity-aware print pattern as cycles/unusedExports. Also adds tests/detector.test.ts, the FIRST test file in the project (vitest, 4 tests, all passing): case-insensitive test-dir matching, src-test segment-boundary non-match, single-definition non-flagging, re-export skipping.
+
+## 2026-08-14 — Entry-point false positives eliminated (issue #4)
+
+> **[STATUS UPDATE, 2026-08-14]: the 2026-08-05 entry below said
+> "detectUnusedExports still has false positives on React components
+> (not yet using the detectEntryPoints filter)" — that is now FIXED.**
+
+**Status:** Done
+
+detectUnusedExports and detectOrphanFiles now build an entry-module set
+from `indexer/resolveRoutes.ts`'s `getEntryModuleIds()` (App Router
+convention, matches regardless of importers) plus
+`detectEntryPoints.ts` (CLI entry, orphan classifier) and skip those
+modules entirely. Next.js page.tsx/route.ts files and apps/cli/index.ts
+no longer appear as unused-export/orphan findings. 8 regression tests
+added to tests/core-detectors.test.ts; doctor.ts's note about the
+"entry files aren't fully filtered out yet" caveat removed.

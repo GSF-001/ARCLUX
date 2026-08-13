@@ -382,3 +382,29 @@ Confirmed pnpm typecheck (tsc --noEmit -p apps/web/tsconfig.json) passes clean, 
 **Status:** Done
 
 GraphNode.tsx wrapped in React.memo -- previously every node instance re-rendered on any GraphCanvas.tsx transform change (pan/zoom), even when that node's own props were unchanged. On graphs with hundreds of nodes this meant hundreds of wasted re-renders per pan/zoom frame. Default shallow compare sufficient since props are primitives/stable refs. Not benchmarked with before/after numbers, just a structural fix based on an obvious gap.
+
+## 2026-08-14 — Hooks done (issue #147) + /api/search on the real engine (issue #9)
+
+> **[STATUS UPDATE, 2026-08-14]: the "useClipboard/useCommandPalette/
+> useDebounce/useMediaQuery still stubs" line above is stale — the 3
+> remaining hooks are now implemented, and the "/api/search ...
+> stopgap, SearchEngine.ts still 0%" note is obsolete.**
+
+**Status:** Done
+
+- `hooks/useMediaQuery.ts` — thin wrapper over `@base-ui/react`'s
+  `unstable-use-media-query` (issue note: prefer re-export over
+  reimplementation).
+- `hooks/useClipboard.ts` — async Clipboard API + execCommand fallback,
+  `copied`/`error`/`copy` with auto-reset.
+- `hooks/useCommandPalette.ts` — owns open-state + global shortcuts
+  (Cmd/Ctrl+K, "/", Escape); `CommandPalette.tsx` refactored to consume
+  it (its inline keydown effect removed). Exported standalone for other
+  surfaces.
+- `/api/search` rewritten to use `buildSearchIndex` + `search` from
+  packages/search (issue #9); response shape unchanged
+  (`{ query, results: [{ moduleId, filePath, score }] }`).
+- Note: issue #147 was assigned to collaborator mwakidenis (not started
+  since 2026-08-07); implemented in this session — see collaborators.md.
+- tsc exit 0, eslint 0 on all changed files; not visually verified in
+  browser (same standard gap as other entries).

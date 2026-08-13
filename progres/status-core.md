@@ -352,6 +352,13 @@ unfinished work. Before investigating an empty stub, `cat` the whole
 file first (not just `wc -l`) — some are marked intentionally empty in
 a comment, which immediately answers the question.
 
+> **[STATUS UPDATE, 2026-08-14]: the resolver family IS now consumed** —
+> `getEntryModuleIds()` is used by `detectUnusedExports.ts` /
+> `detectOrphanFiles.ts` (issue #4, entry-point filtering). The
+> resolver results are still not attached to ModuleInfo/Repository by
+> `buildIndex.ts` (pass 5 never landed) — detectors call them directly.
+> See "2026-08-14 — Issues #4/#7/#9/#50" below.
+
 ## 2026-08-06 — Update — route/export/component/hook/provider resolvers + Explorer panel
 
 **`packages/indexer/resolveRoutes.ts`**: detects Next.js App Router entry
@@ -503,3 +510,27 @@ Kernel now persists ProcessEntry records to ~/.arclux/pids/*.json on register/up
 **Status:** Done
 
 Added packages/storage/SnapshotManager.ts: writes one JSON record per process to ~/.arclux/pids/<id>.json on register/update, reads live-check each PID via process.kill(pid, 0) and self-deletes stale records. Pattern read from forever's getAllProcesses/getSockets (see NOTICE), re-implemented with plain files instead of socket IPC. Wired into Kernel.ts (registerProcess/updateProcessStatus/removeProcess/shutdown all persist), packages/kernel/introspection/ProcSnapshot.ts (added snapshotFromEntries for cross-process use), and apps/cli/commands/ps.ts (reads disk records directly, registered in apps/cli/index.ts).
+
+## 2026-08-14 — Issues #4/#7/#9/#50 — entry-point-aware detectors, call graph, search engine
+
+**Status:** Done
+
+- **#7 → #4 (entry-point awareness):** `resolveRoutes.ts` was already
+  implemented; its `getEntryModuleIds()` (plus `detectEntryPoints`) is
+  now wired into `detectUnusedExports.ts` and `detectOrphanFiles.ts` —
+  App Router files and the CLI entry are no longer false-flagged as
+  unused/orphan. 8 new tests in tests/core-detectors.test.ts. doctor.ts
+  wording updated.
+- **#50 (call graph):** `extractCallsJs` (bare-identifier calls, excludes
+  `obj.foo()`/`this.foo()`/`require()`) wired into the 3 JS parsers;
+  `buildIndex` resolves calls via named imports and backfills `calledBy`;
+  `buildCallGraph.ts` emits weighted `type: "call"` edges mirroring
+  buildImportGraph. RawCall/ResolvedCall/calls/calledBy added to
+  shared/types.ts. 15 tests (tests/graph-callgraph.test.ts). Known
+  limitation: TS-family parsers don't extract calls yet — a TS-only repo
+  yields 0 call edges (follow-up candidate).
+- **#9 (search engine):** packages/search/* implemented (SearchIndex,
+  SearchEngine, SearchFilters, plus plain-TS SearchProvider/SearchResults/
+  SearchKeyboard — packages stay framework-agnostic); `/api/search`
+  rewritten to use the engine, response shape unchanged. 19 tests
+  (tests/search.test.ts).

@@ -62,6 +62,6 @@ token di `graphColors.ts` dan referensikan dari sana.
 
 ## Status implementasi
 
-Cek `PROGRESS.md` di root repo untuk daftar terkini apa yang sudah
+Cek `PROGRES.md` di root repo untuk daftar terkini apa yang sudah
 berjalan vs. masih kosong sebelum mengasumsikan sebuah fitur sudah ada.
 Banyak file di `packages/` dan `apps/web` masih berupa stub 0 baris.

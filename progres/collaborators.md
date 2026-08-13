@@ -32,7 +32,7 @@
 ### mwakidenis — issue #147
 - **Task**: Implement 3 remaining apps/web/hooks stubs
 - **Files**: `apps/web/hooks/useClipboard.ts`, `useCommandPalette.ts`, `useMediaQuery.ts`
-- **Status**: not started
+- **Status**: not started as of 2026-08-14; **implemented by main session 2026-08-14** (owner-directed bulk issue pass) — see status-web.md entry. If mwakidenis returns with their own version, compare before merging.
 - **Assigned**: 2026-08-07
 - **Note**: 4th active collaborator, first assignment. Also independently added CITATION.cff (unprompted, unassigned contribution) before this. Profile suggests frontend/React-heavy background, picked this task to match.
 

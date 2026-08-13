@@ -15,8 +15,7 @@ A command-line tool for analyzing a repo without the web UI.
 
 | Command | What it does |
 |---|---|
-| analyze | Clones + indexes a repo, prints a summary (modules, detected frameworks, issues found) |
-| analyzeLocal | Same as analyze but against a local path instead of cloning |
+| analyze | Analyzes a repo — local path (default `.`) or clone, prints a summary (modules, detected frameworks, issues found) |
 | graph | Builds and prints/exports the dependency graph |
 | impact | Given a file, shows what depends on it (direct + transitive consumers) |
 | doctor | Environment/setup diagnostics — checks Node version, missing deps, etc. |
