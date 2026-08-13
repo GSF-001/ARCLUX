@@ -81,6 +81,13 @@ pnpm test -- --runInBand fails since Vitest 4.1.10 has no such option. Plain pnp
 
 A much earlier decisions.md/status entry (GraphMenu consolidation session) explicitly flagged GraphFocusView.tsx as pushed near a chat context limit, typecheck-only, not visually verified in-browser. This session is the first time it was actually exercised by a real user against a real large-fan-in file (25 affected files) -- both bugs found (dead back-button icon, silent 12-item cap) were exactly the kind of thing a typecheck-only "looks done" status hides. Lesson: when a PROGRES entry says "not yet visually verified," treat any bug report against that component as plausible even if the code "looks" complete on read -- do not assume the component is solid just because it compiled and was merged.
 
+ main
+## 2026-08-13 — Two main-like branches causing sync confusion
+
+**Status:** Not Started
+
+Repo has both 'origin/main' and 'origin/ARCLUX.main' as branches. This session repeatedly hit 'fatal: couldn't find remote ref main' during git checkout/pull sequences, and packages/editor/ + packages/diagnostics/ appeared to vanish between commands even after being written and committed. Root cause suspected: local checkout/pull steps intermittently targeted or got confused between these two branches, leaving local main stale relative to origin/main while work was actually preserved on feature branches. Fix applied: always 'git fetch origin' then 'git reset --hard origin/main' before trusting local file listings, rather than assuming local main == remote main. Needs a real decision: rename or delete one of the two main-like branches so this class of bug can't recur.
+
  docs/log-today-progress-v2
 ## 2026-08-13 — Default branch repo adalah ARCLUX.main, bukan main
 
