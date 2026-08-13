@@ -46,6 +46,7 @@ import { requireMainProcessBinding } from "../rules/electron/requireMainProcessB
 import { requirePreloadExposure } from "../rules/electron/requirePreloadExposure";
 import { requireComponentExport } from "../rules/react/requireComponentExport";
 import { requireHookRules } from "../rules/react/requireHookRules";
+import { requireController } from "../rules/laravel/requireController";
 
 /** Severity that a single Issue carries. "error" should fail a build/CI check, "warning" should not. */
 export type IssueSeverity = "error" | "warning";
@@ -69,7 +70,7 @@ export interface RunAllChecksResult {
 
 /**
  * Runs the same 10 detectors doctor.ts/verify.ts already run, plus the
- * rule engine with all 13 implemented rules (the only non-wired rule file
+ * rule engine with all 14 implemented rules (the only non-wired rule file
  * is react/requirePropsTyping.ts, a documented deferral). Returns one
  * normalized Issue[] list instead of 10 separate detector outputs + a
  * separate rule engine result.
@@ -118,6 +119,7 @@ export function runAllChecks(repository: Repository): RunAllChecksResult {
       requirePreloadExposure,
       requireComponentExport,
       requireHookRules,
+      requireController,
     ],
     repository.meta.detectedFrameworks
   );

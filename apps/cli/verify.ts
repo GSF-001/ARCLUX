@@ -13,12 +13,12 @@
 // (packages/rules/RuleEngine.ts) into a single PASS/FAIL verdict.
 //
 // Rule coverage, confirmed by direct inspection (2026-08-13), NOT
-// assumed: of 14 rule files across nextjs/react/nestjs/express/vite/
-// electron, 13 have real implementations (all of nextjs/nestjs/express/
-// vite/electron plus the 2 react rules); the only non-implemented file is
-// react/requirePropsTyping.ts, a documented deferral — it needs
-// parser-level parameter information. Every rule below in `rules` is
-// implemented; stubs are never wired in on purpose.
+// assumed: of 15 rule files across laravel/nextjs/react/nestjs/express/
+// vite/electron, 14 have real implementations (all of laravel/nextjs/
+// nestjs/express/vite/electron plus the 2 react rules); the only
+// non-implemented file is react/requirePropsTyping.ts, a documented
+// deferral — it needs parser-level parameter information. Every rule below
+// in `rules` is implemented; stubs are never wired in on purpose.
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
@@ -47,6 +47,7 @@ import { requireMainProcessBinding } from "../../packages/rules/electron/require
 import { requirePreloadExposure } from "../../packages/rules/electron/requirePreloadExposure";
 import { requireComponentExport } from "../../packages/rules/react/requireComponentExport";
 import { requireHookRules } from "../../packages/rules/react/requireHookRules";
+import { requireController } from "../../packages/rules/laravel/requireController";
 
 export function registerVerifyCommand(program: Command): void {
   program
@@ -85,7 +86,7 @@ export function registerVerifyCommand(program: Command): void {
           deadCode.length +
           ambiguousSymbols.length;
 
-        // Rule engine — all 13 implemented rules (see file header);
+        // Rule engine — all 14 implemented rules (see file header);
         // framework filtering happens inside runRules via detectedFrameworks.
         const ruleViolations = runRules(
           repository,
@@ -103,6 +104,7 @@ export function registerVerifyCommand(program: Command): void {
             requirePreloadExposure,
             requireComponentExport,
             requireHookRules,
+            requireController,
           ],
           meta.detectedFrameworks
         );

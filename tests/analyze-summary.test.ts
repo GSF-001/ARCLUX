@@ -52,6 +52,8 @@ function makeModule(
     importedBy,
     imports: resolvedImports.map((r) => r.moduleId),
     resolvedImports,
+    calls: [],
+    calledBy: [],
     implicitDependencies: [],
   };
 }

@@ -47,6 +47,8 @@ function makeModule(relativePath: string, exportName: string, line = 1): ModuleI
     importedBy: [],
     imports: [],
     resolvedImports: [],
+    calls: [],
+    calledBy: [],
     implicitDependencies: [],
   };
 }
@@ -123,6 +125,8 @@ describe("detectAmbiguousSymbolResolution / categorize()", () => {
       importedBy: [],
       imports: [],
       resolvedImports: [],
+      calls: [],
+      calledBy: [],
       implicitDependencies: [],
     };
     const origin = makeModule("src/origin.ts", "shared");

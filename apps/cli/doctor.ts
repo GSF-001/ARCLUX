@@ -116,7 +116,7 @@ export function registerDoctorCommand(program: Command): void {
         if (unusedExports.length > 0) {
           p.log.warn(`${unusedExports.length} unused ${unusedExports.length === 1 ? "export" : "exports"} found:`);
           p.log.message(
-            "  (note: entry files aren't fully filtered out yet \u2014 see detectEntryPoints findings below \u2014 so an app's entry point may show up here as a false positive)"
+            "  (entry points are filtered out \u2014 App Router files and CLI entry are excluded as false-positive class)"
           );
           for (const f of unusedExports) {
             p.log.message(`  ${f.filePath}:${f.line} \u2014 ${f.message}`);
@@ -125,13 +125,7 @@ export function registerDoctorCommand(program: Command): void {
 
         if (orphanFiles.length > 0) {
           p.log.warn(`${orphanFiles.length} orphan ${orphanFiles.length === 1 ? "file" : "files"} found:`);
-          p.log.message(
-            "  (note: same entry-file caveat as unused exports \u2014 cross-check against detectEntryPoints below)"
-          );
-          for (const f of orphanFiles) {
-            p.log.message(`  ${f.filePath} \u2014 ${f.message}`);
-          }
-        }
+          p.log.message("  (entry points are filtered out \u2014 same exclusion as unused exports)");
 
         if (largeModules.length > 0) {
           p.log.warn(`${largeModules.length} large ${largeModules.length === 1 ? "module" : "modules"} found:`);

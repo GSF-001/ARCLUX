@@ -59,6 +59,8 @@ function makeModule(relativePath: string, opts: ModuleOpts = {}): ModuleInfo {
     importedBy: opts.importedBy ?? [],
     imports,
     resolvedImports: imports,
+    calls: [],
+    calledBy: [],
     implicitDependencies: [],
   };
 }

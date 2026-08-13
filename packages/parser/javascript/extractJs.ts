@@ -7,7 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import ts from "typescript";
-import type { RawImport, RawExport, ImportKind } from "../../shared/types";
+import type { RawImport, RawExport, ImportKind, RawCall } from "../../shared/types";
 
 // Shared by parseJs.ts, parseJsx.ts, parseCommonJs.ts. Deliberately NOT
 // reusing packages/parser/typescript/parseTs.ts's extractImports/
@@ -224,4 +224,45 @@ export function extractExportsJs(sourceFile: ts.SourceFile): RawExport[] {
 
   visit(sourceFile);
   return exports;
+}
+
+/**
+ * Bare-identifier call sites: `foo(...)` where the callee expression is a
+ * plain Identifier. Deliberately excludes:
+ *   - `obj.foo()` / `this.foo()` / `foo.bar.baz()` — the callee is a
+ *     PropertyAccessExpression, not an Identifier, so these never match;
+ *   - `require(...)` — a bare identifier call that is import-related, not
+ *     a real function call (it is already captured as a RawImport of kind
+ *     "require" by extractImportsJs).
+ *
+ * This is an AST-only pass — no type information is available — so a bare
+ * call like `helper()` cannot be attributed to a module here. Attribution
+ * happens later in buildIndex.ts pass 3, which matches the callee name
+ * against the module's named imports. Two known limitations, both by
+ * design (issue #50):
+ *   1. Calls of default-imported functions (`import helper from "./h"`
+ *      then `helper()`) can never be resolved — RawImport does not capture
+ *      a local name for default imports, only hasDefaultImport: true.
+ *   2. `obj.foo()` / `this.foo()` can never be resolved — even with type
+ *      info this would need a full type-checker pass (method resolution),
+ *      which the parser layer deliberately does not run.
+ */
+export function extractCallsJs(sourceFile: ts.SourceFile): RawCall[] {
+  const calls: RawCall[] = [];
+
+  function visit(node: ts.Node) {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      if (node.expression.text !== "require") {
+        calls.push({
+          calleeName: node.expression.text,
+          line: getLine(sourceFile, node.getStart()),
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return calls;
 }
