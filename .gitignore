@@ -7,3 +7,9 @@ build/
 .env
 .env.local
 package-lock.json
+
+# Agent protocol working files (local only, not part of PRs)
+.agent_task_state.md
+AGENT_DIARY.md
+EXPERIMENTS_LOG.md
+KNOWN_ISSUES.md
