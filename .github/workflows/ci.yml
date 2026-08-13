@@ -18,3 +18,18 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run lint
       - run: pnpm run test
+
+  docs-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install docs-site deps
+        run: pnpm install --ignore-workspace --frozen-lockfile
+        working-directory: docs-site
+      - name: Build docusaurus site
+        run: pnpm build
+        working-directory: docs-site

@@ -5,13 +5,13 @@ const { themes } = require('prism-react-renderer');
 const config = {
   title: 'ARCLUX',
   tagline: 'Codebase analysis workspace — bukan dashboard',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.svg',
 
-  url: 'https://your-org.github.io',
-  baseUrl: '/arclux-docs/',
+  url: 'https://gsf-001.github.io',
+  baseUrl: '/ARCLUX/',
 
-  organizationName: 'your-org',
-  projectName: 'arclux',
+  organizationName: 'GSF-001',
+  projectName: 'ARCLUX',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
@@ -29,7 +29,7 @@ const config = {
         docs: {
           routeBasePath: '/',
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/your-org/arclux/edit/main/docs-site/',
+          editUrl: 'https://github.com/GSF-001/ARCLUX/edit/ARCLUX.main/docs-site/',
         },
         blog: false,
         theme: {
@@ -56,7 +56,7 @@ const config = {
             label: 'Docs',
           },
           {
-            href: 'https://github.com/your-org/arclux',
+            href: 'https://github.com/GSF-001/ARCLUX',
             label: 'GitHub',
             position: 'right',
           },

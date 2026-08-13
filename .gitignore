@@ -1,4 +1,5 @@
 node_modules/
+.docusaurus/
 .next/
 dist/
 build/
