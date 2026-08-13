@@ -11,31 +11,34 @@
 // Does not recompute impact -- reuses the existing chain end to end.
 
 import type { Repository } from "../repository/Repository";
-import {
-  getImpactNavigation,
-  type ImpactNavigationResult,
-} from "../editor/ImpactNavigator";
+import { getImpactCount } from "../editor/ImpactNavigator";
 import type { DiagnosticFinding } from "./DiagnosticEngine";
 
 export interface FindingWithContext {
   finding: DiagnosticFinding;
 
-  /** Impact for each distinct moduleId referenced in finding.locations. */
-  impactByModuleId: Record<string, ImpactNavigationResult>;
+  /** Affected-file count for each distinct moduleId referenced in finding.locations. */
+  impactByModuleId: Record<string, number>;
 }
 
 export function attachImpactContext(
   repository: Repository,
   finding: DiagnosticFinding,
+  cache: Map<string, number> = new Map(),
 ): FindingWithContext {
   const uniqueModuleIds = [
     ...new Set(finding.locations.map((loc) => loc.moduleId)),
   ];
 
-  const impactByModuleId: Record<string, ImpactNavigationResult> = {};
+  const impactByModuleId: Record<string, number> = {};
 
   for (const moduleId of uniqueModuleIds) {
-    impactByModuleId[moduleId] = getImpactNavigation(repository, moduleId);
+    let count = cache.get(moduleId);
+    if (count === undefined) {
+      count = getImpactCount(repository, moduleId);
+      cache.set(moduleId, count);
+    }
+    impactByModuleId[moduleId] = count;
   }
 
   return { finding, impactByModuleId };
@@ -45,5 +48,12 @@ export function attachImpactContextToAll(
   repository: Repository,
   findings: DiagnosticFinding[],
 ): FindingWithContext[] {
-  return findings.map((f) => attachImpactContext(repository, f));
+  // Shared cache across all findings in this run, and only the affected-file
+  // COUNT is kept per moduleId (not the full ImpactNavigationResult, which
+  // includes a materialized affected-files array and a full impact tree --
+  // neither used by diagnose's output). On Django (~989 unique moduleIds
+  // across 650 findings), retaining the full result per moduleId caused an
+  // out-of-memory crash; retaining just numbers does not.
+  const cache = new Map<string, number>();
+  return findings.map((f) => attachImpactContext(repository, f, cache));
 }
