@@ -473,3 +473,9 @@ Correction: a draft progress entry from another session claimed 'no code written
 Five new files in packages/indexer/. resolveRoutes.ts detects Next.js App Router entry files (page/layout/route/etc under app/), exposes getEntryModuleIds() for detectors to skip false positives. resolveExports.ts walks re-export chains beyond the single hop ModuleInfo.resolvedReExports covers, with cycle detection. resolveComponents.ts, resolveHooks.ts, resolveProviders.ts are naming-convention heuristics only (PascalCase/use*/*Provider), explicitly documented as such since no parser extracts this from AST yet. None of the five are wired into buildIndex.ts pipeline yet -- results are not attached to ModuleInfo or Repository anywhere. tsc clean, not otherwise tested.
     
     main
+
+## 2026-08-13 — Kernel & ProcessManager diimplementasi pakai referensi PM2
+
+**Status:** Done
+
+packages/kernel/ (ProcessTable, SignalBus, ServiceRegistry, Kernel) dan packages/runtime/ProcessManager.ts sekarang berisi logic asli, bukan stub. Dibangun dengan clone referensi PM2 (github.com/Unitech/pm2, lib/God.js dan lib/God/ForkMode.js) untuk pattern proses: spawn via child_process.spawn, tracking pid/status, capture stdout/stderr, IPC message forwarding, exit handling dengan auto-restart. Status naming (launching/online/stopping/stopped/errored) mengikuti konvensi PM2. Event bus pakai Node EventEmitter bawaan, bukan EventEmitter2 seperti PM2. Sengaja TIDAK diporting: cluster mode (lib/God/ClusterMode.js, belum dibutuhkan), log file persistence ke disk, PID file writing, uid/gid options. Scoped untuk service internal ARCLUX (web server, watcher, indexer).
