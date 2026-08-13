@@ -1,0 +1,41 @@
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches: [ARCLUX.main]
+    paths: ['docs-site/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install docs-site deps
+        run: pnpm install --ignore-workspace --frozen-lockfile
+        working-directory: docs-site
+      - name: Build docusaurus site
+        run: pnpm build
+        working-directory: docs-site
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs-site/build
+      - id: deployment
+        uses: actions/deploy-pages@v5
