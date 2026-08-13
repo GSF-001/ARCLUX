@@ -13,13 +13,12 @@
 // (packages/rules/RuleEngine.ts) into a single PASS/FAIL verdict.
 //
 // Rule coverage, confirmed by direct inspection (2026-08-13), NOT
-// assumed: of 13 rule files across nextjs/react/nestjs/express/vite/
-// electron, 3 have real implementations — nextjs/requirePage.ts,
-// react/requireComponentExport.ts, react/requireHookRules.ts. The other
-// 10 are stubs (react/requirePropsTyping is a documented deferral — it
-// needs parser-level parameter information). Do NOT add a stub to
-// `rules` below until it's actually implemented; this file only wires up
-// implemented rules on purpose.
+// assumed: of 14 rule files across nextjs/react/nestjs/express/vite/
+// electron, 13 have real implementations (all of nextjs/nestjs/express/
+// vite/electron plus the 2 react rules); the only non-implemented file is
+// react/requirePropsTyping.ts, a documented deferral — it needs
+// parser-level parameter information. Every rule below in `rules` is
+// implemented; stubs are never wired in on purpose.
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
@@ -36,6 +35,16 @@ import { detectDeadCode } from "../../packages/detectors/detectDeadCode";
 import { detectAmbiguousSymbolResolution } from "../../packages/detectors/detectAmbiguousSymbolResolution";
 import { runRules } from "../../packages/rules/RuleEngine";
 import { requirePage } from "../../packages/rules/nextjs/requirePage";
+import { requireRoute } from "../../packages/rules/nextjs/requireRoute";
+import { requireIndexUpdate } from "../../packages/rules/nextjs/requireIndexUpdate";
+import { requireLayoutUpdate } from "../../packages/rules/nextjs/requireLayoutUpdate";
+import { requireMetadata } from "../../packages/rules/nextjs/requireMetadata";
+import { requireControllerBinding } from "../../packages/rules/nestjs/requireControllerBinding";
+import { requireModuleRegistration } from "../../packages/rules/nestjs/requireModuleRegistration";
+import { requireRouteRegistration } from "../../packages/rules/express/requireRouteRegistration";
+import { requireEntryConfig } from "../../packages/rules/vite/requireEntryConfig";
+import { requireMainProcessBinding } from "../../packages/rules/electron/requireMainProcessBinding";
+import { requirePreloadExposure } from "../../packages/rules/electron/requirePreloadExposure";
 import { requireComponentExport } from "../../packages/rules/react/requireComponentExport";
 import { requireHookRules } from "../../packages/rules/react/requireHookRules";
 
@@ -76,8 +85,27 @@ export function registerVerifyCommand(program: Command): void {
           deadCode.length +
           ambiguousSymbols.length;
 
-        // Rule engine — see file header: only requirePage is real right now.
-        const ruleViolations = runRules(repository, [requirePage, requireComponentExport, requireHookRules], meta.detectedFrameworks);
+        // Rule engine — all 13 implemented rules (see file header);
+        // framework filtering happens inside runRules via detectedFrameworks.
+        const ruleViolations = runRules(
+          repository,
+          [
+            requirePage,
+            requireRoute,
+            requireIndexUpdate,
+            requireLayoutUpdate,
+            requireMetadata,
+            requireControllerBinding,
+            requireModuleRegistration,
+            requireRouteRegistration,
+            requireEntryConfig,
+            requireMainProcessBinding,
+            requirePreloadExposure,
+            requireComponentExport,
+            requireHookRules,
+          ],
+          meta.detectedFrameworks
+        );
         const ruleErrors = ruleViolations.filter((v) => v.severity === "error");
         const ruleWarnings = ruleViolations.filter((v) => v.severity === "warning");
 

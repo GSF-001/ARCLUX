@@ -47,7 +47,6 @@ What is solid right now:
 What is not there yet:
 - Parsers for Go and Java exist but don't yet capture same-package/same-directory relationships that don't use explicit imports (a documented design gap, see `progres/decisions.md`)
 - Parsers for Rust, C#, C++, PHP, Ruby (dependency-manifest parsing exists for several of these; source-code parsing does not yet)
-- Framework convention rules beyond a starting Next.js rule
 - Real search (`/api/search` is a filename-only stopgap)
 - A handful of dashboard panels (workspace, explorer, some overview components)
 
@@ -56,7 +55,7 @@ What is not there yet:
 - Builds a dependency graph (imports, exports, folders) from static analysis
 - Traces impact - what is affected if you change file X
 - Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (19 detectors — run them all with `arclux doctor`)
-- Enforces framework conventions (Next.js today, more frameworks planned)
+- Enforces framework conventions (13 rules: Next.js, NestJS, Express, Vite, Electron, React — `arclux verify` gates on them)
 - Parses TypeScript, JavaScript, and Python today; more languages planned
 
 ## Install (from source)

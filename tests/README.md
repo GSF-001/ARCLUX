@@ -1,6 +1,5 @@
 # tests/
 
-
 Automated tests, run with Vitest (https://vitest.dev).
 
     npx vitest run          # run once
@@ -9,16 +8,57 @@ Automated tests, run with Vitest (https://vitest.dev).
 
 ## What's tested here
 
-- **`parser/`** — language/manifest parsers against real files copied
-  from actual public repos (not hand-written fixtures) — e.g.
-  parser/go.test.ts parses gin's real go.mod and asserts on the
-  exact dependency list. The real files live in tests/fixtures/.
-- **`indexer/`** — cross-file resolution logic, like same-package
-  implicit dependencies for languages (Go, Java) that don't require
-  explicit imports between files in one package/directory.
+- **`parser/`** — language/manifest parsers. Manifest tests run against
+  real files copied from actual public repos (gin's go.mod, tokio's
+  Cargo.toml — see tests/fixtures/). Language-parser tests parse inline
+  source strings: typescript, javascript (ESM/JSX/CommonJS), python
+  (tree-sitter), java, golang.
+- **`indexer/`** — cross-file resolution logic (same-package implicit
+  dependencies for Go/Java) and a full `buildIndex` pass over a real
+  temp directory (scan → parse → resolve → importedBy back-fill).
 - **`watcher/`** — debounce/dedup behavior for the file-change queue
-  that powers incremental re-indexing, using Vitest's fake timers so
-  the tests run instantly instead of actually waiting.
+  that powers incremental re-indexing, using Vitest's fake timers.
+- **Root-level suites** — detectors (unit + the 8 doctor-wired
+  detectors + scanFiles cycle guard), the rule engine (all 13
+  implemented rules), impact analysis (`calculateAffectedFiles`), the
+  dependency graph builder, the analyze summary, and the pipeline entry
+  point (`analyzeRepository({ localPath })` end-to-end against a temp
+  repo with package.json framework detection).
+
+## Status
+
+141 tests across 20 files, all passing (`npx vitest run`).
+
+## Test files
+
+| File | Tests | What it covers |
+|---|---|---|
+| detector.test.ts | 4 | detectAmbiguousSymbolResolution core cases |
+| detectors-wired.test.ts | 17 | the 8 detectors wired into doctor.ts |
+| core-detectors.test.ts | 6 | core detector helpers/behaviors |
+| scanFiles-cycle.test.ts | 1 | junction/symlink cycle guard in scanFiles |
+| rules.test.ts | 10 | RuleEngine + requirePage + 2 react rules |
+| rules-frameworks.test.ts | 37 | the 10 framework rules (nextjs x4, nestjs x2, express, vite, electron x2) |
+| graph.test.ts | 6 | buildDependencyGraph: dedup, external drops, implicit edges |
+| impact.test.ts | 5 | calculateAffectedFiles: transitive, diamond, notFound |
+| indexer.test.ts | 5 | buildIndex end-to-end on a real temp dir |
+| pipeline.test.ts | 3 | analyzeRepository localPath: frameworks, index, graph, manifest deps |
+| analyze-summary.test.ts | 2 | CLI analyze summary formatting |
+| parser/typescript.test.ts | 7 | parseTs import/export kinds |
+| parser/javascript.test.ts | 6 | parseJs / parseJsx / parseCommonJs |
+| parser/python.test.ts | 5 | parsePython (tree-sitter) imports/exports |
+| parser/java.test.ts | 4 | parseJava imports, public-only exports, scopeId |
+| parser/golang.test.ts | 4 | parseGo imports, uppercase exports, scopeId |
+| parser/go.test.ts | 4 | parseGoMod against gin's real go.mod |
+| parser/rust.test.ts | 4 | parseCargoToml against tokio's real Cargo.toml |
+| indexer/resolveSameScopeDependencies.test.ts | 6 | Go same-package implicit dependency resolution |
+| watcher/changeQueue.test.ts | 5 | change queue debounce/dedup (fake timers) |
+
+## Fixtures
+
+tests/fixtures/ holds REAL manifest files copied from public repos
+(go.mod from gin-gonic/gin, Cargo.toml from tokio-rs/tokio) — not
+hand-written. See tests/fixtures/README if one exists.
 
 ## Adding a test for a real-world edge case
 
@@ -30,40 +70,3 @@ exact expected output. That's how tests/fixtures/Cargo.toml.tokio
 came to exist — it caught a real bug in Cargo.toml parsing
 (platform-conditional dependency sections weren't handled) before it
 shipped.
-
-=======
-Automated tests, run via Vitest. All 19 tests passing as of this writing
-(4 test files, 0 failures) - verified by actually running `npx vitest run`,
-not inferred from file presence.
-
-Run all tests:
-
-    npx vitest run
-
-Run one file:
-
-    npx vitest run tests/parser/go.test.ts
-
-## Test files
-
-| File | Tests | What it covers |
-|---|---|---|
-| parser/go.test.ts | 4 | parseGoMod against a REAL go.mod (gin's, fixtures/go.mod.gin) - 35 deps, all runtime, version extraction, empty-require-block edge case. |
-| parser/rust.test.ts | 4 | parseCargoToml against a REAL Cargo.toml (tokio's, fixtures/Cargo.toml.tokio) - 36 deps (16 runtime/20 dev), platform-conditional section resolution, empty-manifest edge case. |
-| indexer/resolveSameScopeDependencies.test.ts | 6 | Go's "same package, no import needed" implicit dependency resolution, against the REAL playground/go-demo fixture. |
-| watcher/changeQueue.test.ts | 5 | createChangeQueue debounce behavior - flush timing, timer reset, dedup by path, close() behavior. Uses Vitest fake timers. |
-
-## Fixtures
-
-tests/fixtures/ holds REAL manifest files copied from public repos
-(go.mod from gin-gonic/gin, Cargo.toml from tokio-rs/tokio) - not
-hand-written.
-
-## Coverage gaps
-
-Only 4 of the working packages listed in packages/README.md have
-dedicated tests. Everything else currently working has been verified via
-scripts/testPlayground.ts and scripts/testManifests.ts manual runs (see
-root PROGRES.md) but has no automated regression test yet.
-
-main
