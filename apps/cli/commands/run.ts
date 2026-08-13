@@ -8,4 +8,39 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: cli/commands/run — not yet implemented.
+import { RuntimeManager } from "../../../packages/runtime/RuntimeManager";
+import type { ProcessSpec } from "../../../packages/runtime/ProcessSpec";
+
+const KNOWN_SERVICES: Record<string, ProcessSpec> = {
+  web: {
+    id: "web",
+    name: "ARCLUX Web",
+    command: "npm",
+    args: ["run", "dev"],
+    cwd: "apps/web",
+    autorestart: true,
+  },
+};
+
+export async function runCommand(args: string[]): Promise<void> {
+  const [serviceName] = args;
+  const spec = serviceName ? KNOWN_SERVICES[serviceName] : undefined;
+
+  if (!spec) {
+    console.error(
+      `Unknown service "${serviceName ?? ""}". Known services: ${Object.keys(KNOWN_SERVICES).join(", ")}`
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const runtime = new RuntimeManager();
+  runtime.kernel.signalBus.on("log:out", (payload: any) => {
+    process.stdout.write(payload.data);
+  });
+  runtime.kernel.signalBus.on("log:err", (payload: any) => {
+    process.stderr.write(payload.data);
+  });
+
+  runtime.startService(spec);
+}

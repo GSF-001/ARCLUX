@@ -479,3 +479,9 @@ Five new files in packages/indexer/. resolveRoutes.ts detects Next.js App Router
 **Status:** Done
 
 packages/kernel/ (ProcessTable, SignalBus, ServiceRegistry, Kernel) dan packages/runtime/ProcessManager.ts sekarang berisi logic asli, bukan stub. Dibangun dengan clone referensi PM2 (github.com/Unitech/pm2, lib/God.js dan lib/God/ForkMode.js) untuk pattern proses: spawn via child_process.spawn, tracking pid/status, capture stdout/stderr, IPC message forwarding, exit handling dengan auto-restart. Status naming (launching/online/stopping/stopped/errored) mengikuti konvensi PM2. Event bus pakai Node EventEmitter bawaan, bukan EventEmitter2 seperti PM2. Sengaja TIDAK diporting: cluster mode (lib/God/ClusterMode.js, belum dibutuhkan), log file persistence ke disk, PID file writing, uid/gid options. Scoped untuk service internal ARCLUX (web server, watcher, indexer).
+
+## 2026-08-13 — Kernel & RuntimeManager selesai, integrasi ke CLI
+
+**Status:** In Progress
+
+Kernel.ts, ProcessTable.ts, SignalBus.ts, ServiceRegistry.ts, ProcessManager.ts, ProcessSpec.ts, RuntimeManager.ts semua berisi logic asli berdasarkan referensi PM2 (God.js, ForkMode.js). apps/cli/commands/run.ts terhubung ke RuntimeManager sebagai integrasi pertama. Sempat ada insiden git reset --hard yang menghapus kerjaan tanpa sengaja, sudah dipulihkan penuh dan diverifikasi lolos tsc --noEmit. Belum ditest end-to-end (arclux run web belum pernah dijalankan beneran).

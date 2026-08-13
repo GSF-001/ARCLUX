@@ -8,4 +8,32 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: runtime/RuntimeManager — not yet implemented.
+import { Kernel } from "../kernel/Kernel";
+import { ProcessManager } from "./ProcessManager";
+import type { ProcessSpec } from "./ProcessSpec";
+
+export class RuntimeManager {
+  readonly kernel = new Kernel();
+  readonly processManager: ProcessManager;
+
+  constructor() {
+    this.processManager = new ProcessManager(this.kernel);
+  }
+
+  startService(spec: ProcessSpec): void {
+    this.processManager.start(spec);
+    this.kernel.registerService({
+      name: spec.name,
+      processId: spec.id,
+      registeredAt: Date.now(),
+    });
+  }
+
+  stopService(id: string): void {
+    this.processManager.stop(id);
+  }
+
+  listProcesses() {
+    return this.kernel.processTable.list();
+  }
+}

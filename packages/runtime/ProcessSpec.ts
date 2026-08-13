@@ -8,14 +8,6 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-/**
- * ProcessSpec — declarative shape describing how to spawn one process.
- * Scoped-down equivalent of PM2's pm2_env for fork mode (see
- * lib/God/ForkMode.js): keeps command/args/cwd/env/autorestart, drops
- * PM2-specific fields not relevant to ARCLUX (log file paths, pidfile
- * path, uid/gid, windowsHide, versioning/vizion).
- */
-
 export interface ProcessSpec {
   id: string;
   name: string;
