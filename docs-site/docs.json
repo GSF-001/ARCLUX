@@ -86,14 +86,16 @@
               "map/map-packages-ui",
               "map/map-packages-watcher",
               "map/map-packages-workspace"
-            ]
+            ],
+            "defaultOpen": false
           },
           {
             "group": "Apps",
             "pages": [
               "map/map-apps-cli",
               "map/map-apps-web"
-            ]
+            ],
+            "defaultOpen": false
           }
         ]
       }
