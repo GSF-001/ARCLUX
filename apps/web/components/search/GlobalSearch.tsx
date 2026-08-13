@@ -59,12 +59,20 @@ export function GlobalSearch({ repoUrl, branch, onSelect }: GlobalSearchProps) {
   const [results, setResults] = useState<SearchResult[]>([])
   const [hasSearched, setHasSearched] = useState(false)
 
-  useEffect(() => {
+  // Reset results when the query becomes empty. Done during render (not in
+  // an effect) per React's "adjusting state when a prop changes" guidance,
+  // avoiding react-hooks/set-state-in-effect.
+  const [prevDebouncedQuery, setPrevDebouncedQuery] = useState(debouncedQuery)
+  if (prevDebouncedQuery !== debouncedQuery) {
+    setPrevDebouncedQuery(debouncedQuery)
     if (!debouncedQuery.trim()) {
       setResults([])
       setHasSearched(false)
-      return
     }
+  }
+
+  useEffect(() => {
+    if (!debouncedQuery.trim()) return
 
     let cancelled = false
     async function run() {
