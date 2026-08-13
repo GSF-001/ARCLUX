@@ -7,7 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // INTENTIONALLY EMPTY — superseded by
-// packages/indexer/resolveAliases.ts, which already reads tsconfig.json /
+// packages/graph/resolveAliases.ts, which already reads tsconfig.json /
 // jsconfig.json directly (including comment/trailing-comma stripping) to
 // resolve path aliases. This file was likely planned to go through
 // ParserRegistry like other parsers, but the actual implementation lives

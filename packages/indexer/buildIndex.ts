@@ -9,7 +9,7 @@
 import { scanFiles } from "../parser/core/scanFiles";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { resolvePath } from "../graph/resolvePath";
-import { loadAliasConfig } from "./resolveAliases";
+import { loadAliasConfig } from "../graph/resolveAliases";
 import { resolveSameScopeDependencies, type ScopedFile } from "./resolveSameScopeDependencies";
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
