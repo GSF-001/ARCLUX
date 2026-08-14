@@ -278,6 +278,11 @@ Real vs honest-placeholder breakdown:
   Blocked on either fixing vendor-ui/magic-ui/file-tree.tsx's missing
   deps (@radix-ui/react-accordion, scroll-area.tsx) or building a simpler
   tree view from graph data directly.
+
+> **[STATUS UPDATE, 2026-08-14]: resolved — the "building a simpler tree
+> view" option won: POST /api/analyze gained a server-side `folderTree`
+> (issue #330) and FilesPanel renders it via ProjectStructure, wired to
+> the workspace selection state. See "FilesPanel real file tree" below.**
 - IssuesPanel.tsx: honest "coming soon" EmptyState, NOT fake detector
   data. Detectors themselves are 18/18 done and already run via `apps/cli
   doctor`, but nothing exposes them over HTTP yet -- needs a new
@@ -505,3 +510,17 @@ visually verified in a real browser (standard gap).
   432 unused exports, 326 orphans; 386 warnings; 50 info). 6 unit tests
   (tests/runDoctor.test.ts); tsc 0, eslint 0, vitest 202/202. Not
   visually verified in a real browser (standard gap).
+
+## 2026-08-14 — FilesPanel real file tree (last workspace placeholder resolved)
+
+**Status:** Done
+
+FilesPanel (was "file browser coming soon") now renders the interactive
+file tree: POST /api/analyze's server-side `folderTree` (buildFolderGraph,
+added in the Overview work) → ProjectStructure. Selection is lifted to
+Workspace's `selectedModuleId` (shared with ImpactPanel) — clicking a
+file in the tree drives the Impact tab, same as WorkspaceSearch.
+Cost note: triggers a full clone+index per call, consistent with the
+other panels (no caching yet). Verified: /workspace page HTTP 200 on a
+dev server, no errors; tsc 0, eslint 0, vitest 202/202. Not visually
+verified in a real browser (standard gap).
