@@ -788,3 +788,9 @@ Full runtime verification on the arclux repo itself:
    tsc 0. Side observation (not fixed here): the diagnostics themselves
    flag a type-only import cycle daemon ArcluxDaemon ↔
    LocalBridgeServer — worth a follow-up.
+
+## 2026-08-15 — packages/db/ implemented as JSON-record store
+
+**Status:** Done
+
+Was 0%. No database dependency installed (confirmed no sqlite/lowdb/knex/prisma/drizzle) and no network access to add one this session. Implemented as JSON-file-per-record store through RecoveryManager.writeTransactional instead of raw fs writes, for crash safety. schema.ts (RepoRecord/AnalysisRecord/IssueRecord + SCHEMA_VERSION for future real-DB migration), client.ts (generic put/get/list/delete), RepoStore/AnalysisStore/IssueStore wrapping existing shapes. Wired into daemon.ts, verified end-to-end at runtime (not just typecheck) -- ran daemon, triggered a re-analysis, confirmed real files written to ~/.arclux/db/. See PR #380.
