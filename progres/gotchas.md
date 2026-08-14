@@ -116,3 +116,9 @@ sekarang superset). Selanjutnya kerja langsung dari `ARCLUX.main`.
 Selalu cek dengan `git remote show origin | grep "HEAD branch"` di awal
 sesi baru sebelum push, supaya nggak kejadian lagi.
 ARCLUX.main
+
+## 2026-08-14 — main vs ARCLUX.main divergence confirmed -- work from ARCLUX.main
+
+**Status:** Not Started
+
+CONFIRMED (previously only suspected): origin/main and origin/ARCLUX.main are NOT the same branch and have diverged significantly. ARCLUX.main is the actively-maintained branch (has packages/runtime/, 263 more files, collaborator work) and has already merged all of main's history in (see commit 'Merge pull request #320 from GSF-001/main'). main is stale/behind. Any session doing 'git checkout main && git pull' will get a stale tree missing packages/runtime/ and other recent work, causing false 'file not found' errors that look like data loss but are actually just being on the wrong branch. FIX: always work from ARCLUX.main going forward -- 'git checkout ARCLUX.main && git pull origin ARCLUX.main' -- until someone with repo admin access consolidates the two branches into one. Do not assume 'main' is current without checking origin/ARCLUX.main's commit count first.
