@@ -20,7 +20,7 @@ import { runDiagnostics } from "../diagnostics/DiagnosticEngine";
 import { findFreePort } from "../networking/PortManager";
 import { createServiceEndpoint, writeServiceEndpoint, removeServiceEndpoint } from "../networking/ServiceEndpoint";
 import { startLocalBridgeServer, type LocalBridgeServer } from "./LocalBridgeServer";
-import { createHash } from "node:crypto";
+import { computeDaemonId } from "./DaemonProcess";
 
 export interface ArcluxDaemonOptions {
   rootPath: string;
@@ -37,7 +37,7 @@ export class ArcluxDaemon {
     this.rootPath = options.rootPath;
     // Stable id derived from rootPath, so restarting the daemon on the same
     // repo reuses the same endpoint file instead of accumulating stale ones.
-    this.daemonId = createHash("sha1").update(this.rootPath).digest("hex").slice(0, 12);
+    this.daemonId = computeDaemonId(this.rootPath);
   }
 
   /** Delegates to the underlying DaemonRepositoryWatcher -- see LocalBridgeServer.ts's GET /analysis. */
