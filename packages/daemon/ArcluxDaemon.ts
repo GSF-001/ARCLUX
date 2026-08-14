@@ -21,13 +21,25 @@ import { findFreePort } from "../networking/PortManager";
 import { createServiceEndpoint, writeServiceEndpoint, removeServiceEndpoint } from "../networking/ServiceEndpoint";
 import { startLocalBridgeServer, type LocalBridgeServer } from "./LocalBridgeServer";
 import { computeDaemonId } from "./DaemonProcess";
+import { NotificationManager } from "../notifications/NotificationManager";
+import type { NotificationChannel } from "../notifications/NotificationChannel";
 
 export interface ArcluxDaemonOptions {
   rootPath: string;
+  /**
+   * Channels to fan daemon diagnostic events out to. Registered on the
+   * daemon's NotificationManager (daemon.notifications) before start() —
+   * see packages/notifications/ for the interface and a console reference
+   * implementation. Optional: without channels the daemon still analyzes
+   * and emits, just nobody receives notifications.
+   */
+  notificationChannels?: NotificationChannel[];
 }
 
 export class ArcluxDaemon {
   readonly kernel = new Kernel();
+  /** Fans daemon:diagnostics:updated events to registered channels. */
+  readonly notifications: NotificationManager;
   private watcher: DaemonRepositoryWatcher | null = null;
   private bridgeServer: LocalBridgeServer | null = null;
   private readonly daemonId: string;
@@ -38,6 +50,10 @@ export class ArcluxDaemon {
     // Stable id derived from rootPath, so restarting the daemon on the same
     // repo reuses the same endpoint file instead of accumulating stale ones.
     this.daemonId = computeDaemonId(this.rootPath);
+    this.notifications = new NotificationManager(this.kernel.signalBus);
+    for (const channel of options.notificationChannels ?? []) {
+      this.notifications.registerChannel(channel);
+    }
   }
 
   /** Delegates to the underlying DaemonRepositoryWatcher -- see LocalBridgeServer.ts's GET /analysis. */
@@ -48,6 +64,10 @@ export class ArcluxDaemon {
 
   start(): void {
     if (this.watcher) return;
+
+    // Subscribe before the first analysis can emit, so no diagnostics run
+    // is missed by channels. Idempotent in NotificationManager itself.
+    this.notifications.start();
 
     this.watcher = new DaemonRepositoryWatcher(this.rootPath);
 
@@ -86,6 +106,9 @@ export class ArcluxDaemon {
 
   async stop(): Promise<void> {
     if (!this.watcher) return;
+    // Unsubscribe first so a final diagnostics event can't reach channels
+    // while the watcher is already tearing down.
+    this.notifications.stop();
     if (this.bridgeServer) {
       await this.bridgeServer.close();
       this.bridgeServer = null;

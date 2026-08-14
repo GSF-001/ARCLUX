@@ -8,4 +8,25 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: notifications/Notification — not yet implemented.
+// The unit of fan-out produced by NotificationManager: a diagnostic
+// finding normalized into a channel-neutral shape. Channels (console,
+// desktop notification, editor popup) render this — they don't re-derive
+// it from DiagnosticFinding themselves, and they don't need to know which
+// signal bus event produced it.
+
+export type NotificationSeverity = "error" | "warning" | "info";
+
+export interface Notification {
+  /** Stable id, unique per finding+location: `${source}:${filePath}:${line}`. */
+  id: string;
+  severity: NotificationSeverity;
+  message: string;
+  /** Milliseconds since epoch — when the underlying event was produced. */
+  at: number;
+  /** The check/event that produced this (e.g. a diagnostic checkId). */
+  source: string;
+  /** First location's file, for jump-to-file affordances. Null when the finding has no location. */
+  filePath: string | null;
+  /** First location's line (1-based). Null when the finding is file-level only. */
+  line: number | null;
+}

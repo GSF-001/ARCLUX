@@ -598,3 +598,24 @@ structural death framing — full decision in progres/decisions.md):
   in contract.ts isolated the same way.
 Tests: 224/224 (208 + 14 guard-inventory + 1 safeRun + 1 scanSummary).
 tsc 0.
+
+## 2026-08-14 — notifications/ implemented + wired to daemon (issue #353)
+
+**Status:** Done
+
+`packages/notifications/` was 3 stub files; now real:
+- `Notification.ts` — channel-neutral shape (id, severity, message, at,
+  source, filePath, line), normalized from DiagnosticFinding.
+- `NotificationChannel.ts` — `NotificationChannel` interface + reference
+  `ConsoleNotificationChannel` implementation.
+- `NotificationManager.ts` — subscribes to kernel.signalBus
+  `daemon:diagnostics:updated`, normalizes findings, fans out to
+  registered channels; idempotent start/stop, broken channel can't starve
+  the rest (try/catch per channel).
+
+Wired into `ArcluxDaemon`: new `notificationChannels` option registered
+onto `daemon.notifications`, subscribed in `start()` before the first
+analysis can emit, unsubscribed first in `stop()`. Existing subscribers
+(apps/cli/daemon.ts, LocalBridgeServer) untouched — additive only.
++11 tests (tests/notifications.test.ts), incl. end-to-end event flow
+through a real Kernel SignalBus. Tests: 236/236, tsc 0.
