@@ -17,15 +17,43 @@ import * as p from "@clack/prompts";
 import { ArcluxDaemon } from "../../packages/daemon/ArcluxDaemon";
 import { resolveWorkingRepositoryRoot } from "../../packages/environment/EnvironmentDetector";
 import { resolve } from "node:path";
+import { spawnDetached, stopDetached, getDaemonStatus } from "../../packages/daemon/DaemonProcess";
+import { fileURLToPath } from "node:url";
 
 export function registerDaemonCommand(program: Command): void {
   program
     .command("daemon")
     .description("Start ARCLUX as a long-running process: watches the repo and re-analyzes on every change")
     .argument("[path]", "path to the repository root -- auto-detected (walks up to the nearest .git) if omitted", "")
-    .action(async (pathArg: string) => {
+    .option("--detach", "run the daemon as a background process instead of foreground")
+    .option("--stop", "stop a running detached daemon for this repository")
+    .option("--status", "check whether a detached daemon is running for this repository")
+    .action(async (pathArg: string, options: { detach?: boolean; stop?: boolean; status?: boolean }) => {
       const startPath = pathArg ? resolve(pathArg) : process.cwd();
       const targetPath = pathArg ? startPath : resolveWorkingRepositoryRoot(startPath);
+
+      if (options.stop) {
+        const stopped = stopDetached(targetPath);
+        if (stopped) p.log.success(`Stopped daemon for ${targetPath}`);
+        else p.log.warn(`No running daemon found for ${targetPath}`);
+        return;
+      }
+
+      if (options.status) {
+        const status = getDaemonStatus(targetPath);
+        if (status) p.log.success(`Daemon running (pid ${status.pid}, since ${new Date(status.startedAt).toLocaleTimeString()})`);
+        else p.log.warn(`No running daemon for ${targetPath}`);
+        return;
+      }
+
+      if (options.detach) {
+        const cliEntry = fileURLToPath(new URL("index.ts", import.meta.url));
+        const { pid, logFile } = spawnDetached(targetPath, cliEntry);
+        p.log.success(`Daemon started in background (pid ${pid})`);
+        p.log.info(`Logs: ${logFile}`);
+        return;
+      }
+
       const daemon = new ArcluxDaemon({ rootPath: targetPath });
 
       daemon.kernel.signalBus.on("daemon:started", () => {
