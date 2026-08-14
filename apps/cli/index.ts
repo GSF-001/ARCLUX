@@ -16,6 +16,7 @@ import { registerVerifyCommand } from "./verify";
 import { registerDoctorCommand } from "./doctor";
 import { registerConfigCommand } from "./config";
 import { registerDiagnoseCommand } from "./diagnose";
+import { registerDaemonCommand } from "./daemon";
 import { registerPsCommand } from "./commands/ps";
 import { registerWorkCommand } from "./commands/work";
 
@@ -30,6 +31,7 @@ registerVerifyCommand(program);
 registerDoctorCommand(program);
 registerConfigCommand(program);
 registerDiagnoseCommand(program);
+registerDaemonCommand(program);
 registerPsCommand(program);
 registerWorkCommand(program);
 
