@@ -102,4 +102,34 @@ describe("parseTs", () => {
     expect(parsed.exports).toEqual([]);
     expect(parsed.warnings).toEqual([]);
   });
+
+  it("extracts bare-identifier call sites (issue #316)", async () => {
+    const parsed = await parseTsSource(`
+      import { helper } from "./h";
+      helper();
+      obj.helper();
+      this.helper();
+      require("fs");
+    `);
+    // line 1 is the template's leading newline; only the bare helper() on
+    // line 3 is a call edge — obj./this. are property accesses, require is
+    // an import.
+    expect(parsed.calls).toEqual([{ calleeName: "helper", line: 3 }]);
+  });
+
+  it("parses TSX without treating JSX elements as call sites (issue #316)", async () => {
+    const parsed = await parseTsSource(
+      'const el = <div onClick={handleClick} />;\nhandleClick();',
+      "src/App.tsx"
+    );
+    expect(parsed.calls).toEqual([{ calleeName: "handleClick", line: 2 }]);
+  });
+
+  it("captures multiple bare calls with distinct lines (issue #316)", async () => {
+    const parsed = await parseTsSource("foo();\nbar(1, 2);");
+    expect(parsed.calls).toEqual([
+      { calleeName: "foo", line: 1 },
+      { calleeName: "bar", line: 2 },
+    ]);
+  });
 });

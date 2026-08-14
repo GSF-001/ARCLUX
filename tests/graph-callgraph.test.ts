@@ -22,9 +22,11 @@ import { buildCallGraph } from "../packages/graph/buildCallGraph";
 import { parserRegistry } from "../packages/parser/core/ParserRegistry";
 import { parseJs } from "../packages/parser/javascript/parseJs";
 import { extractCallsJs } from "../packages/parser/javascript/extractJs";
+import { parseTs } from "../packages/parser/typescript/parseTs";
 import type { ModuleInfo, RepositoryMeta, FileInfo } from "../packages/shared/types";
 
 parserRegistry.register(parseJs);
+parserRegistry.register(parseTs);
 
 // ─────────────────────────────────────────────
 // extractCallsJs unit tests
@@ -278,6 +280,40 @@ describe("buildIndex call resolution", () => {
     const b = repository.getModule("b.js");
     expect(a?.calls).toEqual([{ moduleId: "b.js", calleeName: "helper", line: 2 }]);
     expect(b?.calledBy).toEqual(["a.js"]);
+  });
+
+  it("resolves bare calls in TypeScript files — TS-only repos now get call edges (issue #316)", async () => {
+    const dir = track(
+      makeRepoDir({
+        "a.ts": 'import { helper } from "./b";\nhelper();',
+        "b.ts": "export function helper() { return 1; }",
+      })
+    );
+    const repository = await buildIndex({ rootPath: dir, meta: { ...META, rootPath: dir } });
+
+    const a = repository.getModule("a.ts");
+    const b = repository.getModule("b.ts");
+    expect(a?.calls).toEqual([{ moduleId: "b.ts", calleeName: "helper", line: 2 }]);
+    expect(b?.calledBy).toEqual(["a.ts"]);
+
+    const graph = buildCallGraph(repository);
+    expect(graph.edges).toEqual([expect.objectContaining({ type: "call", source: "a.ts", target: "b.ts" })]);
+  });
+
+  it("TSX: JSX elements and obj.foo() produce no call edges (issue #316)", async () => {
+    const dir = track(
+      makeRepoDir({
+        "a.tsx":
+          'import { helper } from "./b";\nimport type { T } from "./b";\nconst el = <div onClick={handler} />;\nobj.helper();\nhelper();',
+        "b.ts": "export function helper() { return 1; }\nexport interface T {}",
+      })
+    );
+    const repository = await buildIndex({ rootPath: dir, meta: { ...META, rootPath: dir } });
+
+    const a = repository.getModule("a.tsx");
+    // Only the bare helper() on line 5 resolves — the JSX element, the
+    // type-only import, and obj.helper() are all non-call sites.
+    expect(a?.calls).toEqual([{ moduleId: "b.ts", calleeName: "helper", line: 5 }]);
   });
 
   it("drops a bare call whose callee is not among the module's named imports", async () => {
