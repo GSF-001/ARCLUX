@@ -10,11 +10,9 @@
 // packages/networking/ServiceEndpoint.ts writes -- see
 // computeDaemonId in packages/daemon/DaemonProcess.ts for how the id
 // is derived from a repo root path) and subscribes to its SSE stream.
-// NOT built/typechecked here -- this repo's Termux environment has no
-// network access to install the `vscode` API types package, so this
-// file is written against the documented VS Code Extension API but has
-// only been reviewed, not compiled. Build with `pnpm install && pnpm
-// build` in an environment with npm registry access before relying on it.
+// Verified 2026-08-14: pnpm install && pnpm build pass (tsc strict,
+// @types/vscode ^1.85). Only manual test in VS Code's Extension
+// Development Host (F5) remains.
 
 import * as fs from "fs";
 import * as os from "os";

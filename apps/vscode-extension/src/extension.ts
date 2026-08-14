@@ -6,10 +6,9 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// NOT built/typechecked here -- see daemonClient.ts's header for why
-// (no network access to install @types/vscode in this environment).
-// Written against the documented VS Code Extension API; build in an
-// environment with npm registry access before relying on it.
+// Verified 2026-08-14: pnpm install && pnpm build pass (tsc strict,
+// @types/vscode ^1.85). Only manual test in VS Code's Extension
+// Development Host (F5) remains.
 //
 // Minimal viable extension: connects to a running `arclux daemon
 // --detach` for the open workspace, shows module count in the status
