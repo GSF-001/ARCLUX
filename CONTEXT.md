@@ -97,8 +97,9 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
    kali (keputusan #6: coarse watchRepository dulu, per-file deferred)
 4. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
    GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
-5. Dashboard panels (workspace, explorer, overview) belum di-mount ke
-   halaman manapun
+5. Web page untuk commit history / contributors — git helpers
+   (getCommitHistory/getContributors, 08-14) udah siap, UI belum ada
+   (contoh pola: /api/branches → WorkspaceSwitcher)
 
 ## Kalau butuh detail lebih dalam
 `cat PROGRES.md progres/PROGRES-status-*.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`
