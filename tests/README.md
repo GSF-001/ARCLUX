@@ -29,7 +29,7 @@ Automated tests, run with Vitest (https://vitest.dev).
 
 ## Status
 
-191 tests across 23 files, all passing (`npx vitest run`).
+208 tests across 25 files, all passing (`npx vitest run`).
 
 ## Test files
 
@@ -43,13 +43,15 @@ Automated tests, run with Vitest (https://vitest.dev).
 | rules-frameworks.test.ts | 37 | the 10 framework rules (nextjs x4, nestjs x2, express, vite, electron x2) |
 | rules-laravel.test.ts | 8 | laravel/requireController (issue #53): controller existence, v1 scope |
 | graph.test.ts | 6 | buildDependencyGraph: dedup, external drops, implicit edges |
-| graph-callgraph.test.ts | 15 | buildCallGraph + extractCallsJs (issue #50): bare calls, weight, calledBy |
+| graph-callgraph.test.ts | 17 | buildCallGraph + extractCallsJs/TS (issues #50/#316): bare calls, weight, calledBy |
+| runDoctor.test.ts | 6 | packages/engine/runDoctor (POST /api/doctor): 19 detectors normalized to one finding list |
+| git-history.test.ts | 6 | packages/git checkoutBranch/getCommitHistory/getContributors against a real temp git repo |
 | impact.test.ts | 5 | calculateAffectedFiles: transitive, diamond, notFound |
 | indexer.test.ts | 5 | buildIndex end-to-end on a real temp dir |
 | pipeline.test.ts | 3 | analyzeRepository localPath: frameworks, index, graph, manifest deps |
 | analyze-summary.test.ts | 2 | CLI analyze summary formatting |
 | search.test.ts | 19 | packages/search engine (issue #9): index build, ranking, filters, session |
-| parser/typescript.test.ts | 7 | parseTs import/export kinds |
+| parser/typescript.test.ts | 10 | parseTs import/export kinds + bare-call extraction (issue #316) |
 | parser/javascript.test.ts | 6 | parseJs / parseJsx / parseCommonJs |
 | parser/python.test.ts | 5 | parsePython (tree-sitter) imports/exports |
 | parser/java.test.ts | 4 | parseJava imports, public-only exports, scopeId |

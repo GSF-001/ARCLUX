@@ -50,13 +50,12 @@ What is solid right now:
 - Real search engine (packages/search/* — fuzzy path + export-name matching, used by `/api/search`)
 - Framework convention rules (14 rules: Next.js, NestJS, Express, Vite, Electron, React, Laravel — `arclux verify` gates on them)
 - CLI commands: analyze, graph, impact, doctor, config, diff, diagnose, verify
-- Web dashboard: dependency graph viewer, layout/navigation, most UI patterns and primitives
+- Web dashboard: overview page (stats + project structure tree), graph viewer with a module Explorer panel, real search page, and a workspace (file tree, impact, detector issues, branch switcher) — all backed by live API routes (/api/analyze, /api/graph, /api/search, /api/impact, /api/doctor, /api/branches)
 - Verified against large real-world repositories (microsoft/vscode, facebook/react, vitejs/vite, laravel/laravel) in addition to internal fixtures
 
 What is not there yet:
 - General-purpose source parsers for Rust, C#, C++, PHP, Ruby (dependency-manifest parsing exists for all of these; PHP has route-file parsing — `packages/parser/php/parsePhpRoutes.ts` — but the general `.php` source parser is deliberately deferred, see `progres/decisions.md`)
 - True per-file incremental re-analysis (`packages/incremental` + `packages/watcher` are built and verified standalone; `watchRepository` wraps the pipeline in a coarse change-level cache, but `buildIndex` still does a full rebuild — see `progres/decisions.md`)
-- A handful of dashboard panels (workspace, explorer, some overview components) are not mounted on any page yet
 
 ## What it does
 
@@ -182,8 +181,9 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
    kali (keputusan #6: coarse watchRepository dulu, per-file deferred)
 4. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
    GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
-5. Dashboard panels (workspace, explorer, overview) belum di-mount ke
-   halaman manapun
+5. Web page untuk commit history / contributors — git helpers
+   (getCommitHistory/getContributors, 08-14) udah siap, UI belum ada
+   (contoh pola: /api/branches → WorkspaceSwitcher)
 
 ## Kalau butuh detail lebih dalam
 `cat PROGRES.md progres/PROGRES-status-*.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`
