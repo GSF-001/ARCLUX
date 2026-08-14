@@ -6,7 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Issue #75, assignee: GSF-001. Measures how long analyzeLocalDirectory()
+// Issue #75, assignee: GSF-001. Measures how long analyzeRepository({ localPath })
 // takes on repos of varying size, so performance regressions are caught
 // with numbers instead of vibes. Not yet implemented — this is currently
 // a self-test of the collaborator marking system, not real benchmark

@@ -7,7 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import { posix } from "node:path";
-import { resolveAlias, type AliasConfig } from "../indexer/resolveAliases";
+import { resolveAlias, type AliasConfig } from "./resolveAliases";
 
 const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py"];
 const INDEX_FILENAMES = [
@@ -27,7 +27,7 @@ export type PathResolution =
  * `knownFiles` is the set of relativePaths that scanFiles.ts found — used to verify
  * a resolved candidate actually exists before committing to it.
  *
- * `aliasConfig` (from indexer/resolveAliases.ts) is optional so callers that don't
+ * `aliasConfig` (from graph/resolveAliases.ts) is optional so callers that don't
  * care about tsconfig path aliases (e.g. tests) can omit it.
  */
 export function resolvePath(

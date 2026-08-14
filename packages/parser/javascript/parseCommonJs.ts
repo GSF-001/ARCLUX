@@ -17,7 +17,7 @@
 import ts from "typescript";
 import type { LanguageParser } from "../core/ParserInterface";
 import type { FileInfo, ParsedFile } from "../../shared/types";
-import { extractImportsJs, extractExportsJs } from "./extractJs";
+import { extractImportsJs, extractExportsJs, extractCallsJs } from "./extractJs";
 
 export const parseCommonJs: LanguageParser = {
   supportedLanguages: ["javascript"],
@@ -36,12 +36,13 @@ export const parseCommonJs: LanguageParser = {
       );
     } catch (err) {
       warnings.push(`Failed to parse: ${(err as Error).message}`);
-      return { file, imports: [], exports: [], warnings };
+      return { file, imports: [], exports: [], calls: [], warnings };
     }
     return {
       file,
       imports: extractImportsJs(sourceFile),
       exports: extractExportsJs(sourceFile),
+      calls: extractCallsJs(sourceFile),
       warnings,
     };
   },

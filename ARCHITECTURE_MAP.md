@@ -28,11 +28,20 @@ fixing/completing an existing stub.
 
 ### packages/ — MOSTLY STUB
 
-- `search/` — see `progres/status-*.md` for current state before assuming this is the place to add semantic search/embeddings/RAG. See "Where intelligence layers go" below.
+- `search/` — core engine done (issue #9): `SearchIndex`, `SearchEngine`
+  (fuzzyScore ranking over paths + export names), `SearchFilters`;
+  `SearchProvider`/`SearchResults`/`SearchKeyboard` are plain-TS
+  session/type/shortcut helpers (packages are framework-agnostic — React
+  wiring lives in `apps/web`). Consumed by `/api/search`.
 
-### packages/ — FOUNDATION, NOT WIRED IN YET
+### packages/ — FOUNDATION, BUILT BUT NOT WIRED INTO THE PIPELINE
 
-- `watcher/`, `incremental/` — see `decisions.md`. Don't build on top of these until they're actually connected to `engine/pipeline.ts`.
+- `watcher/`, `incremental/` — see `decisions.md`. `watchRepository`
+  (coarse, change-level cache over `analyzeRepository({ localPath })`)
+  is functional but has no consumer yet; `buildIndex` still does a full
+  rebuild (per-file granular incrementality is deferred — issue #6,
+  see decisions.md). Don't build new capabilities on top of these until
+  a consumer exists.
 
 ### apps/ — SURFACES (consume packages/, no business logic here)
 

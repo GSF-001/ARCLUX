@@ -12,7 +12,7 @@
 // impact against the CURRENT working tree, not a true two-graph
 // comparison yet.
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import type { ChangedFile, ChangeStatus } from "./types";
 
 const STATUS_MAP: Record<string, ChangeStatus> = {
@@ -22,7 +22,9 @@ const STATUS_MAP: Record<string, ChangeStatus> = {
 };
 
 export function getChangedFiles(repoPath: string, refA: string, refB: string): ChangedFile[] {
-  const output = execSync(`git diff --name-status ${refA} ${refB}`, {
+  // execFileSync (not execSync): refA/refB are caller-supplied strings and
+  // must never be interpolated into a shell command line.
+  const output = execFileSync("git", ["diff", "--name-status", refA, refB], {
     cwd: repoPath,
     encoding: "utf-8",
   });

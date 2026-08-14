@@ -28,7 +28,7 @@ import type { ModuleInfo, RepositoryMeta, FileInfo, RawExport } from "../package
 
 function makeFile(relativePath: string): FileInfo {
   return {
-    absolutePath: `/tmp/repo/${relativePath}`,
+    absolutePath: `/virtual/repo/${relativePath}`,
     relativePath,
     language: "typescript",
     extension: ".ts",
@@ -47,6 +47,8 @@ function makeModule(relativePath: string, exportName: string, line = 1): ModuleI
     importedBy: [],
     imports: [],
     resolvedImports: [],
+    calls: [],
+    calledBy: [],
     implicitDependencies: [],
   };
 }
@@ -57,7 +59,7 @@ function makeRepository(modules: ModuleInfo[]): Repository {
     org: "test-org",
     name: "test-repo",
     defaultBranch: "main",
-    rootPath: "/tmp/repo",
+    rootPath: "/virtual/repo",
     detectedFrameworks: [],
     packageManager: "npm",
     analyzedAt: new Date().toISOString(),
@@ -123,6 +125,8 @@ describe("detectAmbiguousSymbolResolution / categorize()", () => {
       importedBy: [],
       imports: [],
       resolvedImports: [],
+      calls: [],
+      calledBy: [],
       implicitDependencies: [],
     };
     const origin = makeModule("src/origin.ts", "shared");

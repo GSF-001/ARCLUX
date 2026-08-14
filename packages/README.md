@@ -34,15 +34,26 @@ directly outside of `engine/`.
   raw import strings into actual module ids (handling path aliases,
   same-package implicit dependencies, etc.), and produces a `Repository`.
 - **`graph`** — turns an indexed `Repository` into a renderable
-  `DependencyGraph` (nodes + edges) that the web UI draws.
-- **`detectors`** — 18 independent checks that each take a `Repository`
+  `DependencyGraph` (nodes + edges) that the web UI draws: dependency
+  graph, weighted import graph, export graph, folder graph, and call
+  graph (`buildCallGraph.ts` — which functions call which, resolved via
+  bare-identifier call sites against named imports).
+- **`search`** — real search over an indexed `Repository`:
+  `buildSearchIndex()` + `search()` with `fuzzyScore` ranking
+  (path + file name + export names) and `applyFilters()`; consumed by
+  `/api/search`. Framework-agnostic (no React — the React-facing hooks
+  live in `apps/web`).
+- **`detectors`** — 19 independent checks that each take a `Repository`
   and return findings: circular dependencies, dead code, unused exports,
   duplicate modules, orphan files, convention violations, and more.
+  Entry points (App Router files, CLI entry) are filtered out of the
+  unused-export/orphan false-positive class via `detectEntryPoints.ts` +
+  `indexer/resolveRoutes.ts`'s `getEntryModuleIds()`.
 - **`impact`** — answers "what breaks if I change this file?" by tracing
   consumers/dependents through the graph.
 - **`rules`** — framework-specific convention checks (Next.js routes,
   React hooks, NestJS modules, Express routing, Vite config, Electron
-  main/preload boundaries).
+  main/preload boundaries, Laravel route→controller existence).
 - **`engine`** — the orchestrator. `analyzeRepository({ repoUrl })` is
   the one function that does clone -> parse -> index -> graph, with
   proper cleanup even on failure.
@@ -50,9 +61,11 @@ directly outside of `engine/`.
   incrementally re-index on file changes instead of doing a full rebuild.
 - **`incremental`** — the incremental re-index logic itself, consumed
   by `watcher`.
-- **`cache`**, **`db`**, **`search`**, **`ui`** — caching layer,
-  persistence, search-over-index, and shared graph-rendering helpers
-  (colors, layout, icons) used by `apps/web`.
+- **`cache`**, **`db`**, **`ui`** — caching layer (file/repository/graph
+  content-hash caches, wired into buildIndex/pipeline), persistence, and
+  shared graph-rendering helpers used by `apps/web` (the color helper
+  lives in `apps/web/theme/graphColors.ts`; `packages/ui/*` is mostly
+  unstarted — see `progres/status-backlog.md`).
 - **`shared`** — types, `ArcluxError`, and small utilities
   (`hashContent`, `toPosixPath`, `createLogger`, etc.) every other
   package imports from. Read `shared/types.ts` first when exploring this

@@ -1,5 +1,5 @@
 ---
-title: "Intro"
+title: "Overview"
 description: "See through your codebase before it breaks"
 ---
 
@@ -32,49 +32,59 @@ cd apps/web
 pnpm run dev
 ```
 
+<Warning>
+Jalan di Termux (Android) arm64: `apps/web` pakai Webpack, bukan Turbopack --
+Turbopack belum didukung di arsitektur ini. Jangan tambahkan `--turbo` ke script dev.
+</Warning>
+
+<Note>
+Parsing TypeScript/TSX pakai TypeScript Compiler API, parsing Python pakai
+`web-tree-sitter`. Kalau nambah bahasa baru, cek `packages/parser/` dulu sebelum bikin parser baru.
+</Note>
+
 ## What it actually does
 
-&lt;CardGroup cols={2}>
-  &lt;Card title="Dependency graph" icon="diagram-project">
+<CardGroup cols={2}>
+  <Card title="Dependency graph" icon="diagram-project">
     Maps every import, export, and folder into one live dependency graph
-  &lt;/Card>
-  &lt;Card title="Impact analysis" icon="radar">
+  </Card>
+  <Card title="Impact analysis" icon="radar">
     Change one file, trace everything downstream before you ship
-  &lt;/Card>
-  &lt;Card title="18 structural detectors" icon="magnifying-glass">
+  </Card>
+  <Card title="18 structural detectors" icon="magnifying-glass">
     Circular deps, dead code, orphan files, layer violations, and more
-  &lt;/Card>
-  &lt;Card title="Framework conventions" icon="ruler">
+  </Card>
+  <Card title="Framework conventions" icon="ruler">
     Enforces conventions, starting with Next.js -- more frameworks planned
-  &lt;/Card>
-&lt;/CardGroup>
+  </Card>
+</CardGroup>
 
 ## Status: alpha
 
 This project is under active development with a small team. Expect breaking changes and stubs that aren't wired up yet.
 
-&lt;CardGroup cols={2}>
-  &lt;Card title="Solid today" icon="check">
+<CardGroup cols={2}>
+  <Card title="Solid today" icon="check">
     Core pipeline, TS/Python parsing, all 18 detectors, full impact analysis -- verified against `vscode`, `react`, `vite`
-  &lt;/Card>
-  &lt;Card title="Not there yet" icon="hourglass-half">
+  </Card>
+  <Card title="Not there yet" icon="hourglass-half">
     Real search, Go/Java relationship parsing, most dashboard panels
-  &lt;/Card>
-&lt;/CardGroup>
+  </Card>
+</CardGroup>
 
 ## Next steps
 
-&lt;CardGroup cols={2}>
-  &lt;Card title="Usage" icon="terminal" href="/usage">
+<CardGroup cols={2}>
+  <Card title="Usage" icon="terminal" href="/usage">
     Full CLI command reference and web dashboard setup
-  &lt;/Card>
-  &lt;Card title="Architecture" icon="sitemap" href="/architecture">
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
     How the pipeline fits together: parser to graph to detectors
-  &lt;/Card>
-  &lt;Card title="Status & Progress" icon="chart-line" href="/status">
+  </Card>
+  <Card title="Status & Progress" icon="chart-line" href="/status">
     What's solid, what's a stub, and what's actively being worked on
-  &lt;/Card>
-  &lt;Card title="Codebase Map" icon="folder-tree" href="/map/map-apps-cli">
+  </Card>
+  <Card title="Codebase Map" icon="folder-tree" href="/map/map-apps-cli">
     Browse every package and app in the monorepo
-  &lt;/Card>
-&lt;/CardGroup>
+  </Card>
+</CardGroup>

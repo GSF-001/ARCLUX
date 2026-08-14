@@ -50,6 +50,12 @@ Built with `commander` (routing) + `@clack/prompts` (output/spinner).
 exception as `scripts/testPlayground.ts` — legitimate for a local-path
 call site, not for the production remote-repo flow.
 
+> **[STATUS UPDATE, 2026-08-14]: this entry is resolved — analyzeLocal.ts
+> was merged into pipeline.ts on 2026-08-11 (LAB 3, see decisions.md).
+> `analyzeRepository({ localPath })` is now the one entry point. The
+> stale import left behind in packages/watcher/watchRepository.ts was
+> fixed in this session (now calls `analyzeRepository({ localPath })`).**
+
 **Explicit action item**: another session was reportedly planning a
 `pipeline.ts` refactor (adding `findings[]` + local-path support to
 `AnalyzeRepositoryResult`). Once that lands, `analyzeLocal.ts` should be
@@ -317,6 +323,10 @@ unmarked on purpose, this is expected script behavior, not a bug.
 
 ## 2026-08-06 — Update - packages/README.md added
 
+> **[STATUS UPDATE, 2026-08-13]: `rules/` is no longer a stub** — all 10
+> remaining rule files implemented and wired (see status-backlog.md's
+> 2026-08-13 UPDATE entry). The scan below reflects the state as of 2026-08-06.
+
 Per-folder status table generated from an actual file scan (line-count
 stub detection), not memory. Snapshot: repository/detectors/impact/
 incremental/shared/parser/graph = working, watcher/indexer/git/engine =
@@ -353,14 +363,55 @@ Added .github/PULL_REQUEST_TEMPLATE.md, .github/CODEOWNERS (verified against act
 
 progres/PROGRES-bugs.md etc renamed to progres/bugs.md etc (folder name already gives context, prefix was redundant). Updated all references across PROGRES.md, README.md, TOOLING.md, QUICKSTART.md, progres/README.md, and scripts/log-progress.sh (which builds the filename dynamically from category).
 
+ main
 ## 2026-08-13 — Editor and diagnostics layers implemented, pending merge
 
 **Status:** In Progress
 
 Implemented packages/editor/ (CodeNavigator, ImpactNavigator, SymbolProvider, LineContext, EditContext) and packages/diagnostics/ (ErrorLocation, DiagnosticEngine wrapping 3 detector adapters -- circularDependency, deadCode, ambiguousSymbolResolution -- ErrorContext, DiagnosticEvent, FixSuggestion). Wired into CLI via apps/cli/diagnose.ts, registered in apps/cli/index.ts. Verified working end-to-end with 'npx tsx apps/cli/index.ts diagnose .' (62 real findings against this repo itself). All detector adapters call real functions from packages/detectors/* and packages/impact/* -- no reimplementation, no mocked data. Two things still open: (1) branch 'feat/diagnostics-layer' has all of this work but is NOT YET MERGED to main as of this entry -- verify before assuming it's live. (2) FixSuggestion.ts only covers the 3 wired checkIds; other 15 detectors not yet wired into diagnostics/ -- read each detector's actual return shape before adding, they are NOT uniform (confirmed: circularDependency has no line info, deadCode has file but no line, ambiguousSymbolResolution has real line info per definition).
 
+main
 ## 2026-08-14 — Scheduler package implemented and wired into ProcessManager
 
 **Status:** Done
 
 Implemented packages/scheduler/ (JobState, Job, JobQueue, JobScheduler) from scratch -- was a 4-file empty scaffold (11 lines each, license header only). Design pattern taken from Linux kernel kernel/workqueue.c + include/linux/workqueue.h: max_active (concurrency cap), WQ_HIGHPRI-style priority queue jump, delayed_work-style notBefore scheduling, ordered-mode strict FIFO. CPU-affinity/NUMA pool concepts from the same kernel file deliberately not ported -- not applicable to a single-process Node scheduler. Wired into packages/runtime/ProcessManager.ts's crash-restart path: previously a crashed process restarted instantly (this.start(spec) called directly in the exit handler), now goes through JobScheduler with exponential backoff (1s, 2s, 4s... capped 30s) keyed to the process's restart count, preventing crash-loop busy-restarting. Verified with tsc --noEmit -p apps/cli/tsconfig.json, no errors.
+
+ docs/log-today-progress-v2
+## 2026-08-13 — Platform layer docs map lengkap
+
+**Status:** Done
+
+docs-site/map/map-packages-platform.mdx sekarang punya tabel tanggung jawab tiap file, section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file konkret plus dependency ke packages/engine, parser, diff, impact yang sudah ada, diagram arah dependency satu arah, dan daftar file existing yang perlu diedit nanti (apps/cli/index.ts, apps/web/lib/api.ts). Status: dokumentasi selesai, logic belum diisi.
+
+## 2026-08-13 — Platform layer docs map lengkap
+
+**Status:** Done
+
+docs-site/map/map-packages-platform.mdx sekarang punya tabel tanggung jawab tiap file, section Blueprint Integration yang memetakan alur editor dan semantic-diff pipeline ke file konkret plus dependency ke packages/engine, parser, diff, impact yang sudah ada, diagram arah dependency satu arah, dan daftar file existing yang perlu diedit nanti (apps/cli/index.ts, apps/web/lib/api.ts). Status: dokumentasi selesai, logic belum diisi.
+
+## 2026-08-13 — Platform layer docs map complete
+
+`docs-site/map/map-packages-platform.mdx` sekarang punya: (1) tabel
+tanggung jawab tiap file per package platform layer, (2) section
+"Blueprint Integration" yang memetakan alur editor dan semantic-diff
+pipeline ke file konkret + dependency existing engine, (3) diagram arah
+dependency satu arah (Developer Layer → Platform Layer → ARCLUX Engine),
+(4) daftar file existing yang perlu diedit nanti (`apps/cli/index.ts`
+buat register command baru, cek `apps/web/lib/api.ts` buat shared
+middleware). Status: dokumentasi selesai, implementasi logic belum
+dimulai.
+ARCLUX.main
+
+## 2026-08-13 — Dogfood ARCLUX on Django
+
+**Status:** scripts/log-progress.sh
+
+Stress-tested ARCLUX on the Django repository: 3,039 modules and 7,734 dependency edges analyzed in ~30s on Termux/Android. Impact analysis traced django/db/models/lookups.py to 1,319 affected files. Diagnostic analysis reached the current Node.js heap limit (~1 GB) after ~50s, establishing a real-world stress boundary.
+
+## 2026-08-13 — Django stress test
+
+**Status:** done
+
+ARCLUX indexed 3039 modules and 7734 dependency edges in ~30s; impact traced django/db/models/lookups.py to 1319 affected files; diagnose reached Node heap limit on Termux.
+ARCLUX.main

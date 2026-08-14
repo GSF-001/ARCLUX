@@ -9,13 +9,13 @@
 import { scanFiles } from "../parser/core/scanFiles";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { resolvePath } from "../graph/resolvePath";
-import { loadAliasConfig } from "./resolveAliases";
+import { loadAliasConfig } from "../graph/resolveAliases";
 import { resolveSameScopeDependencies, type ScopedFile } from "./resolveSameScopeDependencies";
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
 import { getCachedParsedFile, setCachedParsedFile } from "../cache/fileCache";
 import { ArcluxError } from "../shared/errors";
-import type { RepositoryMeta, ModuleInfo, ParsedFile, ResolvedImport } from "../shared/types";
+import type { RepositoryMeta, ModuleInfo, ParsedFile, ResolvedImport, ResolvedCall } from "../shared/types";
 
 export interface BuildIndexOptions {
   rootPath: string;
@@ -92,6 +92,12 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
   for (const [relativePath, parsed] of parsedByPath) {
     const resolvedImportIds: string[] = [];
     const resolvedImports: ResolvedImport[] = [];
+    // callee name -> moduleId for every named import of this module. Used
+    // below to resolve bare call sites (extractCallsJs output) to the
+    // module that exports the callee. Last write wins if the same name is
+    // imported from two modules — that source is a duplicate-identifier
+    // error anyway, so there is no correct answer to prefer.
+    const namedImportToModule = new Map<string, string>();
 
     for (const rawImport of parsed.imports) {
       const resolution = resolvePath(relativePath, rawImport.source, knownFiles, aliasConfig);
@@ -105,8 +111,29 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
           hasNamespaceImport: rawImport.hasNamespaceImport,
           line: rawImport.line,
         });
+        for (const name of rawImport.namedImports) {
+          namedImportToModule.set(name, resolution.moduleId);
+        }
       }
       // external packages intentionally not added as modules — they're graph nodes, not repo modules
+    }
+
+    // Resolve bare call sites to the module exporting the callee. A call
+    // whose callee is not among the module's named imports (a local
+    // function, a default-imported function, or a global) is dropped here
+    // on purpose — see extractJs.ts's extractCallsJs doc comment for the
+    // two by-design limitations (default-import calls and
+    // obj.foo()/this.foo() calls are never resolved).
+    const resolvedCalls: ResolvedCall[] = [];
+    for (const rawCall of parsed.calls ?? []) {
+      const targetModuleId = namedImportToModule.get(rawCall.calleeName);
+      if (targetModuleId) {
+        resolvedCalls.push({
+          moduleId: targetModuleId,
+          calleeName: rawCall.calleeName,
+          line: rawCall.line,
+        });
+      }
     }
 
     const resolvedReExports: Record<string, string> = {};
@@ -126,17 +153,25 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
       resolvedReExports,
       imports: resolvedImportIds,
       resolvedImports,
+      calls: resolvedCalls,
       importedBy: [], // filled in pass 4
+      calledBy: [], // filled in pass 4
       implicitDependencies: implicitDepsByPath.get(relativePath) ?? [],
     });
   }
 
-  // Pass 4: back-fill importedBy so consumers can be queried in O(1)
+  // Pass 4: back-fill importedBy and calledBy so consumers can be queried in O(1)
   for (const module of modulesByPath.values()) {
     for (const importedId of module.imports) {
       const target = modulesByPath.get(importedId);
       if (target) {
         target.importedBy.push(module.id);
+      }
+    }
+    for (const call of module.calls) {
+      const target = modulesByPath.get(call.moduleId);
+      if (target) {
+        target.calledBy.push(module.id);
       }
     }
   }

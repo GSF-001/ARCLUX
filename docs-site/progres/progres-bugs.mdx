@@ -205,10 +205,10 @@ Done and merged to main this session:
 
 STILL NOT DONE - call graph (packages/graph/buildCallGraph.ts):
 Planned but not implemented yet. Design decided:
-- RawCall { calleeName, line } added to ParsedFile as OPTIONAL field
+- RawCall &#123; calleeName, line &#125; added to ParsedFile as OPTIONAL field
   (calls?), since 7 other parsers - Go, Java, Python, TS, etc - build
   ParsedFile literals without it and would break if it were required.
-- ResolvedCall { moduleId, calleeName, line } plus calls/calledBy fields
+- ResolvedCall &#123; moduleId, calleeName, line &#125; plus calls/calledBy fields
   added to ModuleInfo as REQUIRED (only buildIndex.ts constructs
   ModuleInfo, so safe to make required there).
 - Known limitation to document in code: extractCallsJs will only catch
@@ -307,7 +307,7 @@ Deeper investigation of the zero-edges issue: exportCount is 0 for literally eve
 
 **Status:** Not Started
 
-Traced further: return { file, imports, exports, warnings } at the normal path DOES call extractExports() correctly. The exports:[] seen is only in the catch block (parse failure fallback). Need to check: is getPythonRuntime() or parser.parse() throwing silently for mscodebase-intelligence's files? Check warnings array in actual API response next -- if warnings has a 'Failed to parse' message, that confirms it. Not checked yet.
+Traced further: return &#123; file, imports, exports, warnings &#125; at the normal path DOES call extractExports() correctly. The exports:[] seen is only in the catch block (parse failure fallback). Need to check: is getPythonRuntime() or parser.parse() throwing silently for mscodebase-intelligence's files? Check warnings array in actual API response next -- if warnings has a 'Failed to parse' message, that confirms it. Not checked yet.
 
 ## 2026-08-09 — extractExports() in parsePython.ts skipped decorated top-level definitions
 
@@ -350,3 +350,9 @@ The ArrowLeft icon next to "This file needs" in GraphFocusView.tsx looked like a
 **Status:** Done
 
 User reported a file with (25) shown in the "affects" header but only a handful of cards visible and scrolling did nothing. Root cause found by reading the actual component code (not guessing from the screenshot): dependencies/dependents arrays were .slice(0, 12) before rendering, with the remainder shown only as static text ("+13 more") -- not a button, not scrollable, permanently unreachable. First fix attempt removed the cap entirely (render all), which surfaced a real follow-up concern from the user: a file with hundreds of affected files would render all of them at once and could make the panel heavy/unusable. Second iteration: replaced the hard cap with INITIAL_VISIBLE=30 + a real clickable expand button per side (not a dead label), with expand state reset via useEffect when selectedNodeId changes so navigating to a new file does not carry over a previous file stay-expanded state. Lesson: match the fix to the actual reported symptom before generalizing -- "remove the cap" and "cap with expand-on-demand" are different designs, worth confirming with the user before defaulting to the simplest read of the bug report.
+
+## 2026-08-13 — ProcessManager pid never persisted, causing ps to always show empty
+
+**Status:** Done
+
+ProcessManager.start() mutated entry.pid/entry.startedAt directly on the in-memory ProcessTable object after spawn, bypassing Kernel's persistence write. The on-disk record kept pid: null forever, so SnapshotManager.readLiveProcessRecords()'s liveness check (process.kill(pid, 0)) always failed and immediately deleted the record. Fixed by adding Kernel.setProcessRuntimeInfo() which mutates and persists atomically; ProcessManager now calls that instead of mutating the table entry directly.

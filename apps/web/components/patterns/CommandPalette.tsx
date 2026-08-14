@@ -14,11 +14,12 @@
 
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Command } from "cmdk"
 import { LayoutDashboard, Network, Search, Settings } from "lucide-react"
 import { cn } from "@/lib/cn"
+import { useCommandPalette } from "@/hooks/useCommandPalette"
 
 export interface CommandPaletteProps {
   org: string
@@ -26,30 +27,18 @@ export interface CommandPaletteProps {
 }
 
 export function CommandPalette({ org, repo }: CommandPaletteProps) {
-  const [open, setOpen] = useState(false)
+  // Open-state + keyboard shortcuts (Cmd/Ctrl+K, "/", Escape) moved into
+  // the shared hook so other surfaces can reuse the same wiring.
+  const { open, setOpen } = useCommandPalette()
   const router = useRouter()
   const base = `/${org}/${repo}`
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || e.key === "/") {
-        e.preventDefault()
-        setOpen((prev) => !prev)
-      }
-      if (e.key === "Escape") {
-        setOpen(false)
-      }
-    }
-    document.addEventListener("keydown", onKeyDown)
-    return () => document.removeEventListener("keydown", onKeyDown)
-  }, [])
 
   const navigate = useCallback(
     (href: string) => {
       router.push(href)
       setOpen(false)
     },
-    [router]
+    [router, setOpen]
   )
 
   if (!open) return null

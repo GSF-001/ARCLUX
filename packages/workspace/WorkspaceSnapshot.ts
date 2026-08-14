@@ -8,4 +8,4 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: cli/commands/health — not yet implemented.
+// Scaffold: workspace/WorkspaceSnapshot — not yet implemented.

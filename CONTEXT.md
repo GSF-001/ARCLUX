@@ -24,24 +24,34 @@ Dashboard.
   bukan 0 baris, jadi "kosong" = ≤9 baris bukan `==0`
 
 ## Arsitektur ringkas
-packages/git, parser (per-bahasa: ts/py/js/go/java, manifest parsers),
-indexer (buildIndex, resolveRoutes/Exports/Components/Hooks/Providers),
-graph (buildDependencyGraph/ImportGraph/ExportGraph, buildCallGraph
-belum), engine (pipeline.ts = satu-satunya entry point analyzeRepository),
-detectors (18/18 selesai, wired ke apps/cli/doctor.ts), impact (8/8
-selesai), repository, db (0%), cache (0%, ada design conflict — lihat
-bawah), shared/types.ts (kamus tipe wajib dipakai semua package).
+packages/git, parser (per-bahasa: ts/py/js/go/java + manifest parsers,
+PHP route-file parser parsePhpRoutes), indexer (buildIndex,
+resolveRoutes/Exports/Components/Hooks/Providers — getEntryModuleIds dipakai
+detector entry-point filter), graph (buildDependencyGraph/ImportGraph/
+ExportGraph/FolderGraph/CallGraph — call graph selesai issue #50), engine
+(pipeline.ts = satu-satunya entry point analyzeRepository, localPath ATAU
+repoUrl), detectors (19 file, semua wired ke apps/cli/doctor.ts;
+unusedExports/orphanFiles sudah entry-point-aware issue #4), rules (14:
+nextjs/nestjs/express/vite/electron/react/laravel), search (SearchEngine/
+SearchIndex/SearchFilters + /api/search — issue #9), impact (8/8
+selesai), repository, db (0%), cache (3/5 wired: fileCache/repositoryCache/
+graphCache; CacheProvider+memoryCache stub), incremental/watcher (built,
+watchRepository wraps pipeline API, belum ada consumer), shared/types.ts
+(kamus tipe wajib dipakai semua package).
 apps/web/components: graph/ (GraphCanvas, GraphProvider, GraphFocusView),
-explorer/, workspace/, overview/, vendor-ui/ (shadcn+aceternity+magic-ui).
+explorer/, workspace/, overview/, vendor-ui/ (shadcn+aceternity+magic-ui);
+hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
+(issue #147).
 
 ## Yang udah solid — jangan disentuh tanpa alasan kuat
 - packages/engine/pipeline.ts (satu entry point, jangan panggil step
   individual dari luar engine/)
-- Parser TS/Python/JS/Go/Java + manifest parsers (TAPI manifest parser
-  belum di-wire ke registry manapun — dead code sampai ada yang motong
-  jalan itu)
-- 18/18 detectors, GraphCanvas/GraphProvider/GraphFocusView (history nav
+- Parser TS/Python/JS/Go/Java + manifest parsers (semua di-wire ke
+  parserRegistry/manifestRegistry di pipeline.ts)
+- 19 detector file, GraphCanvas/GraphProvider/GraphFocusView (history nav
   + expand-on-demand udah di-fix & diverifikasi browser)
+- Call graph (buildCallGraph), search engine (packages/search), 14 rules
+  (termasuk laravel/requireController), 3 web hooks baru
 
 ## GOTCHA KRITIS — baca ini sebelum debug apapun
 1. **`nodeRequire.resolve()` TIDAK BISA DIPERCAYA di runtime webpack
@@ -79,19 +89,16 @@ explorer/, workspace/, overview/, vendor-ui/ (shadcn+aceternity+magic-ui).
 
 ## Prioritas aktif sekarang
 1. `packages/db/*` — 0%, belum ada persistence layer sama sekali
-2. `packages/cache/*` — 0%, ADA DESIGN CONFLICT belum resolved:
-   strategi MetadataStrategy (git-diff) butuh clone persisten, tapi
-   `pipeline.ts` selalu hapus clone abis selesai (`cleanupRepository`
-   di `finally`). Opsi A (ubah lifecycle clone jadi persisten) vs
-   Opsi B (pakai ContentStrategy/file-hash dulu) — belum diputusin.
-3. Python: `from ..utils import X` (relative import 2+ level) belum
-   ketest, kemungkinan gak keresolve bener di `resolvePath.ts`
-4. Zero test coverage buat `parsePython.ts` (Go/Rust udah ada test)
-5. `scanFiles.ts` ada 3 `catch {}` diam-diam yang bisa drop file tanpa
-   warning — kelas bug yang sama kayak wasm issue (data hilang, gak
-   ada sinyal)
-6. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
+2. `packages/cache/CacheProvider.ts` + `memoryCache.ts` — 2/5 masih stub
+   (3 content-hash cache udah wired; CacheProvider/memoryCache belum jelas
+   masih dibutuhin atau nggak)
+3. True per-file incremental — `packages/incremental` + `watcher` built
+   dan verified standalone, tapi `buildIndex` masih full rebuild tiap
+   kali (keputusan #6: coarse watchRepository dulu, per-file deferred)
+4. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
    GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
+5. Dashboard panels (workspace, explorer, overview) belum di-mount ke
+   halaman manapun
 
 ## Kalau butuh detail lebih dalam
 `cat PROGRES.md progres/PROGRES-status-*.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`

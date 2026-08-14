@@ -14,6 +14,8 @@
 
 import type { Repository } from "../repository/Repository";
 import type { ModuleInfo } from "../shared/types";
+import { detectEntryPoints } from "./detectEntryPoints";
+import { getEntryModuleIds } from "../indexer/resolveRoutes";
 
 export interface UnusedExportFinding {
   filePath: string;
@@ -98,10 +100,10 @@ function buildReExportersIndex(modules: ModuleInfo[]): Map<string, ReExporterRef
  *   - Aliased re-exports (`export { foo as bar } from "./x"`) will not
  *     chain correctly — see the comment on `resolvedReExports` in
  *     shared/types.ts for why.
- *   - No entry-file concept exists yet (resolveRoutes.ts is still empty),
- *     so a chain terminating in a module nobody imports is reported as
- *     unused even if that module is meant to be a framework entry point
- *     (e.g. a Next.js page.tsx). Revisit once resolveRoutes.ts exists.
+ *   - Entry points (Next.js App Router files, CLI entry) are excluded
+ *     up front — they're invoked by framework/runtime convention, not by
+ *     an import statement, so their exports must never be flagged as
+ *     unused. See buildEntryModuleIds() below.
  */
 function isExportUsed(
   moduleId: string,
@@ -135,13 +137,34 @@ function isExportUsed(
   return false;
 }
 
+/**
+ * Module ids that are entry points by convention and must be skipped by
+ * unused-export / orphan-file detection:
+ * - Next.js App Router files (page/layout/route/loading/error/... under
+ *   app/) via indexer/resolveRoutes.ts's convention-based classifier —
+ *   matches regardless of whether anything imports them.
+ * - Orphaned modules matching detectEntryPoints.ts's known entry-point
+ *   conventions (e.g. apps/cli/index.ts).
+ */
+function buildEntryModuleIds(repository: Repository): Set<string> {
+  const modules = repository.getAllModules();
+  const ids = new Set<string>(getEntryModuleIds(modules));
+  for (const finding of detectEntryPoints(repository)) {
+    ids.add(finding.filePath);
+  }
+  return ids;
+}
+
 export function detectUnusedExports(repository: Repository): UnusedExportFinding[] {
   const modules = repository.getAllModules();
   const importersIndex = buildImportersIndex(modules);
   const reExportersIndex = buildReExportersIndex(modules);
+  const entryModuleIds = buildEntryModuleIds(repository);
   const findings: UnusedExportFinding[] = [];
 
   for (const module of modules) {
+    if (entryModuleIds.has(module.id)) continue;
+
     for (const exp of module.exports) {
       // Re-export entries forward another module's export under this
       // file's namespace — they're not "the" export being defined here,

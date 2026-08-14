@@ -7,9 +7,10 @@ Termux, tsconfig, Webpack, version-pinning quirks. See PROGRES.md for the index.
 - **Dead code piling up**: 2 differently-named files doing the same thing
   (`graph/resolveAlias.ts` vs `indexer/resolveAliases.ts`) because of
   parallel sessions without sync. Lesson: ALWAYS `cat`/`grep` first before
-  writing a new file that could overlap. **Same risk still exists** for
-  `packages/ui/graphColor.ts` vs `theme/graphColors.ts` — not yet cleaned
-  up.
+  writing a new file that could overlap. The same class of risk existed
+  for `packages/ui/graphColor.ts` vs `theme/graphColors.ts` — **cleaned
+  up 2026-08-14 (issue #11): the stub was deleted, `theme/graphColors.ts`
+  is the single source.**
 - **`wc -l` is misleading**: a file with just the Apache 2.0 license
   header has a baseline of 8 lines even when empty. The "empty" threshold
   is `≤9`, not `==0`. Always `cat` a suspicious file before recording its
@@ -81,8 +82,37 @@ pnpm test -- --runInBand fails since Vitest 4.1.10 has no such option. Plain pnp
 
 A much earlier decisions.md/status entry (GraphMenu consolidation session) explicitly flagged GraphFocusView.tsx as pushed near a chat context limit, typecheck-only, not visually verified in-browser. This session is the first time it was actually exercised by a real user against a real large-fan-in file (25 affected files) -- both bugs found (dead back-button icon, silent 12-item cap) were exactly the kind of thing a typecheck-only "looks done" status hides. Lesson: when a PROGRES entry says "not yet visually verified," treat any bug report against that component as plausible even if the code "looks" complete on read -- do not assume the component is solid just because it compiled and was merged.
 
+ main
 ## 2026-08-13 — Two main-like branches causing sync confusion
 
 **Status:** Not Started
 
 Repo has both 'origin/main' and 'origin/ARCLUX.main' as branches. This session repeatedly hit 'fatal: couldn't find remote ref main' during git checkout/pull sequences, and packages/editor/ + packages/diagnostics/ appeared to vanish between commands even after being written and committed. Root cause suspected: local checkout/pull steps intermittently targeted or got confused between these two branches, leaving local main stale relative to origin/main while work was actually preserved on feature branches. Fix applied: always 'git fetch origin' then 'git reset --hard origin/main' before trusting local file listings, rather than assuming local main == remote main. Needs a real decision: rename or delete one of the two main-like branches so this class of bug can't recur.
+
+ docs/log-today-progress-v2
+## 2026-08-13 — Default branch repo adalah ARCLUX.main, bukan main
+
+**Status:** Not Started
+
+git remote show origin menunjukkan HEAD branch repo ini ARCLUX.main. Sempat push beberapa commit (scaffold platform layer + docs map) ke main tanpa sadar itu bukan branch default. Ketauan pas GitHub nawarin Compare antara main dan ARCLUX.main. Fix: isi main digabung ke ARCLUX.main. Selalu cek git remote show origin | grep 'HEAD branch' di awal sesi baru.
+
+## 2026-08-13 — Default branch repo adalah ARCLUX.main, bukan main
+
+**Status:** Not Started
+
+git remote show origin menunjukkan HEAD branch repo ini ARCLUX.main. Sempat push beberapa commit (scaffold platform layer + docs map) ke main tanpa sadar itu bukan branch default. Ketauan pas GitHub nawarin Compare antara main dan ARCLUX.main. Fix: isi main digabung ke ARCLUX.main. Selalu cek git remote show origin | grep 'HEAD branch' di awal sesi baru.
+
+## 2026-08-13 — Repo default branch is ARCLUX.main, not main
+
+`git remote show origin` menunjukkan HEAD branch repo ini adalah
+`ARCLUX.main`, bukan `main`. Sempat push beberapa commit (platform
+layer scaffold + docs map) ke `main` tanpa sadar itu bukan branch
+default, jadi hasilnya nggak langsung kelihatan sebagai kerjaan utama di
+GitHub. Ketauan pas GitHub nawarin "Compare" antara `main` dan
+`ARCLUX.main` dan base-nya ke-set `ARCLUX.main`.
+
+Fix: konten `main` digabung ke `ARCLUX.main` (jadi `ARCLUX.main`
+sekarang superset). Selanjutnya kerja langsung dari `ARCLUX.main`.
+Selalu cek dengan `git remote show origin | grep "HEAD branch"` di awal
+sesi baru sebelum push, supaya nggak kejadian lagi.
+ARCLUX.main

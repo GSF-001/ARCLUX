@@ -28,7 +28,7 @@
 "use client";
 
 import { X, ArrowLeft, AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useGraphContext } from "./GraphProvider";
 import { getGraphNodeColor } from "@/theme/graphColors";
 import { getNodeIconPath } from "./nodeIcons";
@@ -95,10 +95,14 @@ export function GraphFocusView() {
   // Collapse both sides again whenever the focused node changes, so
   // navigating to a new file (via a card click or the back button)
   // doesn't carry over a previous file's "show all" state.
-  useEffect(() => {
+  // React-recommended replacement for a setState-in-effect: adjust state
+  // during render, keyed on the previous prop value.
+  const [prevSelectedNodeId, setPrevSelectedNodeId] = useState(selectedNodeId);
+  if (prevSelectedNodeId !== selectedNodeId) {
+    setPrevSelectedNodeId(selectedNodeId);
     setDepsExpanded(false);
     setDependentsExpanded(false);
-  }, [selectedNodeId]);
+  }
 
   const node = graph?.nodes.find((n) => n.id === selectedNodeId);
   if (!node || !graph || !isFocusPanelOpen) return null;

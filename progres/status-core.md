@@ -80,7 +80,7 @@ Full attribution is in `NOTICE` (root). Summary:
 
 **Repos in `~/research` used only to read patterns/architecture, not
 copied from**: git, language-server-protocol, llvm-project, sqlite,
-tree-sitter, nx, clack, shadcn-table, drizzle-orm (check which ones are
+tree-sitter, nx, clack, shadcn-table, drizzle-orm, forever, pm2 (check which ones are
 actually cloned before assuming).
 
 ## 2026-08-03 — Update — packages/incremental (new foundation, not wired in yet)
@@ -352,6 +352,13 @@ unfinished work. Before investigating an empty stub, `cat` the whole
 file first (not just `wc -l`) — some are marked intentionally empty in
 a comment, which immediately answers the question.
 
+> **[STATUS UPDATE, 2026-08-14]: the resolver family IS now consumed** —
+> `getEntryModuleIds()` is used by `detectUnusedExports.ts` /
+> `detectOrphanFiles.ts` (issue #4, entry-point filtering). The
+> resolver results are still not attached to ModuleInfo/Repository by
+> `buildIndex.ts` (pass 5 never landed) — detectors call them directly.
+> See "2026-08-14 — Issues #4/#7/#9/#50" below.
+
 ## 2026-08-06 — Update — route/export/component/hook/provider resolvers + Explorer panel
 
 **`packages/indexer/resolveRoutes.ts`**: detects Next.js App Router entry
@@ -473,3 +480,57 @@ Correction: a draft progress entry from another session claimed 'no code written
 Five new files in packages/indexer/. resolveRoutes.ts detects Next.js App Router entry files (page/layout/route/etc under app/), exposes getEntryModuleIds() for detectors to skip false positives. resolveExports.ts walks re-export chains beyond the single hop ModuleInfo.resolvedReExports covers, with cycle detection. resolveComponents.ts, resolveHooks.ts, resolveProviders.ts are naming-convention heuristics only (PascalCase/use*/*Provider), explicitly documented as such since no parser extracts this from AST yet. None of the five are wired into buildIndex.ts pipeline yet -- results are not attached to ModuleInfo or Repository anywhere. tsc clean, not otherwise tested.
     
     main
+
+## 2026-08-13 — Kernel diperbaiki + RuntimeManager wiring ke CLI
+
+**Status:** In Progress
+
+Kernel.ts diperbaiki: import ProcessStatus yang salah diganti ke ProcessStatusValue. RuntimeManager.ts baru dibuat sebagai titik integrasi tunggal Kernel + ProcessManager. apps/cli/commands/run.ts sekarang memanggil RuntimeManager.startService() untuk service web sebagai proof-of-concept integrasi pertama. Belum ditest jalan end-to-end, baru lolos tsc --noEmit.
+
+## 2026-08-13 — Kernel & ProcessManager diimplementasi pakai referensi PM2
+
+**Status:** Done
+
+packages/kernel/ (ProcessTable, SignalBus, ServiceRegistry, Kernel) dan packages/runtime/ProcessManager.ts sekarang berisi logic asli, bukan stub. Dibangun dengan clone referensi PM2 (github.com/Unitech/pm2, lib/God.js dan lib/God/ForkMode.js) untuk pattern proses: spawn via child_process.spawn, tracking pid/status, capture stdout/stderr, IPC message forwarding, exit handling dengan auto-restart. Status naming (launching/online/stopping/stopped/errored) mengikuti konvensi PM2. Event bus pakai Node EventEmitter bawaan, bukan EventEmitter2 seperti PM2. Sengaja TIDAK diporting: cluster mode (lib/God/ClusterMode.js, belum dibutuhkan), log file persistence ke disk, PID file writing, uid/gid options. Scoped untuk service internal ARCLUX (web server, watcher, indexer).
+
+## 2026-08-13 — Kernel & RuntimeManager selesai, integrasi ke CLI
+
+**Status:** In Progress
+
+Kernel.ts, ProcessTable.ts, SignalBus.ts, ServiceRegistry.ts, ProcessManager.ts, ProcessSpec.ts, RuntimeManager.ts semua berisi logic asli berdasarkan referensi PM2 (God.js, ForkMode.js). apps/cli/commands/run.ts terhubung ke RuntimeManager sebagai integrasi pertama. Sempat ada insiden git reset --hard yang menghapus kerjaan tanpa sengaja, sudah dipulihkan penuh dan diverifikasi lolos tsc --noEmit. Belum ditest end-to-end (arclux run web belum pernah dijalankan beneran).
+
+## 2026-08-13 — Add process persistence for ps command
+
+**Status:** Done
+
+Kernel now persists ProcessEntry records to ~/.arclux/pids/*.json on register/update (packages/storage/SnapshotManager.ts, new). readLiveProcessRecords() live-checks each PID via process.kill(pid, 0) and self-deletes stale records instead of trusting on-disk state blindly — pattern read from forever's getAllProcesses/getSockets (not copied, re-implemented for file-based instead of socket-based IPC). Kernel.shutdown() now also cleans up its own records. Wired apps/cli/commands/ps.ts to read persisted records directly (CLI runs as a separate process from whatever registered the process, so it can't share Kernel memory) and registered it in apps/cli/index.ts. Added ProcSnapshot.snapshotFromEntries() so both live in-memory ProcessTable and cross-process disk records can produce the same ProcSnapshot shape.
+
+## 2026-08-13 — Cross-process process visibility via file-based persistence
+
+**Status:** Done
+
+Added packages/storage/SnapshotManager.ts: writes one JSON record per process to ~/.arclux/pids/<id>.json on register/update, reads live-check each PID via process.kill(pid, 0) and self-deletes stale records. Pattern read from forever's getAllProcesses/getSockets (see NOTICE), re-implemented with plain files instead of socket IPC. Wired into Kernel.ts (registerProcess/updateProcessStatus/removeProcess/shutdown all persist), packages/kernel/introspection/ProcSnapshot.ts (added snapshotFromEntries for cross-process use), and apps/cli/commands/ps.ts (reads disk records directly, registered in apps/cli/index.ts).
+
+## 2026-08-14 — Issues #4/#7/#9/#50 — entry-point-aware detectors, call graph, search engine
+
+**Status:** Done
+
+- **#7 → #4 (entry-point awareness):** `resolveRoutes.ts` was already
+  implemented; its `getEntryModuleIds()` (plus `detectEntryPoints`) is
+  now wired into `detectUnusedExports.ts` and `detectOrphanFiles.ts` —
+  App Router files and the CLI entry are no longer false-flagged as
+  unused/orphan. 8 new tests in tests/core-detectors.test.ts. doctor.ts
+  wording updated.
+- **#50 (call graph):** `extractCallsJs` (bare-identifier calls, excludes
+  `obj.foo()`/`this.foo()`/`require()`) wired into the 3 JS parsers;
+  `buildIndex` resolves calls via named imports and backfills `calledBy`;
+  `buildCallGraph.ts` emits weighted `type: "call"` edges mirroring
+  buildImportGraph. RawCall/ResolvedCall/calls/calledBy added to
+  shared/types.ts. 15 tests (tests/graph-callgraph.test.ts). Known
+  limitation: TS-family parsers don't extract calls yet — a TS-only repo
+  yields 0 call edges (follow-up candidate).
+- **#9 (search engine):** packages/search/* implemented (SearchIndex,
+  SearchEngine, SearchFilters, plus plain-TS SearchProvider/SearchResults/
+  SearchKeyboard — packages stay framework-agnostic); `/api/search`
+  rewritten to use the engine, response shape unchanged. 19 tests
+  (tests/search.test.ts).

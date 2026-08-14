@@ -39,9 +39,34 @@ function mdxSafe(text) {
 
   out = out.replace(/<!--/g, '\u0000CMTOPEN\u0000').replace(/-->/g, '\u0000CMTCLOSE\u0000');
 
+  // Inline code (single backticks): braces di dalamnya literal — lindungi dari
+  // brace-escape di bawah, biar tidak jadi &#123; (entity tidak didecode di code span).
+  const inlineCode = [];
+  out = out.replace(/`[^`\n]+`/g, (m) => {
+    inlineCode.push(m);
+    return `\u0000CODE${inlineCode.length - 1}\u0000`;
+  });
+
+  // Proteksi tag komponen Mintlify: <Card ...>, </Card>, <CardGroup cols={2}>, <Tabs>, dll.
+  // Konvensi Mintlify: nama komponen selalu diawali huruf kapital.
+  const jsxTags = [];
+  out = out.replace(/<\/?[A-Z][A-Za-z0-9]*(?:\s+[^<>]*)?\/?>/g, (m) => {
+    jsxTags.push(m);
+    return `\u0000JSX${jsxTags.length - 1}\u0000`;
+  });
+
+  // Kurung kurawal di teks biasa diparse MDX sebagai ekspresi JSX (acorn gagal
+  // pada `...` dst) — escape. Ekspresi di dalam JSX tag yang dilindungi
+  // (<Card cols={2}>) dikembalikan mentah dan tetap hidup.
+  out = out.replace(/\{/g, '&#123;').replace(/\}/g, '&#125;');
+
   out = out.replace(/</g, '&lt;');
 
-  out = out.replace(/\u0000CMTOPEN\u0000/g, '<!--').replace(/\u0000CMTCLOSE\u0000/g, '-->');
+  out = out.replace(/\u0000JSX(\d+)\u0000/g, (m, i) => jsxTags[Number(i)]);
+  out = out.replace(/\u0000CODE(\d+)\u0000/g, (m, i) => inlineCode[Number(i)]);
+  // HTML comment <!-- --> tidak valid di MDX (Mintlify menolaknya saat deploy) —
+  // kembalikan sebagai MDX comment {/* ... */}.
+  out = out.replace(/\u0000CMTOPEN\u0000/g, '{/*').replace(/\u0000CMTCLOSE\u0000/g, '*/}');
   out = out.replace(/\u0000AUTOLINK(\d+)\u0000/g, (m, i) => autolinks[Number(i)]);
   out = out.replace(/\u0000FENCE(\d+)\u0000/g, (m, i) => fenceBlocks[Number(i)]);
 
@@ -102,16 +127,8 @@ if (!fs.existsSync(DOCS_OUT) || !fs.existsSync(path.join(DOCS_OUT, 'docs.json'))
 const readme = readIfExists('README.md');
 const context = readIfExists('CONTEXT.md');
 
-{
-  let body = '';
-  if (readme) {
-    const cut = readme.search(/^#+\s*(Installation|Usage|Getting Started|Quickstart)/im);
-    body += stripFrontmatter(cut > -1 ? readme.slice(0, cut) : readme);
-  }
-  if (context) body += `\n\n## Context tambahan\n\n${stripFrontmatter(context)}`;
-  if (!body.trim()) body = '_README.md tidak ditemukan di root repo._';
-  writeDoc('intro.mdx', 'Intro', firstLine(body, 140) || 'Ringkasan project ARCLUX', body);
-}
+// intro.mdx draft dihapus -- overview.mdx (hand-written, di bawah) yang jadi satu-satunya
+// sumber halaman ini. Draft otomatis dari README selalu ketimpa versi hand-written itu juga.
 
 {
   let body = '';
@@ -283,7 +300,7 @@ const context = readIfExists('CONTEXT.md');
       }
       const slug = `map-${groupDir}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const filename = `${slug}.mdx`;
-      writeDoc(filename, `${groupDir}/${name}`, description || `Ringkasan ${groupDir}/${name}`, body, 'map');
+      writeDoc(filename, name, description || `Ringkasan ${groupDir}/${name}`, body, 'map');
       pageNames.push(filename.replace('.mdx', ''));
     });
     return pageNames;
@@ -329,6 +346,16 @@ const context = readIfExists('CONTEXT.md');
     'cd apps/web',
     'pnpm run dev',
     '```',
+    '',
+    '<Warning>',
+    'Jalan di Termux (Android) arm64: `apps/web` pakai Webpack, bukan Turbopack --',
+    'Turbopack belum didukung di arsitektur ini. Jangan tambahkan `--turbo` ke script dev.',
+    '</Warning>',
+    '',
+    '<Note>',
+    'Parsing TypeScript/TSX pakai TypeScript Compiler API, parsing Python pakai',
+    '`web-tree-sitter`. Kalau nambah bahasa baru, cek `packages/parser/` dulu sebelum bikin parser baru.',
+    '</Note>',
     '',
     '## What it actually does',
     '',
@@ -378,7 +405,151 @@ const context = readIfExists('CONTEXT.md');
     '</CardGroup>',
     ''
   ].join('\n');
-  writeDoc('intro.mdx', 'Intro', 'See through your codebase before it breaks', introBody);
+  writeDoc('overview.mdx', 'Overview', 'See through your codebase before it breaks', introBody);
+}
+
+
+// Override architecture.mdx with structured, English, AccordionGroup layout
+{
+  const archBody = [
+    "Not an implementation list — a **boundary map**. Read this before adding anything new, especially if you're extending ARCLUX with a new capability (search, intelligence layers, RAG), not just fixing an existing stub.",
+    '',
+    '<Warning>',
+    '**CORE and CORE-ADJACENT layers**: changes here need a `decisions.md` entry first. These are the packages everything else depends on.',
+    '</Warning>',
+    '',
+    '<Tip>',
+    '**EXTENSION POINTS**: safe to add to without discussion. New parsers, detectors, cache strategies, and framework rules go here.',
+    '</Tip>',
+    '',
+    '## Layers',
+    '',
+    '<AccordionGroup>',
+    '  <Accordion title="packages/ — CORE" icon="triangle-exclamation">',
+    '    Changes need a `decisions.md` entry first.',
+    '',
+    '    - **`engine/`** — the orchestrator (`analyzeRepository()`). Everything else depends on this.',
+    '    - **`repository/`** — the domain model (`Repository`, `ModuleInfo`).',
+    '    - **`shared/`** — `types.ts` is the shape of everything. Adding fields is fine; changing or removing needs a `decisions.md` entry.',
+    '  </Accordion>',
+    '',
+    '  <Accordion title="packages/ — CORE-ADJACENT" icon="triangle-exclamation">',
+    '    Care needed, but not a full stop.',
+    '',
+    '    - **`indexer/`** — resolves imports into a `Repository`. New resolver passes (routes, components, etc) are fine to add. Changing `buildIndex.ts`\'s pass order needs care — later passes depend on earlier ones.',
+    '    - **`graph/`** — turns a `Repository` into a `DependencyGraph`. New graph variants (`buildCallGraph`, `buildImportGraph`) are extensions. Changing `buildDependencyGraph.ts`\'s core shape is not.',
+    '    - **`impact/`** — consumer/dependent tracing.',
+    '  </Accordion>',
+    '',
+    '  <Accordion title="packages/ — EXTENSION POINTS" icon="circle-plus">',
+    '    Safe to add to without discussion.',
+    '',
+    '    - **`parser/`** — new language support, one subfolder per language, implements `LanguageParser`.',
+    '    - **`detectors/`** — each detector is independent, takes a `Repository`, returns findings. See `detectAmbiguousSymbolResolution.ts` for the pattern.',
+    '    - **`cache/`** — additive by nature. A cache miss should always fall back to the uncached path.',
+    '    - **`rules/`** — one subfolder per framework, independent convention checks.',
+    '  </Accordion>',
+    '',
+    '  <Accordion title="packages/ — MOSTLY STUB" icon="hourglass-half">',
+    '    - **`search/`** — see `progres/status-*.md` for current state before assuming this is the place to add semantic search, embeddings, or RAG. See [Where intelligence layers go](#where-intelligence-ai-layers-go) below.',
+    '  </Accordion>',
+    '',
+    '  <Accordion title="packages/ — FOUNDATION, NOT WIRED IN YET" icon="plug-circle-xmark">',
+    '    - **`watcher/`**, **`incremental/`** — see `decisions.md`. Don\'t build on top of these until they\'re actually connected to `engine/pipeline.ts`.',
+    '  </Accordion>',
+    '',
+    '  <Accordion title="apps/ — SURFACES" icon="window-restore">',
+    '    Consume `packages/`, no business logic here.',
+    '',
+    '    - **`cli/`** — consumes `engine/`.',
+    '    - **`web/`** — consumes `engine/` via API routes. Graph rendering (SVG/d3-force) lives here, not in `packages/graph/`.',
+    '  </Accordion>',
+    '</AccordionGroup>',
+    '',
+    '## Where intelligence & AI layers go',
+    '',
+    "ARCLUX's job is building an accurate **structural** model of a codebase: parse → index → graph → impact → detect. It is deliberately **not** trying to be a semantic search engine, a RAG system, an agent-facing MCP server, or an embeddings/reranking pipeline — those are legitimate problems, but they consume a structural model, they don't belong inside one.",
+    '',
+    '<Note>',
+    'Adding semantic search, graph RAG, agent tool-calling, embeddings, LSP bridging, or self-healing behavior? It belongs in a **new top-level package** (e.g. `packages/intelligence/`), consuming `DependencyGraph`/`Repository`/`AnalyzeRepositoryResult` as inputs — not woven into `graph/`, `detectors/`, or `engine/`. Treat ARCLUX the way you\'d treat a library you don\'t maintain: depend on its stable outputs, don\'t reach into its internals.',
+    '</Note>',
+    '',
+    "This boundary exists on purpose, based on comparing notes with a collaborator (ManSio) who maintains a more elaborate codebase-intelligence system (graph RAG, agentic search, embeddings, LSP bridge, sandboxing, 1000+ tests). That project is a good example of what a **consumer** built on top of a structural model like ARCLUX's could look like — not a template for what ARCLUX's own core should become.",
+    '',
+    '## Definition of "done" for anything non-trivial',
+    '',
+    'Not done until all five:',
+    '',
+    '1. **Implemented** — the code exists and typechecks',
+    "2. **Tested** — verified against a real fixture or repo, not just `tsc --noEmit` (see TOOLING.md's verification standard)",
+    '3. **Integrated** — actually called from somewhere real (`engine/pipeline.ts`, a detector registry, an API route) — see `progres/bugs.md`\'s manifest-parser and cache entries for what "implemented but never wired in" costs if skipped',
+    '4. **Verified** — for anything touching `apps/web`, confirmed visually in-browser, not just assumed from code review',
+    '5. **Documented** — a `progres/*.md` entry exists (status, decision, or bug depending on what it is) — see TOOLING.md section 1',
+    '',
+    '## Changing this file',
+    '',
+    'This file describes **boundaries**, not the current implementation state (that\'s what `progres/status-*.md` is for) and not package-by-package descriptions (that\'s `packages/README.md`). If a layer\'s boundary genuinely needs to move — not just "someone wants an exception" — log the reasoning in `decisions.md` first, then update this file to match.',
+    ''
+  ].join('\n');
+  writeDoc('architecture.mdx', 'Architecture', 'Boundary map: core, extension points, what\'s safe to touch', archBody);
+}
+
+
+// Override status.mdx: concise English index, not a wall of text
+{
+  const statusBody = [
+    "This is an index. The real history lives in `progres/*.md` -- read all of them, not just this page.",
+    '',
+    '<Note>',
+    'At the start of any session: `cat PROGRES.md progres/status-core.md progres/status-detectors.md progres/status-web.md progres/status-infra.md progres/status-backlog.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`',
+    '',
+    'Skipping the detail files means missing most of what has actually been learned about this codebase.',
+    '</Note>',
+    '',
+    '## What this is',
+    '',
+    'ARCLUX is a codebase analysis tool: clone repo -> parse -> index -> build dependency graph -> interactive browser visualization. It shows how files and modules connect, what breaks if you change something, and which conventions are being violated.',
+    '',
+    '## Stack',
+    '',
+    '- **Monorepo**: `apps/web` (Next.js 16, App Router, Webpack -- not Turbopack, unsupported on Termux arm64), `packages/*` (framework-agnostic core logic)',
+    '- **UI**: React, Tailwind v4, shadcn/ui (Base UI variant) + Aceternity + Magic UI',
+    '- **Graph rendering**: SVG + `d3-force`',
+    '- **Parsing**: TypeScript Compiler API (TS/TSX) + `web-tree-sitter` (Python)',
+    '- **Environment**: Termux on Android, not desktop',
+    '- **License**: Apache 2.0',
+    '',
+    '## Progress detail',
+    '',
+    '<CardGroup cols={2}>',
+    '  <Card title="Core status" icon="gears" href="/progres/progres-status-core">',
+    '    Pipeline, parser, indexer, graph, impact, incremental',
+    '  </Card>',
+    '  <Card title="Detectors status" icon="magnifying-glass" href="/progres/progres-status-detectors">',
+    '    All 18 structural detectors',
+    '  </Card>',
+    '  <Card title="Web status" icon="window" href="/progres/progres-status-web">',
+    '    apps/web, graph viewer, vendor-ui, theme',
+    '  </Card>',
+    '  <Card title="Infra status" icon="wrench" href="/progres/progres-status-infra">',
+    '    CLI, collaborator tooling, testing, cleanup',
+    '  </Card>',
+    '  <Card title="Backlog" icon="list-check" href="/progres/progres-status-backlog">',
+    '    What is planned but not started',
+    '  </Card>',
+    '  <Card title="Bugs" icon="bug" href="/progres/progres-bugs">',
+    '    Real bugs found in ARCLUX\'s own code, and their fixes',
+    '  </Card>',
+    '  <Card title="Decisions" icon="scale-balanced" href="/progres/progres-decisions">',
+    '    "We chose X over Y, here\'s why" -- design calls, not bugs',
+    '  </Card>',
+    '  <Card title="Gotchas" icon="triangle-exclamation" href="/gotchas">',
+    '    Environment/tooling traps, not bugs in ARCLUX\'s code',
+    '  </Card>',
+    '</CardGroup>',
+    ''
+  ].join('\n');
+  writeDoc('status.mdx', 'Status & Progress', 'Current progress, open bugs, priorities', statusBody);
 }
 
 console.log('\n== Selesai. Halaman ke-generate ke docs-site/*.mdx ==');

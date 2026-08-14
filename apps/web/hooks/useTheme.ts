@@ -15,17 +15,17 @@
 
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useState, useCallback } from "react"
 
 type Theme = "light" | "dark"
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>("dark")
-
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark")
-    setTheme(isDark ? "dark" : "light")
-  }, [])
+  // layout.tsx's inline init script applies the theme class before hydration,
+  // so reading it in the lazy initializer gives the true initial theme
+  // (dark-first, matches theme/arclux.json) without a sync-setState effect.
+  const [theme, setTheme] = useState<Theme>(() =>
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
+  )
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {

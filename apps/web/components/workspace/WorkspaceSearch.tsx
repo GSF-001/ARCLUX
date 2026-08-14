@@ -41,12 +41,20 @@ export function WorkspaceSearch({ repoUrl, branch, onSelect }: WorkspaceSearchPr
   const [results, setResults] = useState<SearchResult[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
-  useEffect(() => {
+  // Reset results when the query becomes empty. Done during render (not in
+  // an effect) per React's "adjusting state when a prop changes" guidance,
+  // avoiding react-hooks/set-state-in-effect.
+  const [prevQuery, setPrevQuery] = useState(query)
+  if (prevQuery !== query) {
+    setPrevQuery(query)
     if (!query.trim()) {
       setResults([])
       setIsOpen(false)
-      return
     }
+  }
+
+  useEffect(() => {
+    if (!query.trim()) return
 
     let cancelled = false
     const timer = setTimeout(async () => {

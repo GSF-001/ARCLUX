@@ -9,6 +9,8 @@
 // Original ARCLUX logic, not adapted from any external source.
 
 import type { Repository } from "../repository/Repository";
+import { detectEntryPoints } from "./detectEntryPoints";
+import { getEntryModuleIds } from "../indexer/resolveRoutes";
 
 export interface OrphanFileFinding {
   filePath: string;
@@ -19,15 +21,23 @@ export interface OrphanFileFinding {
  * Files that nothing else in the repository imports at all — file-level,
  * distinct from detectUnusedExports.ts which checks per-export.
  *
- * Same limitation as detectUnusedExports.ts: no entry-file concept exists
- * yet (resolveRoutes.ts is still empty). A file that's genuinely an entry
- * point (a CLI's index.ts, a Next.js page.tsx never imported by other
- * source files) will show up here as a false positive. Revisit once
- * resolveRoutes.ts / an explicit entry-file list exists.
+ * Entry points are excluded up front: a CLI's index.ts or a Next.js
+ * page.tsx is never imported by other source files BY DESIGN — it's
+ * invoked by the runtime/framework, so it's not an orphan. The exclusion
+ * set comes from indexer/resolveRoutes.ts (App Router convention) plus
+ * detectEntryPoints.ts (known entry-point conventions), mirroring what
+ * detectUnusedExports.ts does.
  */
 export function detectOrphanFiles(repository: Repository): OrphanFileFinding[] {
-  return repository.findModulesWithNoImporters().map((module) => ({
-    filePath: module.file.relativePath,
-    message: `"${module.file.relativePath}" is never imported by any other file in the repository.`,
-  }));
+  const entryModuleIds = new Set<string>();
+  for (const id of getEntryModuleIds(repository.getAllModules())) entryModuleIds.add(id);
+  for (const finding of detectEntryPoints(repository)) entryModuleIds.add(finding.filePath);
+
+  return repository
+    .findModulesWithNoImporters()
+    .filter((module) => !entryModuleIds.has(module.id))
+    .map((module) => ({
+      filePath: module.file.relativePath,
+      message: `"${module.file.relativePath}" is never imported by any other file in the repository.`,
+    }));
 }
