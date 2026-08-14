@@ -9,7 +9,7 @@
 // Fix: default was "light", and this hook was never actually called from
 // app/layout.tsx (see the fix there) so it had zero effect on first paint
 // regardless. Default flipped to "dark" to match ARCLUX's dark-first
-// design (theme/arclux.json) and the inline init script layout.tsx now
+// design (theme/theme.dark.ts) and the inline init script layout.tsx now
 // runs before hydration — this hook's job is now just keeping state in
 // sync for the toggle button, not doing the initial theme decision alone.
 
@@ -22,7 +22,7 @@ type Theme = "light" | "dark"
 export function useTheme() {
   // layout.tsx's inline init script applies the theme class before hydration,
   // so reading it in the lazy initializer gives the true initial theme
-  // (dark-first, matches theme/arclux.json) without a sync-setState effect.
+  // (dark-first, matches theme/theme.dark.ts) without a sync-setState effect.
   const [theme, setTheme] = useState<Theme>(() =>
     typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
   )

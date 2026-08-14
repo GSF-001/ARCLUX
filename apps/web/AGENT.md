@@ -54,8 +54,8 @@ Detail lengkap: `apps/web/vendor-ui/README.md`.
 
 ## Theming
 
-Warna dan token graph sudah didefinisikan di `theme/arclux.json` dan
-`theme/graphColors.ts`, termasuk token khusus untuk 6 tipe node
+Warna dan token graph sudah didefinisikan di `theme/colors.ts`,
+`theme/theme.dark.ts` dan `theme/graphColors.ts`, termasuk token khusus untuk 6 tipe node
 (`file`, `folder`, `external-package`, `route`, `component`, `hook`) dan
 4 tipe edge. Jangan hardcode warna baru untuk elemen graph — tambahkan
 token di `graphColors.ts` dan referensikan dari sana.

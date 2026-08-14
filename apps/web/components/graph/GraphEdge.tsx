@@ -8,6 +8,7 @@
 
 "use client";
 
+import { memo } from "react";
 import { getGraphEdgeColor } from "@/theme/graphColors";
 import type { GraphEdge as GraphEdgeData } from "@/packages/shared/types";
 import type { GraphNodePosition } from "./GraphNode";
@@ -59,7 +60,7 @@ function shortenToCircleBoundary(
  * as clean labeled cards with no overlap — that's the intended place to
  * see per-edge type info now, not the canvas itself.
  */
-export function GraphEdge({
+export function GraphEdgeComponent({
   edge,
   sourcePos,
   targetPos,
@@ -94,3 +95,11 @@ export function GraphEdge({
     />
   );
 }
+
+// Memoized for the same reason as GraphNode: GraphCanvas re-renders on every
+// pan/zoom frame (transform state), but an edge's own props (edge, sourcePos,
+// targetPos, isHighlighted) are stable across those frames — without memo,
+// hundreds of <line> elements re-render per pointermove for zero visual
+// change. Default shallow-compare is sufficient (all props are primitives or
+// stable references).
+export const GraphEdge = memo(GraphEdgeComponent);

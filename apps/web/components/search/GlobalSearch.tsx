@@ -113,13 +113,13 @@ export function GlobalSearch({ repoUrl, branch, onSelect }: GlobalSearchProps) {
       )}
 
       {results.length > 0 && (
-        <div className="mt-2 rounded-md border">
+        <div className="mt-2 rounded-lg bg-card shadow-lg">
           {results.slice(0, 20).map((r) => (
             <button
               key={r.moduleId}
               type="button"
               onClick={() => onSelect?.(r.moduleId)}
-              className="block w-full cursor-pointer px-3 py-2 text-left text-sm hover:bg-muted"
+              className="block w-full cursor-pointer px-3 py-2.5 text-left text-sm transition-transform hover:bg-muted active:scale-[0.99]"
             >
               <div className="font-medium">{r.filePath.split("/").pop()}</div>
               <div className="text-xs text-muted-foreground">{r.filePath}</div>

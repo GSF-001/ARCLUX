@@ -135,7 +135,7 @@ the first place.
 ## 2026-08-05 — Update — dark theme default fix + GraphMenu consolidation
 
 **Dark theme bug found via dogfooding**: landing page and graph viewer
-rendered light/white despite theme/arclux.json being dark-first by
+rendered light/white despite theme/theme.dark.ts being dark-first by
 design. Root cause: hooks/useTheme.ts existed and worked, but NOTHING in
 the app tree ever called it — app/layout.tsx never applied the "dark"
 class to <html> at all. Fixed:

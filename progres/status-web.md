@@ -570,3 +570,66 @@ verified in a real browser (standard gap).
   latest = the #336 merge), 6 contributors (top: GSF-001, 307);
   /activity page 200, no errors. tsc 0, eslint 0, vitest 208/208. Not
   visually verified in a real browser (standard gap).
+
+## 2026-08-14 — Universal Responsive UI (mobile-first, Termux-friendly)
+
+**Status:** Done (tsc 0, eslint 0, vitest 295/295, dev-server live: 6/6
+pages HTTP 200, SSR HTML contains all new chrome). Visual pass on an
+actual phone still pending (Mikatoshi).
+
+- `hooks/useBreakpoint.ts` (new): { isMobile, isTablet, isDesktop }
+  over the existing useMediaQuery wrapper (issue #147: re-export, not
+  reimplementation). Breakpoints match Tailwind defaults (md=48rem,
+  lg=64rem). Visibility itself is Tailwind-class driven (hydration-safe);
+  the hook only feeds interactive behavior.
+- `components/layout/BottomNav.tsx` (new): mobile-only (<md) 5-tab bar
+  (Overview/Graph/Search/Activity/Workspace) as a flex child of the
+  layout (not `fixed` — never overlaps content or the graph canvas),
+  safe-area padding for notched phones, active tab highlight, 44px+
+  targets.
+- `Sidebar.tsx`: desktop `w-64` collapsible to a `w-16` icon rail
+  (`transition-all duration-300`); tablet overlay mode (`overlay` +
+  onClose); mobile hidden (BottomNav owns nav). Premium: `bg-sidebar`
+  token + shadow, no `border-r`.
+- `Navbar.tsx`: org/repo props; menu button (tablet opens overlay,
+  desktop collapses sidebar — decided via useBreakpoint); Settings link
+  visible only <md (it lives in the sidebar on larger screens); icon
+  buttons `size-11 md:size-8` (44px touch target on mobile); no
+  `border-b`.
+- `WorkspaceLayout.tsx`: now "use client" with sidebar collapse state +
+  overlay drawer (always mounted, CSS-hidden on lg+ so resizing to
+  desktop mid-gesture is safe). Breadcrumbs strip uses `bg-muted/40`
+  instead of `border-b`.
+- `GraphCanvas.tsx`: native pinch-to-zoom (two-pointer distance ratio,
+  zoom-to-midpoint), single-finger pan fallback after lifting one
+  finger, `touch-none` on the canvas container (no browser scroll
+  hijack), viewport culling for nodes AND edges (selected/hovered always
+  render; CULL_MARGIN=100 world units), coarse-pointer hit radius
+  (44px) via `(pointer: coarse)` media query.
+- `GraphNode.tsx`: optional invisible hit-area circle (22px radius) for
+  coarse pointers — visual 6px dot still meets the 44px tap target;
+  rendered last so it sits on top (other shapes are pointer-events-none).
+- `GraphEdge.tsx`: memoized (props stable across pan/zoom frames — same
+  reasoning as GraphNode memo).
+- `GraphViewport.tsx` ExplorerPanel: <md becomes a full-screen overlay
+  (a 380px flex sibling would leave the canvas ~0px on a phone); md+
+  keeps the 380px sibling. Branches on useMediaQuery — safe because the
+  panel only mounts after a client-side node selection.
+- `GlobalSearch.tsx`: results list `border` → `bg-card shadow-lg`,
+  taller tap targets.
+- No new npm dependencies (pinch is native Pointer Events; verified
+  @use-gesture/react v10.3.1 is 2 years stale with unconfirmed React 19
+  compat).
+- Doc contradiction fixed (§4.9): `theme/arclux.json` referenced in 7
+  places but never existed — all updated to theme/colors.ts +
+  theme/theme.dark.ts (KI-030).
+- Pre-existing build blocker found (not touched, out of scope):
+  app/api/diagnostics/route.ts scaffold has no exports → `next build`
+  fails its type-check on the generated route type (KI-029).
+
+Verified: `cd apps/web && npx tsc --noEmit` 0; `pnpm --filter web lint`
+0; `pnpm test` 295/295; `pnpm --filter web build` compiles but fails
+final type-check on KI-029 only; dev-server: /test/test + graph/search/
+workspace/activity/settings all HTTP 200, SSR HTML contains
+Toggle-navigation / aria-label=Primary / bg-sidebar markers, no
+console errors. Not visually verified on a real phone (standard gap).
