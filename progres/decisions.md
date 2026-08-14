@@ -728,6 +728,13 @@ The stable Engine contract was exercised against a real, large,
 external Python repository and the test uncovered and fixed an actual
 runtime integration bug in the existing Python parser.
 
+main
+## 2026-08-14 — Use Linux workqueue.c as reference for scheduler design, not implementation
+
+**Status:** Done
+
+When implementing packages/scheduler/*, cloned torvalds/linux (sparse-checkout, kernel/workqueue.c + include/linux/workqueue.h only) to study a battle-tested design for job scheduling. Chose to port design CONCEPTS only (max_active concurrency cap, priority-jumps-queue, delayed/deferred execution, ordered-strict-FIFO mode), not any code or CPU/hardware-specific mechanics (NUMA pod affinity, cpumask, per-CPU worker pools, bit-packed work_struct flags) -- those solve hardware scheduling problems ARCLUX's single-process Node scheduler doesn't have. This is the second time this session external OSS source was read-only referenced for a design pattern rather than copied (see ESLint report-translator attempt, which failed due to sparse-checkout misconfiguration, for the diagnostics/ErrorLocation.ts locationPrecision pattern).
+
 ## 2026-08-13 — Platform layer scaffold added
 
 docs/log-today-progress-v2
@@ -821,3 +828,4 @@ other TS-family parsers) is a separate, smaller follow-up — file it as
 an issue when a contributor picks it up. Known limitations documented
 in the code: default-imported callees unresolvable, `obj.foo()` /
 `this.foo()` not captured (AST-only, no type info).
+ARCLUX.main
