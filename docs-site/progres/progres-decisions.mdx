@@ -824,6 +824,11 @@ current pass structure.
 
 ## 2026-08-14 — Call graph: TS-parser call extraction is a follow-up
 
+> **[STATUS UPDATE, 2026-08-14]: IMPLEMENTED same-day — see
+> progres/status-core.md "Issue #50 follow-up done: TS-family call
+> extraction (issue #316)". `parseTs.ts` runs `extractCalls()`; arclux
+> self-repo call edges went 0 → 220.**
+
 **Context:** issue #50 implemented `extractCallsJs` per its spec — wired
 only into the JS-family parsers (parseJs/parseJsx/parseCommonJs). The
 arclux repo itself is TS-only, so buildCallGraph yields 0 call edges on

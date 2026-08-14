@@ -8,27 +8,62 @@
 
 "use client";
 
-import { GraphProvider } from "./GraphProvider";
+import { GraphProvider, useGraphContext } from "./GraphProvider";
 import { GraphCanvas } from "./GraphCanvas";
 import { GraphMenu } from "./GraphMenu";
 import { GraphSearch } from "./GraphSearch";
 import { GraphFocusView } from "./GraphFocusView";
 import { GraphContextMenu } from "./GraphContextMenu";
+import { Explorer } from "@/components/explorer/Explorer";
 
 export interface GraphViewportProps {
   repoUrl: string;
   branch?: string;
 }
 
+/**
+ * Right-hand module explorer, mounted when a FILE node is selected. Lives
+ * in the flex layout OUTSIDE the canvas column (sibling, not overlay), so
+ * GraphFocusView's inset-4 overlay never collides with it — the canvas
+ * column just narrows. Folders / external packages have no file source to
+ * inspect (FileDetails hits /api/file), so only "file"-type nodes open it.
+ *
+ * Closing the Explorer deselects the node (selectNode(null)), which also
+ * closes the focus view — consistent with "close = stop inspecting this
+ * module". Closing the focus view alone (its own X) keeps the Explorer
+ * open: the node stays selected, so the deep inspection persists.
+ */
+function ExplorerPanel({ repoUrl, branch }: { repoUrl: string; branch?: string }) {
+  const { graph, selectedNodeId, selectNode } = useGraphContext();
+
+  if (!selectedNodeId) return null;
+  const selected = graph?.nodes.find((n) => n.id === selectedNodeId);
+  if (!selected || selected.type !== "file") return null;
+
+  return (
+    <div className="h-full w-[380px] shrink-0">
+      <Explorer
+        repoUrl={repoUrl}
+        moduleId={selectedNodeId}
+        branch={branch}
+        onClose={() => selectNode(null)}
+      />
+    </div>
+  );
+}
+
 export function GraphViewport({ repoUrl, branch }: GraphViewportProps) {
   return (
     <GraphProvider repoUrl={repoUrl} branch={branch}>
-      <div className="relative h-full w-full">
-        <GraphCanvas />
-        <GraphMenu />
-        <GraphSearch />
-        <GraphFocusView />
-        <GraphContextMenu />
+      <div className="flex h-full w-full">
+        <div className="relative h-full min-w-0 flex-1">
+          <GraphCanvas />
+          <GraphMenu />
+          <GraphSearch />
+          <GraphFocusView />
+          <GraphContextMenu />
+        </div>
+        <ExplorerPanel repoUrl={repoUrl} branch={branch} />
       </div>
     </GraphProvider>
   )

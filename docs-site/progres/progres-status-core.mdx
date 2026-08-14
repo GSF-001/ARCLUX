@@ -518,6 +518,22 @@ Kernel now persists ProcessEntry records to ~/.arclux/pids/*.json on register/up
 
 Added packages/storage/SnapshotManager.ts: writes one JSON record per process to ~/.arclux/pids/&lt;id>.json on register/update, reads live-check each PID via process.kill(pid, 0) and self-deletes stale records. Pattern read from forever's getAllProcesses/getSockets (see NOTICE), re-implemented with plain files instead of socket IPC. Wired into Kernel.ts (registerProcess/updateProcessStatus/removeProcess/shutdown all persist), packages/kernel/introspection/ProcSnapshot.ts (added snapshotFromEntries for cross-process use), and apps/cli/commands/ps.ts (reads disk records directly, registered in apps/cli/index.ts).
 
+## 2026-08-14 — Issue #50 follow-up done: TS-family call extraction (issue #316)
+
+> **[STATUS UPDATE, 2026-08-14]: the "TS-parser call extraction is a
+> follow-up" decision below is now IMPLEMENTED — see this entry.**
+
+**Status:** Done
+
+`parseTs.ts` now runs `extractCalls()` (bare-identifier call sites,
+same rule as `extractCallsJs`, kept as a separate function per the JS/TS
+convention) and populates `ParsedFile.calls` — `buildIndex`/`buildCallGraph`
+were already language-agnostic. Verified on the arclux repo itself:
+**0 → 220 call edges** (e.g. apps/cli/analyze.ts → detectCircularDependency).
+TSX handled correctly: JSX elements and type-only imports produce no
+call sites. 5 new tests (parser/typescript.test.ts +3,
+graph-callgraph.test.ts +2). Test count: 196.
+
 ## 2026-08-14 — Issues #4/#7/#9/#50 — entry-point-aware detectors, call graph, search engine
 
 **Status:** Done
@@ -533,9 +549,9 @@ Added packages/storage/SnapshotManager.ts: writes one JSON record per process to
   `buildIndex` resolves calls via named imports and backfills `calledBy`;
   `buildCallGraph.ts` emits weighted `type: "call"` edges mirroring
   buildImportGraph. RawCall/ResolvedCall/calls/calledBy added to
-  shared/types.ts. 15 tests (tests/graph-callgraph.test.ts). Known
-  limitation: TS-family parsers don't extract calls yet — a TS-only repo
-  yields 0 call edges (follow-up candidate).
+  shared/types.ts. 15 tests (tests/graph-callgraph.test.ts). TS-family
+  call extraction landed same-day in the #316 entry above (parseTs
+  populates calls; arclux self-repo: 0 → 220 call edges).
 - **#9 (search engine):** packages/search/* implemented (SearchIndex,
   SearchEngine, SearchFilters, plus plain-TS SearchProvider/SearchResults/
   SearchKeyboard — packages stay framework-agnostic); `/api/search`
