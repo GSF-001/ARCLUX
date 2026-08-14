@@ -8,7 +8,7 @@
 
 import ts from "typescript";
 import type { LanguageParser } from "../core/ParserInterface";
-import type { FileInfo, ParsedFile, RawImport, RawExport, ImportKind } from "../../shared/types";
+import type { FileInfo, ParsedFile, RawImport, RawExport, RawCall, ImportKind } from "../../shared/types";
 
 function getLine(sourceFile: ts.SourceFile, pos: number): number {
   return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
@@ -172,6 +172,42 @@ function extractExports(sourceFile: ts.SourceFile): RawExport[] {
   return exports;
 }
 
+/**
+ * Bare-identifier call sites: `foo(...)` where the callee is a plain
+ * Identifier. Deliberately the same rule as the JS-family
+ * extractCallsJs (extractJs.ts) — kept as a separate function per the
+ * JS/TS extractor convention in this repo (share structure, stay
+ * auditable side by side).
+ *
+ * Known limitations (documented, not bugs — AST-only, no type info):
+ * - `obj.foo()` / `this.foo()` are PropertyAccessExpressions, not
+ *   captured — resolving them needs type information.
+ * - Default-imported callees are never resolved downstream because
+ *   RawImport has no local name for default imports.
+ * - `require(...)` is excluded — it's an import, not a call edge.
+ */
+function extractCalls(sourceFile: ts.SourceFile): RawCall[] {
+  const calls: RawCall[] = [];
+
+  function visit(node: ts.Node) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text !== "require"
+    ) {
+      calls.push({
+        calleeName: node.expression.text,
+        line: getLine(sourceFile, node.getStart()),
+      });
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return calls;
+}
+
 export const parseTs: LanguageParser = {
   supportedLanguages: ["typescript"],
   extensions: [".ts", ".tsx"],
@@ -190,12 +226,13 @@ export const parseTs: LanguageParser = {
       );
     } catch (err) {
       warnings.push(`Failed to parse: ${(err as Error).message}`);
-      return { file, imports: [], exports: [], warnings };
+      return { file, imports: [], exports: [], calls: [], warnings };
     }
 
     const imports = extractImports(sourceFile);
     const exports = extractExports(sourceFile);
+    const calls = extractCalls(sourceFile);
 
-    return { file, imports, exports, warnings };
+    return { file, imports, exports, calls, warnings };
   },
 };
