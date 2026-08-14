@@ -20,6 +20,7 @@ import { registerDaemonCommand } from "./daemon";
 import { registerPsCommand } from "./commands/ps";
 import { registerWorkCommand } from "./commands/work";
 import { registerWorkspaceCommand } from "./workspace";
+import { registerSystemCommand } from "./commands/system";
 
 const program = new Command();
 program.name("arclux").description("Repository intelligence CLI").version("0.1.0");
@@ -36,5 +37,6 @@ registerDaemonCommand(program);
 registerPsCommand(program);
 registerWorkCommand(program);
 registerWorkspaceCommand(program);
+registerSystemCommand(program);
 
 program.parse();

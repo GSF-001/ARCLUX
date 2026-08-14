@@ -62,4 +62,9 @@ export class PermissionManager {
   getCapabilitySet(processId: string): CapabilitySet | undefined {
     return this.sets.get(processId);
   }
+
+  /** All registered capability sets, for aggregation (e.g. SystemState). */
+  list(): { processId: string; set: CapabilitySet }[] {
+    return [...this.sets.entries()].map(([processId, set]) => ({ processId, set }));
+  }
 }
