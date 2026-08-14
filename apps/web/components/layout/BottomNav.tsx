@@ -42,7 +42,7 @@ export function BottomNav({ org, repo }: BottomNavProps) {
   return (
     <nav
       aria-label="Primary"
-      className="bg-muted/50 select-none md:hidden"
+      className="glass-overlay select-none md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="grid h-16 grid-cols-5">

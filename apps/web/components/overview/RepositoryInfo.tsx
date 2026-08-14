@@ -25,9 +25,9 @@ interface StatCardProps {
 
 function StatCard({ label, value }: StatCardProps) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 px-4 py-3">
-      <p className="text-xs uppercase tracking-wide text-neutral-500">{label}</p>
-      <p className="mt-1 truncate font-mono text-lg text-neutral-100">{value}</p>
+    <div className="glass-card rounded-lg px-4 py-3">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate font-mono text-lg text-foreground">{value}</p>
     </div>
   );
 }

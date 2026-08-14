@@ -43,6 +43,7 @@ export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceL
   const { isDesktop } = useBreakpoint()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   function handleMenuClick() {
     if (isDesktop) {
@@ -59,6 +60,7 @@ export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceL
         repo={repo}
         onMenuClick={handleMenuClick}
         menuActive={sidebarOpen}
+        scrolled={scrolled}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -89,7 +91,12 @@ export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceL
           <div className="bg-muted/40 px-6 py-3">
             <Breadcrumbs items={breadcrumbs} />
           </div>
-          <div className="flex-1 overflow-auto">{children}</div>
+          <div
+            className="flex-1 overflow-auto"
+            onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 10)}
+          >
+            {children}
+          </div>
         </div>
       </div>
 
