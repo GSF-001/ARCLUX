@@ -12,7 +12,7 @@ import { useState } from "react"
 import { Navbar } from "@/components/layout/Navbar"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { BottomNav } from "@/components/layout/BottomNav"
-import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs"
+import type { BreadcrumbItem } from "@/components/layout/Breadcrumbs"
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { cn } from "@/lib/cn"
 
@@ -61,6 +61,7 @@ export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceL
         onMenuClick={handleMenuClick}
         menuActive={sidebarOpen}
         scrolled={scrolled}
+        breadcrumbs={breadcrumbs}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -88,9 +89,6 @@ export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceL
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="bg-muted/40 px-6 py-3">
-            <Breadcrumbs items={breadcrumbs} />
-          </div>
           <div
             className="flex-1 overflow-auto"
             onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 10)}
