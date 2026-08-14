@@ -698,6 +698,35 @@ in the same invocation; no misleading list/snapshot subcommands.
 no-git fallback, close/shutdown, snapshot immutability, error state,
 kernel injection, duplicate service rejection. Tests: 272/272, tsc 0.
 
+## 2026-08-14 — packages/system/ implemented (issue #350)
+
+**Status:** Done
+
+`packages/system/` was 4 stub files; now the central state aggregator
+(issue #350):
+- `ConfigurationStore.ts` — in-memory key/value with typed defaults
+  (get falls back to default, set overrides, delete restores, listKeys/
+  entries only cover explicit values).
+- `HealthMonitor.ts` — component health checks (register/unregister/
+  check); per-check try/catch so a throwing check marks that component
+  "down" without taking the whole report down; overall ok/degraded/down.
+- `SystemState.ts` — one immutable snapshot aggregating workspaces +
+  processes + services + jobs + capabilities + configuration + health.
+- `SystemManager.ts` — composes the already-existing pieces (Kernel,
+  WorkspaceManager, JobScheduler, PermissionManager, ConfigurationStore)
+  into SystemState.snapshot(); wires default health checks for
+  kernel/workspaces/jobs (failed jobs → degraded).
+
+Additive methods added so aggregation can read them: `JobScheduler.list()`
+and `PermissionManager.list()` (no behavior change).
+Wired into the CLI: `arclux system status` (formatted or `--json`),
+verified running — aggregates a fresh Kernel + health in a one-shot CLI
+process.
++11 tests (tests/system.test.ts): config defaults/override/delete/list,
+health ok/degraded/down (incl. throwing check), full aggregation, workspace
+inclusion, config inclusion, failed-job degradation, custom checks.
+Tests: 283/283, tsc 0.
+
 ## 2026-08-14 — Daemon verified end-to-end (issue #347) + 2 runtime bugs fixed
 
 **Status:** Done

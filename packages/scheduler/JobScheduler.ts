@@ -42,6 +42,11 @@ export class JobScheduler {
     return this.states.get(jobId);
   }
 
+  /** All known job states, for aggregation (e.g. SystemState). */
+  list(): JobStateEntry[] {
+    return [...this.states.values()];
+  }
+
   /** Pulls runnable jobs off the queue until maxActive is reached or the queue is empty. */
   private drain(): void {
     while (this.runningCount < this.maxActive) {
