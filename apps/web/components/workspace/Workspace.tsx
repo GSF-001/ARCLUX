@@ -47,6 +47,10 @@ export interface WorkspaceProps {
  */
 export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
+  // Active branch: defaults to the prop (e.g. from a future URL param),
+  // then the branch switcher sets it (which also seeds it from the repo's
+  // default via WorkspaceSwitcher). Panels refetch when it changes.
+  const [activeBranch, setActiveBranch] = useState<string | undefined>(branch)
 
   return (
     <div className="flex h-full flex-col">
@@ -54,8 +58,9 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
         org={org}
         repo={repo}
         repoUrl={repoUrl}
-        branch={branch}
+        branch={activeBranch}
         onSelectFile={setSelectedModuleId}
+        onBranchChange={setActiveBranch}
       />
       <WorkspaceCommand org={org} repo={repo} />
       <div className="flex-1 overflow-hidden">
@@ -63,7 +68,7 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
           left={
             <FilesPanel
               repoUrl={repoUrl}
-              branch={branch}
+              branch={activeBranch}
               selectedModuleId={selectedModuleId}
               onSelectFile={setSelectedModuleId}
             />
@@ -75,10 +80,10 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
                 <TabsTrigger value="issues">Issues</TabsTrigger>
               </TabsList>
               <TabsContent value="impact" className="flex-1 overflow-auto">
-                <ImpactPanel repoUrl={repoUrl} moduleId={selectedModuleId} />
+                <ImpactPanel repoUrl={repoUrl} moduleId={selectedModuleId} branch={activeBranch} />
               </TabsContent>
               <TabsContent value="issues" className="flex-1 overflow-auto">
-                <IssuesPanel repoUrl={repoUrl} branch={branch} />
+                <IssuesPanel repoUrl={repoUrl} branch={activeBranch} />
               </TabsContent>
             </Tabs>
           }
