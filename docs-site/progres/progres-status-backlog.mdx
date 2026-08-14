@@ -36,10 +36,16 @@ see "packages/impact/* already done" update below**
 
 **Medium priority**:
 - `packages/cache/*`, `packages/watcher/*` (5 & 4 files respectively)
-- Remaining `packages/git/*` (`checkoutBranch`, `detectDefaultBranch`,
+- `packages/git/*` (`checkoutBranch`, `detectDefaultBranch`,
   `getBranches`, `getCommitHistory`, `getContributors` — different from
   `cloneRepository`/`cleanupRepository`/`readGitignore`, which are already
   done)
+
+> **[STATUS UPDATE, 2026-08-14]: resolved — all 5 are implemented.
+> getBranches + detectDefaultBranch (git ls-remote, no clone) power GET
+> /api/branches and the workspace branch switcher (see status-web.md);
+> checkoutBranch/getCommitHistory/getContributors operate on a local
+> clone (see status-core.md "packages/git history helpers").**
 - `packages/graph/buildCallGraph/buildExportGraph/buildImportGraph.ts`
 - Remaining `packages/indexer/*` (`indexSchema`, `resolveComponents/Exports/
   Hooks/Providers/Routes`, `updateIndex`, `watchIndex`) — **the empty
