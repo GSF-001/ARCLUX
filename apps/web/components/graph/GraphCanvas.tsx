@@ -21,6 +21,7 @@ import {
 import { useGraphContext } from "./GraphProvider";
 import { GraphNode, type GraphNodePosition } from "./GraphNode";
 import { GraphEdge } from "./GraphEdge";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -28,6 +29,26 @@ interface SimNode extends SimulationNodeDatum {
 
 const DOUBLE_CLICK_DELAY_MS = 300;
 const ZOOM_TO_NODE_SCALE = 2;
+// Touch hit target for node dots (Apple HIG minimum). The invisible circle
+// is only rendered on coarse pointers; see GraphNode hitRadius prop.
+const NODE_HIT_RADIUS = 22;
+// World-space margin around the visible viewport kept in the render pass so
+// nodes/edges partially entering the frame don't pop out one frame early.
+const CULL_MARGIN = 100;
+
+interface PointerPoint {
+  x: number;
+  y: number;
+}
+
+interface PinchState {
+  startDistance: number;
+  startScale: number;
+  startMidX: number;
+  startMidY: number;
+  startTx: number;
+  startTy: number;
+}
 
 export function GraphCanvas() {
   const {
@@ -58,6 +79,16 @@ export function GraphCanvas() {
   // graph.edges (hundreds of SVG elements) on every pointermove. State is
   // only committed once, on pointerup, via setTransform.
   const liveTransform = useRef(transform);
+  // Active pointers (id -> position). Size 2 = pinch; the transition from
+  // 1 to 2 cancels the single-finger pan so the two gestures never fight.
+  const pointers = useRef(new Map<number, PointerPoint>());
+  // Snapshot taken when the second finger lands; updated scale/translation
+  // are derived from it on every move (zoom-to-midpoint, not viewport-center
+  // zoom — the content stays under the fingers).
+  const pinchStart = useRef<PinchState | null>(null);
+  // Coarse pointer (touch) devices get the larger node hit target; mouse
+  // keeps precise 6px targeting on dense graphs.
+  const isCoarsePointer = useMediaQuery("(pointer: coarse)");
 
   useEffect(() => {
     liveTransform.current = transform;
@@ -182,11 +213,53 @@ export function GraphCanvas() {
   }
 
   function handlePointerDown(e: React.PointerEvent) {
-    isPanning.current = true;
-    lastPointer.current = { x: e.clientX, y: e.clientY };
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.current.size === 2) {
+      // Second finger down: switch from pan to pinch, anchored at the
+      // current midpoint + scale so zoom keeps the content under the
+      // fingers (zoom-to-point) instead of around the viewport center.
+      const [p1, p2] = [...pointers.current.values()];
+      pinchStart.current = {
+        startDistance: Math.hypot(p2.x - p1.x, p2.y - p1.y),
+        startScale: liveTransform.current.scale,
+        startMidX: (p1.x + p2.x) / 2,
+        startMidY: (p1.y + p2.y) / 2,
+        startTx: liveTransform.current.x,
+        startTy: liveTransform.current.y,
+      };
+      isPanning.current = false;
+      return;
+    }
+
+    if (pointers.current.size === 1) {
+      isPanning.current = true;
+      lastPointer.current = { x: e.clientX, y: e.clientY };
+    }
   }
 
   function handlePointerMove(e: React.PointerEvent) {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Pinch: scale by the finger-distance ratio, translate so the midpoint
+    // stays pinned to where the fingers were when the pinch started.
+    if (pinchStart.current && pointers.current.size >= 2) {
+      const [p1, p2] = [...pointers.current.values()];
+      const distance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      const scale = Math.min(3, Math.max(0.2, pinchStart.current.startScale * (distance / pinchStart.current.startDistance)));
+      const k = scale / pinchStart.current.startScale;
+      liveTransform.current = {
+        scale,
+        x: midX - k * (pinchStart.current.startMidX - pinchStart.current.startTx),
+        y: midY - k * (pinchStart.current.startMidY - pinchStart.current.startTy),
+      };
+      applyTransformToDOM(liveTransform.current);
+      return;
+    }
+
     if (!isPanning.current) return;
     const dx = e.clientX - lastPointer.current.x;
     const dy = e.clientY - lastPointer.current.y;
@@ -199,13 +272,18 @@ export function GraphCanvas() {
     applyTransformToDOM(liveTransform.current);
   }
 
-  function handlePointerUp() {
-    if (isPanning.current) {
-      // Commit the DOM-only value to React state exactly once, at the end
-      // of the drag, instead of on every pointermove.
-      setTransform(liveTransform.current);
+  function endPointer(e: React.PointerEvent) {
+    pointers.current.delete(e.pointerId);
+    // Lifting one finger out of a pinch falls back to one-finger pan.
+    if (pointers.current.size < 2) pinchStart.current = null;
+    if (pointers.current.size === 0) {
+      if (isPanning.current) {
+        // Commit the DOM-only value to React state exactly once, at the end
+        // of the drag, instead of on every pointermove.
+        setTransform(liveTransform.current);
+      }
+      isPanning.current = false;
     }
-    isPanning.current = false;
   }
 
   function handleWheel(e: React.WheelEvent) {
@@ -234,14 +312,27 @@ export function GraphCanvas() {
     );
   }
 
+  // Viewport culling: only render nodes/edges intersecting the visible
+  // world-space rectangle (plus CULL_MARGIN), so zoomed-in views of large
+  // graphs stop re-rendering hundreds of off-screen SVG elements. The
+  // selected/hovered node always renders regardless of visibility.
+  const margin = CULL_MARGIN / transform.scale;
+  const viewLeft = -transform.x / transform.scale - margin;
+  const viewTop = -transform.y / transform.scale - margin;
+  const viewRight = (dimensions.width - transform.x) / transform.scale + margin;
+  const viewBottom = (dimensions.height - transform.y) / transform.scale + margin;
+  const isInView = (pos: GraphNodePosition) =>
+    pos.x >= viewLeft && pos.x <= viewRight && pos.y >= viewTop && pos.y <= viewBottom;
+
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden bg-black"
+      className="relative h-full w-full touch-none overflow-hidden bg-black"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
+      onPointerUp={endPointer}
+      onPointerCancel={endPointer}
+      onPointerLeave={endPointer}
       onWheel={handleWheel}
     >
       <svg
@@ -282,6 +373,9 @@ export function GraphCanvas() {
               edge.target === selectedNodeId ||
               edge.source === hoveredNodeId ||
               edge.target === hoveredNodeId;
+            // Cull edges with BOTH endpoints off-screen (an edge touching a
+            // visible node must render, even if its other end is outside).
+            if (!isHighlighted && !isInView(sourcePos) && !isInView(targetPos)) return null;
             // Label only shows for the SELECTED node's edges, not hover —
             // hovering a high fan-in hub was popping dozens of overlapping
             // "imports" labels at once (see live dogfood screenshot).
@@ -302,17 +396,23 @@ export function GraphCanvas() {
           {graph.nodes.map((node) => {
             const pos = positions.get(node.id);
             if (!pos) return null;
+            const isSelected = node.id === selectedNodeId;
+            const isHovered = node.id === hoveredNodeId;
+            // Cull off-screen nodes (selected/hovered always stay mounted
+            // so interaction never drops them mid-gesture).
+            if (!isSelected && !isHovered && !isInView(pos)) return null;
             return (
               <GraphNode
                 key={node.id}
                 node={node}
                 position={pos}
-                isSelected={node.id === selectedNodeId}
-                isHovered={node.id === hoveredNodeId}
+                isSelected={isSelected}
+                isHovered={isHovered}
                 onClick={selectNode}
                 onHoverChange={setHoveredNodeId}
                 importCount={importCounts.get(node.id) ?? 0}
                 zoomScale={transform.scale}
+                hitRadius={isCoarsePointer ? NODE_HIT_RADIUS : undefined}
               />
             );
           })}

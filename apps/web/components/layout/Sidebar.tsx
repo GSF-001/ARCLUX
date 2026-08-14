@@ -10,15 +10,32 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Network, Search, Settings, PanelsTopLeft, Activity } from "lucide-react"
+import { LayoutDashboard, Network, Search, Settings, PanelsTopLeft, Activity, X } from "lucide-react"
 import { cn } from "@/lib/cn"
 
 interface SidebarProps {
   org: string
   repo: string
+  /** Desktop inline mode: collapsed to a bare icon rail (w-16). */
+  collapsed?: boolean
+  /** Tablet overlay mode: rendered in a fixed drawer, shows a close button. */
+  overlay?: boolean
+  /** Called when the user asks to close the overlay drawer. */
+  onClose?: () => void
 }
 
-export function Sidebar({ org, repo }: SidebarProps) {
+/**
+ * Navigation sidebar, rendered by WorkspaceLayout in one of two modes:
+ * - Desktop (inline, `hidden lg:block` wrapper): `w-64`, collapsible to a
+ *   `w-16` icon rail. Width animates via `transition-all duration-300`.
+ * - Tablet (overlay): WorkspaceLayout wraps this in a `fixed` drawer with
+ *   a backdrop; `overlay` adds the close button. Not rendered on mobile —
+ *   BottomNav owns navigation there.
+ *
+ * Premium styling: no `border-r` — separation from the content column comes
+ * from the sidebar background token (`bg-sidebar`) plus a soft shadow.
+ */
+export function Sidebar({ org, repo, collapsed = false, overlay = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const base = `/${org}/${repo}`
 
@@ -32,7 +49,26 @@ export function Sidebar({ org, repo }: SidebarProps) {
   ]
 
   return (
-    <aside className="flex h-full w-56 shrink-0 flex-col gap-1 border-r bg-background p-3">
+    <aside
+      className={cn(
+        "flex h-full flex-col gap-1 overflow-hidden bg-sidebar p-3 text-sidebar-foreground transition-all duration-300 select-none",
+        collapsed ? "w-16" : "w-64",
+        overlay ? "shadow-2xl" : "shadow-lg"
+      )}
+    >
+      {overlay && (
+        <div className="mb-2 flex items-center justify-between px-2">
+          <span className="text-sm font-semibold">Navigation</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close navigation"
+            className="rounded-md p-2 transition-transform hover:bg-accent active:scale-95"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {links.map(({ label, href, icon: Icon }) => {
         const isActive = pathname === href
 
@@ -40,16 +76,18 @@ export function Sidebar({ org, repo }: SidebarProps) {
           <Link
             key={href}
             href={href}
+            title={collapsed ? label : undefined}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.98]",
+              collapsed && "justify-center px-0",
               isActive
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
             )}
-            aria-current={isActive ? "page" : undefined}
           >
-            <Icon className="h-4 w-4" />
-            {label}
+            <Icon className="h-4 w-4 shrink-0" />
+            {!collapsed && <span className="truncate">{label}</span>}
           </Link>
         )
       })}

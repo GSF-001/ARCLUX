@@ -15,6 +15,7 @@ import { GraphSearch } from "./GraphSearch";
 import { GraphFocusView } from "./GraphFocusView";
 import { GraphContextMenu } from "./GraphContextMenu";
 import { Explorer } from "@/components/explorer/Explorer";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export interface GraphViewportProps {
   repoUrl: string;
@@ -35,13 +36,24 @@ export interface GraphViewportProps {
  */
 function ExplorerPanel({ repoUrl, branch }: { repoUrl: string; branch?: string }) {
   const { graph, selectedNodeId, selectNode } = useGraphContext();
+  // md+ keeps the Explorer as a 380px flex sibling (canvas column narrows);
+  // below md a 380px sibling would leave the canvas ~0px wide on a phone,
+  // so it becomes a full-screen overlay instead. Safe to branch on the
+  // hook here: the panel only mounts after a client-side node selection.
+  const isMdUp = useMediaQuery("(min-width: 48rem)");
 
   if (!selectedNodeId) return null;
   const selected = graph?.nodes.find((n) => n.id === selectedNodeId);
   if (!selected || selected.type !== "file") return null;
 
   return (
-    <div className="h-full w-[380px] shrink-0">
+    <div
+      className={
+        isMdUp
+          ? "h-full w-[380px] shrink-0"
+          : "fixed inset-0 z-50 shadow-2xl"
+      }
+    >
       <Explorer
         repoUrl={repoUrl}
         moduleId={selectedNodeId}

@@ -32,6 +32,11 @@ export interface GraphNodeProps {
    * only renders past MIN_ZOOM_FOR_HALO to avoid clutter when zoomed
    * out on dense graphs -- see progres/PROGRES-decisions.md. */
   zoomScale?: number;
+  /** Touch hit radius (px). Set on coarse-pointer devices so the visual
+   * 6px dot still meets the 44px tap target via an invisible larger
+   * circle. Undefined on fine pointers (mouse) — desktop keeps precise
+   * 6px targeting on dense graphs. */
+  hitRadius?: number;
 }
 
 const BASE_RADIUS = 6;
@@ -75,6 +80,7 @@ function GraphNodeComponent({
   onHoverChange,
   importCount = 0,
   zoomScale = 1,
+  hitRadius,
 }: GraphNodeProps) {
   const color = getGraphNodeColor(node.type, "dark");
   const radius = isSelected ? BASE_RADIUS + 3 : isHovered ? BASE_RADIUS + 1.5 : BASE_RADIUS;
@@ -119,6 +125,13 @@ function GraphNodeComponent({
           opacity={isSelected || isHovered ? 0.95 : 0.65}
           className="pointer-events-none"
         />
+      )}
+      {/* Invisible hit target. Must be LAST so it sits on top: SVG hits
+          register against the topmost shape, and the visible dot/icon/
+          label all keep pointer-events-none — so the whole hitRadius disk
+          becomes the tap target on touch devices. */}
+      {hitRadius !== undefined && hitRadius > radius && (
+        <circle r={hitRadius} fill="transparent" />
       )}
       {(() => {
         if (zoomScale < MIN_ZOOM_FOR_LABEL) return null;
