@@ -427,3 +427,9 @@ Implemented packages/storage/RecoveryManager.ts (was an 11-line stub) as a real 
 **Status:** Done
 
 apps/cli/commands/diagnose.ts was an 11-line unregistered stub, duplicate name of the real apps/cli/diagnose.ts (which is registered and does the actual work). Kept edit.ts, open.ts, logs.ts, proc.ts, recover.ts (backing packages already have real logic, just not wired to CLI yet) and env.ts, service.ts, workspace.ts (backing packages still stubs too, nothing to wire yet).
+
+## 2026-08-14 — Full daemon roadmap implemented: Phase 1-5
+
+**Status:** In Progress
+
+Completed all 5 phases of the 'ARCLUX as always-on service' roadmap in one session: (1) packages/daemon/ArcluxDaemon.ts -- push-based re-analysis via DaemonRepositoryWatcher wrapping watchRepository.ts, wired to Kernel's SignalBus, runs diagnostics automatically. (2) packages/daemon/LocalBridgeServer.ts -- HTTP+SSE bridge (GET /analysis, GET /events) so any editor/terminal can connect without a custom protocol, plus packages/networking/PortManager.ts + ServiceEndpoint.ts for port allocation and cross-process discovery. (3) packages/environment/EnvironmentDetector.ts -- walks up from cwd to nearest .git, so 'arclux daemon' works from any subfolder. (4) packages/daemon/DaemonProcess.ts -- --detach/--stop/--status flags, real background process via detached spawn + unref (PM2 pattern). (5) apps/vscode-extension/ -- minimal VS Code extension (status bar + Problems panel via daemon SSE). CAVEAT: apps/vscode-extension was written against the documented VS Code API but NOT built or typechecked -- no network access in this session's environment to install @types/vscode. Needs 'pnpm install && pnpm build' plus manual testing in VS Code's Extension Development Host before considered verified. Also unverified end-to-end: actually running 'arclux daemon --detach' and confirming the bridge server + SSE events work against a real repo -- was verified via tsc --noEmit only, not runtime execution.
