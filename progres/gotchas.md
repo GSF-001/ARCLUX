@@ -30,6 +30,14 @@ Termux, tsconfig, Webpack, version-pinning quirks. See PROGRES.md for the index.
 - **Don't clone reference repos inside `~/arclux`** — they must be at the
   `~` root (`~/git-truck`, `~/madge`, `~/opencode`, `~/research/*`),
   outside the project.
+- **Backticks inside double-quoted shell args get executed**: a commit
+  message or `gh pr create --body` written with `` `code` `` spans inside
+  double quotes is shell-substituted — the span is eaten and
+  "command not found" noise lands in the message (PR #365, 2026-08-14;
+  had to `--amend` + force-push + `--body-file` to clean up). Lesson:
+  PR bodies go through `--body-file <file>`; commit messages through
+  `git commit -F -` with a heredoc; never backticks in double-quoted
+  shell text.
 
 ## 2026-08-03 — Running tsc from repo root gives false @/ alias errors for apps/web
 
