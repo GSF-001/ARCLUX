@@ -70,3 +70,9 @@ CODEOWNERS if/when they become active again.
 **Status:** Done
 
 4th active collaborator independently added CITATION.cff (Citation File Format) before being assigned anything. Linked it from README's License section. Assigned issue #147 (apps/web/hooks stubs) separately the same day.
+
+## 2026-08-15 — ManSio: language layer, system layer, VS Code extension verified, daemon e2e verified, glassmorphism UI
+
+**Status:** Done
+
+Resolved issues #346 (VS Code extension build+verify), #348 (packages/language/), #350 (packages/system/), plus daemon end-to-end verification, glassmorphism UI polish (1/3), universal responsive UI, and multiple gotchas/bugs logged along the way. Very active this session.
