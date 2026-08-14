@@ -22,9 +22,13 @@ from `vendor-ui/shadcn/*`. All complete.
 **`components/marketing/*`** (5 files, all complete): `Hero.tsx`, `CTA.tsx`,
 `Example.tsx`, `Features.tsx`, `Footer.tsx`.
 
-**`components/overview/*`** — only `ProjectStructure.tsx` (99 lines, file
+- **`components/overview/*`** — only `ProjectStructure.tsx` (99 lines, file
 tree UI, collapsible, uses `d3-hierarchy`) is complete. `RepositoryHeader`,
 `RepositoryInfo`, `RepositoryOverview` are still stubs.
+
+> **[STATUS UPDATE, 2026-08-14]: resolved — RepositoryHeader/Info/Overview
+> implemented and mounted on the [org]/[repo] root page (see
+> progres/status-web.md "Overview page implemented").**
 
 **`components/explorer/*`** — only `FileDetails.tsx` (132 lines, fetch +
 render source with syntax highlighting) is complete, **not yet wired into
@@ -425,3 +429,23 @@ GraphFocusView's inset-4 overlay never collides with it; closing the
 Explorer deselects the node, closing the focus view alone keeps it open.
 Graph page SSR smoke-tested on a live dev server (HTTP 200, no errors);
 tsc 0, eslint 0. Not visually verified in a real browser (standard gap).
+
+## 2026-08-14 — Overview page implemented ([org]/[repo] root page)
+
+> **[STATUS UPDATE, 2026-08-14]: the "components/overview/* — only
+> ProjectStructure is complete, RepositoryHeader/Info/Overview are
+> stubs" line above is now resolved — all three are implemented and the
+> [org]/[repo] root page renders them.**
+
+**Status:** Done
+
+[org]/[repo]/page.tsx (was a "coming soon" placeholder) now renders
+RepositoryOverview: RepositoryHeader (org/repo + branch badge + nav
+links), RepositoryInfo (stat strip: modules/nodes/edges/frameworks/
+package manager/dependencies/analyzedAt), and the interactive
+ProjectStructure file tree. POST /api/analyze now also returns a
+server-side `folderTree` (buildFolderGraph — needs the Repository, which
+never leaves the server); lib/api.ts gained a `postJson` helper. Verified
+live: /api/analyze on ARCLUX → 533 modules, folderTree root 8 children,
+packages/ 36 children; overview page HTTP 200; tsc 0, eslint 0. Not
+visually verified in a real browser (standard gap).
