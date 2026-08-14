@@ -69,7 +69,7 @@ Full attribution is in `NOTICE` (root). Summary:
 
 | Source | License | Nature | Became |
 |---|---|---|---|
-| `sst/opencode` | MIT | pattern re-adapted | `theme/arclux.json`, `hooks/useFilteredList.ts` |
+| `sst/opencode` | MIT | pattern re-adapted | `theme/colors.ts`, `hooks/useFilteredList.ts` |
 | `pahen/madge` | MIT | algorithm re-implemented | `detectCircularDependency.ts` |
 | `git-truck` | MIT | UX pattern re-implemented | `GraphCanvas.tsx` |
 | `sverweij/dependency-cruiser` | MIT | concept re-implemented | `RuleEngine.ts` |
@@ -726,6 +726,40 @@ process.
 health ok/degraded/down (incl. throwing check), full aggregation, workspace
 inclusion, config inclusion, failed-job degradation, custom checks.
 Tests: 283/283, tsc 0.
+
+## 2026-08-14 — packages/language/ implemented (issue #348)
+
+**Status:** Done
+
+`packages/language/` was 6 stub files; now the language-intelligence layer
+wrapping packages/parser/* + the indexed Repository (issue #348):
+- `SyntaxEngine.ts` — per-file parsing via the shared ParserRegistry
+  (parseFile/analyze), language detection, UNSUPPORTED_LANGUAGE error.
+  `ensureParsersRegistered` is now exported from engine/pipeline.ts
+  (additive) so this layer can guarantee parsers are registered.
+- `SymbolEngine.ts` — symbol → declaration/importers/callers over a
+  Repository (getSymbols/findByName/forModule/consumers).
+- `LanguageService.ts` — entry facade: parseFile/language/getSymbols/
+  findSymbol/symbolsForModule/consumers (repository optional).
+- `CompletionEngine.ts` — prefix auto-completion over repository exports,
+  dedupe preferring symbols from already-imported modules.
+- `FormattingEngine.ts` — honest minimal normalization (CRLF→LF, trailing
+  whitespace, final newline, tab↔space by tabWidth) — no prettier
+  dependency exists, a full formatter is out of scope and documented.
+- `DiffEngine.ts` — symbol-level diff of two ParsedFile versions
+  (exports/imports added/removed/kept, calls kept, changeCount).
+
+IMPORTANT finding: blueprint (docs-site map-packages-platform.mdx) cites
+packages/engine/analyzeFile.ts / analyzeModule.ts / analyzeDependency.ts
+as "existing" — they are all EMPTY 8-line stubs. Rule 4 (check real
+shapes) applied: language/ wraps the real parserRegistry/Repository
+instead. Wired into the CLI: `arclux language <file>` (formatted or
+`--json`), verified running on real files.
++12 tests (tests/language.test.ts): parsing, language detection,
+unsupported-language error, symbol resolution (importers/callers),
+findSymbol multi-module, completion + imported-boost, formatting
+normalization (CRLF/tabs/trailing), symbol diff add/remove/no-change.
+Tests: 295/295, tsc 0.
 
 ## 2026-08-14 — Daemon verified end-to-end (issue #347) + 2 runtime bugs fixed
 

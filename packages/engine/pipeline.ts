@@ -40,7 +40,7 @@ import type { Repository } from "../repository/Repository";
 // Register known parsers once, at module load. As more languages get parser
 // implementations (parseJs, parsePython, ...) they get registered here too.
 let parsersRegistered = false;
-function ensureParsersRegistered() {
+export function ensureParsersRegistered() {
   if (parsersRegistered) return;
   parserRegistry.register(parseTs);
   parserRegistry.register(parsePython);
