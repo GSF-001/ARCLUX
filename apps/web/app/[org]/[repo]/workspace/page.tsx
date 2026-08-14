@@ -6,19 +6,19 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import { GraphViewport } from "@/components/graph/GraphViewport";
+import { Workspace } from "@/components/workspace/Workspace";
 
-interface GraphPageProps {
+interface WorkspacePageProps {
   params: Promise<{ org: string; repo: string }>;
 }
 
-export default async function GraphPage({ params }: GraphPageProps) {
+export default async function WorkspacePage({ params }: WorkspacePageProps) {
   const { org, repo } = await params;
   const repoUrl = `https://github.com/${org}/${repo}.git`;
 
   return (
-    <div className="h-full w-full">
-      <GraphViewport repoUrl={repoUrl} />
+    <div className="h-full">
+      <Workspace org={org} repo={repo} repoUrl={repoUrl} />
     </div>
   );
 }

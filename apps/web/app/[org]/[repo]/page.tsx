@@ -16,7 +16,7 @@ export default async function OverviewPage({ params }: OverviewPageProps) {
   const { org, repo } = await params;
 
   return (
-    <main className="h-screen w-full bg-background text-foreground">
+    <main className="h-full w-full bg-background text-foreground">
       <RepositoryOverview org={org} repo={repo} />
     </main>
   );
