@@ -1,17 +1,20 @@
-/**
- * Copyright 2026 Mikatoshi
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- */
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
 
 import { spawn, type ChildProcess } from "node:child_process";
 import type { Kernel } from "../kernel/Kernel";
 import { ProcessStatus } from "../kernel/ProcessTable";
 import type { ProcessSpec } from "./ProcessSpec";
+import { JobScheduler } from "../scheduler/JobScheduler";
+import { createJob } from "../scheduler/Job";
+import { Sandbox } from "../security/Sandbox";
+import { PermissionManager } from "../security/PermissionManager";
+import { Capability } from "../security/Capability";
 
 interface TrackedChild {
   spec: ProcessSpec;
@@ -20,10 +23,27 @@ interface TrackedChild {
 
 export class ProcessManager {
   private children = new Map<string, TrackedChild>();
+  // Restart jobs go through JobScheduler with exponential backoff, instead of
+  // restarting instantly, to avoid crash-loop (a process erroring every <1s
+  // would otherwise busy-loop restart attempts). Pattern from Linux workqueue's
+  // delayed_work, see packages/scheduler/Job.ts.
+  private restartScheduler = new JobScheduler({ maxActive: 1 });
+  // Enforces capability checks before a process is allowed to spawn.
+  // See packages/security/Sandbox.ts -- ported from Linux capability.h's
+  // granular-permission model.
+  readonly permissions = new PermissionManager();
+  private sandbox = new Sandbox(this.permissions);
 
   constructor(private readonly kernel: Kernel) {}
 
   start(spec: ProcessSpec): void {
+    // Grant default capabilities on first start. Callers wanting a tighter
+    // policy should call this.permissions.grant() themselves BEFORE start().
+    if (!this.permissions.getCapabilitySet(spec.id)) {
+      this.permissions.grant(spec.id, [Capability.EXEC, Capability.ENV_WRITE, Capability.IPC_SEND, Capability.PROCESS_KILL]);
+    }
+    this.sandbox.enforce(spec);
+
     this.kernel.registerProcess({
       id: spec.id,
       pid: null,
@@ -69,7 +89,18 @@ export class ProcessManager {
 
       if (shouldRestart) {
         this.kernel.processTable.incrementRestarts(spec.id);
-        this.start(spec);
+        const restartCount = this.kernel.processTable.get(spec.id)?.restarts ?? 1;
+        // Exponential backoff: 1s, 2s, 4s, 8s... capped at 30s.
+        const delayMs = Math.min(30_000, 1_000 * 2 ** (restartCount - 1));
+        this.restartScheduler.schedule(
+          createJob({
+            name: `restart:${spec.name}`,
+            delayMs,
+            run: async () => {
+              this.start(spec);
+            },
+          })
+        );
       }
     });
 
