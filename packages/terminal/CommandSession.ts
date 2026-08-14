@@ -8,4 +8,26 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: terminal/CommandSession — not yet implemented.
+// The shape of one managed command run, as recorded by TerminalManager.
+// A session starts as "running", ends as "exited" (clean exit, exitCode
+// set) or "error" (spawn failure / sandbox denial / explicit stop). The
+// accumulated stdout/stderr are captured so callers (e.g. a future
+// `arclux run`) can render them without re-deriving from child_process
+// events.
+
+export type CommandStatus = "running" | "exited" | "error";
+
+export interface CommandSession {
+  id: string;
+  command: string;
+  args: string[];
+  cwd: string;
+  /** The full environment the child was launched with (process.env + overrides). */
+  env: Record<string, string>;
+  status: CommandStatus;
+  exitCode: number | null;
+  startedAt: number;
+  endedAt: number | null;
+  stdout: string;
+  stderr: string;
+}

@@ -620,6 +620,32 @@ analysis can emit, unsubscribed first in `stop()`. Existing subscribers
 +11 tests (tests/notifications.test.ts), incl. end-to-end event flow
 through a real Kernel SignalBus. Tests: 236/236, tsc 0.
 
+## 2026-08-14 — packages/terminal/ implemented (issue #351)
+
+**Status:** Done
+
+`packages/terminal/` was 4 stub files; now a managed shell execution layer
+(issue #351): runs commands through Sandbox capability checks instead of
+calling child_process directly.
+- `ShellEnvironment.ts` — `buildShellEnvironment()` (process.env + overrides,
+  drops undefined values).
+- `CommandSession.ts` — session shape (status running/exited/error,
+  exitCode, stdout/stderr, timestamps).
+- `CommandExecutor.ts` — spawns a ProcessSpec with `sandbox.enforce()`
+  BEFORE the process starts (denied commands never launch); spawn
+  `error` → reject (session marked "error", not fake clean exit);
+  optional timeoutMs → SIGKILL; settled-guard against error+close double-fire.
+- `TerminalManager.ts` — owns PermissionManager + Sandbox (same wiring as
+  ProcessManager), default-grants EXEC+ENV_WRITE on first run,
+  rejects duplicate session ids, records every run as a session.
+
++15 tests (tests/terminal.test.ts): env merge, stdout/stderr capture,
+non-zero exit, timeout kill, sandbox deny (no capability / wrong set),
+spawn-error, session lifecycle, duplicate id, list, env override.
+Bonus: fixed pre-existing type error in Sandbox.ts:35 (required array
+needed `CapabilityValue[]` annotation — was in KNOWN_ISSUES as owner
+error). Tests: 251/251, tsc 0.
+
 ## 2026-08-14 — Daemon verified end-to-end (issue #347) + 2 runtime bugs fixed
 
 **Status:** Done
