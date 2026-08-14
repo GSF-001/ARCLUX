@@ -15,6 +15,7 @@ export interface WorkspaceHeaderProps {
   repoUrl: string
   branch?: string
   onSelectFile?: (moduleId: string) => void
+  onBranchChange?: (branch: string) => void
 }
 
 /**
@@ -24,10 +25,10 @@ export interface WorkspaceHeaderProps {
  * shell, which stays outside this. This is workspace-internal chrome
  * only (repo switcher + file search), one level down from the page shell.
  */
-export function WorkspaceHeader({ org, repo, repoUrl, branch, onSelectFile }: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ org, repo, repoUrl, branch, onSelectFile, onBranchChange }: WorkspaceHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-4 border-b px-4 py-2">
-      <WorkspaceSwitcher org={org} repo={repo} branch={branch} />
+      <WorkspaceSwitcher org={org} repo={repo} branch={branch} onBranchChange={onBranchChange} />
       <WorkspaceSearch repoUrl={repoUrl} branch={branch} onSelect={onSelectFile} />
     </div>
   )

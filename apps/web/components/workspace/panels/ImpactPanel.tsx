@@ -13,16 +13,16 @@ export interface ImpactPanelProps {
   repoUrl: string
   /** Selected module id (relativePath in the graph), e.g. "src/utils/format.ts". */
   moduleId: string | null
+  branch?: string
 }
 
 /**
  * Thin wrapper around ImpactSummary.tsx (already built and browser-verified,
  * see PROGRES-status.md) for the workspace layout. Requires a moduleId --
- * the workspace's file selection state (WorkspaceSwitcher / FilesPanel) is
- * expected to feed this. Not yet wired to a real file-selection flow, since
- * FilesPanel.tsx is still a "coming soon" placeholder -- see its own file.
+ * the workspace's file selection state (WorkspaceSearch / FilesPanel) is
+ * expected to feed this; branch comes from the workspace branch switcher.
  */
-export function ImpactPanel({ repoUrl, moduleId }: ImpactPanelProps) {
+export function ImpactPanel({ repoUrl, moduleId, branch }: ImpactPanelProps) {
   if (!moduleId) {
     return (
       <EmptyState
@@ -32,5 +32,5 @@ export function ImpactPanel({ repoUrl, moduleId }: ImpactPanelProps) {
     )
   }
 
-  return <ImpactSummary repoUrl={repoUrl} moduleId={moduleId} />
+  return <ImpactSummary repoUrl={repoUrl} moduleId={moduleId} branch={branch} />
 }

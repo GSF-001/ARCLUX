@@ -266,6 +266,12 @@ Real vs honest-placeholder breakdown:
 - WorkspaceSwitcher.tsx: functional for switching between recently-viewed
   repos (client-side list), but branch switching is NOT functional yet --
   pipeline.ts accepts a branch param but no UI lets the user pick one.
+
+> **[STATUS UPDATE, 2026-08-14]: resolved — branch switching works.
+> packages/git/getBranches.ts + detectDefaultBranch.ts implemented
+> (git ls-remote, no clone) behind GET /api/branches; WorkspaceSwitcher
+> lists branches and the workspace refetches panels on change. See
+> "Branch switcher" below.**
 - WorkspaceSearch.tsx: real, hits GET /api/search (fuzzyScore.ts stopgap,
   same caveats as documented on that route -- file-path-only, no caching,
   re-indexes whole repo per call).
@@ -524,3 +530,23 @@ Cost note: triggers a full clone+index per call, consistent with the
 other panels (no caching yet). Verified: /workspace page HTTP 200 on a
 dev server, no errors; tsc 0, eslint 0, vitest 202/202. Not visually
 verified in a real browser (standard gap).
+
+## 2026-08-14 — Branch switcher (workspace; last WorkspaceSwitcher gap)
+
+**Status:** Done
+
+- `packages/git/getBranches.ts` + `detectDefaultBranch.ts` implemented
+  (both were 8-line stubs): `git ls-remote --heads` / `--symref HEAD`
+  via execFileSync array args (no shell, no injection — same pattern as
+  KI-010).
+- `GET /api/branches?repoUrl=` (new route): `{ branches, defaultBranch
+  }` — lightweight, never clones.
+- WorkspaceSwitcher: branch section in the dropdown (list from
+  /api/branches, current branch checkmarked); seeds the active branch
+  from the repo default when none is set. Workspace owns `activeBranch`
+  state and passes it to FilesPanel/ImpactPanel/IssuesPanel — panels
+  refetch when it changes.
+- Verified live: /api/branches on ARCLUX → 200 with the real branch
+  list; missing-repoUrl → 400; /workspace 200, no errors. tsc 0,
+  eslint 0, vitest 202/202. Not visually verified in a real browser
+  (standard gap).
