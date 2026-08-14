@@ -70,7 +70,7 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
                 <ImpactPanel repoUrl={repoUrl} moduleId={selectedModuleId} />
               </TabsContent>
               <TabsContent value="issues" className="flex-1 overflow-auto">
-                <IssuesPanel />
+                <IssuesPanel repoUrl={repoUrl} branch={branch} />
               </TabsContent>
             </Tabs>
           }

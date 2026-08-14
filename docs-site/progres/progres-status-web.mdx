@@ -290,6 +290,11 @@ Real vs honest-placeholder breakdown:
   doctor`, but nothing exposes them over HTTP yet -- needs a new
   /api/doctor route.
 
+> **[STATUS UPDATE, 2026-08-14]: resolved — /api/doctor exists
+> (packages/engine/runDoctor.ts, all 19 detectors normalized to one flat
+> finding list) and IssuesPanel renders it grouped by severity. See
+> "IssuesPanel + /api/doctor" below.**
+
 Verification: npx tsc --noEmit -p apps/web/tsconfig.json clean (only the
 2 pre-existing file-tree.tsx errors, unrelated). NOT yet verified
 visually in-browser -- Workspace.tsx is not wired into any app/ route yet
@@ -485,3 +490,25 @@ never leaves the server); lib/api.ts gained a `postJson` helper. Verified
 live: /api/analyze on ARCLUX → 533 modules, folderTree root 8 children,
 packages/ 36 children; overview page HTTP 200; tsc 0, eslint 0. Not
 visually verified in a real browser (standard gap).
+
+## 2026-08-14 — IssuesPanel + /api/doctor (workspace Issues tab is now real)
+
+**Status:** Done
+
+- `packages/engine/runDoctor.ts` (new): runs all 19 detectors and
+  normalizes every finding to `&#123; checkId, severity, filePath?, message
+  &#125;` — the HTTP counterpart of `arclux doctor`'s terminal print.
+  Severity per family: structural = error, hygiene/conventions =
+  warning, informational classifiers (entryPoints, sharedModules, pure
+  barrels) = info; ambiguous symbols map high→error, medium/low→warning.
+- `POST /api/doctor` (new route): analyzeRepository → runDoctor →
+  `{ repoUrl, findings, errorCount, warningCount, infoCount }`.
+- `IssuesPanel` (was an honest "no issues panel yet" placeholder):
+  fetches /api/doctor, renders findings grouped error → warning → info
+  with severity dots + checkId + filePath + message; loading/error/retry
+  states. `Workspace.tsx` passes repoUrl/branch through.
+- Verified live: POST /api/doctor on GSF-001/ARCLUX → 200, 1203 findings
+  (767 errors — real data: 4 circular deps incl. playground fixtures,
+  432 unused exports, 326 orphans; 386 warnings; 50 info). 6 unit tests
+  (tests/runDoctor.test.ts); tsc 0, eslint 0, vitest 202/202. Not
+  visually verified in a real browser (standard gap).
