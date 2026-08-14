@@ -208,3 +208,48 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Glassmorphism utilities (Mikatoshi's "1/3 glass" — UI chrome only, never
+ * content). Colors go through theme tokens (bg-background / border-foreground)
+ * instead of hardcoded zinc so the light theme keeps working: in dark mode
+ * background = #000 (equivalent to zinc-900), in light mode = #FFF frosted.
+ * Performance guard: mobile (<768px) drops blur to a lighter 4px pass,
+ * prefers-reduced-motion removes backdrop-filter entirely (solid fallback).
+ */
+@layer components {
+  .glass-panel {
+    @apply border border-foreground/5 bg-background/60 shadow-2xl backdrop-blur-md transition-all duration-200;
+  }
+  .glass-overlay {
+    @apply border border-foreground/5 bg-background/80 backdrop-blur-lg;
+  }
+  .glass-card {
+    @apply border border-foreground/5 bg-background/40 shadow-2xl backdrop-blur-sm transition-all duration-200;
+  }
+  .glass-card:hover {
+    @apply bg-background/50;
+  }
+  .glass-topbar {
+    @apply border-b border-foreground/5 bg-background/70 backdrop-blur-md;
+  }
+  @media (max-width: 768px) {
+    .glass-panel,
+    .glass-overlay,
+    .glass-card,
+    .glass-topbar {
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .glass-panel,
+    .glass-overlay,
+    .glass-card,
+    .glass-topbar {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background-color: var(--background);
+    }
+  }
+}

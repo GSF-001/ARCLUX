@@ -67,7 +67,7 @@ export function GraphContextMenu() {
     <div
       ref={menuRef}
       style={{ left: menuPos.x, top: menuPos.y }}
-      className="fixed z-50 w-44 overflow-hidden rounded-md border bg-popover py-1 text-sm shadow-md"
+      className="glass-panel fixed z-50 w-44 overflow-hidden rounded-md py-1 text-sm"
     >
       <button
         onClick={focusNode}

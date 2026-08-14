@@ -111,7 +111,7 @@ export function ActivityView({ repoUrl, branch }: ActivityViewProps) {
               {data.commits.map((commit) => (
                 <li
                   key={commit.hash}
-                  className="rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                  className="glass-card rounded-md px-3 py-2"
                 >
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                     <code className="font-mono text-xs text-neutral-500">{shortHash(commit.hash)}</code>
@@ -136,7 +136,7 @@ export function ActivityView({ repoUrl, branch }: ActivityViewProps) {
               {data.contributors.map((contributor) => (
                 <li
                   key={contributor.email}
-                  className="flex items-center justify-between gap-3 rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                  className="glass-card flex items-center justify-between gap-3 rounded-md px-3 py-2"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm text-neutral-200">{contributor.name}</p>

@@ -12,6 +12,7 @@ import Link from "next/link"
 import { Moon, Sun, PanelLeft, Settings } from "lucide-react"
 import { useTheme } from "@/hooks/useTheme"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/cn"
 
 interface NavbarProps {
   org: string
@@ -20,6 +21,8 @@ interface NavbarProps {
   onMenuClick?: () => void
   /** Highlights the menu button while the overlay drawer is open. */
   menuActive?: boolean
+  /** True once the page content scrolled past 10px — switches the header to glass. */
+  scrolled?: boolean
 }
 
 /**
@@ -30,12 +33,17 @@ interface NavbarProps {
  * (it lives in the sidebar there). Icon buttons grow to 44px on mobile for
  * touch targets (Apple HIG), staying compact on desktop.
  */
-export function Navbar({ org, repo, onMenuClick, menuActive = false }: NavbarProps) {
+export function Navbar({ org, repo, onMenuClick, menuActive = false, scrolled = false }: NavbarProps) {
   const { theme, toggleTheme } = useTheme()
   const settingsHref = `/${org}/${repo}/settings`
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-2 bg-background px-4">
+    <header
+      className={cn(
+        "flex h-14 shrink-0 items-center justify-between gap-2 px-4",
+        scrolled ? "glass-topbar" : "bg-background"
+      )}
+    >
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"

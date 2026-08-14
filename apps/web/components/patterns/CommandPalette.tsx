@@ -56,7 +56,7 @@ export function CommandPalette({ org, repo }: CommandPaletteProps) {
       onClick={() => setOpen(false)}
     >
       <Command
-        className="w-full max-w-md overflow-hidden rounded-lg border bg-popover shadow-lg"
+        className="glass-panel w-full max-w-md overflow-hidden rounded-lg"
         onClick={(e) => e.stopPropagation()}
         label="Command palette"
       >

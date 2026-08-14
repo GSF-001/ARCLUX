@@ -118,7 +118,7 @@ export function GraphFocusView() {
     .filter((n): n is GraphNodeData => Boolean(n));
 
   return (
-    <div className="absolute inset-4 z-20 flex flex-col overflow-hidden rounded-lg border border-neutral-800 bg-black/95 backdrop-blur-sm">
+    <div className="glass-panel absolute inset-4 z-20 flex flex-col overflow-hidden rounded-lg">
       <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           {canGoBack && (
