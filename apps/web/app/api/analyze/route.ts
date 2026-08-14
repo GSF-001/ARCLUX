@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeRepository } from "@/packages/engine/pipeline";
+import { buildFolderGraph, type FileTreeNode } from "@/packages/graph/buildFolderGraph";
 import { isArcluxError } from "@/packages/shared/errors";
 
 interface AnalyzeRequestBody {
@@ -53,10 +54,14 @@ export async function POST(request: NextRequest) {
     // repository is for server-side consumers only (see the field's doc
     // comment on AnalyzeRepositoryResult) — strip it so this endpoint's
     // response shape doesn't silently change now that the field exists.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally discarded (rest-sibling strip)
-    const { repository: _repository, ...safeResult } = result;
+    const { repository, ...safeResult } = result;
 
-    return NextResponse.json(safeResult, { status: 200 });
+    // Server-side-derived folder tree for the overview page. Built here
+    // (not client-side) because the client only has the serialized graph,
+    // not the Repository this is derived from.
+    const folderTree: FileTreeNode = buildFolderGraph(repository).tree;
+
+    return NextResponse.json({ ...safeResult, folderTree }, { status: 200 });
   } catch (err) {
     if (isArcluxError(err)) {
       return NextResponse.json(

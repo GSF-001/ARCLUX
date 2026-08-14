@@ -42,3 +42,27 @@ export async function fetchJson<T>(
 
   return json as T;
 }
+
+/**
+ * POST variant of fetchJson for the routes that take a JSON body
+ * (/api/analyze). Same contract otherwise: checks res.ok, parses JSON,
+ * throws a readable Error carrying the route's `error` field on failure.
+ */
+export async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const message =
+      json && typeof json === "object" && "error" in json
+        ? String((json as { error: unknown }).error)
+        : `Request failed with status ${res.status}`;
+    throw new Error(message);
+  }
+
+  return json as T;
+}
