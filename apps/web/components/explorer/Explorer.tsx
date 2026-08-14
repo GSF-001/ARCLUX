@@ -42,8 +42,8 @@ export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) 
   const [activeTab, setActiveTab] = useState<ExplorerTab>("file");
 
   return (
-    <div className="flex h-full flex-col border-l bg-background">
-      <div className="flex items-center justify-between border-b px-4 py-2">
+    <div className="flex h-full flex-col bg-background">
+      <div className="flex items-center justify-between bg-muted/20 px-4 py-2">
         <p className="truncate font-mono text-xs text-muted-foreground">{moduleId}</p>
         {onClose && (
           <button
@@ -56,7 +56,7 @@ export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) 
         )}
       </div>
 
-      <div className="flex border-b">
+      <div className="flex bg-muted/10">
         {TABS.map((tab) => (
           <button
             key={tab.id}

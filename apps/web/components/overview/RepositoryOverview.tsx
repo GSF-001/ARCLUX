@@ -15,6 +15,7 @@ import { ErrorState } from "@/components/patterns/ErrorState";
 import { RepositoryHeader } from "./RepositoryHeader";
 import { RepositoryInfo } from "./RepositoryInfo";
 import { ProjectStructure } from "./ProjectStructure";
+import { Explorer } from "@/components/explorer/Explorer";
 import type { FileTreeNode } from "@/packages/graph/buildFolderGraph";
 import type { DependencyGraph } from "@/packages/shared/types";
 
@@ -56,6 +57,7 @@ export function RepositoryOverview({ org, repo, branch }: RepositoryOverviewProp
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,8 +119,24 @@ export function RepositoryOverview({ org, repo, branch }: RepositoryOverviewProp
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">
             Project structure
           </h2>
-          <div className="max-h-[60vh] overflow-auto rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
-            <ProjectStructure tree={data.folderTree} />
+          <div className="flex gap-4">
+            <div className="max-h-[60vh] flex-1 overflow-auto rounded-lg bg-neutral-950/60 p-3">
+              <ProjectStructure
+                tree={data.folderTree}
+                selectedPath={selectedPath}
+                onSelectFile={setSelectedPath}
+              />
+            </div>
+            {selectedPath && (
+              <div className="max-h-[60vh] w-[45%] shrink-0 overflow-hidden rounded-lg bg-neutral-950/60">
+                <Explorer
+                  repoUrl={repoUrl}
+                  moduleId={selectedPath}
+                  branch={branch}
+                  onClose={() => setSelectedPath(null)}
+                />
+              </div>
+            )}
           </div>
         </section>
       </div>
