@@ -200,12 +200,12 @@ ke file+line.
 | Tahap | File platform (baru) | Konsumsi dari (existing) |
 |---|---|---|
 | Editor menangkap keystroke | packages/editor/EditContext.ts, CodeNavigator.ts | — |
-| Incremental analysis | packages/language/LanguageService.ts | packages/engine/analyzeFile.ts (existing) |
+| Incremental analysis | packages/language/LanguageService.ts | packages/parser/* (ParserRegistry, existing) |
 | Error detection | packages/diagnostics/DiagnosticEngine.ts | packages/detectors/* (existing) |
-| Symbol resolution | packages/language/SymbolEngine.ts | packages/engine/analyzeModule.ts (existing) |
-| Dependency resolution | packages/language/SyntaxEngine.ts | packages/engine/analyzeDependency.ts (existing) |
+| Symbol resolution | packages/language/SymbolEngine.ts | packages/repository/Repository (existing) |
+| Dependency resolution | packages/language/SyntaxEngine.ts | packages/parser/* (ParserRegistry, existing) |
 | Diagnostics aggregation | packages/diagnostics/DiagnosticEngine.ts, ErrorLocation.ts | — |
-| Impact engine | packages/editor/ImpactNavigator.ts | packages/engine/analyzeImpact.ts (existing) |
+| Impact engine | packages/editor/ImpactNavigator.ts | packages/impact/* (existing, cek map-packages-impact.mdx) |
 | Affected files/lines/symbols | packages/diagnostics/FixSuggestion.ts | packages/impact/* (existing, cek map-packages-impact.mdx) |
 | Notification | packages/notifications/NotificationManager.ts | — |
 | Navigasi ke file+line | packages/editor/CodeNavigator.ts | — |
@@ -218,14 +218,19 @@ Impact Diff → Architectural Diff.
 | Tahap | File platform (baru) | Konsumsi dari (existing) |
 |---|---|---|
 | Text Diff | packages/semantic-diff/SemanticDiff.ts (entry) | packages/diff/gitDiff.ts (existing) |
-| Symbol Diff | packages/semantic-diff/SymbolDiff.ts | packages/engine/analyzeModule.ts (existing) |
+| Symbol Diff | packages/semantic-diff/SymbolDiff.ts | packages/language/SymbolEngine.ts (existing, issue #348) |
 | AST Diff | packages/semantic-diff/AstDiff.ts | packages/parser/* (existing, cek map-packages-parser.mdx) |
 | Dependency Diff | packages/semantic-diff/DependencyDiff.ts | packages/diff/architecturalDiff.ts (existing) |
-| Impact Diff | packages/semantic-diff/DependencyDiff.ts (lanjutan) | packages/engine/analyzeImpact.ts (existing) |
+| Impact Diff | packages/semantic-diff/DependencyDiff.ts (lanjutan) | packages/impact/* (existing) |
 | Architectural Diff | packages/semantic-diff/SemanticDiff.ts (final stage) | packages/diff/architecturalDiff.ts (existing) |
 | Render output | packages/semantic-diff/DiffRenderer.ts | — |
 
-**Catatan penting:** semantic-diff TIDAK bikin parser/graph engine kedua.
+**Catatan penting:** `packages/engine/analyzeFile.ts`, `analyzeModule.ts`,
+`analyzeDependency.ts`, `analyzeImpact.ts` — semua EMPTY 8-line stubs
+(hanya license header), JANGAN dianggap existing. Real sources yang sudah
+implemented: packages/language/* (issue #348, per-file parsing via
+ParserRegistry, symbols via Repository), packages/impact/*, packages/parser/*.
+semantic-diff TIDAK bikin parser/graph engine kedua.
 Semua tahap di atas WAJIB memanggil fungsi existing di packages/engine
 dan packages/diff, bukan reimplementasi. Kalau nemu diri lu nulis AST
 walking baru di sini, itu tanda salah arah — harusnya panggil
