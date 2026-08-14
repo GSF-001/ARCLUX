@@ -62,7 +62,7 @@ export function registerAnalyzeCommand(program: Command): void {
         p.log.info(`Package manager: ${meta.packageManager}`);
         p.log.success(`${repository.moduleCount} modules indexed`);
         p.log.info(
-          `Scan: ${result.scanSummary.filesScanned} files, ${result.scanSummary.filesParsed} parsed, ${result.scanSummary.filesSkippedNoParser} skipped (no parser)`
+          `Scan: ${scanSummary.filesScanned} files, ${scanSummary.filesParsed} parsed, ${scanSummary.filesSkippedNoParser} skipped (no parser)`
         );
         p.log.success(`${graph.nodes.length} nodes, ${graph.edges.length} edges in dependency graph`);
 
