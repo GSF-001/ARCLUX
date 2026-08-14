@@ -70,7 +70,12 @@ export function spawnDetached(rootPath: string, cliEntry: string): { pid: number
   const logFile = logFilePath(daemonId);
   const logFd = openSync(logFile, "a");
 
-  const child = spawn(process.execPath, [cliEntry, "daemon", rootPath], {
+  // Dev-mode cliEntry is a .ts file whose ESM imports are extensionless
+  // (resolved by tsx). Bare `node <cliEntry>` fails with ERR_MODULE_NOT_FOUND
+  // on the very first import — found by the #347 runtime verification. The
+  // tsx loader fixes it; built .js entries don't need it.
+  const loaderArgs = cliEntry.endsWith(".ts") ? ["--import", "tsx"] : [];
+  const child = spawn(process.execPath, [...loaderArgs, cliEntry, "daemon", rootPath], {
     detached: true,
     stdio: ["ignore", logFd, logFd],
     env: { ...process.env, ARCLUX_DAEMON_CHILD: "1" },

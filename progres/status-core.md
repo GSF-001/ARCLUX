@@ -619,3 +619,31 @@ analysis can emit, unsubscribed first in `stop()`. Existing subscribers
 (apps/cli/daemon.ts, LocalBridgeServer) untouched — additive only.
 +11 tests (tests/notifications.test.ts), incl. end-to-end event flow
 through a real Kernel SignalBus. Tests: 236/236, tsc 0.
+
+## 2026-08-14 — Daemon verified end-to-end (issue #347) + 2 runtime bugs fixed
+
+**Status:** Done
+
+Issue #347 asked to actually RUN the daemon (it had only passed tsc).
+Full runtime verification on the arclux repo itself:
+- `arclux daemon <path> --detach` → bridge up (endpoint file + port),
+  GET /analysis → 552 modules, GET /events SSE connects.
+- **SSE push works**: touching a file re-analyzes and emits `event:
+  analysis` + `event: diagnostics` (real findings — playground cycles,
+  ambiguous symbols).
+- `--status`/`--stop` round-trip correct; process verified dead after
+  stop.
+
+**Two real bugs found and fixed:**
+1. **Detached spawn crashed on startup** — ERR_MODULE_NOT_FOUND on the
+   first extensionless .ts import: `spawnDetached` ran bare `node
+   apps/cli/index.ts`, but dev-mode ESM imports need the tsx loader.
+   Fix: `--import tsx` when cliEntry ends with `.ts` (DaemonProcess.ts).
+2. **GET /diagnostics 404'd** — documented in LocalBridgeServer's
+   docstring but never implemented in the handler. Fix: bridge caches
+   the last `daemon:diagnostics:updated` payload and serves it;
+   explicit `{ findings: [], ran: false, at: null }` before any run.
+   +1 regression test (tests/daemon-bridge.test.ts). Tests: 225/225,
+   tsc 0. Side observation (not fixed here): the diagnostics themselves
+   flag a type-only import cycle daemon ArcluxDaemon ↔
+   LocalBridgeServer — worth a follow-up.
