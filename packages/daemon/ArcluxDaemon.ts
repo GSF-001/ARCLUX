@@ -17,6 +17,10 @@
 import { Kernel } from "../kernel/Kernel";
 import { DaemonRepositoryWatcher } from "./DaemonRepositoryWatcher";
 import { runDiagnostics } from "../diagnostics/DiagnosticEngine";
+import { findFreePort } from "../networking/PortManager";
+import { createServiceEndpoint, writeServiceEndpoint, removeServiceEndpoint } from "../networking/ServiceEndpoint";
+import { startLocalBridgeServer, type LocalBridgeServer } from "./LocalBridgeServer";
+import { createHash } from "node:crypto";
 
 export interface ArcluxDaemonOptions {
   rootPath: string;
@@ -25,10 +29,21 @@ export interface ArcluxDaemonOptions {
 export class ArcluxDaemon {
   readonly kernel = new Kernel();
   private watcher: DaemonRepositoryWatcher | null = null;
+  private bridgeServer: LocalBridgeServer | null = null;
+  private readonly daemonId: string;
   private readonly rootPath: string;
 
   constructor(options: ArcluxDaemonOptions) {
     this.rootPath = options.rootPath;
+    // Stable id derived from rootPath, so restarting the daemon on the same
+    // repo reuses the same endpoint file instead of accumulating stale ones.
+    this.daemonId = createHash("sha1").update(this.rootPath).digest("hex").slice(0, 12);
+  }
+
+  /** Delegates to the underlying DaemonRepositoryWatcher -- see LocalBridgeServer.ts's GET /analysis. */
+  async getAnalysis() {
+    if (!this.watcher) throw new Error("daemon not started");
+    return this.watcher.getAnalysis();
   }
 
   start(): void {
@@ -54,11 +69,28 @@ export class ArcluxDaemon {
       this.kernel.signalBus.emit("daemon:analysis:error", { message: err.message, at: Date.now() });
     });
 
+    findFreePort()
+      .then((port) => startLocalBridgeServer(this, port))
+      .then((server) => {
+        this.bridgeServer = server;
+        const endpoint = createServiceEndpoint(server.port);
+        writeServiceEndpoint(this.daemonId, endpoint);
+        this.kernel.signalBus.emit("daemon:bridge:listening", { ...endpoint, at: Date.now() });
+      })
+      .catch((err) => {
+        this.kernel.signalBus.emit("daemon:bridge:error", { message: err instanceof Error ? err.message : String(err), at: Date.now() });
+      });
+
     this.kernel.signalBus.emit("daemon:started", { rootPath: this.rootPath, at: Date.now() });
   }
 
   async stop(): Promise<void> {
     if (!this.watcher) return;
+    if (this.bridgeServer) {
+      await this.bridgeServer.close();
+      this.bridgeServer = null;
+    }
+    removeServiceEndpoint(this.daemonId);
     await this.watcher.close();
     this.watcher = null;
     this.kernel.signalBus.emit("daemon:stopped", { rootPath: this.rootPath, at: Date.now() });

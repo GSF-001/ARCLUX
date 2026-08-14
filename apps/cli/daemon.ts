@@ -28,6 +28,14 @@ export function registerDaemonCommand(program: Command): void {
         p.log.success(`ARCLUX daemon watching ${targetPath}`);
       });
 
+      daemon.kernel.signalBus.on("daemon:bridge:listening", (data: any) => {
+        p.log.info(`Local bridge listening at ${data.baseUrl} (GET /analysis, GET /events)`);
+      });
+
+      daemon.kernel.signalBus.on("daemon:bridge:error", (data: any) => {
+        p.log.error(`Bridge server failed to start: ${data.message}`);
+      });
+
       daemon.kernel.signalBus.on("daemon:analysis:updated", (data: any) => {
         p.log.info(`Re-analyzed: ${data.moduleCount} modules`);
       });
