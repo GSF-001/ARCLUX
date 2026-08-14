@@ -69,10 +69,10 @@ function NodeCard({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left transition-colors ${
+      className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${
         accent
-          ? "border-red-900/40 bg-red-950/10 hover:border-red-700/60 hover:bg-red-950/20"
-          : "border-neutral-800 bg-neutral-950/80 hover:border-neutral-600 hover:bg-neutral-900"
+          ? "bg-red-950/15 hover:bg-red-950/25"
+          : "bg-neutral-900/60 hover:bg-neutral-800/80"
       }`}
     >
       <NodeIcon node={node} />
@@ -119,7 +119,7 @@ export function GraphFocusView() {
 
   return (
     <div className="glass-panel absolute inset-4 z-20 flex flex-col overflow-hidden rounded-lg">
-      <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
+      <div className="flex items-center justify-between bg-neutral-900/40 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           {canGoBack && (
             <button
@@ -147,9 +147,9 @@ export function GraphFocusView() {
         </button>
       </div>
 
-      <div className="grid flex-1 grid-cols-2 divide-x divide-neutral-800 overflow-hidden">
+      <div className="grid flex-1 grid-cols-2 gap-px overflow-hidden bg-neutral-900/40">
         <div className="flex flex-col overflow-hidden">
-          <div className="flex flex-col gap-0.5 border-b border-neutral-800 px-3 py-2.5">
+          <div className="flex flex-col gap-0.5 bg-neutral-900/60 px-3 py-2.5">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
               This file needs ({dependencies.length})
             </div>
@@ -174,7 +174,7 @@ export function GraphFocusView() {
         </div>
 
         <div className="flex flex-col overflow-hidden">
-          <div className="flex flex-col gap-0.5 border-b border-red-900/30 bg-red-950/5 px-3 py-2.5">
+          <div className="flex flex-col gap-0.5 bg-red-950/10 px-3 py-2.5">
             <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: IMPACT_COLOR }}>
               <AlertTriangle className="h-3 w-3" />
               If you change this, it affects ({dependents.length})
