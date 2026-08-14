@@ -6,35 +6,47 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Fix: default was "light", and this hook was never actually called from
-// app/layout.tsx (see the fix there) so it had zero effect on first paint
-// regardless. Default flipped to "dark" to match ARCLUX's dark-first
-// design (theme/theme.dark.ts) and the inline init script layout.tsx now
-// runs before hydration — this hook's job is now just keeping state in
-// sync for the toggle button, not doing the initial theme decision alone.
+// The theme class lives on <html> in app/layout.tsx (hardcoded `dark`,
+// applied server-side — there is no inline init script in this codebase).
+// This hook is purely the toggle-button state: it mirrors the current class
+// via useSyncExternalStore so SSR and the first hydration render always
+// agree (getServerSnapshot returns "dark", matching layout.tsx) — a lazy
+// initializer reading document.documentElement instead produced a hydration
+// mismatch (server Moon vs client Sun icon, issue #374).
 
 "use client"
 
-import { useState, useCallback } from "react"
+import { useSyncExternalStore, useCallback } from "react"
 
 type Theme = "light" | "dark"
 
+const THEME_CHANGE_EVENT = "arclux-theme-change"
+
+function subscribe(callback: () => void): () => void {
+  window.addEventListener(THEME_CHANGE_EVENT, callback)
+  return () => window.removeEventListener(THEME_CHANGE_EVENT, callback)
+}
+
+function getSnapshot(): Theme {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light"
+}
+
+function getServerSnapshot(): Theme {
+  // Matches layout.tsx's hardcoded `dark` class. React uses this for SSR AND
+  // the first hydration render, then switches to getSnapshot — so the two
+  // sides can never render a different icon (issue #374).
+  return "dark"
+}
+
 export function useTheme() {
-  // layout.tsx's inline init script applies the theme class before hydration,
-  // so reading it in the lazy initializer gives the true initial theme
-  // (dark-first, matches theme/theme.dark.ts) without a sync-setState effect.
-  const [theme, setTheme] = useState<Theme>(() =>
-    typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
-  )
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const next = prev === "dark" ? "light" : "dark"
-      document.documentElement.classList.toggle("dark", next === "dark")
-      localStorage.setItem("arclux-theme", next)
-      return next
-    })
-  }, [])
+    const next = theme === "dark" ? "light" : "dark"
+    document.documentElement.classList.toggle("dark", next === "dark")
+    localStorage.setItem("arclux-theme", next)
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
+  }, [theme])
 
   return { theme, toggleTheme }
 }
