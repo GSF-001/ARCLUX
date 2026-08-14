@@ -88,6 +88,22 @@ Web dashboard:
     cd apps/web
     pnpm run dev
 
+## Daemon (always-on background service)
+
+ARCLUX can run as a long-running background process that watches your repo and re-analyzes on every file change:
+
+```bash
+npx tsx apps/cli/index.ts daemon --detach
+npx tsx apps/cli/index.ts daemon --status
+npx tsx apps/cli/index.ts daemon --stop
+```
+
+The daemon exposes a local HTTP+SSE bridge (GET /analysis, GET /events) so any editor/terminal can connect -- see packages/daemon/.
+
+## VS Code Extension
+
+A minimal VS Code extension (apps/vscode-extension/) connects to a running daemon: Problems panel diagnostics + status bar module count. Build with pnpm install && pnpm build inside apps/vscode-extension/, then load via VS Code's Extension Development Host.
+
 ## How it works
 
     repository -> parser -> graph -> detectors -> engine -> report
