@@ -18,8 +18,8 @@ export interface Contributor {
 /**
  * Aggregates commit authors for a local clone at localPath via
  * `git shortlog -sne --no-merges` — one entry per author, sorted by
- * commit count descending. Requires a full (non-shallow) clone; see
- * getCommitHistory.ts's note.
+ * commit count descending. Requires a full (non-shallow) clone — use
+ * cloneRepository({ depth: 0 }), see getCommitHistory.ts's note.
  */
 export async function getContributors(localPath: string): Promise<Contributor[]> {
   const git = simpleGit(localPath);

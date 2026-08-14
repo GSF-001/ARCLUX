@@ -557,3 +557,23 @@ verified in a real browser (standard gap).
   list; missing-repoUrl → 400; /workspace 200, no errors. tsc 0,
   eslint 0, vitest 202/202. Not visually verified in a real browser
   (standard gap).
+
+## 2026-08-14 — Activity page: commit history + contributors (/api/history)
+
+**Status:** Done
+
+- `cloneRepository` supports full clones now: `depth: 0` means no
+  `--depth` flag (the arg was previously unconditional, so a full clone
+  wasn't expressible). Documented on CloneOptions + the git-history
+  helpers' comments.
+- `GET /api/history?repoUrl=&maxCount=&branch=` (new route): full clone
+  (depth 0) → getCommitHistory + getContributors → cleanup; returns
+  `{ repoUrl, defaultBranch, commits, contributors }`. maxCount capped
+  1..100 (default 50).
+- `/[org]/[repo]/activity` page (new) renders ActivityView: recent
+  commits (short hash, date, author, message) + contributors sorted by
+  commit count; Sidebar gained an Activity link.
+- Verified live: /api/history on ARCLUX → 200, 5 commits (maxCount=5,
+  latest = the #336 merge), 6 contributors (top: GSF-001, 307);
+  /activity page 200, no errors. tsc 0, eslint 0, vitest 208/208. Not
+  visually verified in a real browser (standard gap).
