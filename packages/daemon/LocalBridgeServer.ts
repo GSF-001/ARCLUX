@@ -40,11 +40,16 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
  */
 export function startLocalBridgeServer(daemon: ArcluxDaemon, port: number): Promise<LocalBridgeServer> {
   const sseClients = new Set<ServerResponse>();
+  let lastDiagnostics: unknown = null;
 
   daemon.kernel.signalBus.on("daemon:analysis:updated", (data: unknown) => {
     broadcastSse("analysis", data);
   });
   daemon.kernel.signalBus.on("daemon:diagnostics:updated", (data: unknown) => {
+    // Keep the last run so GET /diagnostics has something to serve even
+    // after the SSE event is gone — found missing by the #347 runtime
+    // verification (the route was documented but never implemented).
+    lastDiagnostics = data;
     broadcastSse("diagnostics", data);
   });
 
@@ -78,6 +83,17 @@ export function startLocalBridgeServer(daemon: ArcluxDaemon, port: number): Prom
       res.write(": connected\n\n");
       sseClients.add(res);
       req.on("close", () => sseClients.delete(res));
+      return;
+    }
+
+    if (url === "/diagnostics") {
+      // Last diagnostics run, or an explicit "not run yet" — a null
+      // response would be indistinguishable from a bug.
+      sendJson(
+        res,
+        200,
+        lastDiagnostics ?? { findings: [], ran: false, at: null }
+      );
       return;
     }
 
