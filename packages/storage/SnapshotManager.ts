@@ -12,6 +12,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import type { ProcessEntry } from "../shared/types";
+import { writeTransactional } from "./RecoveryManager";
 
 /**
  * File-based persistence for kernel process state.
@@ -65,7 +66,11 @@ function isPidAlive(pid: number | null): boolean {
 /** Write (or overwrite) the on-disk record for a single process entry. */
 export function writeProcessRecord(entry: ProcessEntry): void {
   ensurePidsDir();
-  fs.writeFileSync(recordPath(entry.id), JSON.stringify(entry, null, 2), "utf8");
+  // Goes through the journal (packages/storage/RecoveryManager.ts) instead
+  // of a plain writeFileSync, so a crash mid-write is redoable on next
+  // startup instead of leaving a half-written record that readLiveProcessRecords
+  // would otherwise have to detect-and-delete (data loss) further down.
+  writeTransactional(recordPath(entry.id), JSON.stringify(entry, null, 2));
 }
 
 /** Remove the on-disk record for a process, if it exists. */

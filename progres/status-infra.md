@@ -415,3 +415,9 @@ Stress-tested ARCLUX on the Django repository: 3,039 modules and 7,734 dependenc
 
 ARCLUX indexed 3039 modules and 7734 dependency edges in ~30s; impact traced django/db/models/lookups.py to 1319 affected files; diagnose reached Node heap limit on Termux.
 ARCLUX.main
+
+## 2026-08-14 — Storage recovery layer: write-ahead journal for crash-safe writes
+
+**Status:** Done
+
+Implemented packages/storage/RecoveryManager.ts (was an 11-line stub) as a real write-ahead log, porting Linux jbd2's transaction state machine (T_RUNNING -> T_LOCKED -> T_FLUSH -> T_COMMIT -> T_FINISHED verbatim, minus disk-block-specific commit sub-phases which don't apply to whole-file JSON writes). writeTransactional() logs the payload to a journal BEFORE the real file write; once COMMIT is logged the transaction is durable even if the real write hasn't happened yet. recoverFromJournal() replays on startup: COMMIT-but-not-FINISHED transactions are REDONE from the journaled payload, transactions that never reached COMMIT are DISCARDED untouched. Wired into packages/storage/SnapshotManager.ts's writeProcessRecord (previously a plain fs.writeFileSync that could leave half-written records for readLiveProcessRecords to silently delete on read -- data loss). Wired recoverFromJournal() into packages/runtime/RuntimeManager's constructor so replay happens once at ARCLUX startup, before any process management begins.

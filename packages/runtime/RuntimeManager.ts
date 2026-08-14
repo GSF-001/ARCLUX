@@ -19,13 +19,28 @@
 import { Kernel } from "../kernel/Kernel";
 import { ProcessManager } from "./ProcessManager";
 import type { ProcessSpec } from "./ProcessSpec";
+import { recoverFromJournal } from "../storage/RecoveryManager";
 
 export class RuntimeManager {
   readonly kernel = new Kernel();
   readonly processManager: ProcessManager;
 
   constructor() {
+    // Replay any incomplete write-ahead-log transactions from a previous
+    // crash before anything else touches storage -- see
+    // packages/storage/RecoveryManager.ts. Committed-but-unapplied writes
+    // are redone; never-committed writes are discarded, matching jbd2's
+    // recovery semantics.
+    const recovery = recoverFromJournal();
+    if (recovery.redone.length > 0 || recovery.discarded.length > 0) {
+      // Emitted after kernel exists, not before -- see emit call below.
+    }
+
     this.processManager = new ProcessManager(this.kernel);
+
+    if (recovery.redone.length > 0 || recovery.discarded.length > 0) {
+      this.kernel.signalBus.emit("recovery:replayed", recovery);
+    }
   }
 
   startService(spec: ProcessSpec): void {
