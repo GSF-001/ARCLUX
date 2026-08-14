@@ -13,6 +13,7 @@ import { Moon, Sun, PanelLeft, Settings } from "lucide-react"
 import { useTheme } from "@/hooks/useTheme"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/cn"
+import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs"
 
 interface NavbarProps {
   org: string
@@ -23,6 +24,8 @@ interface NavbarProps {
   menuActive?: boolean
   /** True once the page content scrolled past 10px — switches the header to glass. */
   scrolled?: boolean
+  /** Rendered inline next to the logo, replacing the old separate breadcrumb strip. */
+  breadcrumbs?: BreadcrumbItem[]
 }
 
 /**
@@ -33,7 +36,7 @@ interface NavbarProps {
  * (it lives in the sidebar there). Icon buttons grow to 44px on mobile for
  * touch targets (Apple HIG), staying compact on desktop.
  */
-export function Navbar({ org, repo, onMenuClick, menuActive = false, scrolled = false }: NavbarProps) {
+export function Navbar({ org, repo, onMenuClick, menuActive = false, scrolled = false, breadcrumbs }: NavbarProps) {
   const { theme, toggleTheme } = useTheme()
   const settingsHref = `/${org}/${repo}/settings`
 
@@ -55,9 +58,15 @@ export function Navbar({ org, repo, onMenuClick, menuActive = false, scrolled = 
         >
           <PanelLeft className="h-4 w-4" />
         </Button>
-        <Link href="/" className="px-2 text-sm font-semibold tracking-tight">
+        <Link href="/" className="px-2 text-sm font-semibold tracking-tight shrink-0">
           Arclux
         </Link>
+        {breadcrumbs && breadcrumbs.length > 0 && (
+          <>
+            <span className="text-muted-foreground/40">/</span>
+            <Breadcrumbs items={breadcrumbs} className="min-w-0" />
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-1">
