@@ -15,13 +15,17 @@
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
 import { ArcluxDaemon } from "../../packages/daemon/ArcluxDaemon";
+import { resolveWorkingRepositoryRoot } from "../../packages/environment/EnvironmentDetector";
+import { resolve } from "node:path";
 
 export function registerDaemonCommand(program: Command): void {
   program
     .command("daemon")
     .description("Start ARCLUX as a long-running process: watches the repo and re-analyzes on every change")
-    .argument("[path]", "path to the repository root", ".")
-    .action(async (targetPath: string) => {
+    .argument("[path]", "path to the repository root -- auto-detected (walks up to the nearest .git) if omitted", "")
+    .action(async (pathArg: string) => {
+      const startPath = pathArg ? resolve(pathArg) : process.cwd();
+      const targetPath = pathArg ? startPath : resolveWorkingRepositoryRoot(startPath);
       const daemon = new ArcluxDaemon({ rootPath: targetPath });
 
       daemon.kernel.signalBus.on("daemon:started", () => {
