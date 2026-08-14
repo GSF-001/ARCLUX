@@ -6,3 +6,50 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
+import { simpleGit } from "simple-git";
+
+export interface CommitInfo {
+  hash: string;
+  /** ISO date of the commit */
+  date: string;
+  message: string;
+  authorName: string;
+  authorEmail: string;
+}
+
+export interface GetCommitHistoryOptions {
+  /** Max commits to return. Default: 20. */
+  maxCount?: number;
+  /** Branch/ref to log (default: current branch). */
+  branch?: string;
+  /** Only commits touching this path (file or directory, repo-relative). */
+  path?: string;
+}
+
+/**
+ * Returns commit history for a local clone at localPath via
+ * `git log`. Requires a full (non-shallow) clone to see history — the
+ * pipeline's cloneRepository defaults to depth 1, so callers wanting
+ * history should clone with `depth: undefined` or fetch first.
+ */
+export async function getCommitHistory(
+  localPath: string,
+  options: GetCommitHistoryOptions = {}
+): Promise<CommitInfo[]> {
+  const { maxCount = 20, branch, path } = options;
+  const git = simpleGit(localPath);
+
+  const log = await git.log({
+    maxCount,
+    from: branch,
+    file: path,
+  });
+
+  return log.all.map((commit) => ({
+    hash: commit.hash,
+    date: commit.date,
+    message: commit.message,
+    authorName: commit.author_name,
+    authorEmail: commit.author_email,
+  }));
+}

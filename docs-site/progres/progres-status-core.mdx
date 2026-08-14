@@ -563,3 +563,22 @@ graph-callgraph.test.ts +2). Test count: 196.
 **Status:** Done
 
 apps/cli/commands/work.ts added: arclux work &lt;file> &lt;newContentFile> reads current + replacement content, builds PatchSet -> ChangePlan -> executes via ChangeExecutor (writeTransactional, transactional/recoverable write). This is the first real caller of packages/change/, proving the pipeline works end-to-end without needing intent parsing (ContextResolver), which doesn't exist yet. Registered in apps/cli/index.ts. Verified with tsc -p apps/cli/tsconfig.json (root tsc --noEmit picks up the wrong/Next.js-oriented tsconfig.json for CLI code -- use -p apps/cli/tsconfig.json when checking apps/cli specifically).
+
+## 2026-08-14 — packages/git history helpers implemented (last git stubs)
+
+**Status:** Done
+
+checkoutBranch/getCommitHistory/getContributors implemented (all were
+8-line stubs; the remaining backlog git items, alongside getBranches +
+detectDefaultBranch which landed with the branch switcher):
+- `checkoutBranch(localPath, branch)` — no-op if already on it;
+  otherwise fetch origin + `checkout -b branch origin/branch`, falling
+  back to plain `checkout branch` for local-only branches.
+- `getCommitHistory(localPath, { maxCount?, branch?, path? })` —
+  simple-git log → &#123; hash, date, message, authorName, authorEmail &#125;.
+  NOTE: requires a full (non-shallow) clone — the pipeline defaults to
+  depth 1, so history callers must clone with depth: undefined.
+- `getContributors(localPath)` — `git shortlog -sne --no-merges` →
+  [&#123; name, email, commits &#125;] sorted by count.
+6 tests (tests/git-history.test.ts) against a real temp git repo
+(git init + commits); tsc 0, vitest 208/208 (202 + 6).
