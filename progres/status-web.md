@@ -246,6 +246,12 @@ you CANNOT `git push` directly to `main` anymore, always
 
 ## 2026-08-05 — Update -- components/workspace/* 8 stub files are now DONE
 
+> **[STATUS UPDATE, 2026-08-14]: the "Workspace.tsx is not wired into any
+> app/ route yet" note below is now RESOLVED — WorkspaceLayout (Navbar +
+> Sidebar + Breadcrumbs) is the shared [org]/[repo] layout, and
+> Workspace is mounted at /[org]/[repo]/workspace. See the
+> "Workspace shell mounted" entry below.**
+
 Wrote all 8 files: Workspace.tsx (composition root), WorkspaceHeader.tsx,
 WorkspaceCommand.tsx, WorkspaceSearch.tsx, WorkspaceSwitcher.tsx, and
 panels/{Files,Impact,Issues}Panel.tsx.
@@ -408,10 +414,33 @@ GraphNode.tsx wrapped in React.memo -- previously every node instance re-rendere
 - `/api/search` rewritten to use `buildSearchIndex` + `search` from
   packages/search (issue #9); response shape unchanged
   (`{ query, results: [{ moduleId, filePath, score }] }`).
-- Note: issue #147 was assigned to collaborator mwakidenis (not started
-  since 2026-08-07); implemented in this session — see collaborators.md.
+- Notes: WorkspaceSearch.tsx above says it hits the fuzzyScore
+  stopgap — that's since upgraded to the real search engine (issue #9),
+  response shape unchanged; GlobalSearch (08-06 entry below) is now
+  mounted on the [org]/[repo]/search page.
 - tsc exit 0, eslint 0 on all changed files; not visually verified in
   browser (same standard gap as other entries).
+
+## 2026-08-14 — Workspace shell mounted: shared [org]/[repo] layout + /workspace route
+
+**Status:** Done
+
+- New `app/[org]/[repo]/layout.tsx` renders the pre-existing
+  WorkspaceLayout (Navbar + Sidebar + Breadcrumbs) around every repo
+  page — previously the pages rendered standalone full-screen with no
+  app chrome.
+- New `/[org]/[repo]/workspace` route renders the Workspace composition
+  root (WorkspaceHeader switcher+search, CommandPalette, Files/Impact/
+  Issues split pane); Sidebar gained a Workspace link.
+- Search page upgraded: mounts GlobalSearch (its "waiting on
+  SearchEngine" placeholder was stale — the engine landed in issue #9).
+- Page heights adjusted h-screen → h-full so pages fit inside the
+  shell's flex column; RepositoryHeader nav links dropped (Sidebar owns
+  navigation — no duplicate chrome).
+- Verified live: overview/graph/search/workspace/settings all HTTP 200
+  on a dev server, shell present in SSR, no server errors; tsc 0,
+  eslint 0, vitest 196/196. Not visually verified in a real browser
+  (standard gap).
 
 ## 2026-08-14 — Explorer panel mounted into the graph page (backlog item)
 
