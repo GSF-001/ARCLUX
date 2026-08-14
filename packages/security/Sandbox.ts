@@ -14,7 +14,7 @@
 
 import type { ProcessSpec } from "../runtime/ProcessSpec";
 import { PermissionManager } from "./PermissionManager";
-import { Capability } from "./Capability";
+import { Capability, type CapabilityValue } from "./Capability";
 
 export interface SandboxCheckResult {
   allowed: boolean;
@@ -30,7 +30,7 @@ export class Sandbox {
    * injecting/overriding env vars for the child).
    */
   checkSpec(spec: ProcessSpec): SandboxCheckResult {
-    const required = [Capability.EXEC];
+    const required: CapabilityValue[] = [Capability.EXEC];
     if (spec.env && Object.keys(spec.env).length > 0) {
       required.push(Capability.ENV_WRITE);
     }

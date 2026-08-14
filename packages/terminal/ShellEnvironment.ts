@@ -8,4 +8,17 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// Scaffold: terminal/ShellEnvironment — not yet implemented.
+// Builds the environment a managed shell/command runs with: the current
+// process env merged with caller-provided overrides. Kept as a separate
+// module so the merge/override policy lives in one place and can be
+// tested without spawning anything.
+
+export function buildShellEnvironment(overrides: Record<string, string> = {}): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    // process.env values are typed string | undefined; spawn would
+    // serialize undefined as the literal string "undefined", so drop them.
+    if (value !== undefined) env[key] = value;
+  }
+  return { ...env, ...overrides };
+}
