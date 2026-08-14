@@ -17,7 +17,9 @@ export interface CloneOptions {
   repoUrl: string;
   /** Branch to checkout. Defaults to the repo's default branch if omitted. */
   branch?: string;
-  /** Shallow clone depth. Defaults to 1 (fastest, no history) */
+  /** Shallow clone depth. Defaults to 1 (fastest, no history).
+   * Pass 0 for a FULL clone (history included) — e.g. for getCommitHistory/
+   * getContributors, which need git log data. */
   depth?: number;
 }
 
@@ -32,13 +34,17 @@ export interface CloneResult {
  * cleanupRepository.ts on `localPath` once analysis is done.
  */
 export async function cloneRepository(options: CloneOptions): Promise<CloneResult> {
-  const { repoUrl, branch, depth = 1 } = options;
+  const { repoUrl, branch } = options;
+  const depth = options.depth ?? 1;
 
   const workDir = mkdtempSync(join(tmpdir(), "arclux-"));
   const git = simpleGit();
 
   try {
-    const cloneArgs = ["--depth", String(depth)];
+    const cloneArgs: string[] = [];
+    if (depth > 0) {
+      cloneArgs.push("--depth", String(depth));
+    }
     if (branch) {
       cloneArgs.push("--branch", branch);
     }

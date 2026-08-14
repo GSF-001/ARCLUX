@@ -28,9 +28,9 @@ export interface GetCommitHistoryOptions {
 
 /**
  * Returns commit history for a local clone at localPath via
- * `git log`. Requires a full (non-shallow) clone to see history — the
- * pipeline's cloneRepository defaults to depth 1, so callers wanting
- * history should clone with `depth: undefined` or fetch first.
+ * `git log`. Requires a full (non-shallow) clone to see history — use
+ * cloneRepository({ depth: 0 }); the shallow default (depth 1) has no
+ * log data.
  */
 export async function getCommitHistory(
   localPath: string,
