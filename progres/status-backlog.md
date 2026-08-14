@@ -117,3 +117,9 @@ framework detection extended to read composer.json (`laravel/framework`
 extracted, closures correctly skipped; DDD layouts give false
 "missing" — documented v1 limitation) and laravel/laravel 11.x
 (closure-only → 0 refs, correct). 8 tests (tests/rules-laravel.test.ts).
+
+## 2026-08-15 — Remaining stub files as of this session
+
+**Status:** Not Started
+
+Confirmed via line-count scan (find packages -name '*.ts' | wc -l <= 9): packages/parser/{csharp,ruby,rust,cpp}/* (source parsers, manifest parsing already exists per earlier decisions), packages/indexer/{updateIndex,watchIndex,indexSchema}.ts (likely superseded by packages/daemon/'s coarse watchRepository approach -- verify before implementing, don't assume still needed), packages/engine/{analyzeFile,analyzeModule,analyzeImpact,analyzeConvention,analyzeArchitecture,analyzeDependency,generateSummary,generateReport}.ts (real entry point is pipeline.ts's analyzeRepository -- these are an unimplemented finer-grained API surface, not broken core), packages/ui/{graphLayout,graphTheme,graphAnimation,graphIcons}.ts (apps/web/components/graph/* has its own implementation currently, unclear if these should replace/wrap that), packages/watcher/watchGit.ts, packages/networking/{NetworkRegistry,ConnectionManager}.ts (in progress this session, see below).
