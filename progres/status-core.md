@@ -800,3 +800,9 @@ Was 0%. No database dependency installed (confirmed no sqlite/lowdb/knex/prisma/
 **Status:** Done
 
 CacheProvider.ts (facade/stats over fileCache/repositoryCache/graphCache -- confirmed all 3 already implemented and wired into buildIndex.ts + engine/pipeline.ts) and memoryCache.ts (generic TTL Map cache utility, resolves the 'unclear purpose' from the 2026-08-08 decisions entry) implemented. See PR #382.
+
+## 2026-08-15 — packages/networking/ 4/4 files complete
+
+**Status:** Done
+
+NetworkRegistry.ts (lists all registered daemon endpoints from ~/.arclux/endpoints/) and ConnectionManager.ts (liveness check via existing GET /analysis route) implemented, completing packages/networking/ alongside PortManager.ts and ServiceEndpoint.ts from the daemon session.
