@@ -633,3 +633,40 @@ final type-check on KI-029 only; dev-server: /test/test + graph/search/
 workspace/activity/settings all HTTP 200, SSR HTML contains
 Toggle-navigation / aria-label=Primary / bg-sidebar markers, no
 console errors. Not visually verified on a real phone (standard gap).
+
+## 2026-08-14 — Glassmorphism UI polish (1/3) + KI-029 systemic build fix
+
+**Status:** Done (tsc 0, eslint 0, vitest 295/295, `next build` now
+PASSES — previously failed on the scaffold routes, dev-server 6/6 pages
+200). PR #363.
+
+- Glass utilities in `app/globals.css` (`@layer components`):
+  `.glass-panel` (bg-background/60 + blur-md + shadow-2xl),
+  `.glass-overlay` (bg-background/80 + blur-lg), `.glass-card`
+  (bg-background/40 + blur-sm, hover→/50), `.glass-topbar`
+  (bg-background/70 + blur-md, applied on scroll). Colors go through
+  theme tokens (bg-background / border-foreground) instead of the
+  hardcoded zinc from the request — equivalent effect in dark mode
+  (#000 background), and the light theme keeps working.
+- Applied (chrome only, Mikatoshi's "1/3"): Sidebar inline
+  (glass-panel) + overlay drawer (glass-overlay), BottomNav
+  (glass-overlay), Navbar (glass-topbar when content scrollTop > 10px —
+  scroll listener lives on the overflow-auto container in
+  WorkspaceLayout, not window), RepositoryInfo stat cards + ActivityView
+  commit/contributor cards (glass-card, border/neutral hardcodes
+  replaced with tokens), GraphFocusView + GraphContextMenu + CommandPalette
+  (glass-panel). NOT applied: graph canvas (solid black, perf), code
+  blocks/FileDetails, search result list (readability).
+- Performance guards (in globals.css): `@media (max-width: 768px)` →
+  backdrop-filter blur(4px); `prefers-reduced-motion` → backdrop-filter
+  none + solid `var(--background)`.
+- KI-029 systemic: `next build` type-check failure was NOT one scaffold
+  but six — app/api/{diagnostics,editor,notifications,processes,runtime,
+  services}/route.ts were 8-line stubs with no exports. All six now
+  export valid GET handlers returning explicitly-empty 200 JSON (honest
+  "nothing reported yet" semantics documented in each file; NOT faking a
+  scan). `next build` passes end-to-end.
+- Shipping note: PR #362 (responsive UI) was merged while this work was
+  in flight — the glass commit was pushed to the already-merged branch,
+  so it was re-based as a fresh branch (feat/glass-ki029) off the
+  updated ARCLUX.main and opened as PR #363.
