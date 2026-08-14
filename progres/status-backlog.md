@@ -74,7 +74,12 @@ see "packages/impact/* already done" update below**
 
 ## 2026-08-11 — Explorer.tsx exists but never mounted, likely contributes to weak first impression
 
-**Status:** Not Started
+> **[STATUS UPDATE, 2026-08-14]: RESOLVED — Explorer is now mounted as a
+> right-hand panel on the graph page, opening when a file node is
+> selected (see progres/status-web.md "Explorer panel mounted into the
+> graph page").**
+
+**Status:** Done
 
 Confirmed via grep: zero references to Explorer in apps/web/app. Component exists, works standalone, but no page renders it. Worth prioritizing -- a working workspace/explorer view is probably what makes ARCLUX feel alive to new visitors vs just a graph viewer.
 

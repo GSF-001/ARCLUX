@@ -415,3 +415,20 @@ GraphNode.tsx wrapped in React.memo -- previously every node instance re-rendere
   since 2026-08-07); implemented in this session — see collaborators.md.
 - tsc exit 0, eslint 0 on all changed files; not visually verified in
   browser (same standard gap as other entries).
+
+## 2026-08-14 — Explorer panel mounted into the graph page (backlog item)
+
+> **[STATUS UPDATE, 2026-08-14]: the "Explorer.tsx not mounted on any
+> page" notes (2026-08-06 "Still not done" list + status-backlog 08-11
+> entry) are now RESOLVED.**
+
+**Status:** Done
+
+GraphViewport is now a flex row: canvas column (flex-1) + a 380px
+Explorer panel on the right, mounted when a FILE node is selected
+(folders/external packages have no file source — FileDetails hits
+/api/file). Explorer is a flex SIBLING of the canvas column, so
+GraphFocusView's inset-4 overlay never collides with it; closing the
+Explorer deselects the node, closing the focus view alone keeps it open.
+Graph page SSR smoke-tested on a live dev server (HTTP 200, no errors);
+tsc 0, eslint 0. Not visually verified in a real browser (standard gap).
