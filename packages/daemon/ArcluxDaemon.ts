@@ -16,13 +16,13 @@
 
 import { Kernel } from "../kernel/Kernel";
 import { DaemonRepositoryWatcher } from "./DaemonRepositoryWatcher";
-import { runDiagnostics } from "../diagnostics/DiagnosticEngine";
 import { findFreePort } from "../networking/PortManager";
 import { createServiceEndpoint, writeServiceEndpoint, removeServiceEndpoint } from "../networking/ServiceEndpoint";
 import { startLocalBridgeServer, type LocalBridgeServer } from "./LocalBridgeServer";
 import { computeDaemonId } from "./DaemonProcess";
 import { NotificationManager } from "../notifications/NotificationManager";
 import type { NotificationChannel } from "../notifications/NotificationChannel";
+import { PlatformOrchestrator } from "../orchestration/PlatformOrchestrator";
 
 export interface ArcluxDaemonOptions {
   rootPath: string;
@@ -40,6 +40,8 @@ export class ArcluxDaemon {
   readonly kernel = new Kernel();
   /** Fans daemon:diagnostics:updated events to registered channels. */
   readonly notifications: NotificationManager;
+  /** Generalizes the watcher→analysis→diagnostics wiring (issue #352). */
+  private orchestrator: PlatformOrchestrator | null = null;
   private watcher: DaemonRepositoryWatcher | null = null;
   private bridgeServer: LocalBridgeServer | null = null;
   private readonly daemonId: string;
@@ -70,24 +72,12 @@ export class ArcluxDaemon {
     this.notifications.start();
 
     this.watcher = new DaemonRepositoryWatcher(this.rootPath);
-
-    this.watcher.on("analysis:updated", (result) => {
-      this.kernel.signalBus.emit("daemon:analysis:updated", {
-        rootPath: this.rootPath,
-        moduleCount: result.moduleCount,
-        at: Date.now(),
-      });
-
-      // Re-run the wired diagnostic adapters (packages/diagnostics/DiagnosticEngine.ts)
-      // on every fresh analysis, so a subscriber gets errors as they appear,
-      // not just graph/module counts.
-      const findings = runDiagnostics(result.repository);
-      this.kernel.signalBus.emit("daemon:diagnostics:updated", { findings, at: Date.now() });
+    this.orchestrator = new PlatformOrchestrator({
+      rootPath: this.rootPath,
+      source: this.watcher,
+      signalBus: this.kernel.signalBus,
     });
-
-    this.watcher.on("analysis:error", (err) => {
-      this.kernel.signalBus.emit("daemon:analysis:error", { message: err.message, at: Date.now() });
-    });
+    this.orchestrator.start();
 
     findFreePort()
       .then((port) => startLocalBridgeServer(this, port))
@@ -109,6 +99,7 @@ export class ArcluxDaemon {
     // Unsubscribe first so a final diagnostics event can't reach channels
     // while the watcher is already tearing down.
     this.notifications.stop();
+    this.orchestrator?.stop();
     if (this.bridgeServer) {
       await this.bridgeServer.close();
       this.bridgeServer = null;

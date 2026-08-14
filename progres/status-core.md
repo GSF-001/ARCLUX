@@ -646,6 +646,33 @@ Bonus: fixed pre-existing type error in Sandbox.ts:35 (required array
 needed `CapabilityValue[]` annotation — was in KNOWN_ISSUES as owner
 error). Tests: 251/251, tsc 0.
 
+## 2026-08-14 — packages/orchestration/ implemented (issue #352)
+
+**Status:** Done
+
+`packages/orchestration/` was 4 stub files; now the glue layer that
+generalizes the wiring ArcluxDaemon used to do inline (issue #352):
+- `EventRouter.ts` — declarative routes (`from` → `to` + optional
+  transform) on top of Kernel's SignalBus; `routeMany` + single
+  unsubscribe for teardown.
+- `PlatformOrchestrator.ts` — turns a push-based analysis source into the
+  platform pipeline on the signal bus: `analysis:updated` →
+  `daemon:analysis:updated` (moduleCount) + `runDiagnostics` →
+  `daemon:diagnostics:updated`, `analysis:error` →
+  `daemon:analysis:error`. Emitted names/shapes identical to the old
+  daemon wiring, so existing subscribers are unaffected.
+- `TaskOrchestrator.ts` — runs multi-step tasks in order, per-step state,
+  stops at first failure, emits task:started/step:done/completed/failed.
+- `RecoveryOrchestrator.ts` — subscribes to a failure signal, runs a
+  recovery task via TaskOrchestrator, caps attempts (reset on success),
+  guards against overlapping recoveries.
+
+`ArcluxDaemon` now delegates its watcher→analysis→diagnostics wiring to
+`PlatformOrchestrator` (behavior unchanged — same event names/payloads).
++12 tests (tests/orchestration.test.ts): routing, transforms, single
+unsubscribe, orchestrator wiring + idempotent start/stop, task ordering
++ failure stop, recovery cap/reset/overlap-guard. Tests: 263/263, tsc 0.
+
 ## 2026-08-14 — Daemon verified end-to-end (issue #347) + 2 runtime bugs fixed
 
 **Status:** Done
