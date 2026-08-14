@@ -38,11 +38,12 @@ export interface WorkspaceProps {
  * typecheck" rather than also being "and now the main repo page
  * redesign", which would be a much bigger review surface.
  *
- * FilesPanel and IssuesPanel are honest "coming soon" placeholders (see
- * their own files for why) -- ImpactPanel is the only one backed by real
- * data (ImpactSummary.tsx + /api/impact), so it needs a moduleId, which
- * currently only comes from WorkspaceSearch selection since there's no
- * file tree yet to click into.
+ * FilesPanel and IssuesPanel were honest "coming soon" placeholders when
+ * this file was written; both are now real (FilesPanel = folderTree from
+ * /api/analyze + ProjectStructure, IssuesPanel = /api/doctor findings —
+ * see their own headers). ImpactPanel is backed by real data
+ * (ImpactSummary.tsx + /api/impact) and needs a moduleId, which comes
+ * from WorkspaceSearch OR a click in the FilesPanel tree.
  */
 export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
@@ -59,7 +60,14 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
       <WorkspaceCommand org={org} repo={repo} />
       <div className="flex-1 overflow-hidden">
         <SplitPane
-          left={<FilesPanel />}
+          left={
+            <FilesPanel
+              repoUrl={repoUrl}
+              branch={branch}
+              selectedModuleId={selectedModuleId}
+              onSelectFile={setSelectedModuleId}
+            />
+          }
           right={
             <Tabs defaultValue="impact" className="flex h-full flex-col">
               <TabsList className="mx-4 mt-2 w-fit">
