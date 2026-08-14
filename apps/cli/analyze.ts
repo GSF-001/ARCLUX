@@ -53,7 +53,7 @@ export function registerAnalyzeCommand(program: Command): void {
       spinner.start(`Analyzing ${targetPath}`);
       const startedAt = Date.now();
       try {
-        const { repository, meta, graph } = await analyzeRepository({ localPath: targetPath });
+        const { repository, meta, graph, scanSummary } = await analyzeRepository({ localPath: targetPath });
         const elapsedMs = Date.now() - startedAt;
         spinner.stop("Analysis complete");
 
@@ -61,6 +61,9 @@ export function registerAnalyzeCommand(program: Command): void {
         p.log.info(`Frameworks: ${meta.detectedFrameworks.join(", ") || "none detected"}`);
         p.log.info(`Package manager: ${meta.packageManager}`);
         p.log.success(`${repository.moduleCount} modules indexed`);
+        p.log.info(
+          `Scan: ${result.scanSummary.filesScanned} files, ${result.scanSummary.filesParsed} parsed, ${result.scanSummary.filesSkippedNoParser} skipped (no parser)`
+        );
         p.log.success(`${graph.nodes.length} nodes, ${graph.edges.length} edges in dependency graph`);
 
         const summary = summarizeDetectors(repository);

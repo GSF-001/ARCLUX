@@ -11,7 +11,8 @@
 
 import { describe, it, expect } from "vitest";
 import { Repository } from "../packages/repository/Repository";
-import { runDoctor } from "../packages/engine/runDoctor";
+import { runDoctor, safeRun } from "../packages/engine/runDoctor";
+import type { DoctorFinding } from "../packages/engine/runDoctor";
 import type { ModuleInfo, RepositoryMeta, FileInfo, RawExport } from "../packages/shared/types";
 
 function makeFile(relativePath: string, language = "typescript"): FileInfo {
@@ -150,5 +151,18 @@ describe("runDoctor", () => {
     ]);
     const result = runDoctor(repo);
     expect(result.errorCount + result.warningCount + result.infoCount).toBe(result.findings.length);
+  });
+
+  it("safeRun surfaces a detector crash as a finding instead of throwing (structural-death guard)", () => {
+    const findings: DoctorFinding[] = [];
+    safeRun("crashingCheck", "error", () => {
+      throw new Error("boom");
+    }, findings);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0].checkId).toBe("crashingCheck");
+    expect(findings[0].severity).toBe("error");
+    expect(findings[0].message).toContain("DETECTOR CRASHED");
+    expect(findings[0].message).toContain("boom");
   });
 });

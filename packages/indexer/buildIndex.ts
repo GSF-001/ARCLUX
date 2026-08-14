@@ -48,9 +48,19 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
   // need it, only the already-extracted imports/exports.
   const parsedByPath = new Map<string, ParsedFile>();
   const contentByPath = new Map<string, string>();
+  let filesParsed = 0;
+  let filesSkippedNoParser = 0;
+  const skippedByExtension: Record<string, number> = {};
   for (const file of files) {
     const parser = parserRegistry.getParserForExtension(file.extension);
-    if (!parser) continue; // no parser registered yet for this language — skip, don't crash
+    if (!parser) {
+      // No parser registered yet for this language — skip, don't crash.
+      // Counted so consumers can distinguish "0 Python modules" from
+      // "Python files were skipped" (ScanSummary — the population-rot guard).
+      filesSkippedNoParser += 1;
+      skippedByExtension[file.extension] = (skippedByExtension[file.extension] ?? 0) + 1;
+      continue;
+    }
 
     let content: string;
     try {
@@ -70,7 +80,15 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
 
     parsedByPath.set(file.relativePath, parsed);
     contentByPath.set(file.relativePath, content);
+    filesParsed += 1;
   }
+
+  repository.scanSummary = {
+    filesScanned: files.length,
+    filesParsed,
+    filesSkippedNoParser,
+    skippedByExtension,
+  };
 
   // Pass 2: implicit same-scope dependencies (Go/Java files with no import
   // statement between siblings — see resolveSameScopeDependencies.ts).

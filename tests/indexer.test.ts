@@ -77,6 +77,29 @@ describe("buildIndex", () => {
     expect(a!.exports.map((e) => e.name)).toEqual(["a"]);
   });
 
+  it("records scan accounting: parsed vs skipped-by-no-parser (eligible_seen guard)", async () => {
+    const dir = track(
+      makeRepoDir({
+        "src/a.ts": "export const a = 1;",
+        "src/b.go": "package b\n",
+        // .php/.rb languages are KNOWN (scanFiles includes them) but no
+        // parser is registered — they must be counted, not silently dropped.
+        "src/c.php": "<?php echo 'x';\n",
+        "src/d.rb": "puts 'x'\n",
+      })
+    );
+
+    const repository = await buildIndex({ rootPath: dir, meta: { ...META, rootPath: dir } });
+    expect(repository.scanSummary).toEqual({
+      filesScanned: 4,
+      filesParsed: 2,
+      filesSkippedNoParser: 2,
+      skippedByExtension: { ".php": 1, ".rb": 1 },
+    });
+    // and the modules map reflects only the parsed ones
+    expect(repository.moduleCount).toBe(2);
+  });
+
   it("resolves extensionless imports to the .ts sibling", async () => {
     const dir = track(
       makeRepoDir({

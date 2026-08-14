@@ -316,3 +316,26 @@ export interface ExternalDependency {
   /** Total number of import statements referencing this package, across all modules */
   importCount: number;
 }
+
+// ─────────────────────────────────────────────
+// Scan accounting (the "eligible_seen" of ARCLUX — see progres/decisions.md)
+// ─────────────────────────────────────────────
+
+/**
+ * How many files were scanned vs actually made it into the Repository.
+ * The population-rot guard: a graph built from a snapshot silently drops
+ * files whose language has no registered parser — without this, consumers
+ * can't tell "repo has 0 Python modules" from "Python files were skipped".
+ * Populated by buildIndex.ts pass 1; carried on Repository + surfaced in
+ * AnalyzeRepositoryResult / /api/analyze.
+ */
+export interface ScanSummary {
+  /** Total files matched by scanFiles (before parser dispatch). */
+  filesScanned: number;
+  /** Files that a registered parser successfully parsed into a ModuleInfo. */
+  filesParsed: number;
+  /** Files skipped because no parser is registered for their extension. */
+  filesSkippedNoParser: number;
+  /** skipped count per extension, e.g. {".py": 12} — why the population shrank. */
+  skippedByExtension: Record<string, number>;
+}

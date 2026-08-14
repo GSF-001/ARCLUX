@@ -55,6 +55,30 @@ export interface RunDoctorResult {
   infoCount: number;
 }
 
+/**
+ * Runs one detector, isolating crashes (structural-death guard): if a
+ * detector throws, the suite keeps going and the failure is surfaced as
+ * an error finding instead of silently killing the whole run. A detector
+ * that dies on every input would otherwise look like "no findings".
+ * Exported for direct unit testing of the isolation contract.
+ */
+export function safeRun(
+  checkId: string,
+  severity: DoctorSeverity,
+  run: () => void,
+  findings: DoctorFinding[]
+): void {
+  try {
+    run();
+  } catch (err) {
+    findings.push({
+      checkId,
+      severity,
+      message: `DETECTOR CRASHED: ${err instanceof Error ? err.message : String(err)} — findings for this check are unreliable.`,
+    });
+  }
+}
+
 /** Location of a convention finding, mirroring doctor.ts's selection order. */
 function locationOf(f: Record<string, unknown>): string | undefined {
   if ("filePath" in f && typeof f.filePath === "string") return f.filePath;
@@ -66,80 +90,102 @@ function locationOf(f: Record<string, unknown>): string | undefined {
 export function runDoctor(repository: Repository): RunDoctorResult {
   const findings: DoctorFinding[] = [];
 
+  // Every detector is wrapped in safeRun — a detector that throws must
+  // not silently kill the suite or look like "no findings" (structural
+  // death guard, OWP §4.1 lens; see safeRun above).
+
   // ── error: structural problems ──────────────────────────────
-  for (const c of detectCircularDependency(repository)) {
-    findings.push({
-      checkId: "circularDependency",
-      severity: "error",
-      message: c.cycle.join(" \u2192 "),
-    });
-  }
-  for (const f of detectUnusedExports(repository)) {
-    findings.push({
-      checkId: "unusedExports",
-      severity: "error",
-      filePath: f.filePath,
-      message: `${f.exportName} (${f.exportKind}, line ${f.line}) \u2014 ${f.message}`,
-    });
-  }
-  for (const f of detectOrphanFiles(repository)) {
-    findings.push({
-      checkId: "orphanFiles",
-      severity: "error",
-      filePath: f.filePath,
-      message: f.message,
-    });
-  }
-  for (const f of detectLayerViolation(repository)) {
-    findings.push({
-      checkId: "layerViolation",
-      severity: "error",
-      filePath: f.filePath,
-      message: `imports ${f.importedFilePath} [${f.ruleName}] at line ${f.line} \u2014 ${f.message}`,
-    });
-  }
-  for (const f of detectAmbiguousSymbolResolution(repository)) {
-    findings.push({
-      checkId: "ambiguousSymbolResolution",
-      severity: f.severity === "high" ? "error" : "warning",
-      message: `${f.symbolName} — ${f.reason}; definitions: ${f.definitions
-        .map((d) => `${d.modulePath}:${d.line} (${d.category})`)
-        .join(", ")}`,
-    });
-  }
+  safeRun("circularDependency", "error", () => {
+    for (const c of detectCircularDependency(repository)) {
+      findings.push({
+        checkId: "circularDependency",
+        severity: "error",
+        message: c.cycle.join(" \u2192 "),
+      });
+    }
+  }, findings);
+  safeRun("unusedExports", "error", () => {
+    for (const f of detectUnusedExports(repository)) {
+      findings.push({
+        checkId: "unusedExports",
+        severity: "error",
+        filePath: f.filePath,
+        message: `${f.exportName} (${f.exportKind}, line ${f.line}) \u2014 ${f.message}`,
+      });
+    }
+  }, findings);
+  safeRun("orphanFiles", "error", () => {
+    for (const f of detectOrphanFiles(repository)) {
+      findings.push({
+        checkId: "orphanFiles",
+        severity: "error",
+        filePath: f.filePath,
+        message: f.message,
+      });
+    }
+  }, findings);
+  safeRun("layerViolation", "error", () => {
+    for (const f of detectLayerViolation(repository)) {
+      findings.push({
+        checkId: "layerViolation",
+        severity: "error",
+        filePath: f.filePath,
+        message: `imports ${f.importedFilePath} [${f.ruleName}] at line ${f.line} \u2014 ${f.message}`,
+      });
+    }
+  }, findings);
+  safeRun("ambiguousSymbolResolution", "error", () => {
+    for (const f of detectAmbiguousSymbolResolution(repository)) {
+      findings.push({
+        checkId: "ambiguousSymbolResolution",
+        severity: f.severity === "high" ? "error" : "warning",
+        message: `${f.symbolName} — ${f.reason}; definitions: ${f.definitions
+          .map((d) => `${d.modulePath}:${d.line} (${d.category})`)
+          .join(", ")}`,
+      });
+    }
+  }, findings);
 
   // ── warning: hygiene / conventions ──────────────────────────
-  for (const f of detectLargeModules(repository)) {
-    findings.push({
-      checkId: "largeModules",
-      severity: "warning",
-      filePath: f.filePath,
-      message: `${f.sizeBytes.toLocaleString()} bytes \u2014 ${f.message}`,
-    });
-  }
-  for (const g of detectDuplicateModules(repository)) {
-    findings.push({
-      checkId: "duplicateModules",
-      severity: "warning",
-      message: `${g.filePaths.join(", ")} (${g.sizeBytes.toLocaleString()} bytes each)`,
-    });
-  }
-  for (const f of detectIndexFiles(repository)) {
-    findings.push({
-      checkId: "indexFiles",
-      severity: f.isPureBarrel ? "info" : "warning",
-      filePath: f.filePath,
-      message: f.message,
-    });
-  }
-  for (const f of detectDeadCode(repository)) {
-    findings.push({
-      checkId: "deadCode",
-      severity: "warning",
-      filePath: f.filePath,
-      message: `${f.unusedExportCount} unused export(s), imported by ${f.importedByCount} \u2014 ${f.message}`,
-    });
-  }
+  safeRun("largeModules", "warning", () => {
+    for (const f of detectLargeModules(repository)) {
+      findings.push({
+        checkId: "largeModules",
+        severity: "warning",
+        filePath: f.filePath,
+        message: `${f.sizeBytes.toLocaleString()} bytes \u2014 ${f.message}`,
+      });
+    }
+  }, findings);
+  safeRun("duplicateModules", "warning", () => {
+    for (const g of detectDuplicateModules(repository)) {
+      findings.push({
+        checkId: "duplicateModules",
+        severity: "warning",
+        message: `${g.filePaths.join(", ")} (${g.sizeBytes.toLocaleString()} bytes each)`,
+      });
+    }
+  }, findings);
+  safeRun("indexFiles", "warning", () => {
+    for (const f of detectIndexFiles(repository)) {
+      findings.push({
+        checkId: "indexFiles",
+        severity: f.isPureBarrel ? "info" : "warning",
+        filePath: f.filePath,
+        message: f.message,
+      });
+    }
+  }, findings);
+  safeRun("deadCode", "warning", () => {
+    for (const f of detectDeadCode(repository)) {
+      findings.push({
+        checkId: "deadCode",
+        severity: "warning",
+        filePath: f.filePath,
+        message: `${f.unusedExportCount} unused export(s), imported by ${f.importedByCount} \u2014 ${f.message}`,
+      });
+    }
+  }, findings);
 
   const conventionDetectors: Array<{ checkId: string; run: () => unknown[] }> = [
     { checkId: "componentConvention", run: () => detectComponentConvention(repository) },
@@ -152,15 +198,17 @@ export function runDoctor(repository: Repository): RunDoctorResult {
     { checkId: "unusedFiles", run: () => detectUnusedFiles(repository) },
   ];
   for (const { checkId, run } of conventionDetectors) {
-    for (const finding of run()) {
-      const f = finding as Record<string, unknown>;
-      findings.push({
-        checkId,
-        severity: "warning",
-        filePath: locationOf(f),
-        message: typeof f.message === "string" ? f.message : JSON.stringify(finding),
-      });
-    }
+    safeRun(checkId, "warning", () => {
+      for (const finding of run()) {
+        const f = finding as Record<string, unknown>;
+        findings.push({
+          checkId,
+          severity: "warning",
+          filePath: locationOf(f),
+          message: typeof f.message === "string" ? f.message : JSON.stringify(finding),
+        });
+      }
+    }, findings);
   }
 
   // ── info: informational classifiers ─────────────────────────

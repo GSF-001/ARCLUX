@@ -833,6 +833,39 @@ other TS-family parsers) is a separate, smaller follow-up — file it as
 an issue when a contributor picks it up. Known limitations documented
 in the code: default-imported callees unresolvable, `obj.foo()` /
 `this.foo()` not captured (AST-only, no type info).
+
+## 2026-08-14 — OWP-lens hardening: eligible_seen, negative controls, crash isolation
+
+**Context:** external review (OWP-class analysis, Tom Jones's
+`eligible_seen` / population-rot framing) identified three real gaps in
+ARCLUX: (1) no committed negative controls for 7 of 19 detectors — only
+prose-documented manual "positive control" verifications;
+(2) buildIndex silently dropped unparseable files — no scan-vs-parse
+accounting, so "0 Python modules" was indistinguishable from "Python
+files were skipped"; (3) one detector throwing would kill the whole
+doctor/verify suite and look like "no findings".
+
+**Decision:**
+- **Guard inventory (negative controls):** `tests/guard-inventory.test.ts`
+  — known-bad + clean fixtures for detectDeadCode/detectDuplicateModules/
+  detectEntryPoints/detectIndexFiles/detectLargeModules/
+  detectLayerViolation/detectSharedModules (the 7 without committed
+  tests). All 19 detectors now have committed positive controls; the
+  coverage matrix lives in tests/README.md.
+- **Population rot guard (eligible_seen):** `ScanSummary` in
+  shared/types.ts — filesScanned/filesParsed/filesSkippedNoParser/
+  skippedByExtension, populated by buildIndex pass 1, carried on
+  Repository, surfaced in AnalyzeRepositoryResult (/api/analyze) and the
+  analyze CLI line. Consumers can now see how much of the repo made it
+  into the graph and WHY the rest didn't.
+- **Structural-death guard:** `safeRun` in runDoctor wraps every detector
+  (DETECTOR CRASHED finding instead of killing the suite); runAllChecks
+  in contract.ts got the same try/catch isolation.
+
+**Alternatives rejected:** a meta-test that mechanically asserts every
+detector is covered (fragile — can't introspect "meaningful" coverage);
+a runtime registry of eligible sources (over-engineered for a static
+analyzer — the scan summary covers the population-rot concern).
 ARCLUX.main
 
 ## 2026-08-14 — packages/change: new protocol for applying changes, not workstation duplicate

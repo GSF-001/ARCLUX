@@ -29,7 +29,7 @@ Automated tests, run with Vitest (https://vitest.dev).
 
 ## Status
 
-208 tests across 25 files, all passing (`npx vitest run`).
+224 tests across 26 files, all passing (`npx vitest run`).
 
 ## Test files
 
@@ -44,10 +44,11 @@ Automated tests, run with Vitest (https://vitest.dev).
 | rules-laravel.test.ts | 8 | laravel/requireController (issue #53): controller existence, v1 scope |
 | graph.test.ts | 6 | buildDependencyGraph: dedup, external drops, implicit edges |
 | graph-callgraph.test.ts | 17 | buildCallGraph + extractCallsJs/TS (issues #50/#316): bare calls, weight, calledBy |
-| runDoctor.test.ts | 6 | packages/engine/runDoctor (POST /api/doctor): 19 detectors normalized to one finding list |
+| runDoctor.test.ts | 7 | packages/engine/runDoctor (POST /api/doctor): 19 detectors normalized + safeRun crash isolation |
 | git-history.test.ts | 6 | packages/git checkoutBranch/getCommitHistory/getContributors against a real temp git repo |
+| guard-inventory.test.ts | 14 | negative controls for the 7 detectors that had none (deadCode, duplicateModules, entryPoints, indexFiles, largeModules, layerViolation, sharedModules) |
 | impact.test.ts | 5 | calculateAffectedFiles: transitive, diamond, notFound |
-| indexer.test.ts | 5 | buildIndex end-to-end on a real temp dir |
+| indexer.test.ts | 6 | buildIndex end-to-end on a real temp dir (incl. scanSummary eligible_seen accounting) |
 | pipeline.test.ts | 3 | analyzeRepository localPath: frameworks, index, graph, manifest deps |
 | analyze-summary.test.ts | 2 | CLI analyze summary formatting |
 | search.test.ts | 19 | packages/search engine (issue #9): index build, ranking, filters, session |
@@ -60,6 +61,21 @@ Automated tests, run with Vitest (https://vitest.dev).
 | parser/rust.test.ts | 4 | parseCargoToml against tokio's real Cargo.toml |
 | indexer/resolveSameScopeDependencies.test.ts | 6 | Go same-package implicit dependency resolution |
 | watcher/changeQueue.test.ts | 5 | change queue debounce/dedup (fake timers) |
+
+## Guard inventory — detector coverage matrix
+
+Every detector has at least one committed negative control (a KNOWN-BAD
+fixture that must fire). This is the "detector definitely fires"
+guarantee — see tests/guard-inventory.test.ts for the 7 detectors that
+previously had only manual verifications.
+
+| Detector | Covered in |
+|---|---|
+| detectCircularDependency, detectUnusedExports, detectOrphanFiles | core-detectors.test.ts |
+| detectAmbiguousSymbolResolution | detector.test.ts |
+| detectComponentConvention, detectFeatureStructure, detectMissingExports, detectRepositoryPattern, detectRouteConvention, detectStoryConvention, detectTestConvention, detectUnusedFiles | detectors-wired.test.ts |
+| detectDeadCode, detectDuplicateModules, detectEntryPoints, detectIndexFiles, detectLargeModules, detectLayerViolation, detectSharedModules | guard-inventory.test.ts |
+| runDoctor normalization (all 19 via runDoctor) | runDoctor.test.ts |
 
 ## Fixtures
 
