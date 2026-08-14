@@ -6,7 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import type { RepositoryMeta, ModuleInfo } from "../shared/types";
+import type { RepositoryMeta, ModuleInfo, ScanSummary } from "../shared/types";
 
 /**
  * In-memory representation of one analyzed repository.
@@ -16,6 +16,8 @@ import type { RepositoryMeta, ModuleInfo } from "../shared/types";
 export class Repository {
   readonly meta: RepositoryMeta;
   private modules: Map<string, ModuleInfo> = new Map();
+  /** Scan accounting set by buildIndex pass 1 — see ScanSummary in shared/types.ts. */
+  scanSummary?: ScanSummary;
 
   constructor(meta: RepositoryMeta) {
     this.meta = meta;

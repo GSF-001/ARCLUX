@@ -92,13 +92,24 @@ export function runAllChecks(repository: Repository): RunAllChecksResult {
   ];
 
   for (const [checkId, run] of detectorRuns) {
-    const findings = run() as unknown[];
-    for (const _finding of findings) {
+    try {
+      const findings = run() as unknown[];
+      for (const _finding of findings) {
+        issues.push({
+          source: "detector",
+          checkId,
+          severity: "error",
+          message: `${checkId} finding (see detector output for detail)`,
+        });
+      }
+    } catch (err) {
+      // Structural-death guard: a detector that throws must not silently
+      // kill the whole check — surface it as an error issue instead.
       issues.push({
         source: "detector",
         checkId,
         severity: "error",
-        message: `${checkId} finding (see detector output for detail)`,
+        message: `DETECTOR CRASHED: ${err instanceof Error ? err.message : String(err)} — ${checkId} findings unreliable.`,
       });
     }
   }

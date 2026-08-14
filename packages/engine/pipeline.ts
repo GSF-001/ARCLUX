@@ -34,7 +34,7 @@ import { parseGradle_, parsePom } from "../parser/java/parseGradlePom";
 import { parseRequirements } from "../parser/python/parseRequirements";
 import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
 import { ArcluxError, isArcluxError } from "../shared/errors";
-import type { DependencyGraph, RepositoryMeta } from "../shared/types";
+import type { DependencyGraph, RepositoryMeta, ScanSummary } from "../shared/types";
 import type { Repository } from "../repository/Repository";
 
 // Register known parsers once, at module load. As more languages get parser
@@ -83,6 +83,12 @@ export interface AnalyzeRepositoryResult {
   meta: RepositoryMeta;
   moduleCount: number;
   graph: DependencyGraph;
+  /**
+   * Scan accounting — files scanned vs parsed vs skipped (no parser for
+   * the language). The population-rot guard: tells consumers how much of
+   * the repo actually made it into the graph (see ScanSummary).
+   */
+  scanSummary: ScanSummary;
   /**
    * Full in-memory Repository, for server-side consumers that need to run
    * detectors/impact analysis (CLI, /api/impact, /api/search) without
@@ -197,6 +203,12 @@ async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryRes
     meta: repository.meta,
     moduleCount: repository.moduleCount,
     graph,
+    scanSummary: repository.scanSummary ?? {
+      filesScanned: 0,
+      filesParsed: 0,
+      filesSkippedNoParser: 0,
+      skippedByExtension: {},
+    },
     repository,
     dependencies: manifestRegistry.detectDependencies(resolvedPath),
   };
@@ -275,6 +287,12 @@ async function analyzeRemoteRepository(
       meta: repository.meta,
       moduleCount: repository.moduleCount,
       graph,
+      scanSummary: repository.scanSummary ?? {
+        filesScanned: 0,
+        filesParsed: 0,
+        filesSkippedNoParser: 0,
+        skippedByExtension: {},
+      },
       repository,
       dependencies: manifestRegistry.detectDependencies(localPath),
     };

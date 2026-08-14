@@ -575,3 +575,26 @@ detectDefaultBranch which landed with the branch switcher):
   [{ name, email, commits }] sorted by count.
 6 tests (tests/git-history.test.ts) against a real temp git repo
 (git init + commits); tsc 0, vitest 208/208 (202 + 6).
+
+## 2026-08-14 — OWP-lens hardening: guard inventory, scanSummary, crash isolation
+
+**Status:** Done
+
+Three fixes from an OWP-class review (eligible_seen / population rot /
+structural death framing — full decision in progres/decisions.md):
+- **Guard inventory:** tests/guard-inventory.test.ts — positive + clean
+  fixtures for the 7 detectors that had only prose-documented manual
+  verifications (deadCode, duplicateModules, entryPoints, indexFiles,
+  largeModules, layerViolation, sharedModules). All 19 detectors now
+  have committed negative controls; coverage matrix in tests/README.md.
+- **eligible_seen:** ScanSummary (filesScanned/filesParsed/
+  filesSkippedNoParser/skippedByExtension) populated in buildIndex pass
+  1, carried on Repository, surfaced in AnalyzeRepositoryResult and the
+  analyze CLI. Verified: ARCLUX itself 546 scanned = 546 parsed (0
+  skipped); a mixed .ts/.go/.php/.rb fixture counts the 2 skipped
+  languages explicitly.
+- **Structural-death guard:** safeRun in runDoctor wraps every detector
+  (crash → DETECTOR CRASHED error finding, suite continues); runAllChecks
+  in contract.ts isolated the same way.
+Tests: 224/224 (208 + 14 guard-inventory + 1 safeRun + 1 scanSummary).
+tsc 0.
