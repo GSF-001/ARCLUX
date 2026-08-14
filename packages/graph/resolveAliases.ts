@@ -6,7 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { posix } from "node:path";
 
 /**
@@ -32,37 +32,70 @@ const CONFIG_FILENAMES = ["tsconfig.json", "jsconfig.json"];
  * `compilerOptions.paths` + `baseUrl`. Used so resolvePath.ts can turn "@/lib/api"
  * into a candidate internal module path instead of misreading it as an npm package.
  *
- * Returns an empty rule set (never throws) if no config file exists or it's
+ * Reads the repo-root config AND each config in apps/* (e.g. apps/web/tsconfig.json,
+ * the pnpm workspace members). In a monorepo, apps/web/tsconfig.json typically has
+ * its own "@/*" pointing at apps/web/ (different base than the root's "@/*" pointing
+ * at repo root) — without the nested configs, every "@/..." import inside apps/web
+ * resolves against the WRONG base, falls through to "external package", and
+ * produces mass false-positive unusedExports/orphanFiles findings (issue #372).
+ * Rules from all configs are merged (targets rebased to be repo-root-relative);
+ * resolvePath already tries every candidate rule, so extra bases are harmless —
+ * a wrong-base candidate simply won't exist in knownFiles and gets skipped.
+ *
+ * Returns an empty rule set (never throws) if no config file exists or all are
  * malformed — a missing/broken tsconfig should never crash indexing, imports
  * will just fall back to being treated as external, same as before this existed.
  */
 export function loadAliasConfig(repoRoot: string): AliasConfig {
-  for (const filename of CONFIG_FILENAMES) {
-    const configPath = posix.join(repoRoot, filename);
-    if (!existsSync(configPath)) continue;
+  const rules: AliasRule[] = [];
+  const seen = new Set<string>();
 
-    try {
-      const raw = readFileSync(configPath, "utf-8");
-      const json = JSON.parse(stripJsonComments(raw)) as {
-        compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> };
-      };
+  // Root config first, then one level of apps/* (mirrors pnpm-workspace.yaml).
+  const configRelDirs = [""];
+  try {
+    const appsDir = posix.join(repoRoot, "apps");
+    for (const entry of readdirSync(appsDir, { withFileTypes: true })) {
+      if (entry.isDirectory()) configRelDirs.push(posix.join("apps", entry.name));
+    }
+  } catch {
+    // No apps/ directory (single-package repo) — the root config is enough.
+  }
 
-      const rules = buildRules(json.compilerOptions?.paths, json.compilerOptions?.baseUrl);
-      if (rules.length > 0) {
-        return { rules };
+  for (const relDir of configRelDirs) {
+    for (const filename of CONFIG_FILENAMES) {
+      const configPath = posix.join(repoRoot, relDir, filename);
+      if (!existsSync(configPath)) continue;
+
+      try {
+        const raw = readFileSync(configPath, "utf-8");
+        const json = JSON.parse(stripJsonComments(raw)) as {
+          compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> };
+        };
+
+        for (const rule of buildRules(json.compilerOptions?.paths, json.compilerOptions?.baseUrl, relDir)) {
+          const key = `${rule.prefix}\u0000${rule.targets.join("\u0000")}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          rules.push(rule);
+        }
+      } catch {
+        // Malformed config — try the next candidate filename, or fall through to empty.
+        continue;
       }
-    } catch {
-      // Malformed tsconfig — try the next candidate filename, or fall through to empty.
-      continue;
     }
   }
 
-  return { rules: [] };
+  // Longest prefix wins first, so a specific alias like "@/packages/*" is tried
+  // before a catch-all like "@/*" when both could technically match.
+  rules.sort((a, b) => b.prefix.length - a.prefix.length);
+
+  return { rules };
 }
 
 function buildRules(
   paths: Record<string, string[]> | undefined,
-  baseUrl: string | undefined
+  baseUrl: string | undefined,
+  configRelDir = ""
 ): AliasRule[] {
   if (!paths) return [];
 
@@ -78,14 +111,16 @@ function buildRules(
       if (baseUrl) {
         base = posix.join(baseUrl, base);
       }
+      // Targets are relative to the config file's own directory (apps/web's
+      // "./*" means apps/web/, not repo root). For the root config this is a
+      // no-op ("" joins to the same path) — behavior is unchanged for it.
+      base = posix.join(configRelDir, base);
       return base.endsWith("/") ? base : `${base}/`;
     });
 
     rules.push({ prefix, targets: normalizedTargets });
   }
 
-  // Longest prefix wins first, so a specific alias like "@/packages/*" is tried
-  // before a catch-all like "@/*" when both could technically match.
   rules.sort((a, b) => b.prefix.length - a.prefix.length);
 
   return rules;
@@ -114,13 +149,64 @@ export function resolveAlias(importSource: string, config: AliasConfig): string[
 }
 
 /**
- * tsconfig.json commonly has // comments and trailing commas, neither of which
- * are valid JSON. Strips just enough of that to make JSON.parse succeed —
- * not a full JSONC parser, but sufficient for standard tsconfig files.
+ * tsconfig.json commonly has line comments (double slash), block comments
+ * (slash-star ... star-slash) and trailing commas, none of which are valid
+ * JSON. Strips just enough of that to make JSON.parse succeed. Implemented as
+ * a small string-aware state machine: the naive regex approach breaks on real
+ * Next.js configs, where path patterns like "@/" and double-star include
+ * globs contain the literal sequences slash-star and star-slash INSIDE quoted
+ * strings — a block-comment regex then eats everything between them,
+ * corrupting the JSON and making loadAliasConfig return empty rules (issue #372).
  */
 function stripJsonComments(input: string): string {
-  return input
-    .replace(/\/\*[\s\S]*?\*\//g, "") // block comments
-    .replace(/(^|[^:])\/\/.*$/gm, "$1") // line comments (careful not to eat "://")
-    .replace(/,(\s*[}\]])/g, "$1"); // trailing commas
+  let out = "";
+  let inString = false;
+  let i = 0;
+  while (i < input.length) {
+    const c = input[i];
+
+    if (inString) {
+      out += c;
+      if (c === "\\" && i + 1 < input.length) {
+        out += input[i + 1];
+        i += 2;
+        continue;
+      }
+      if (c === '"') inString = false;
+      i++;
+      continue;
+    }
+
+    if (c === '"') {
+      inString = true;
+      out += c;
+      i++;
+      continue;
+    }
+
+    if (c === "/" && input[i + 1] === "/") {
+      while (i < input.length && input[i] !== "\n") i++;
+      continue;
+    }
+
+    if (c === "/" && input[i + 1] === "*") {
+      i += 2;
+      while (i < input.length && !(input[i] === "*" && input[i + 1] === "/")) i++;
+      i += 2;
+      continue;
+    }
+
+    if (c === ",") {
+      let j = i + 1;
+      while (j < input.length && /\s/.test(input[j])) j++;
+      if (input[j] === "}" || input[j] === "]") {
+        i++; // trailing comma — drop it, keep following whitespace
+        continue;
+      }
+    }
+
+    out += c;
+    i++;
+  }
+  return out;
 }
