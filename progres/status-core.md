@@ -794,3 +794,9 @@ Full runtime verification on the arclux repo itself:
 **Status:** Done
 
 Was 0%. No database dependency installed (confirmed no sqlite/lowdb/knex/prisma/drizzle) and no network access to add one this session. Implemented as JSON-file-per-record store through RecoveryManager.writeTransactional instead of raw fs writes, for crash safety. schema.ts (RepoRecord/AnalysisRecord/IssueRecord + SCHEMA_VERSION for future real-DB migration), client.ts (generic put/get/list/delete), RepoStore/AnalysisStore/IssueStore wrapping existing shapes. Wired into daemon.ts, verified end-to-end at runtime (not just typecheck) -- ran daemon, triggered a re-analysis, confirmed real files written to ~/.arclux/db/. See PR #380.
+
+## 2026-08-15 — packages/cache/ 5/5 files complete
+
+**Status:** Done
+
+CacheProvider.ts (facade/stats over fileCache/repositoryCache/graphCache -- confirmed all 3 already implemented and wired into buildIndex.ts + engine/pipeline.ts) and memoryCache.ts (generic TTL Map cache utility, resolves the 'unclear purpose' from the 2026-08-08 decisions entry) implemented. See PR #382.
