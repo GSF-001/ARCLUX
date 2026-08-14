@@ -534,3 +534,9 @@ Added packages/storage/SnapshotManager.ts: writes one JSON record per process to
   SearchKeyboard — packages stay framework-agnostic); `/api/search`
   rewritten to use the engine, response shape unchanged. 19 tests
   (tests/search.test.ts).
+
+## 2026-08-14 — arclux work command: proves Change Pipeline end-to-end
+
+**Status:** Done
+
+apps/cli/commands/work.ts added: arclux work <file> <newContentFile> reads current + replacement content, builds PatchSet -> ChangePlan -> executes via ChangeExecutor (writeTransactional, transactional/recoverable write). This is the first real caller of packages/change/, proving the pipeline works end-to-end without needing intent parsing (ContextResolver), which doesn't exist yet. Registered in apps/cli/index.ts. Verified with tsc -p apps/cli/tsconfig.json (root tsc --noEmit picks up the wrong/Next.js-oriented tsconfig.json for CLI code -- use -p apps/cli/tsconfig.json when checking apps/cli specifically).
