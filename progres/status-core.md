@@ -673,6 +673,31 @@ generalizes the wiring ArcluxDaemon used to do inline (issue #352):
 unsubscribe, orchestrator wiring + idempotent start/stop, task ordering
 + failure stop, recovery cap/reset/overlap-guard. Tests: 263/263, tsc 0.
 
+## 2026-08-14 — packages/workspace/ implemented (issue #349)
+
+**Status:** Done
+
+`packages/workspace/` was 4 stub files; now the session concept tying
+project + environment + services + processes together (issue #349):
+- `WorkspaceState.ts` — per-workspace state: rootPath, repositoryRoot,
+  wasStartPath, status (active/closed/error), timestamps.
+- `WorkspaceSnapshot.ts` — immutable point-in-time capture (state +
+  shallow-copied processes + services) for restore/UI reads, mirroring
+  ProcSnapshot's philosophy.
+- `WorkspaceSession.ts` — owns a Kernel scoped to a detected root;
+  registerProcess/registerService/snapshot/close/setError.
+- `WorkspaceManager.ts` — open() walks up to the repo root via
+  EnvironmentDetector (idempotent per root, fallback to startPath when no
+  .git), list/get/close/closeAll/snapshots.
+
+Wired into the CLI: `arclux workspace <path>` opens a session and prints
+its snapshot (formatted or `--json`), verified running. Sessions are
+in-process only (no cross-process persistence yet) — the command prints
+in the same invocation; no misleading list/snapshot subcommands.
++9 tests (tests/workspace.test.ts): walk-up detection, idempotent open,
+no-git fallback, close/shutdown, snapshot immutability, error state,
+kernel injection, duplicate service rejection. Tests: 272/272, tsc 0.
+
 ## 2026-08-14 — Daemon verified end-to-end (issue #347) + 2 runtime bugs fixed
 
 **Status:** Done
