@@ -421,3 +421,9 @@ ARCLUX.main
 **Status:** Done
 
 Implemented packages/storage/RecoveryManager.ts (was an 11-line stub) as a real write-ahead log, porting Linux jbd2's transaction state machine (T_RUNNING -> T_LOCKED -> T_FLUSH -> T_COMMIT -> T_FINISHED verbatim, minus disk-block-specific commit sub-phases which don't apply to whole-file JSON writes). writeTransactional() logs the payload to a journal BEFORE the real file write; once COMMIT is logged the transaction is durable even if the real write hasn't happened yet. recoverFromJournal() replays on startup: COMMIT-but-not-FINISHED transactions are REDONE from the journaled payload, transactions that never reached COMMIT are DISCARDED untouched. Wired into packages/storage/SnapshotManager.ts's writeProcessRecord (previously a plain fs.writeFileSync that could leave half-written records for readLiveProcessRecords to silently delete on read -- data loss). Wired recoverFromJournal() into packages/runtime/RuntimeManager's constructor so replay happens once at ARCLUX startup, before any process management begins.
+
+## 2026-08-14 — Removed duplicate diagnose.ts stub
+
+**Status:** Done
+
+apps/cli/commands/diagnose.ts was an 11-line unregistered stub, duplicate name of the real apps/cli/diagnose.ts (which is registered and does the actual work). Kept edit.ts, open.ts, logs.ts, proc.ts, recover.ts (backing packages already have real logic, just not wired to CLI yet) and env.ts, service.ts, workspace.ts (backing packages still stubs too, nothing to wire yet).
