@@ -8,7 +8,7 @@
 
 import { createRequire } from "node:module";
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import type { LanguageParser } from "../core/ParserInterface";
 import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/types";
 
@@ -63,22 +63,42 @@ export function getPythonRuntime(): Promise<PythonRuntime> {
     runtimePromise = (async () => {
       await Parser.init();
       const parser = new Parser();
-      // nodeRequire.resolve() ITSELF returns a path relative to the
-      // webpack bundle location (not a real filesystem path) when running
-      // inside Next.js's webpack runtime -- confirmed via debug logging,
-      // and confirmed AGAIN when a later "cleanup" pass reintroduced
-      // nodeRequire.resolve() to read tree-sitter-wasms/package.json
-      // dynamically, silently regressing this exact bug. DO NOT call
-      // nodeRequire.resolve() anywhere in this function, for any file,
-      // including package.json -- it is not reliable in this runtime,
-      // full stop. Hardcoded version below (matches pnpm ls output);
-      // update PYTHON_WASM_VERSION if tree-sitter-wasms is ever bumped.
-      // Known limitation (tracked in gotchas): this path shape is
-      // pnpm-specific and will not work under npm/yarn.
-      const PYTHON_WASM_VERSION = "0.1.13";
-      const wasmPath = require.resolve(
-        "tree-sitter-wasms/out/tree-sitter-python.wasm"
-      );
+      // nodeRequire.resolve() (and bare require.resolve()) returns a path
+      // relative to the webpack bundle location (not a real filesystem
+      // path) when running inside Next.js's webpack runtime -- confirmed
+      // via debug logging. This has regressed multiple times (see
+      // progres/bugs.md, 2026-08-10 entries) because someone re-adds a
+      // require.resolve() call here during a later cleanup pass. DO NOT
+      // call require.resolve() or nodeRequire.resolve() anywhere in this
+      // function, for any file, including package.json.
+      //
+      // process.cwd() alone isn't reliable either -- it depends on WHERE
+      // the dev server was started from (repo root vs apps/web), and
+      // pnpm hoists tree-sitter-wasms to the monorepo root's node_modules,
+      // not apps/web's. So walk upward from process.cwd() (same algorithm
+      // Node's own module resolution uses) until node_modules/tree-sitter-wasms
+      // is found, instead of assuming a fixed relative depth.
+      function findWasmPath(): string {
+        let dir = process.cwd();
+        for (let i = 0; i < 10; i++) {
+          const candidate = path.join(
+            dir,
+            "node_modules",
+            "tree-sitter-wasms",
+            "out",
+            "tree-sitter-python.wasm"
+          );
+          if (existsSync(candidate)) return candidate;
+          const parent = path.dirname(dir);
+          if (parent === dir) break; // reached filesystem root
+          dir = parent;
+        }
+        throw new Error(
+          "Could not find tree-sitter-wasms/out/tree-sitter-python.wasm by walking up from " +
+            process.cwd()
+        );
+      }
+      const wasmPath = findWasmPath();
       const language = await Language.load(wasmPath);
       parser.setLanguage(language);
       return { parser, language };
