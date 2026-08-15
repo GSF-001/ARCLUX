@@ -1,4 +1,4 @@
-# ARCLUX Complete A-Z Tutorial 📚
+# ARCLUX Complete Tutorial 📚
 
 **Learn ARCLUX from complete beginner to advanced user in 1-2 hours.**
 
