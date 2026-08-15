@@ -27,7 +27,10 @@ export class ManifestRegistry {
   private parsersByFilename: Map<string, ManifestParser> = new Map();
 
   register(parser: ManifestParser): void {
-    this.parsersByFilename.set(parser.filename, parser);
+    const filenames = typeof parser.filename === "string" ? [parser.filename] : parser.filename;
+    for (const filename of filenames) {
+      this.parsersByFilename.set(filename, parser);
+    }
   }
 
   getParserForFilename(filename: string): ManifestParser | undefined {

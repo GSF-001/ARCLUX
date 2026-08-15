@@ -58,6 +58,24 @@ function parseMaven(content: string): ManifestDependency[] {
     .replace(/<plugin>[\s\S]*?<\/plugin>/g, "")
     .replace(/<dependencyManagement>[\s\S]*?<\/dependencyManagement>/g, "");
 
+  // Resolve <version>${...}</version> references against the <properties>
+  // section of the SAME pom (Maven's standard version-property pattern,
+  // e.g. <spring.version>6.1.0</spring.version> + <version>${spring.version}</version>).
+  // Properties that reference other properties resolve iteratively (bounded);
+  // unknown refs (including self-version refs like ${project.version}) stay
+  // literal rather than being guessed.
+  const properties = extractMavenProperties(content);
+  const resolveVersion = (raw: string | undefined): string | undefined => {
+    if (!raw) return undefined;
+    let out = raw;
+    for (let pass = 0; pass < 5; pass++) {
+      const next = out.replace(/\$\{([^}]+)\}/g, (_, key: string) => properties[key] ?? `\${${key}}`);
+      if (next === out) break;
+      out = next;
+    }
+    return out;
+  };
+
   const blockPattern = /<dependency>([\s\S]*?)<\/dependency>/g;
 
   let blockMatch: RegExpExecArray | null;
@@ -72,7 +90,7 @@ function parseMaven(content: string): ManifestDependency[] {
 
     dependencies.push({
       name: `${groupId}:${artifactId}`,
-      versionRange: version,
+      versionRange: resolveVersion(version),
       kind: scope === "test" ? "dev" : "runtime",
     });
   }
@@ -80,8 +98,25 @@ function parseMaven(content: string): ManifestDependency[] {
   return dependencies;
 }
 
+/** Collects the <properties> section of a pom.xml into a key->value map. */
+function extractMavenProperties(content: string): Record<string, string> {
+  const properties: Record<string, string> = {};
+  const section = content.match(/<properties>([\s\S]*?)<\/properties>/);
+  if (!section) return properties;
+
+  const entryPattern = /<([A-Za-z0-9_.-]+)>([^<]+)<\/\1>/g;
+  let match: RegExpExecArray | null;
+  while ((match = entryPattern.exec(section[1])) !== null) {
+    properties[match[1]] = match[2];
+  }
+  return properties;
+}
+
 export const parseGradle_: ManifestParser = {
-  filename: "build.gradle",
+  // build.gradle (Groovy DSL, single-quoted strings) and build.gradle.kts
+  // (Kotlin DSL, double-quoted function calls) share the same
+  // group:artifact:version dependency syntax — one parser, two filenames.
+  filename: ["build.gradle", "build.gradle.kts"],
   parse: parseGradle,
 };
 

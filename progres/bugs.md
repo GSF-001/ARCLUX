@@ -392,6 +392,12 @@ Python files using relative imports got ZERO dependency edges: `from .repository
 
 Known gap (documented in extractJs.ts + PROGRES.md): extractExportsJs only recognized per-property assignment (module.exports.NAME=/exports.NAME=); `module.exports = {…}` has bare LHS `module.exports` which matchCommonJsExportTarget never matched — exports silently dropped. Fix: bare `module.exports =`/`exports =` with ObjectLiteralExpression RHS → each property is a named export (shorthand `{a}`, renamed key `{foo: renamed}` → "foo", string keys, methods/getters; spread + computed keys skipped). +6 tests in tests/parser/javascript.test.ts. Single-value assignment (`module.exports = fn`) still out of scope (follow-up).
 
+## 2026-08-15 — Manifest parsers part 2: pom.xml ${property} versions unresolved + build.gradle.kts never scanned
+
+**Status:** Fixed (PR #437, closes issue #436)
+
+(1) parsePom записывал versionRange литерально (`${spring.version}`) — теперь резолвит из `<properties>`-секции того же pom (итеративно для chained-ссылок; неизвестные `${project.version}` остаются литеральными). (2) build.gradle.kts никогда не сканировался: parseGradle_ регистрировался только как filename "build.gradle", а ManifestRegistry мапил один filename на парсер. Fix: `filename: string | readonly string[]` в ManifestParserInterface, registry итерирует filenames, parseGradle_ → ["build.gradle", "build.gradle.kts"] (Kotlin DSL строковая форма group:artifact:version уже матчилась существующим regex — probe подтвердил, регистрации не хватало). +6 тестов (свойства direct/chained/unknown, Kotlin DSL, registry multi-filename, e2e gradle-kts-basic fixture). Наблюдение (не фиксилось): parseCsproj регистрирует filename ".csproj" (расширение как имя — реальный Foo.csproj не найдётся, только файл буквально названный .csproj).
+
 ## 2026-08-15 — Maven pom.xml parser: regex captures plugin and dependencyManagement dependencies as project deps
 
 **Status:** Fixed (PR #435, closes issue #434)

@@ -16,9 +16,11 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import path from "node:path";
 import { parsePom, parseGradle_ } from "../packages/parser/java/parseGradlePom";
-import { analyzeRepository, type AnalyzeRepositoryResult } from "../packages/engine/pipeline";
+import { manifestRegistry } from "../packages/parser/core/ManifestRegistry";
+import { analyzeRepository, ensureParsersRegistered, type AnalyzeRepositoryResult } from "../packages/engine/pipeline";
 
 const FIXTURE_PATH = path.join(__dirname, "fixtures", "java-basic");
+const GRADLE_KTS_FIXTURE = path.join(__dirname, "fixtures", "gradle-kts-basic");
 
 describe("parsePom", () => {
   it("extracts project dependencies with correct kinds (test scope -> dev)", () => {
@@ -106,6 +108,58 @@ describe("parsePom", () => {
     expect(parsePom.parse("this is not xml at all")).toEqual([]);
     expect(parsePom.parse("")).toEqual([]);
   });
+
+  it("resolves <version>${property}</version> against the <properties> section", () => {
+    const deps = parsePom.parse(`
+<project>
+  <properties>
+    <spring.version>6.1.0</spring.version>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-core</artifactId>
+      <version>${'${spring.version}'}</version>
+    </dependency>
+  </dependencies>
+</project>
+`);
+    expect(deps[0].versionRange).toBe("6.1.0");
+  });
+
+  it("keeps unresolvable ${...} versions literal (e.g. ${project.version})", () => {
+    const deps = parsePom.parse(`
+<project>
+  <dependencies>
+    <dependency>
+      <groupId>a</groupId>
+      <artifactId>b</artifactId>
+      <version>${'${project.version}'}</version>
+    </dependency>
+  </dependencies>
+</project>
+`);
+    expect(deps[0].versionRange).toBe("${project.version}");
+  });
+
+  it("resolves chained property references iteratively", () => {
+    const deps = parsePom.parse(`
+<project>
+  <properties>
+    <base>1.0</base>
+    <chain>${'${base}'}</chain>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>a</groupId>
+      <artifactId>b</artifactId>
+      <version>${'${chain}'}</version>
+    </dependency>
+  </dependencies>
+</project>
+`);
+    expect(deps[0].versionRange).toBe("1.0");
+  });
 });
 
 describe("parseGradle_", () => {
@@ -125,6 +179,38 @@ dependencies {
       "junit:junit:dev",
       "org.springframework:spring-core:runtime",
     ]);
+  });
+
+  it("parses build.gradle.kts (Kotlin DSL string form) with the same syntax", () => {
+    const deps = parseGradle_.parse(`
+plugins {
+    id("java")
+}
+
+dependencies {
+    implementation("org.springframework:spring-core:6.1.0")
+    testImplementation("junit:junit:4.13.2")
+}
+`);
+    expect(deps).toEqual([
+      { name: "org.springframework:spring-core", versionRange: "6.1.0", kind: "runtime" },
+      { name: "junit:junit", versionRange: "4.13.2", kind: "dev" },
+    ]);
+  });
+});
+
+describe("ManifestRegistry — multi-filename parsers", () => {
+  beforeAll(() => {
+    // The singleton registry is populated lazily by the pipeline — make it
+    // deterministic for this unit test.
+    ensureParsersRegistered();
+  });
+
+  it("registers parseGradle_ under both build.gradle and build.gradle.kts", () => {
+    const filenames = manifestRegistry.registeredFilenames;
+    expect(filenames).toContain("build.gradle");
+    expect(filenames).toContain("build.gradle.kts");
+    expect(manifestRegistry.getParserForFilename("build.gradle.kts")).toBe(parseGradle_);
   });
 });
 
@@ -150,5 +236,18 @@ describe("Manifest wiring e2e: pom.xml through analyzeRepository (issue #434)", 
     expect(result.moduleCount).toBe(1);
     const ids = result.repository.getAllModules().map((m) => m.id);
     expect(ids).toEqual(["src/com/example/Main.java"]);
+  });
+});
+
+describe("Manifest wiring e2e: build.gradle.kts through analyzeRepository", () => {
+  let result: AnalyzeRepositoryResult;
+
+  beforeAll(async () => {
+    result = await analyzeRepository({ localPath: GRADLE_KTS_FIXTURE });
+  }, 30_000);
+
+  it("surfaces Kotlin DSL dependencies from build.gradle.kts", () => {
+    const names = result.dependencies.map((d) => d.name).sort();
+    expect(names).toEqual(["junit:junit", "org.springframework:spring-core"]);
   });
 });
