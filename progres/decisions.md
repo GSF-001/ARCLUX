@@ -872,8 +872,9 @@ ARCLUX.main
 
 **Status:** In Progress
 
-GPT proposed packages/workstation/ duplicating existing editor/language/terminal/scheduler packages. Corrected to: keep existing high-level packages as-is, add packages/change/ (ChangePlan, PatchSet, ChangeExecutor) as a new cross-cutting protocol any caller (editor, CLI, future assistant) can use to propose+apply changes. ChangeExecutor writes via storage/RecoveryManager.writeTransactional(), not fs directly. Scaffolded minimal 3-file vertical slice first; PatchPreview/ChangeVerifier deferred until a real caller needs them.
+proposed packages/workstation/ duplicating existing editor/language/terminal/scheduler packages. Corrected to: keep existing high-level packages as-is, add packages/change/ (ChangePlan, PatchSet, ChangeExecutor) as a new cross-cutting protocol any caller (editor, CLI, future assistant) can use to propose+apply changes. ChangeExecutor writes via storage/RecoveryManager.writeTransactional(), not fs directly. Scaffolded minimal 3-file vertical slice first; PatchPreview/ChangeVerifier deferred until a real caller needs them.
 
+docs/log-session-progress
 ## 2026-08-15 — UPDATE: packages/semantic-diff implemented (wiring, not new logic)
 
 **Status:** Open (PR #433 open, not yet merged — pending review)
@@ -895,3 +896,10 @@ No new tests written yet for these 5 files — `pnpm tsc --noEmit` passes and
 existing suite (325 tests) still green, but semantic-diff itself is
 untested. AstDiff's before/after content must be supplied by the caller
 (same limitation as architecturalDiff.ts — no git ref checkout built here).
+
+## 2026-08-15 — packages/semantic-diff implemented
+
+**Status:** In Progress
+
+Implemented all 5 semantic-diff files as thin wiring around existing packages per Blueprint Integration map -- no new parser/graph logic. AstDiff wraps ParserRegistry, SymbolDiff wraps SymbolEngine, DependencyDiff wraps architecturalDiff + calculateAffectedFiles, DiffRenderer formats output, SemanticDiff orchestrates. No new tests yet, tsc passes and existing 325 tests still green. PR #433 open, not yet merged.
+ARCLUX.main

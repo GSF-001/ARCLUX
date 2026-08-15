@@ -19,7 +19,13 @@ import type { ManifestParser, ManifestDependency } from "../core/ManifestParserI
 // solution-level concept in .NET via project references, not per-package),
 // so every PackageReference is reported as "runtime".
 export const parseCsproj: ManifestParser = {
-  filename: ".csproj",
+  // .csproj files live in per-project subdirectories with arbitrary names
+  // (src/MyApp/MyApp.csproj) — an exact filename lookup would only ever
+  // match a file literally named ".csproj" at the repo root. Match by
+  // extension instead; ManifestRegistry.detectDependencies walks the tree
+  // for parsers that declare `extension` (issue #438).
+  filename: [],
+  extension: ".csproj",
 
   parse(content: string): ManifestDependency[] {
     const dependencies: ManifestDependency[] = [];
