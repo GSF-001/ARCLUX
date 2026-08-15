@@ -2,6 +2,7 @@
 const sidebars = {
   docsSidebar: [
     'intro',
+    'how-to-use',
     'architecture',
     'stack',
     'gotchas',
