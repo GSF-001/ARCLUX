@@ -22,9 +22,14 @@
 import { describe, it, expect } from "vitest";
 import { Repository } from "../packages/repository/Repository";
 import { calculateAffectedFiles } from "../packages/impact/calculateAffectedFiles";
+import { calculateAffectedComponents } from "../packages/impact/calculateAffectedComponents";
+import { calculateAffectedModules } from "../packages/impact/calculateAffectedModules";
+import { calculateAffectedRoutes } from "../packages/impact/calculateAffectedRoutes";
 import { buildImpactTree } from "../packages/impact/buildImpactTree";
 import { traceConsumers } from "../packages/impact/traceConsumers";
 import { traceDependencies } from "../packages/impact/traceDependencies";
+import { traceExports } from "../packages/impact/traceExports";
+import { traceImports } from "../packages/impact/traceImports";
 import type { ModuleInfo, RepositoryMeta, FileInfo } from "../packages/shared/types";
 
 function makeFile(relativePath: string): FileInfo {
@@ -201,5 +206,162 @@ describe("Impact Analysis — buildImpactTree", () => {
 
   it("returns null for a module that does not exist", () => {
     expect(buildImpactTree(chainRepository(), "ghost.ts")).toBeNull();
+  });
+});
+
+describe("Impact Analysis — traceExports", () => {
+  it("attributes importers by named, default and namespace usage", () => {
+    const repo = makeRepository([
+      makeModule("lib.ts", {
+        exports: [
+          { name: "helper", kind: "named", line: 5 },
+          { name: "Widget", kind: "default", line: 10 },
+        ],
+      }),
+      makeModule("consumerA.ts", {
+        resolvedImports: [
+          { moduleId: "lib.ts", kind: "static", namedImports: ["helper"], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+      makeModule("consumerB.ts", {
+        resolvedImports: [
+          { moduleId: "lib.ts", kind: "static", namedImports: [], hasDefaultImport: true, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+      makeModule("consumerNs.ts", {
+        resolvedImports: [
+          { moduleId: "lib.ts", kind: "static", namedImports: [], hasDefaultImport: false, hasNamespaceImport: true, line: 1 },
+        ],
+      }),
+    ]);
+
+    const entries = traceExports(repo, "lib.ts");
+    expect(entries).toHaveLength(2);
+
+    const helper = entries.find((e) => e.exportName === "helper")!;
+    expect(helper.exportKind).toBe("named");
+    expect(helper.line).toBe(5);
+    // named usage + namespace import both pull the export in
+    expect(helper.importedByModuleIds.sort()).toEqual(["consumerA.ts", "consumerNs.ts"]);
+
+    const widget = entries.find((e) => e.exportName === "Widget")!;
+    expect(widget.importedByModuleIds.sort()).toEqual(["consumerB.ts", "consumerNs.ts"]);
+  });
+
+  it("skips re-export attribution and returns [] for a missing module", () => {
+    const repo = makeRepository([
+      makeModule("lib.ts", {
+        exports: [{ name: "a", kind: "re-export", reExportSource: "./a", line: 1 }],
+      }),
+      makeModule("consumer.ts", {
+        resolvedImports: [
+          { moduleId: "lib.ts", kind: "static", namedImports: ["a"], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+    ]);
+    const entries = traceExports(repo, "lib.ts");
+    expect(entries).toHaveLength(1);
+    // re-exports forward a symbol from elsewhere — never attributed to this module
+    expect(entries[0].importedByModuleIds).toEqual([]);
+    expect(traceExports(repo, "ghost.ts")).toEqual([]);
+  });
+});
+
+describe("Impact Analysis — traceImports", () => {
+  it("assembles identifiers (named + default + namespace) from resolved imports", () => {
+    const repo = makeRepository([
+      makeModule("entry.ts", {
+        resolvedImports: [
+          { moduleId: "service.ts", kind: "static", namedImports: ["getService", "config"], hasDefaultImport: false, hasNamespaceImport: false, line: 3 },
+          { moduleId: "utils.ts", kind: "static", namedImports: [], hasDefaultImport: true, hasNamespaceImport: false, line: 4 },
+          { moduleId: "types.ts", kind: "static", namedImports: [], hasDefaultImport: false, hasNamespaceImport: true, line: 5 },
+        ],
+      }),
+    ]);
+
+    expect(traceImports(repo, "entry.ts")).toEqual([
+      { fromModuleId: "service.ts", identifiers: ["getService", "config"], line: 3 },
+      { fromModuleId: "utils.ts", identifiers: ["default"], line: 4 },
+      { fromModuleId: "types.ts", identifiers: ["*"], line: 5 },
+    ]);
+  });
+
+  it("returns [] for a missing module", () => {
+    expect(traceImports(chainRepository(), "ghost.ts")).toEqual([]);
+  });
+});
+
+describe("Impact Analysis — calculateAffectedComponents", () => {
+  it("filters affected files to PascalCase .tsx/.jsx components only", () => {
+    const repo = makeRepository([
+      makeModule("repository.ts", { importedBy: ["Button.tsx", "service.ts"] }),
+      makeModule("Button.tsx", { imports: ["repository.ts"] }),
+      makeModule("service.ts", { imports: ["repository.ts"] }),
+    ]);
+
+    const components = calculateAffectedComponents(repo, "repository.ts");
+    expect(components.map((c) => c.moduleId)).toEqual(["Button.tsx"]);
+    expect(components[0].filePath).toBe("Button.tsx");
+  });
+
+  it("returns [] when no affected file is a component", () => {
+    const repo = makeRepository([
+      makeModule("repository.ts", { importedBy: ["service.ts"] }),
+      makeModule("service.ts", { imports: ["repository.ts"] }),
+    ]);
+    expect(calculateAffectedComponents(repo, "repository.ts")).toEqual([]);
+  });
+});
+
+describe("Impact Analysis — calculateAffectedModules", () => {
+  it("groups affected files by first-two-path-segments package, sorted by count desc", () => {
+    const repo = makeRepository([
+      makeModule("packages/web/entry.ts", { imports: ["packages/web/service.ts"] }),
+      makeModule("packages/web/service.ts", { imports: ["packages/core/repository.ts"], importedBy: ["packages/web/entry.ts"] }),
+      makeModule("packages/core/repository.ts", { importedBy: ["packages/web/service.ts"] }),
+    ]);
+
+    const groups = calculateAffectedModules(repo, "packages/core/repository.ts");
+    expect(groups).toEqual([
+      { packageId: "packages/web", fileCount: 2, filePaths: ["packages/web/service.ts", "packages/web/entry.ts"] },
+    ]);
+  });
+
+  it("spreads affected files across packages when the chain crosses them", () => {
+    const repo = makeRepository([
+      makeModule("packages/web/page.tsx", { imports: ["packages/core/hook.ts"], importedBy: [] }),
+      makeModule("packages/core/hook.ts", { imports: ["packages/core/lib.ts"], importedBy: ["packages/web/page.tsx"] }),
+      makeModule("packages/core/lib.ts", { importedBy: ["packages/core/hook.ts"] }),
+    ]);
+
+    const groups = calculateAffectedModules(repo, "packages/core/lib.ts");
+    // affected: packages/core/hook.ts (dist 1) and packages/web/page.tsx (dist 2)
+    expect(groups).toEqual([
+      { packageId: "packages/core", fileCount: 1, filePaths: ["packages/core/hook.ts"] },
+      { packageId: "packages/web", fileCount: 1, filePaths: ["packages/web/page.tsx"] },
+    ]);
+  });
+});
+
+describe("Impact Analysis — calculateAffectedRoutes", () => {
+  it("maps affected page/route files to route paths, stripping route-group segments", () => {
+    const repo = makeRepository([
+      makeModule("data.ts", {
+        importedBy: ["app/dashboard/page.tsx", "app/(auth)/login/page.tsx", "app/api/users/route.ts"],
+      }),
+      makeModule("app/dashboard/page.tsx", { imports: ["data.ts"] }),
+      makeModule("app/(auth)/login/page.tsx", { imports: ["data.ts"] }),
+      makeModule("app/api/users/route.ts", { imports: ["data.ts"] }),
+    ]);
+
+    const routes = calculateAffectedRoutes(repo, "data.ts");
+    expect(routes.map((r) => r.routePath).sort()).toEqual(["/api/users", "/dashboard", "/login"]);
+    // non-page/route affected files are dropped entirely
+    expect(routes.every((r) => /\/(page|route)\./.test(r.filePath))).toBe(true);
+  });
+
+  it("returns [] when no affected file is a page or route", () => {
+    const repo = chainRepository();
+    expect(calculateAffectedRoutes(repo, "repository.ts")).toEqual([]);
   });
 });
