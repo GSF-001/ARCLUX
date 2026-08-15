@@ -676,3 +676,9 @@ PASSES — previously failed on the scaffold routes, dev-server 6/6 pages
 **Status:** Done
 
 FileDetails.tsx previously rendered source as flat token-highlighted <pre> with no way to see WHICH line a diagnostic finding referred to -- Impact tab only showed affected FILES, not line-level detail. Rewrote to render per-line: each line gets a gutter (colored bar for error/warning severity + line number), clicking a marked line expands the diagnostic message + fix suggestion inline, editor-style. Explorer.tsx now fetches POST /api/diagnostics once per repoUrl/branch (not per file switch -- endpoint does full clone+index per call, same cost as /api/analyze) and filters events client-side to the open file's path, passed to FileDetails as a diagnostics prop. See PR #389.
+
+## 2026-08-15 — Fixed gutter marker bugs found via browser testing
+
+**Status:** Done
+
+PR #389's inline gutter markers had 2 bugs caught by actual browser testing (screenshots): React key collision when the same checkId fires twice on one line (fixed: key is now checkId+index), and markers were nearly invisible (thin 2px bar only -- changed to whole-row background tint at 10% opacity + thicker bar). Confirmed working visually: cyclicA.ts/cyclicB.ts (express-demo) show 2-3 circular dependency findings with expandable messages. See PR #391.
