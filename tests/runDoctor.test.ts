@@ -13,9 +13,9 @@ import { describe, it, expect } from "vitest";
 import { Repository } from "../packages/repository/Repository";
 import { runDoctor, safeRun } from "../packages/engine/runDoctor";
 import type { DoctorFinding } from "../packages/engine/runDoctor";
-import type { ModuleInfo, RepositoryMeta, FileInfo, RawExport } from "../packages/shared/types";
+import type { ModuleInfo, RepositoryMeta, FileInfo, RawExport, SupportedLanguage } from "../packages/shared/types";
 
-function makeFile(relativePath: string, language = "typescript"): FileInfo {
+function makeFile(relativePath: string, language: SupportedLanguage = "typescript"): FileInfo {
   return {
     absolutePath: `/virtual/repo/${relativePath}`,
     relativePath,
@@ -50,7 +50,7 @@ function makeModule(
     resolvedReExports: {},
     importedBy: [],
     imports,
-    resolvedImports: opts.resolvedImports ?? imports.map((moduleId) => ({ moduleId, namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 })),
+    resolvedImports: (opts.resolvedImports ?? imports.map((moduleId) => ({ moduleId, namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 }))).map((r) => ({ ...r, kind: "static" as const })),
     calls: [],
     calledBy: [],
     implicitDependencies: [],

@@ -87,15 +87,14 @@ function makeModule(
     resolvedReExports: opts.resolvedReExports ?? {},
     importedBy: opts.importedBy ?? [],
     imports,
-    resolvedImports:
-      opts.resolvedImports ??
+    resolvedImports: (opts.resolvedImports ??
       imports.map((moduleId) => ({
         moduleId,
         namedImports: [],
         hasDefaultImport: false,
         hasNamespaceImport: false,
         line: 1,
-      })),
+      }))).map((r) => ({ ...r, kind: "static" as const })),
     calls: [],
     calledBy: [],
     implicitDependencies: [],

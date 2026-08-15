@@ -76,7 +76,7 @@ function makeModule(
     resolvedReExports: {},
     importedBy: opts.importedBy ?? [],
     imports,
-    resolvedImports: opts.resolvedImports ?? imports.map((moduleId) => ({ moduleId, namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 })),
+    resolvedImports: (opts.resolvedImports ?? imports.map((moduleId) => ({ moduleId, namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 }))).map((r) => ({ ...r, kind: "static" as const })),
     calls: [],
     calledBy: [],
     implicitDependencies: [],
