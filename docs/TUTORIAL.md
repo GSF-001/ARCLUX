@@ -863,7 +863,7 @@ git push origin feature/detect-my-issue
 
 ---
 
-**You've completed ARCLUX A-Z Tutorial!** 🎓
+**You've completed ARCLUX Tutorial!** 🎓
 
 You now know:
 - ✅ How to install
