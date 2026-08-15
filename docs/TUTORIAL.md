@@ -551,7 +551,7 @@ npm run verify  # checks conventions
 
 Every Monday: `npm run report`
 Team discusses: What improved? What to fix next week?
-```
+``
 
 ---
 
