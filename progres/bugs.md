@@ -379,3 +379,19 @@ Contributor commit added apps/cli/commands/{edit,logs,open,verify}.ts using expo
 **Status:** Not Started
 
 Test file uses a mock/plain object for repository that doesn't implement Repository class methods (getModule, etc). Needs fixing test setup to use real Repository instance or a proper mock with getModule. Not yet fixed.
+
+## 2026-08-15 — UPDATE: getModule/pipeline test bugs — resolved
+
+**Status:** Resolved
+
+Both CI-failing bugs fixed. `tests/impact.test.ts`: root cause was stale
+parameter order (`(moduleId, repo.graph)` instead of `(repository, moduleId)`)
+plus an empty Repository fixture — none of the tested functions
+(calculateAffectedFiles, buildImpactTree, traceConsumers, traceDependencies)
+were modified, only the test's calling convention and fixtures. Rewritten
+with real Repository.addModule() fixtures and assertions matching actual
+return shapes (some functions return objects like {direct, transitive,
+notFound}, not arrays). `tests/pipeline.test.ts`: full-repo analyzeRepository
+test was timing out on slower hardware (~5s runtime vs 5000ms default
+timeout) — bumped to 30000ms, no logic changed. Merged via PR #428 (and the
+impact.test.ts fix). CI on ARCLUX.main confirmed green after merge.
