@@ -1,11 +1,51 @@
-/**
- * Copyright 2026 ARCLUX
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- */
+import { Command } from "commander";
+import { intro, outro, select } from "@clack/prompts";
+import fs from "fs";
+import path from "path";
 
-// Scaffold: cli/commands/logs — not yet implemented.
+const ARCLUX_HOME = path.join(process.env.HOME || "/root", ".arclux");
+const LOGS_DIR = path.join(ARCLUX_HOME, "logs");
+
+export const logsCommand = new Command()
+  .name("logs")
+  .description("View daemon or CLI logs")
+  .option("--daemon", "Show daemon logs")
+  .option("--tail <n>", "Show last n lines", "50")
+  .option("--follow", "Follow log file (daemon only)")
+  .action(async (options) => {
+    intro("ARCLUX Logs");
+
+    if (!fs.existsSync(LOGS_DIR)) {
+      outro("No logs found");
+      process.exit(0);
+    }
+
+    const logFiles = fs
+      .readdirSync(LOGS_DIR)
+      .filter((f) => f.endsWith(".log"));
+
+    if (logFiles.length === 0) {
+      outro("No log files found");
+      process.exit(0);
+    }
+
+    const selected = options.daemon
+      ? logFiles.find((f) => f.includes("daemon"))
+      : logFiles[logFiles.length - 1];
+
+    if (!selected) {
+      outro("No matching log file found");
+      process.exit(1);
+    }
+
+    const logPath = path.join(LOGS_DIR, selected);
+    const content = fs.readFileSync(logPath, "utf-8");
+    const lines = content.split("\n");
+    const tail = parseInt(options.tail);
+    const displayLines = lines.slice(Math.max(0, lines.length - tail));
+
+    console.log(`\n=== ${selected} (last ${tail} lines) ===\n`);
+    console.log(displayLines.join("\n"));
+
+    outro("Done");
+  });
