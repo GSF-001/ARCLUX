@@ -391,3 +391,9 @@ Python files using relative imports got ZERO dependency edges: `from .repository
 **Status:** Fixed (PR #432, closes issue #430)
 
 Known gap (documented in extractJs.ts + PROGRES.md): extractExportsJs only recognized per-property assignment (module.exports.NAME=/exports.NAME=); `module.exports = {…}` has bare LHS `module.exports` which matchCommonJsExportTarget never matched — exports silently dropped. Fix: bare `module.exports =`/`exports =` with ObjectLiteralExpression RHS → each property is a named export (shorthand `{a}`, renamed key `{foo: renamed}` → "foo", string keys, methods/getters; spread + computed keys skipped). +6 tests in tests/parser/javascript.test.ts. Single-value assignment (`module.exports = fn`) still out of scope (follow-up).
+
+## 2026-08-15 — Maven pom.xml parser: regex captures plugin and dependencyManagement dependencies as project deps
+
+**Status:** Fixed (PR #435, closes issue #434)
+
+parseMaven matched `<dependency>` blocks with a blanket regex in ANY context — probe: 2 false positives out of 4 (`maven-shared-utils` from `<plugin><dependencies>` — plugin's own classpath; `guava` from `<dependencyManagement>` — version management only). Fix: strip `<plugin>…</plugin>` and `<dependencyManagement>…</dependencyManagement>` before block matching (neither nests itself nor the other; profile deps KEPT — conditional but real). Also: FIRST tests ever for the manifest package (tests/manifest.test.ts, 8: parsePom kinds/scopes/plugin/dependencyManagement/profile/malformed, parseGradle_ patterns) + wiring proven e2e (status-core's «not wired to analyzeRepository» was outdated — detectDependencies IS called by both local/remote paths; fixture java-basic with pom.xml + Main.java asserts dependencies = 3 project deps only). suite 359/359.
