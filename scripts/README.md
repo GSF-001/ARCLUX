@@ -10,7 +10,7 @@ documented there in full rather than duplicated here.
 | Script | What it does | Status |
 |---|---|---|
 | `testManifests.ts` | Manual verification: runs each manifest parser against a real manifest file (go.mod, Cargo.toml, etc) copied to `~/manifest-samples`, prints results for eyeball-checking | Working |
-| `testPlayground.ts` | Runs the full pipeline against `playground/*` fixture repos | Working |
+| `testPlayground.ts` | Runs the full pipeline + all 19 detectors against `playground/*` fixtures or the repo itself (`. --local`); real-repo score summary (19/19 OK), exit 1 on crash/malformed output | Working |
 | `checkCollaboratorMarkers.ts` | Detects files referenced in an assigned GitHub issue that don't have an in-file comment mentioning the issue number | Working |
 | `check-diary.ts` | Validates AGENT_DIARY.md structure — every `**Status:**` must have a `## ` header within 2 lines (catches the P-003 orphaned-body failure class). Wired into the pre-commit hook as a best-effort check | Working |
 | `build.ts` | Unclear purpose — `package.json`'s `"build"` script uses `turbo run build` directly, not this file. Empty, not wired to anything. | Not started |

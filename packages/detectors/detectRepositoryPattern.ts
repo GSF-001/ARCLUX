@@ -17,6 +17,11 @@
 // detectCircularDependency.ts, applied to a package-id graph derived via
 // the same "first two path segments" grouping calculateAffectedModules.ts
 // uses.
+//
+// Type-only edges (TS `import type`, Python `if TYPE_CHECKING:`) are
+// excluded from the package graph, matching detectCircularDependency.ts's
+// runtime-cycle semantics (decision #458, Variant C): a package pair linked
+// only by type imports has no runtime dependency between them.
 
 import type { Repository } from "../repository/Repository";
 
@@ -37,7 +42,15 @@ export function detectRepositoryPattern(repository: Repository): RepositoryPatte
   const packageGraph = new Map<string, Set<string>>();
   for (const module of modules) {
     const fromPackage = packageIdOf(module.file.relativePath);
+    // Type-only edges are compile-time deps, not runtime package
+    // dependencies (decision #458-C, same as detectCircularDependency.ts).
+    const typeOnlyTargets = new Set(
+      (module.resolvedImports ?? [])
+        .filter((r) => r.kind === "type-only")
+        .map((r) => r.moduleId)
+    );
     for (const importedId of module.imports) {
+      if (typeOnlyTargets.has(importedId)) continue;
       const importedModule = repository.getModule(importedId);
       if (!importedModule) continue;
       const toPackage = packageIdOf(importedModule.file.relativePath);

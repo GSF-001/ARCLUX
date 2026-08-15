@@ -23,6 +23,7 @@ import { detectCircularDependency } from "../packages/detectors/detectCircularDe
 import { detectDeadCode } from "../packages/detectors/detectDeadCode";
 import { detectOrphanFiles } from "../packages/detectors/detectOrphanFiles";
 import { detectUnusedExports } from "../packages/detectors/detectUnusedExports";
+import { detectRepositoryPattern } from "../packages/detectors/detectRepositoryPattern";
 import { isTestFilePath } from "../packages/detectors/testFiles";
 import type { FileInfo, ModuleInfo, RepositoryMeta, RawExport, ResolvedImport } from "../packages/shared/types";
 
@@ -272,6 +273,30 @@ describe("adversarial — detectUnusedExports", () => {
       }),
     ]);
     expect(detectUnusedExports(repo)).toEqual([]);
+  });
+});
+
+describe("adversarial — detectRepositoryPattern", () => {
+  it("a package cycle closed only by a type-only edge is not reported (decision #458)", () => {
+    // runtime -> security is a real (value) edge; security -> runtime is
+    // type-only (TS `import type` / Python `if TYPE_CHECKING:`). No runtime
+    // package cycle exists — mirrors detectCircularDependency's handling.
+    const repo = makeRepository([
+      makeModule("packages/runtime/pm.ts", {
+        imports: ["packages/security/sandbox.ts"],
+        resolvedImports: [
+          { moduleId: "packages/security/sandbox.ts", kind: "static", namedImports: ["Sandbox"], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+      makeModule("packages/security/sandbox.ts", {
+        imports: ["packages/runtime/spec.ts"],
+        resolvedImports: [
+          { moduleId: "packages/runtime/spec.ts", kind: "type-only", namedImports: ["ProcessSpec"], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+      makeModule("packages/runtime/spec.ts"),
+    ]);
+    expect(detectRepositoryPattern(repo)).toEqual([]);
   });
 });
 
