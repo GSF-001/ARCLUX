@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { FileDetails } from "./FileDetails";
+import { useState, useEffect } from "react";
+import { FileDetails, type DiagnosticMarker } from "./FileDetails";
 import { DependencyList } from "./DependencyList";
 import { ImpactSummary } from "./ImpactSummary";
 
@@ -40,6 +40,43 @@ export interface ExplorerProps {
  */
 export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) {
   const [activeTab, setActiveTab] = useState<ExplorerTab>("file");
+  const [fileDiagnostics, setFileDiagnostics] = useState<DiagnosticMarker[]>([]);
+
+  // Fetches once per repoUrl/branch (not per file switch) -- POST /api/diagnostics
+  // does a full clone+index per call (same cost as /api/analyze, /api/doctor),
+  // so re-fetching on every file open inside the same repo would be wasteful.
+  // Findings are filtered by moduleId client-side per render instead.
+  const [allDiagnostics, setAllDiagnostics] = useState<any[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/diagnostics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repoUrl, branch }),
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setAllDiagnostics(json.events ?? []);
+      })
+      .catch(() => {
+        // best-effort -- FileDetails still works without diagnostics, just no gutter markers
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [repoUrl, branch]);
+
+  useEffect(() => {
+    const filtered: DiagnosticMarker[] = allDiagnostics
+      .filter((e: any) => e.filePath === moduleId)
+      .map((e: any) => ({
+        line: e.line,
+        severity: e.severity,
+        message: e.message,
+        checkId: e.checkId,
+      }));
+    setFileDiagnostics(filtered);
+  }, [allDiagnostics, moduleId]);
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -74,7 +111,7 @@ export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) 
       </div>
 
       <div className="flex-1 overflow-auto">
-        {activeTab === "file" && <FileDetails repoUrl={repoUrl} filePath={moduleId} branch={branch} />}
+        {activeTab === "file" && <FileDetails repoUrl={repoUrl} filePath={moduleId} branch={branch} diagnostics={fileDiagnostics} />}
         {activeTab === "dependencies" && (
           <DependencyList repoUrl={repoUrl} moduleId={moduleId} branch={branch} />
         )}
