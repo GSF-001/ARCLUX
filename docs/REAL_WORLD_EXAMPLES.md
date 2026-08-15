@@ -1,4 +1,4 @@
-# Real World ARCLUX Analysis 🌍
+# ARCLUX Analysis 
 
 See ARCLUX in action analyzing real, famous projects.
 
@@ -25,38 +25,38 @@ npx tsx apps/cli/index.ts analyze .
 ### Output Analysis
 
 ```
-✨ ARCLUX Analysis Report
+ ARCLUX Analysis Report
 
-📊 Project Summary
+  Project Summary
   • Total modules: 87
   • Total files: 312
   • Languages: TypeScript, JavaScript
 
-🎨 Frameworks Detected
+  Frameworks Detected
   ✓ React
   ✓ TypeScript
   ✓ Storybook
 
-⚠️  Issues Found: 18
+    Issues Found: 18
 
-  🔄 Circular Dependencies (3)
+    Circular Dependencies (3)
      • Button → ButtonGroup → Button
      • Tooltip → Popover → Tooltip
      • Modal → Dialog → Modal
 
-  📦 Unused Exports (8)
+      Unused Exports (8)
      • src/components/Button/deprecated-props.ts
      • src/components/Input/old-variants.ts
      • src/hooks/useOldAnimation.ts
      • [5 more...]
 
-  👻 Orphan Files (5)
+    Orphan Files (5)
      • src/components/LegacyButton/
      • src/types/old-api.ts
      • src/utils/deprecated-helpers.ts
      • [2 more...]
 
-  🏗️  Layer Violations (2)
+     Layer Violations (2)
      • Button.tsx imports from pages/ (shouldn't!)
      • Tooltip imports from forms/ (wrong layer!)
 ```
@@ -192,17 +192,17 @@ Week 1: Fix Circular Dependencies
 - Refactor Tooltip/Popover
 - Refactor Modal/Dialog
 - Test all components independently
-- Re-run ARCLUX: should see 0 circular deps ✅
+- Re-run ARCLUX: should see 0 circular deps 
 
 Week 2: Remove Dead Code
 - Delete 5 orphan files (LegacyButton, old files)
 - Clean up unused exports
-- Re-run ARCLUX: should see 0 orphan files ✅
+- Re-run ARCLUX: should see 0 orphan files 
 
 Week 3: Fix Architecture
 - Fix layer violations
 - Move imports to right place
-- Re-run ARCLUX: should see 0 violations ✅
+- Re-run ARCLUX: should see 0 violations 
 
 Result: Clean, maintainable component library!
 ```
@@ -231,34 +231,34 @@ npx tsx apps/cli/index.ts analyze .
 ### Output
 
 ```
-✨ ARCLUX Analysis Report
+ ARCLUX Analysis Report
 
-📊 Project Summary
+ Project Summary
   • Total modules: 124
   • Total files: 643
   • Languages: TypeScript, JavaScript
 
-🎨 Frameworks Detected
+  Frameworks Detected
   ✓ Next.js
   ✓ React
   ✓ TailwindCSS
   ✓ TypeScript
 
-⚠️  Issues Found: 22
+   Issues Found: 22
 
-  🔄 Circular Dependencies (4)
+    Circular Dependencies (4)
      • packages/ui ↔ packages/api (both import each other!)
      • apps/web ↔ packages/utils (unexpected!)
 
-  📦 Unused Exports (7)
+    Unused Exports (7)
      • apps/admin/lib/old-auth.ts
      • packages/ui/components/DeprecatedButton.tsx
 
-  👻 Orphan Files (6)
+    Orphan Files (6)
      • apps/web/utils/backup/
      • packages/api/old-endpoints/
 
-  🏗️  Layer Violations (5)
+     Layer Violations (5)
      • apps/web/components/UserCard imports from apps/admin
      • packages/utils exports server utilities to browser code
 ```
@@ -383,18 +383,18 @@ npx tsx apps/cli/index.ts analyze .
 ### Findings
 
 ```
-Issues Found: 45 😱
+Issues Found: 45 
 
-🔄 Circular Dependencies (8)
+  Circular Dependencies (8)
    Many files importing each other
 
-📦 Unused Exports (22)
+  Unused Exports (22)
    Dead code everywhere
 
-👻 Orphan Files (12)
+  Orphan Files (12)
    Old code nobody uses
 
-🏗️  Layer Violations (3)
+  Layer Violations (3)
    Routes importing from each other
 ```
 
@@ -480,4 +480,4 @@ Focus on architecture, not size.
 
 ---
 
-**Now run ARCLUX on YOUR project! See what you find! 🚀**
+**Now run ARCLUX on YOUR project! See what you find! **
