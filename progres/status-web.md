@@ -682,3 +682,9 @@ FileDetails.tsx previously rendered source as flat token-highlighted <pre> with 
 **Status:** Done
 
 PR #389's inline gutter markers had 2 bugs caught by actual browser testing (screenshots): React key collision when the same checkId fires twice on one line (fixed: key is now checkId+index), and markers were nearly invisible (thin 2px bar only -- changed to whole-row background tint at 10% opacity + thicker bar). Confirmed working visually: cyclicA.ts/cyclicB.ts (express-demo) show 2-3 circular dependency findings with expandable messages. See PR #391.
+
+## 2026-08-15 — Collapsible project structure tree in RepositoryOverview
+
+**Status:** Done
+
+Added a chevron toggle button (only visible once a file is selected) between the project tree and Explorer panel. Collapsing the tree expands Explorer to full width instead of a fixed 45%, so File/Dependencies/Impact tabs aren't cramped. Requested after visual testing showed the tree taking up too much space when viewing file diagnostics. See PR #393.
