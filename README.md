@@ -20,8 +20,11 @@ Dependency graph, impact analysis, and structural convention checking for your c
 [](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 
 ## Documentation
-> [!NOTE]
->  **[Browse the full docs site](https://arclux-os.mintlify.site)** — same content, searchable and organized
+> [!NOTE] 
+> 
+> **[official documentation](https://arclux-os.mintlify.site)**
+content, searchable and organized
+
 -----
 - [`QUICKSTART.md`](QUICKSTART.md) — start here, fast-path workflow cheat sheet
 - [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
