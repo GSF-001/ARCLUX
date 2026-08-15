@@ -125,6 +125,10 @@ repo. Verified: `npx vitest tests/{detector,pipeline,impact}.test.ts` green.
 
 ## 2026-08-15 — CLI commands stubbed out (open, verify, logs, edit)
 
+> **[STATUS UPDATE, 2026-08-15]: logs and run are now WIRED into the CLI
+> router (issue #465). open.ts and logs.ts remain placeholders; verify.ts
+> and edit.ts were already real implementations. See status-infra.md.**
+
 **Status:** Done
 
 Added 4 command files to `apps/cli/commands/`: 
