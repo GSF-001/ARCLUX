@@ -694,3 +694,9 @@ Added a chevron toggle button (only visible once a file is selected) between the
 **Status:** In Progress
 
 Added packages/parser/javascript/highlightJs.ts using the same walk-up-from-cwd wasm loading pattern as highlightPython.ts, with query merged from official tree-sitter-javascript + tree-sitter-typescript highlights.scm files. Wired into /api/file/route.ts. Still Go/Java/other languages -- tree-sitter-wasms has grammars for go.wasm, java.wasm, etc (confirmed present), but each needs its own highlights.scm sourced from that language's official tree-sitter grammar repo before highlighting can be added -- same process as this PR, just not done yet for those languages. Not yet visually verified in browser for JS/TS either. See PR #395.
+
+## 2026-08-15 — Add docs page for SKILL.md
+
+**Status:** Done
+
+docs-site/skill.mdx added under Getting Started: points to SKILL.md on GitHub, summarizes what it covers, one example command. Registered in docs.json nav.

@@ -1,0 +1,22 @@
+---
+title: "AI Agent Skill"
+description: "SKILL.md reference for AI coding agents working in this repo"
+---
+
+ARCLUX ships a `SKILL.md` file at the repo root, following the convention used by AI coding agent skill managers (Claude Code, Cursor, and similar tools that auto-discover `SKILL.md`). Any agent working in this repository picks it up automatically -- no manual prompting needed.
+
+<Card title="View SKILL.md on GitHub" icon="github" href="https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/SKILL.md">
+  Full source, always up to date with the repo
+</Card>
+
+## What it covers
+
+- Which `arclux` command to run for common situations (before editing, after editing, before opening a PR)
+- Environment gotchas specific to this repo (Termux/Webpack, large-repo memory flags, the Python WASM path regression)
+- Boundaries the agent should respect (don't hand-edit progres files, don't add intelligence layers inside core packages)
+
+## Example
+
+```bash
+npx tsx apps/cli/index.ts impact packages/engine/pipeline.ts
+```
