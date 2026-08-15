@@ -451,3 +451,9 @@ Added getDaemonHealth check to daemon status CLI, verifies bridge server reachab
 **Status:** Done
 
 getDaemonHealth() added to DaemonProcess.ts (bridge reachability check via HTTP GET /analysis, port read from ServiceEndpoint.ts). apps/cli/daemon.ts --health flag already existed from a parallel session's earlier merge. Merge caused an accidental duplicate function definition (same code pasted twice, back to back) — caught by tsc TS2393 duplicate implementation error before commit, removed the dup. Lesson: after a git pull fast-forwards in changes from another session, diff the file you're about to patch before assuming your patch target still matches what you last saw.
+
+## 2026-08-15 — Docs site migrated Docusaurus to Mintlify
+
+**Status:** In Progress
+
+docs-site/ rebuilt on Mintlify instead of Docusaurus. mint.json config with dark-mode locked, colors matching ARCLUX design tokens. Content generator reads README/PROGRES/ARCHITECTURE_MAP/TOOLING/CONTEXT/QUICKSTART directly and regenerates .mdx on demand. Known Termux gotcha: sharp needs wasm32 fallback for mintlify dev.

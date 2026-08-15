@@ -373,3 +373,9 @@ Same failure mode as the two prior regressions (2026-08-10 entries): parsePython
 **Status:** Done
 
 Contributor commit added apps/cli/commands/{edit,logs,open,verify}.ts using export const xCommand pattern (not matching registerXCommand convention), none registered in index.ts. open.ts had unterminated template literal (backtick opened, quote closed) -- syntax error, failed tsc entirely. commands/verify.ts duplicated existing registered apps/cli/verify.ts. edit.ts/open.ts also diverged from our CodeNavigator-based design from earlier this session (dependency/consumer navigation) with a different concept (replace file content wholesale). Fix: rewrote edit.ts/open.ts using CodeNavigator (openFile/listDependencyTargets/listDirectConsumerTargets), registered both in index.ts, deleted duplicate commands/verify.ts. logs.ts left unregistered -- assumes ~/.arclux/logs/*.log files which nothing in the codebase writes (state is JSON via SnapshotManager, not log files); needs its own fix before wiring in.
+
+## 2026-08-15 — getModule/pipeline test bugs resolved
+
+**Status:** Done
+
+Both CI-failing bugs fixed. tests/impact.test.ts: root cause was stale parameter order plus empty Repository fixture -- none of the tested functions were modified, only the test's calling convention and fixtures. tests/pipeline.test.ts: timeout bumped 5000ms to 30000ms for slower hardware, no logic changed. CI on ARCLUX.main confirmed green after merge.
