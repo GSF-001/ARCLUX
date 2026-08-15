@@ -37,6 +37,7 @@ const NEXTJS_APP_ROUTER_FILE = /(^|\/)app\/.*\/(page|layout|loading|error|not-fo
 const NEXTJS_ROOT_APP_FILE = /(^|\/)app\/(page|layout|loading|error|not-found|route|template|default)\.(ts|tsx)$/;
 const CLI_ENTRY_FILE = /(^|\/)apps\/cli\/index\.ts$/;
 const VSCODE_EXTENSION_ENTRY_FILE = /(^|\/)apps\/vscode-extension\/src\/extension\.ts$/;
+const GITHUB_SCRIPTS_FILE = /(^|\/)\.github\/scripts\/.+\.py$/;
 
 function classify(module: ModuleInfo): string | null {
   const path = module.file.relativePath;
@@ -51,6 +52,10 @@ function classify(module: ModuleInfo): string | null {
 
   if (VSCODE_EXTENSION_ENTRY_FILE.test(path)) {
     return "VS Code extension entry point — invoked by the VS Code runtime (package.json main/activationEvents), not imported by other source files.";
+  }
+
+  if (GITHUB_SCRIPTS_FILE.test(path)) {
+    return "GitHub workflow script — invoked directly by a workflow (python3 .github/scripts/...), not imported by other source files.";
   }
 
   return null;

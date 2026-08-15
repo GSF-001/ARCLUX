@@ -298,6 +298,13 @@ describe("detectEntryPoints", () => {
     expect(findings[0].reason).toContain("VS Code");
   });
 
+  it("recognizes GitHub workflow scripts as entry points (issue #464)", () => {
+    const repo = makeRepository([makeModule(".github/scripts/threatcrush-to-sarif.py")]);
+    const findings = detectEntryPoints(repo);
+    expect(findings.map((f) => f.filePath)).toEqual([".github/scripts/threatcrush-to-sarif.py"]);
+    expect(findings[0].reason).toContain("GitHub workflow");
+  });
+
   it("does not classify a plain orphaned file as an entry point", () => {
     const repo = makeRepository([makeModule("src/random.ts")]);
     expect(detectEntryPoints(repo)).toHaveLength(0);
