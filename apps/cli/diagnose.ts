@@ -18,6 +18,7 @@ import { runDiagnostics } from "../../packages/diagnostics/DiagnosticEngine";
 import { attachImpactContextToAll } from "../../packages/diagnostics/ErrorContext";
 import { toDiagnosticEventsForAll } from "../../packages/diagnostics/DiagnosticEvent";
 import { getFixSuggestion } from "../../packages/diagnostics/FixSuggestion";
+import path from "node:path";
 
 export function registerDiagnoseCommand(program: Command): void {
   program
@@ -44,7 +45,14 @@ export function registerDiagnoseCommand(program: Command): void {
         p.log.warn(`${events.length} diagnostic event(s) found:`);
         for (const e of events) {
           const marker = e.locationPrecision === "line" ? `:${e.line}` : "";
-          p.log.message(`  [${e.severity}] ${e.filePath}${marker} — ${e.message}`);
+          const label = `${e.filePath}${marker}`;
+          // OSC 8 hyperlink escape sequence -- supported by most modern
+          // terminals (iTerm2, Termux, VS Code integrated terminal, GNOME
+          // Terminal). Terminals that don't support it just show the plain
+          // text, no visible garbage -- it's a no-op fallback, not a break.
+          const absolutePath = path.resolve(targetPath, e.filePath);
+          const clickable = `\u001b]8;;file://${absolutePath}\u001b\\${label}\u001b]8;;\u001b\\`;
+          p.log.message(`  [${e.severity}] ${clickable} — ${e.message}`);
           if (e.affectedFileCount > 0) {
             p.log.message(`    affects ${e.affectedFileCount} file(s)`);
           }
