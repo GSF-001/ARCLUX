@@ -11,6 +11,7 @@ import path from "node:path";
 import { parseOrgAndName } from "@/packages/engine/pipeline";
 import { detectLanguage } from "@/packages/parser/core/LanguageDetector";
 import { highlightPythonSource, type HighlightToken } from "@/packages/parser/python/highlightPython";
+import { highlightJavaScriptSource, highlightTypeScriptSource } from "@/packages/parser/javascript/highlightJs";
 
 /**
  * GET /api/file?repoUrl=...&filePath=...&branch=...
@@ -70,14 +71,18 @@ export async function GET(request: NextRequest) {
   const language = detectLanguage(extension);
 
   let tokens: HighlightToken[] = [];
-  if (language === "python") {
-    try {
+  try {
+    if (language === "python") {
       tokens = await highlightPythonSource(content);
-    } catch (err) {
-      // Highlighting is best-effort — fall back to plain text instead of
-      // failing the whole request if the query engine errors out.
-      console.error("Python highlighting failed:", err);
+    } else if (language === "javascript") {
+      tokens = await highlightJavaScriptSource(content);
+    } else if (language === "typescript") {
+      tokens = await highlightTypeScriptSource(content);
     }
+  } catch (err) {
+    // Highlighting is best-effort — fall back to plain text instead of
+    // failing the whole request if the query engine errors out.
+    console.error(`${language} highlighting failed:`, err);
   }
 
   return NextResponse.json({ content, language, branch: usedBranch, tokens });
