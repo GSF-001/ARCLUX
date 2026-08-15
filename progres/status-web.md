@@ -670,3 +670,9 @@ PASSES — previously failed on the scaffold routes, dev-server 6/6 pages
   in flight — the glass commit was pushed to the already-merged branch,
   so it was re-based as a fresh branch (feat/glass-ki029) off the
   updated ARCLUX.main and opened as PR #363.
+
+## 2026-08-15 — Inline diagnostic gutter markers in FileDetails (line-level, not just file-level impact)
+
+**Status:** Done
+
+FileDetails.tsx previously rendered source as flat token-highlighted <pre> with no way to see WHICH line a diagnostic finding referred to -- Impact tab only showed affected FILES, not line-level detail. Rewrote to render per-line: each line gets a gutter (colored bar for error/warning severity + line number), clicking a marked line expands the diagnostic message + fix suggestion inline, editor-style. Explorer.tsx now fetches POST /api/diagnostics once per repoUrl/branch (not per file switch -- endpoint does full clone+index per call, same cost as /api/analyze) and filters events client-side to the open file's path, passed to FileDetails as a diagnostics prop. See PR #389.
