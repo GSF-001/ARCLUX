@@ -373,3 +373,9 @@ Same failure mode as the two prior regressions (2026-08-10 entries): parsePython
 **Status:** Done
 
 Contributor commit added apps/cli/commands/{edit,logs,open,verify}.ts using export const xCommand pattern (not matching registerXCommand convention), none registered in index.ts. open.ts had unterminated template literal (backtick opened, quote closed) -- syntax error, failed tsc entirely. commands/verify.ts duplicated existing registered apps/cli/verify.ts. edit.ts/open.ts also diverged from our CodeNavigator-based design from earlier this session (dependency/consumer navigation) with a different concept (replace file content wholesale). Fix: rewrote edit.ts/open.ts using CodeNavigator (openFile/listDependencyTargets/listDirectConsumerTargets), registered both in index.ts, deleted duplicate commands/verify.ts. logs.ts left unregistered -- assumes ~/.arclux/logs/*.log files which nothing in the codebase writes (state is JSON via SnapshotManager, not log files); needs its own fix before wiring in.
+
+## 2026-08-15 — CI failing: tests/impact.test.ts all 6 tests fail, repository.getModule is not a function
+
+**Status:** Not Started
+
+Test file uses a mock/plain object for repository that doesn't implement Repository class methods (getModule, etc). Needs fixing test setup to use real Repository instance or a proper mock with getModule. Not yet fixed.
