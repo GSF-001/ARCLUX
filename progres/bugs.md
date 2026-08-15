@@ -392,6 +392,13 @@ Same failure mode as the two prior regressions (2026-08-10 entries): parsePython
 
 Contributor commit added apps/cli/commands/{edit,logs,open,verify}.ts using export const xCommand pattern (not matching registerXCommand convention), none registered in index.ts. open.ts had unterminated template literal (backtick opened, quote closed) -- syntax error, failed tsc entirely. commands/verify.ts duplicated existing registered apps/cli/verify.ts. edit.ts/open.ts also diverged from our CodeNavigator-based design from earlier this session (dependency/consumer navigation) with a different concept (replace file content wholesale). Fix: rewrote edit.ts/open.ts using CodeNavigator (openFile/listDependencyTargets/listDirectConsumerTargets), registered both in index.ts, deleted duplicate commands/verify.ts. logs.ts left unregistered -- assumes ~/.arclux/logs/*.log files which nothing in the codebase writes (state is JSON via SnapshotManager, not log files); needs its own fix before wiring in.
 
+  docs/log-session-progress-v2
+## 2026-08-15 — getModule/pipeline test bugs resolved
+
+**Status:** Done
+
+Both CI-failing bugs fixed. tests/impact.test.ts: root cause was stale parameter order plus empty Repository fixture -- none of the tested functions were modified, only the test's calling convention and fixtures. tests/pipeline.test.ts: timeout bumped 5000ms to 30000ms for slower hardware, no logic changed. CI on ARCLUX.main confirmed green after merge.
+
 ## 2026-08-15 — CI failing: tests/impact.test.ts all 6 tests fail, repository.getModule is not a function
 
 **Status:** Fixed (PR #426, closes issue #424)
@@ -421,3 +428,4 @@ Known gap (documented in extractJs.ts + PROGRES.md): extractExportsJs only recog
 **Status:** Fixed (PR #435, closes issue #434)
 
 parseMaven matched `<dependency>` blocks with a blanket regex in ANY context — probe: 2 false positives out of 4 (`maven-shared-utils` from `<plugin><dependencies>` — plugin's own classpath; `guava` from `<dependencyManagement>` — version management only). Fix: strip `<plugin>…</plugin>` and `<dependencyManagement>…</dependencyManagement>` before block matching (neither nests itself nor the other; profile deps KEPT — conditional but real). Also: FIRST tests ever for the manifest package (tests/manifest.test.ts, 8: parsePom kinds/scopes/plugin/dependencyManagement/profile/malformed, parseGradle_ patterns) + wiring proven e2e (status-core's «not wired to analyzeRepository» was outdated — detectDependencies IS called by both local/remote paths; fixture java-basic with pom.xml + Main.java asserts dependencies = 3 project deps only). suite 359/359.
+ARCLUX.main
