@@ -2,6 +2,12 @@
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
+## 2026-08-15 — Итерация 4 аудита: cache/ и db/ — последние пакеты без тестов (issue #455)
+
+**Status:** Fixed (PR #456, closes #455)
+
+Карта покрытия: cache/ (repositoryCache/graphCache — consume analyzeRemoteRepository; fileCache — buildIndex; CacheProvider; MemoryCache — DEAD CODE, 0 импортеров) и db/ (JSON-file-per-record клиент + RepoStore/AnalysisStore/IssueStore) — 0 тестов. Fix: +12 тестов cache.test.ts (fingerprint order-independent/content-sensitive, hit/miss/invalidate/clear/size, fileCache content-hash staleness, CacheProvider stats, MemoryCache TTL с fake timers) и +10 тестов db.test.ts (ARCLUX_ROOT→tmp: roundtrip + __schemaVersion strip + corrupt/missing tolerance, RepoStore/AnalysisStore/IssueStore семантика). Находка: MemoryCache — dead code (зафиксировано). suite 445/445.
+
 ## 2026-08-15 — Итерация 3 аудита: editor-навигация + architecturalDiff без тестов (issue #451)
 
 **Status:** Fixed (PR #452, closes #451)
