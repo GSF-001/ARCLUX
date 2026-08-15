@@ -129,6 +129,71 @@ function matchCommonJsExportTarget(expr: ts.Expression): string | null {
   return null;
 }
 
+/**
+ * Matches a bare whole-object CommonJS export target: the left-hand side
+ * of `module.exports = { … }` / `exports = { … }` (as opposed to the
+ * per-property `module.exports.NAME = …` handled by
+ * matchCommonJsExportTarget above).
+ */
+function isBareModuleExports(expr: ts.Expression): boolean {
+  // exports = { … }
+  if (ts.isIdentifier(expr) && expr.text === "exports") return true;
+  // module.exports = { … }
+  return (
+    ts.isPropertyAccessExpression(expr) &&
+    ts.isIdentifier(expr.expression) &&
+    expr.expression.text === "module" &&
+    expr.name.text === "exports"
+  );
+}
+
+/**
+ * Extracts the exported name from one property of a whole-object export
+ * (`module.exports = { a, b }`). Returns null for members that carry no
+ * export name (spread `...rest`) or whose key cannot be statically
+ * determined (computed `[key]: value`).
+ */
+function getObjectLiteralExportName(
+  prop: ts.ObjectLiteralElement,
+  sourceFile: ts.SourceFile
+): string | null {
+  if (ts.isSpreadAssignment(prop)) return null;
+
+  if (ts.isShorthandPropertyAssignment(prop)) {
+    return prop.name.text; // { a } -> "a"
+  }
+
+  if (ts.isPropertyAssignment(prop)) {
+    // { foo: foo } / { foo: renamed } / { "foo-bar": x } -> the KEY
+    if (
+      ts.isIdentifier(prop.name) ||
+      ts.isStringLiteral(prop.name) ||
+      ts.isNumericLiteral(prop.name)
+    ) {
+      return prop.name.text;
+    }
+    return null; // computed key [expr]: value
+  }
+
+  if (
+    ts.isMethodDeclaration(prop) ||
+    ts.isGetAccessorDeclaration(prop) ||
+    ts.isSetAccessorDeclaration(prop)
+  ) {
+    // { foo() {} } / { get foo() {} } — only statically-named methods
+    if (
+      ts.isIdentifier(prop.name) ||
+      ts.isStringLiteral(prop.name) ||
+      ts.isNumericLiteral(prop.name)
+    ) {
+      return prop.name.text;
+    }
+    return null;
+  }
+
+  return null;
+}
+
 export function extractExportsJs(sourceFile: ts.SourceFile): RawExport[] {
   const exports: RawExport[] = [];
 
@@ -216,6 +281,21 @@ export function extractExportsJs(sourceFile: ts.SourceFile): RawExport[] {
           kind: "named",
           line: getLine(sourceFile, node.getStart()),
         });
+      } else if (
+        // Whole-object assignment: `module.exports = { a, b }` /
+        // `exports = { a }`. Every property of the object literal becomes
+        // a named export. Closes the long-standing gap noted in the
+        // matchCommonJsExportTarget doc comment (issue #430).
+        isBareModuleExports(node.expression.left) &&
+        ts.isObjectLiteralExpression(node.expression.right)
+      ) {
+        const line = getLine(sourceFile, node.getStart());
+        for (const prop of node.expression.right.properties) {
+          const name = getObjectLiteralExportName(prop, sourceFile);
+          if (name !== null) {
+            exports.push({ name, kind: "named", line });
+          }
+        }
       }
     }
 
