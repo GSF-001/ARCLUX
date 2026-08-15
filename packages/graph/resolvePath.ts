@@ -57,6 +57,35 @@ export function resolvePath(
   // relative form "." / ".." / "..pkg" (from a `from . import x` /
   // `from ..pkg import x` statement — see parsePython.ts).
   if (importSource.startsWith(".") || importSource.startsWith("/")) {
+    // Python package-relative imports use dots WITHOUT a slash (".x",
+    // "..utils", "...pkg.sub", bare "."/"..") — posix.normalize can't
+    // touch them: ".x" is a single segment, not a "./" directory step, so
+    // normalize("pkg/..utils") stays "pkg/..utils" and never matches a
+    // file. JS/TS always writes a slash ("./x", "../x"), so
+    // dots-without-slash are unambiguous Python syntax.
+    //
+    // Python semantics: N dots = N levels up from the importing MODULE,
+    // i.e. (N-1) levels up from its directory, then the (dotted) suffix.
+    // `from ..utils import x` in pkg/mod.py -> up 1 from "pkg" -> "utils".
+    const leadingDots = /^\.+/.exec(importSource);
+    if (leadingDots && importSource[leadingDots[0].length] !== "/") {
+      // `..utils` — a single segment, Python-style. `../x` has a slash
+      // right after the dots, so it must fall through to the JS branch
+      // below (a plain `/^\.+(?!\/)/` lookahead is not enough here —
+      // regex backtracking matches `../x` as one dot + `(?!\/)` seeing
+      // `.` and wrongly classifies it as Python).
+      const dotCount = leadingDots[0].length;
+      const suffix = importSource.slice(dotCount).replace(/\./g, "/");
+      let targetDir = importerDir;
+      for (let i = 1; i < dotCount; i++) {
+        targetDir = posix.dirname(targetDir);
+      }
+      const rawTarget = posix.normalize(posix.join(targetDir, suffix));
+      const resolved = tryResolveInternal(rawTarget, knownFiles);
+      if (resolved) return resolved;
+      return { type: "external", packageName: importSource };
+    }
+
     const rawTarget = posix.normalize(posix.join(importerDir, importSource));
     const resolved = tryResolveInternal(rawTarget, knownFiles);
     if (resolved) return resolved;

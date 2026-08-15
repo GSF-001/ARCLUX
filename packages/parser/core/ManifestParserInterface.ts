@@ -27,8 +27,21 @@ export interface ManifestDependency {
  * LanguageParser/ParserRegistry which cover arbitrary source files.
  */
 export interface ManifestParser {
-  /** Exact filename this parser handles, e.g. "go.mod", "Cargo.toml" */
-  readonly filename: string;
+  /**
+   * Filename(s) this parser handles, e.g. "go.mod", "Cargo.toml" — or an
+   * array for formats that span multiple filenames (build.gradle AND
+   * build.gradle.kts use the same Groovy/Kotlin-DSL dependency syntax).
+   * An empty array means the parser matches ONLY via `extension`.
+   */
+  readonly filename: string | readonly string[];
+  /**
+   * Optional: match files by extension ANYWHERE under the repo root
+   * (e.g. ".csproj" — project files live in per-project subdirectories
+   * with arbitrary names, so an exact filename never matches). When set,
+   * ManifestRegistry.detectDependencies also walks the tree once and
+   * parses every matching file.
+   */
+  readonly extension?: string;
 
   /**
    * Parses manifest content into a flat dependency list. Must NOT throw on

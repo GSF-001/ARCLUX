@@ -2,6 +2,24 @@
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
+## 2026-08-15 — Итерация 2 аудита: 5 impact-функций + 4 manifest-парсера без тестов (issues #445/#446)
+
+**Status:** Fixed (PR #448 + PR #449, closes #445 + #446)
+
+Аудит «зелёные тесты без доказанной механики», итерация 2 (MCP-first: get_symbol_info/intel_code_topology + batch-grep). (1) impact.test.ts покрывал 4 из 9 функций — пять (traceExports, traceImports, calculateAffectedComponents, calculateAffectedModules, calculateAffectedRoutes) имели 0 тестов И 0 вызовов по всему репо (dead code, только doc-comment ссылки в детекторах). +10 тестов, пинующих контракт каждой функции (attribution named/default/namespace, идентификаторы, фильтр .tsx PascalCase, группировка по package-id, routePath с route-group). Находка «0 callers» зафиксирована для будущего wiring-решения. (2) из 9 manifest-парсеров 4 не имели unit-тестов (parsePackageJson, parseGemfile, parseComposer, parseRequirements) — +6 тестов (runtime/dev split, platform-фильтр php/ext-*, version-операторы, malformed→[]). suite 412/412.
+
+## 2026-08-15 — detector.test.ts: 19 placeholder-тестов (Array.isArray на пустом репо) заменены реальной механикой
+
+**Status:** Fixed (PR #442, closes issue #441)
+
+Весь «Detector Suite» был паттерном «зелёный тест без доказанной механики»: 19 тестов проверяли только Array.isArray(findings) на ПУСТОМ Repository — детектор, возвращающий [] для любого входа, прошёл бы. Реальная механика была только у 3 детекторов (core-detectors.test.ts: circular, unused exports, orphan). Fix: tests/detector.test.ts переписан с реальными fixtures (makeModule/makeRepository): каждый из 16 непокрытых детекторов (largeModules, duplicateModules, sharedModules, indexFiles, layerViolation, deadCode, entryPoints, missingExports, routeConvention, componentConvention, featureStructure, repositoryPattern, storyConvention, testConvention, unusedFiles, ambiguousSymbolResolution) получил positive (точный filePath/severity/цикл/ruleName) + negative кейсы. 3 placeholder-входа для circular/unused/orphan удалены (дублируют core-detectors). suite 396/396 (369 + 27).
+
+## 2026-08-15 — parseCsproj: ".csproj" зарегистрирован как точное имя файла — реальные Foo.csproj никогда не сканировались
+
+**Status:** Fixed (PR #439, closes issue #438)
+
+parseCsproj регистрировался как filename ".csproj" — detectDependencies делает join(rootPath, filename), то есть ищет файл буквально названный ".csproj" в корне. Реальные .NET-проекты имеют per-project файлы в поддиректориях с произвольными именами (src/MyApp/MyApp.csproj) — все молча пропускались, NuGet-зависимости не попадали в AnalyzeRepositoryResult.dependencies. Fix: ManifestParserInterface получил optional extension?: string; ManifestRegistry хранит extension-парсеры отдельно (пустой filename-массив ничего не регистрирует в filename-map — поймано первым прогоном тестов) и делает второй проход — один рекурсивный walk (skip node_modules/.git) с парсингом каждого файла по extension; parseCsproj → filename: [], extension: ".csproj". +4 теста (parseCsproj unit self-closing/open-close, перенос регистрации, extension-pass на temp-дире с вложенными csproj + distractor, e2e csharp-basic через analyzeRepository). suite 369/369.
+
 ## 2026-08-03 — Update — Python resolver bug + TS export default double-count bug (fixed)
 
 Tested against playground/python-demo (6-file fixture, existed already)
@@ -374,8 +392,40 @@ Same failure mode as the two prior regressions (2026-08-10 entries): parsePython
 
 Contributor commit added apps/cli/commands/{edit,logs,open,verify}.ts using export const xCommand pattern (not matching registerXCommand convention), none registered in index.ts. open.ts had unterminated template literal (backtick opened, quote closed) -- syntax error, failed tsc entirely. commands/verify.ts duplicated existing registered apps/cli/verify.ts. edit.ts/open.ts also diverged from our CodeNavigator-based design from earlier this session (dependency/consumer navigation) with a different concept (replace file content wholesale). Fix: rewrote edit.ts/open.ts using CodeNavigator (openFile/listDependencyTargets/listDirectConsumerTargets), registered both in index.ts, deleted duplicate commands/verify.ts. logs.ts left unregistered -- assumes ~/.arclux/logs/*.log files which nothing in the codebase writes (state is JSON via SnapshotManager, not log files); needs its own fix before wiring in.
 
+  docs/log-session-progress-v2
 ## 2026-08-15 — getModule/pipeline test bugs resolved
 
 **Status:** Done
 
 Both CI-failing bugs fixed. tests/impact.test.ts: root cause was stale parameter order plus empty Repository fixture -- none of the tested functions were modified, only the test's calling convention and fixtures. tests/pipeline.test.ts: timeout bumped 5000ms to 30000ms for slower hardware, no logic changed. CI on ARCLUX.main confirmed green after merge.
+
+## 2026-08-15 — CI failing: tests/impact.test.ts all 6 tests fail, repository.getModule is not a function
+
+**Status:** Fixed (PR #426, closes issue #424)
+
+Original diagnosis ("mock/plain object doesn't implement getModule") was inaccurate. Root cause: impact functions were refactored from `(moduleId, graph)` to `(repository, moduleId)` and the test file still used the old signature on an empty Repository (which also has no `graph` property — graph is built separately by buildDependencyGraph). Fix: rewrote tests/impact.test.ts with real ModuleInfo fixtures (makeModule/makeRepository convention from tests/graph.test.ts) covering chain (entry->service->repository), circular (a->b->c->a, cycle guard), fan-out (a->{b,c}) and notFound behavior — 12 tests, all green. Related: tests/pipeline.test.ts fixed in PR #427 (issue #425): `/tmp/test` ThreatCrush finding was a false positive (path never touched — throws before I/O), replaced with portable os.tmpdir() path; weak `moduleCount >= 0` assertions replaced with deterministic fixture (tests/fixtures/pipeline-basic/, entry->service->repository) asserting exact moduleCount/edges/scanSummary (~1.8s -> ~22ms).
+
+## 2026-08-15 — Python relative imports resolve as external: from .x / from ..x / bare . and .. dropped from graph
+
+**Status:** Fixed (PR #431, closes issue #429)
+
+Python files using relative imports got ZERO dependency edges: `from .repository import x` in pkg/service.py, `from ..utils import x` in pkg/repository.py, `from .service import x` in pkg/__init__.py — all resolved as external. Root cause: resolvePath handled every leading-dot source with the JS branch (posix.join+normalize), which only resolves `/`-separated segments; Python's `.x`/`..x` are single segments, so normalize("pkg/..utils") stays "pkg/..utils" and never matches. Fix: dots-without-slash → Python package-relative branch (N dots = N-1 dirname steps up + dotted suffix); JS `./x`/`../x` untouched (naive `/^\.+(?!\/)/` lookahead misclassifies `../x` via regex backtracking — fixed with full-dot-run + explicit char check). +11 unit tests (tests/resolvePath.test.ts, first ever for this file) + first e2e for Python parser (tests/python-e2e.test.ts on tests/fixtures/python-basic/: all 3 relative forms produce exact graph edges).
+
+## 2026-08-15 — CommonJS whole-object exports not extracted: module.exports = { a, b } silently yields zero exports
+
+**Status:** Fixed (PR #432, closes issue #430)
+
+Known gap (documented in extractJs.ts + PROGRES.md): extractExportsJs only recognized per-property assignment (module.exports.NAME=/exports.NAME=); `module.exports = {…}` has bare LHS `module.exports` which matchCommonJsExportTarget never matched — exports silently dropped. Fix: bare `module.exports =`/`exports =` with ObjectLiteralExpression RHS → each property is a named export (shorthand `{a}`, renamed key `{foo: renamed}` → "foo", string keys, methods/getters; spread + computed keys skipped). +6 tests in tests/parser/javascript.test.ts. Single-value assignment (`module.exports = fn`) still out of scope (follow-up).
+
+## 2026-08-15 — Manifest parsers part 2: pom.xml ${property} versions unresolved + build.gradle.kts never scanned
+
+**Status:** Fixed (PR #437, closes issue #436)
+
+(1) parsePom записывал versionRange литерально (`${spring.version}`) — теперь резолвит из `<properties>`-секции того же pom (итеративно для chained-ссылок; неизвестные `${project.version}` остаются литеральными). (2) build.gradle.kts никогда не сканировался: parseGradle_ регистрировался только как filename "build.gradle", а ManifestRegistry мапил один filename на парсер. Fix: `filename: string | readonly string[]` в ManifestParserInterface, registry итерирует filenames, parseGradle_ → ["build.gradle", "build.gradle.kts"] (Kotlin DSL строковая форма group:artifact:version уже матчилась существующим regex — probe подтвердил, регистрации не хватало). +6 тестов (свойства direct/chained/unknown, Kotlin DSL, registry multi-filename, e2e gradle-kts-basic fixture). Наблюдение (не фиксилось): parseCsproj регистрирует filename ".csproj" (расширение как имя — реальный Foo.csproj не найдётся, только файл буквально названный .csproj).
+
+## 2026-08-15 — Maven pom.xml parser: regex captures plugin and dependencyManagement dependencies as project deps
+
+**Status:** Fixed (PR #435, closes issue #434)
+
+parseMaven matched `<dependency>` blocks with a blanket regex in ANY context — probe: 2 false positives out of 4 (`maven-shared-utils` from `<plugin><dependencies>` — plugin's own classpath; `guava` from `<dependencyManagement>` — version management only). Fix: strip `<plugin>…</plugin>` and `<dependencyManagement>…</dependencyManagement>` before block matching (neither nests itself nor the other; profile deps KEPT — conditional but real). Also: FIRST tests ever for the manifest package (tests/manifest.test.ts, 8: parsePom kinds/scopes/plugin/dependencyManagement/profile/malformed, parseGradle_ patterns) + wiring proven e2e (status-core's «not wired to analyzeRepository» was outdated — detectDependencies IS called by both local/remote paths; fixture java-basic with pom.xml + Main.java asserts dependencies = 3 project deps only). suite 359/359.
+ARCLUX.main
