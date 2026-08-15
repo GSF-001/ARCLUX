@@ -1,28 +1,43 @@
-import { Command } from "commander";
-import { intro, outro, select } from "@clack/prompts";
+/**
+ * Copyright 2026 Mikatoshi
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ */
 
-export const openCommand = new Command()
-  .name("open")
-  .description("Open analysis results in browser or editor")
-  .option("--browser", "Open in default browser")
-  .option("--editor", "Open in default editor")
-  .option("<path>", "File or directory path")
-  .action(async (path, options) => {
-    intro("ARCLUX Open");
+import type { Command } from "commander";
+import * as path from "node:path";
+import { analyzeRepository } from "../../../packages/engine/pipeline";
+import { openFile } from "../../../packages/editor/CodeNavigator";
 
-    if (!path) {
-      outro("Error: path is required");
-      process.exit(1);
-    }
+export function registerOpenCommand(program: Command): void {
+  program
+    .command("open")
+    .description("Resolve a file to its module in the ARCLUX repository model")
+    .argument("<file>", "path to the file, relative to cwd or absolute")
+    .option("--json", "output raw module JSON instead of formatted summary")
+    .action(async (file: string, options: { json?: boolean }) => {
+      const { repository } = await analyzeRepository({ localPath: "." });
+      const absolutePath = path.resolve(process.cwd(), file);
+      const module = openFile(repository, absolutePath);
 
-    if (!options.browser && !options.editor) {
-      outro("Error: use --browser or --editor flag");
-      process.exit(1);
-    }
+      if (!module) {
+        console.error(`"${file}" is not tracked in this repository's module graph.`);
+        process.exitCode = 1;
+        return;
+      }
 
-    if (options.browser) {
-      outro(`Would open ${path} in browser (not yet implemented)");
-    } else if (options.editor) {
-      outro(`Would open ${path} in editor (not yet implemented)");
-    }
-  });
+      if (options.json) {
+        console.log(JSON.stringify(module, null, 2));
+        return;
+      }
+
+      console.log(`moduleId      ${module.id}`);
+      console.log(`file          ${module.file.relativePath}`);
+      console.log(`imports       ${module.resolvedImports.length}`);
+      console.log(`imported by   ${module.importedBy.length}`);
+    });
+}
