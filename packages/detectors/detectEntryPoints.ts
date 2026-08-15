@@ -36,6 +36,7 @@ export interface EntryPointFinding {
 const NEXTJS_APP_ROUTER_FILE = /(^|\/)app\/.*\/(page|layout|loading|error|not-found|route|template|default)\.(ts|tsx)$/;
 const NEXTJS_ROOT_APP_FILE = /(^|\/)app\/(page|layout|loading|error|not-found|route|template|default)\.(ts|tsx)$/;
 const CLI_ENTRY_FILE = /(^|\/)apps\/cli\/index\.ts$/;
+const VSCODE_EXTENSION_ENTRY_FILE = /(^|\/)apps\/vscode-extension\/src\/extension\.ts$/;
 
 function classify(module: ModuleInfo): string | null {
   const path = module.file.relativePath;
@@ -46,6 +47,10 @@ function classify(module: ModuleInfo): string | null {
 
   if (CLI_ENTRY_FILE.test(path)) {
     return "CLI entry point — invoked directly by the runtime (e.g. tsx/node), not imported by other source files.";
+  }
+
+  if (VSCODE_EXTENSION_ENTRY_FILE.test(path)) {
+    return "VS Code extension entry point — invoked by the VS Code runtime (package.json main/activationEvents), not imported by other source files.";
   }
 
   return null;
