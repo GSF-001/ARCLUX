@@ -81,10 +81,22 @@ Item 3 (scoring gate): `tests/detector-score.test.ts` — registry-driven
 meta-gate iterating all 19 detectors with minimal planted-violation and
 clean fixtures: asserts every detector fires (positive) and stays empty
 (negative), plus an exact denominator check (19). Result: 19/19
-positive, 19/19 negative. Two product decisions surfaced by the
+negative, 19/19 negative. Two product decisions surfaced by the
 adversarial suite are tracked as issues: #458 (TYPE_CHECKING imports as
 real edges) and #459 (test files flagged as orphan/dead). Suite:
 474/474 (44 files).
+
+Decisions #458/#459 implemented (Variant A): `parsePython` now skips
+imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` — type-only
+imports are not graph edges (a type-only cycle is no longer reported);
+new `packages/detectors/testFiles.ts` (`isTestFilePath`) excludes test
+files by convention from detectOrphanFiles / detectUnusedFiles /
+detectUnusedExports / detectDeadCode (same pattern as entry points).
+Adversarial tests flipped from pinned behavior to negative controls;
++6 tests (3 parser TYPE_CHECKING incl. non-guard control, 2 test-file,
+isTestFilePath describe). Boundaries documented in issues #458/#459
+(vitest.setup.ts not covered by the *.test.ts convention;
+detectMissingExports untouched). Suite: 478/478 (44 files).
 
 ## 2026-08-13 — UPDATE: framework rule stubs — implemented
 

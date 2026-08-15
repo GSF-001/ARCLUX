@@ -93,4 +93,25 @@ fn = lambda: 1
     const names = parsed.exports.map((e) => e.name);
     expect(names).toEqual(["outer"]);
   });
+
+  it("skips imports under if TYPE_CHECKING (type-only, decision #458)", async () => {
+    const parsed = await parsePythonSource(
+      "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from B import something"
+    );
+    // Only the `from typing import TYPE_CHECKING` line itself is an edge;
+    // the type-only import under the guard is not (decision #458).
+    expect(parsed.imports.map((i) => i.source)).toEqual(["typing"]);
+  });
+
+  it("skips imports under if typing.TYPE_CHECKING as well", async () => {
+    const parsed = await parsePythonSource(
+      "import typing\nif typing.TYPE_CHECKING:\n    from B import something"
+    );
+    expect(parsed.imports.map((i) => i.source)).toEqual(["typing"]);
+  });
+
+  it("still extracts imports under non-TYPE_CHECKING conditions", async () => {
+    const parsed = await parsePythonSource("if SOME_FLAG:\n    from B import something");
+    expect(parsed.imports.map((i) => i.source)).toEqual(["B"]);
+  });
 });

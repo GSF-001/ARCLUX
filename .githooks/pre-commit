@@ -29,3 +29,16 @@ if [ "$FAIL" -eq 1 ]; then
   echo "Commit ditolak. Pakai scripts/log-progress.sh atau tambahin tanggal manual (format: ## YYYY-MM-DD — judul)."
   exit 1
 fi
+
+# P-003 guard (mechanical): AGENT_DIARY.md is gitignored but must stay
+# structurally valid — an edit that replaces an entry header leaves the
+# body orphaned. Best-effort: only runs when tsx is available, so a
+# contributor without the toolchain is never blocked.
+if [ -f AGENT_DIARY.md ] && { [ -x node_modules/.bin/tsx ] || command -v tsx >/dev/null 2>&1; }; then
+  if ! npx --no-install tsx scripts/check-diary.ts >/dev/null 2>&1; then
+    echo ""
+    echo "BLOCKED: AGENT_DIARY.md structure broken (orphaned entry body — P-003)."
+    echo "Run: npx tsx scripts/check-diary.ts"
+    exit 1
+  fi
+fi

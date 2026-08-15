@@ -22,6 +22,8 @@ import { parsePython } from "../packages/parser/python/parsePython";
 import { detectCircularDependency } from "../packages/detectors/detectCircularDependency";
 import { detectDeadCode } from "../packages/detectors/detectDeadCode";
 import { detectOrphanFiles } from "../packages/detectors/detectOrphanFiles";
+import { detectUnusedExports } from "../packages/detectors/detectUnusedExports";
+import { isTestFilePath } from "../packages/detectors/testFiles";
 import type { FileInfo, ModuleInfo, RepositoryMeta, RawExport, ResolvedImport } from "../packages/shared/types";
 
 function makePyFile(relativePath: string): FileInfo {
@@ -116,17 +118,19 @@ describe("adversarial — parsePython (source level)", () => {
     expect(parsed.imports).toEqual([]);
   });
 
-  it("TYPE_CHECKING conditional import is currently extracted as a real edge (OPEN QUESTION)", async () => {
+  it("TYPE_CHECKING conditional import is skipped — type-only imports are not edges (decision #458)", async () => {
     const parsed = await parsePy(
       "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from B import something"
     );
-    // Pinned current behavior: extractImports recurses into nested nodes,
-    // so the type-only import inside the if-block becomes a real edge.
-    // OPEN QUESTION: should type-only imports be edges at all? If we
-    // decide to skip them, this assertion flips to imports === [].
-    expect(
-      parsed.imports.some((i) => i.source === "B" && i.namedImports.includes("something"))
-    ).toBe(true);
+    // Decision #458 (Variant A): imports under `if TYPE_CHECKING:` are
+    // type-only and must not become dependency-graph edges. Only the
+    // `from typing import TYPE_CHECKING` line itself is extracted.
+    expect(parsed.imports.map((i) => i.source)).toEqual(["typing"]);
+  });
+
+  it("a non-TYPE_CHECKING conditional import is still extracted (guard does not over-skip)", async () => {
+    const parsed = await parsePy("if SOME_FLAG:\n    from B import something");
+    expect(parsed.imports.map((i) => i.source)).toContain("B");
   });
 
   it("syntactically invalid source is tolerated (ERROR node) without crashing", async () => {
@@ -146,21 +150,6 @@ describe("adversarial — parsePython (source level)", () => {
 describe("adversarial — detectCircularDependency", () => {
   it("empty repository does not crash", () => {
     expect(detectCircularDependency(makeRepository([]))).toEqual([]);
-  });
-
-  it("a TYPE_CHECKING-only edge closes a cycle and IS flagged (OPEN QUESTION)", () => {
-    // a -> b is a real import; b -> a exists only under `if TYPE_CHECKING:`
-    // (which the parser currently extracts as a real edge — see the source
-    // level test above). The detector therefore reports a cycle. Pinned
-    // current behavior: if TYPE_CHECKING edges get skipped at parse time,
-    // this fixture becomes the negative control.
-    const repo = makeRepository([
-      makeModule("src/a.ts", { imports: ["src/b.ts"] }),
-      makeModule("src/b.ts", { imports: ["src/a.ts"] }),
-    ]);
-    const findings = detectCircularDependency(repo);
-    expect(findings).toHaveLength(1);
-    expect(new Set(findings[0].cycle)).toEqual(new Set(["src/a.ts", "src/b.ts"]));
   });
 });
 
@@ -203,47 +192,50 @@ describe("adversarial — detectDeadCode", () => {
     expect(detectDeadCode(repo)).toEqual([]);
   });
 
-  it("a test file NOT imported is not dead code (orphan territory, boundary check)", () => {
+  it("a test file NOT imported is not dead code and not orphan (decision #459)", () => {
     const repo = makeRepository([makeModule("src/utils.test.ts", { exports: [named("helper")] })]);
-    // importedBy === 0 => detectDeadCode skips it (that's the orphan
-    // detector's job), so no dead-code finding...
+    // Decision #459 (Variant A): test files are excluded by convention
+    // (runners invoke them by name, like entry points).
     expect(detectDeadCode(repo)).toEqual([]);
-    // ...and detectOrphanFiles DOES flag it — see the OPEN QUESTION below.
-    expect(detectOrphanFiles(repo).map((f) => f.filePath)).toEqual(["src/utils.test.ts"]);
+    expect(detectOrphanFiles(repo)).toEqual([]);
   });
 
-  it("a test file imported for side effects with unused exports IS flagged (OPEN QUESTION)", () => {
-    // e.g. `import "./vitest.setup.ts"` — nothing references its exports.
-    // Pinned current behavior. OPEN QUESTION: should test files be
-    // excluded by convention (like entry points), since runners (vitest,
-    // pytest fixtures) invoke them by name rather than by import?
+  it("a test file imported for side effects with unused exports is NOT flagged as dead (decision #459)", () => {
+    // e.g. a *.test.ts helper imported for side effects — nothing references
+    // its exports, but it's a test-support file, not dead code (runners
+    // discover *.test.ts by convention).
     const repo = makeRepository([
-      makeModule("src/vitest.setup.ts", { exports: [named("install")], importedBy: ["src/main.ts"] }),
+      makeModule("src/helpers.test.ts", { exports: [named("install")], importedBy: ["src/main.ts"] }),
       makeModule("src/main.ts", {
-        imports: ["src/vitest.setup.ts"],
+        imports: ["src/helpers.test.ts"],
         resolvedImports: [
-          { moduleId: "src/vitest.setup.ts", kind: "static", namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+          { moduleId: "src/helpers.test.ts", kind: "static", namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
         ],
       }),
     ]);
-    const findings = detectDeadCode(repo);
-    expect(findings).toHaveLength(1);
-    expect(findings[0].filePath).toBe("src/vitest.setup.ts");
+    expect(detectDeadCode(repo)).toEqual([]);
   });
 });
 
-describe("adversarial — detectOrphanFiles", () => {
-  it("empty repository does not crash", () => {
-    expect(detectOrphanFiles(makeRepository([]))).toEqual([]);
+describe("adversarial — detectUnusedExports", () => {
+  it("test files with unused exports are not flagged (decision #459)", () => {
+    const repo = makeRepository([makeModule("src/utils.test.ts", { exports: [named("helper")] })]);
+    expect(detectUnusedExports(repo)).toEqual([]);
+  });
+});
+
+describe("isTestFilePath", () => {
+  it("matches TS/JS test and spec files, not plain sources", () => {
+    expect(isTestFilePath("src/utils.test.ts")).toBe(true);
+    expect(isTestFilePath("src/Button.spec.tsx")).toBe(true);
+    expect(isTestFilePath("src/utils.ts")).toBe(false);
+    expect(isTestFilePath("src/Button.tsx")).toBe(false);
   });
 
-  it("test files with no importers are currently flagged as orphan (OPEN QUESTION)", () => {
-    const repo = makeRepository([
-      makeModule("src/utils.test.ts", { imports: ["src/utils.ts"] }),
-      makeModule("src/utils.ts"),
-    ]);
-    // No test-file exclusion exists in the entry-module set yet — same
-    // OPEN QUESTION as detectDeadCode above.
-    expect(detectOrphanFiles(repo).map((f) => f.filePath)).toContain("src/utils.test.ts");
+  it("matches Python test files and conftest, not plain sources", () => {
+    expect(isTestFilePath("tests/test_utils.py")).toBe(true);
+    expect(isTestFilePath("src/utils_test.py")).toBe(true);
+    expect(isTestFilePath("src/conftest.py")).toBe(true);
+    expect(isTestFilePath("src/utils.py")).toBe(false);
   });
 });

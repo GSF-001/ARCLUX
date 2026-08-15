@@ -119,10 +119,28 @@ function dottedNameToString(node: TSNode): string {
 function extractImports(root: TSNode, warnings: string[]): RawImport[] {
   const imports: RawImport[] = [];
 
-  function visit(node: TSNode | null) {
+  /**
+   * Imports under `if TYPE_CHECKING:` (or `if typing.TYPE_CHECKING:`) are
+   * type-only — they exist for the type checker, not the runtime, so they
+   * must not become dependency-graph edges (a type-only cycle is not a
+   * real cycle). Decision #458, Variant A: skip them at parse time.
+   * The TS parser marks the same concept via RawImport.kind "type-only"
+   * (see parseTs.ts) — Python has no equivalent import syntax, only this
+   * guard pattern.
+   */
+  function isTypeCheckingGuard(node: TSNode): boolean {
+    if (node.type !== "if_statement") return false;
+    const condition = node.childForFieldName("condition");
+    if (!condition) return false;
+    return condition.text === "TYPE_CHECKING" || condition.text === "typing.TYPE_CHECKING";
+  }
+
+  function visit(node: TSNode | null, typeOnly = false) {
     if (!node) return;
 
-    if (node.type === "import_statement") {
+    const inTypeOnly = typeOnly || isTypeCheckingGuard(node);
+
+    if (node.type === "import_statement" && !inTypeOnly) {
       for (let i = 0; i < node.namedChildren.length; i++) {
         const child = node.namedChildren[i];
         if (!child) continue;
@@ -152,7 +170,7 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
       }
     }
 
-    if (node.type === "import_from_statement") {
+    if (node.type === "import_from_statement" && !inTypeOnly) {
       const moduleNode = node.childForFieldName("module_name");
       const source = moduleNode ? dottedNameToString(moduleNode) : ".";
 
@@ -184,7 +202,7 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
     }
 
     for (let i = 0; i < node.childCount; i++) {
-      visit(node.child(i));
+      visit(node.child(i), inTypeOnly);
     }
   }
 

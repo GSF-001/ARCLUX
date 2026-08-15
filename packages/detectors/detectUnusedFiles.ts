@@ -18,6 +18,7 @@
 
 import type { Repository } from "../repository/Repository";
 import { detectEntryPoints } from "./detectEntryPoints";
+import { isTestFilePath } from "./testFiles";
 
 export interface UnusedFileFinding {
   filePath: string;
@@ -29,7 +30,10 @@ export function detectUnusedFiles(repository: Repository): UnusedFileFinding[] {
 
   return repository
     .findModulesWithNoImporters()
-    .filter((module) => !entryPointPaths.has(module.file.relativePath))
+    .filter(
+      (module) =>
+        !entryPointPaths.has(module.file.relativePath) && !isTestFilePath(module.file.relativePath)
+    )
     .map((module) => ({
       filePath: module.file.relativePath,
       message: `"${module.file.relativePath}" is never imported and doesn't match any known entry-point convention.`,
