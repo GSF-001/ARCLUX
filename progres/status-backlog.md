@@ -13,6 +13,39 @@ for issue #8 completed: graph, impact, indexer, pipeline, and per-language
 parser suites — 141 tests / 20 files, vitest green. See the old entry
 below for the historical stub list.
 
+## 2026-08-15 — Test coverage expanded (detector, pipeline, impact)
+
+**Status:** Done
+
+Added `tests/detector.test.ts` (19 detector smoke tests, one per detector
+covering basic signature/return type), `tests/pipeline.test.ts` (6 tests:
+error handling for invalid options, AnalyzeRepositoryResult structure
+validation, scanSummary shape check), `tests/impact.test.ts` (5 tests:
+calculateAffectedFiles/buildImpactTree/traceConsumers/traceDependencies).
+Tests are non-dogmatic placeholder level (no fixtures, signature-only —
+detectors already have guard-inventory.test.ts with real fixtures) but
+establish that all 19 detectors return arrays without crashing on an empty
+repo. Verified: `npx vitest tests/{detector,pipeline,impact}.test.ts` green.
+
+## 2026-08-15 — CLI commands stubbed out (open, verify, logs, edit)
+
+**Status:** Done
+
+Added 4 command files to `apps/cli/commands/`: 
+- `open.ts` — open analysis results in browser or editor (not yet implemented,
+  honest placeholder with --browser/--editor flags)
+- `verify.ts` — run all framework rules + detectors via runDoctor, output
+  grouped by check, JSON support. Real implementation calling
+  analyzeRepository + runDoctor
+- `logs.ts` — view daemon or CLI logs from ~/.arclux/logs/
+- `edit.ts` — read current + replacement file, show diff preview, apply with
+  --apply flag
+
+open.ts and logs.ts are placeholders (print what they would do). verify.ts and
+edit.ts are real implementations. None wired into apps/cli/index.ts CLI router
+yet — that's a follow-up (consistent with "add files, update PROGRES.md, don't
+create orphans" rule).
+
 ## 2026-08-03 — ❌ STILL EMPTY (8-line stub, license header only)
 
 **Priority #1 — core feature — NOTE: this was previously miscategorized,
@@ -87,7 +120,7 @@ see "packages/impact/* already done" update below**
 
 **Status:** Done
 
-Confirmed via grep: zero references to Explorer in apps/web/app. Component exists, works standalone, but no page renders it. Worth prioritizing -- a working workspace/explorer view is probably what makes ARCLUX feel alive to new visitors vs just a graph viewer.
+Confirmed via grep: zero references to Explorer in apps/web/app. Component exists, works standalone, but no page renders it. Worth prioritizing -- a working workspace/explorer view is probably wha[...]
 
 ## 2026-08-14 — UPDATE: the 2026-08-03 "STILL EMPTY" list — mostly resolved
 
@@ -122,4 +155,4 @@ extracted, closures correctly skipped; DDD layouts give false
 
 **Status:** Not Started
 
-Confirmed via line-count scan (find packages -name '*.ts' | wc -l <= 9): packages/parser/{csharp,ruby,rust,cpp}/* (source parsers, manifest parsing already exists per earlier decisions), packages/indexer/{updateIndex,watchIndex,indexSchema}.ts (likely superseded by packages/daemon/'s coarse watchRepository approach -- verify before implementing, don't assume still needed), packages/engine/{analyzeFile,analyzeModule,analyzeImpact,analyzeConvention,analyzeArchitecture,analyzeDependency,generateSummary,generateReport}.ts (real entry point is pipeline.ts's analyzeRepository -- these are an unimplemented finer-grained API surface, not broken core), packages/ui/{graphLayout,graphTheme,graphAnimation,graphIcons}.ts (apps/web/components/graph/* has its own implementation currently, unclear if these should replace/wrap that), packages/watcher/watchGit.ts, packages/networking/{NetworkRegistry,ConnectionManager}.ts (in progress this session, see below).
+Confirmed via line-count scan (find packages -name '*.ts' | wc -l <= 9): packages/parser/{csharp,ruby,rust,cpp}/* (source parsers, manifest parsing already exists per earlier decisions), packages[...]
