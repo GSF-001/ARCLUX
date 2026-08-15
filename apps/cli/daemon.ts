@@ -17,7 +17,7 @@ import * as p from "@clack/prompts";
 import { ArcluxDaemon } from "../../packages/daemon/ArcluxDaemon";
 import { resolveWorkingRepositoryRoot } from "../../packages/environment/EnvironmentDetector";
 import { resolve } from "node:path";
-import { spawnDetached, stopDetached, getDaemonStatus } from "../../packages/daemon/DaemonProcess";
+import { spawnDetached, stopDetached, getDaemonStatus, getDaemonHealth } from "../../packages/daemon/DaemonProcess";
 import { saveRepo } from "../../packages/db/repositories/RepoStore";
 import { saveAnalysis } from "../../packages/db/repositories/AnalysisStore";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,8 @@ export function registerDaemonCommand(program: Command): void {
     .option("--detach", "run the daemon as a background process instead of foreground")
     .option("--stop", "stop a running detached daemon for this repository")
     .option("--status", "check whether a detached daemon is running for this repository")
-    .action(async (pathArg: string, options: { detach?: boolean; stop?: boolean; status?: boolean }) => {
+    .option("--health", "like --status, but also verifies the local bridge server is actually responding")
+    .action(async (pathArg: string, options: { detach?: boolean; stop?: boolean; status?: boolean; health?: boolean }) => {
       const startPath = pathArg ? resolve(pathArg) : process.cwd();
       const targetPath = pathArg ? startPath : resolveWorkingRepositoryRoot(startPath);
 
@@ -45,6 +46,18 @@ export function registerDaemonCommand(program: Command): void {
         const status = getDaemonStatus(targetPath);
         if (status) p.log.success(`Daemon running (pid ${status.pid}, since ${new Date(status.startedAt).toLocaleTimeString()})`);
         else p.log.warn(`No running daemon for ${targetPath}`);
+        return;
+      }
+
+      if (options.health) {
+        const health = await getDaemonHealth(targetPath);
+        if (!health.running) {
+          p.log.warn(`No running daemon for ${targetPath}`);
+        } else if (health.bridgeReachable) {
+          p.log.success(`Daemon healthy (pid ${health.pid}, bridge responding)`);
+        } else {
+          p.log.error(`Daemon process alive (pid ${health.pid}) but bridge server not responding -- may need a restart`);
+        }
         return;
       }
 
