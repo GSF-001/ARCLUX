@@ -2,6 +2,90 @@
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
+## 2026-08-15 — PLAN: detector quality gate (graph mutations + adversarial suite + scoring)
+
+> **[STATUS UPDATE, 2026-08-15]: items 1 (graph-mutation tests, 11
+> tests), 2 (adversarial suite, 15 tests) and 3 (scoring gate, 19/19 both
+> directions) are now implemented — suite green 474/474 (44 files).
+> See "UPDATE: detector quality gate — graph mutations implemented" below.**
+
+**Status:** Not Started
+
+**Context.** From a cross-project audit (MSCodeBase → ARCLUX). Claims were
+fact-checked against current code first so nothing already done gets re-done:
+- 2026-08-15 detector work already gives every one of the 19 detectors a
+  positive/negative control with real fixtures (`tests/detector.test.ts`,
+  `tests/core-detectors.test.ts`, `tests/detectors-wired.test.ts`)
+- Python relative imports are fixed & tested (issue #429 —
+  `tests/python-e2e.test.ts`, `tests/resolvePath.test.ts`)
+
+**Gap, verified this session:**
+
+1. **Graph-mutation tests** — nothing asserts that inserting an edge into an
+   acyclic graph makes `detectCircularDependency` fire (and removing it
+   clears the finding). The evalmut "add_edge_to_make_cyclic" idea, in TS:
+   `tests/mutation-graph.test.ts` — build a 3-module acyclic fixture, assert
+   no cycle, add an edge, assert cycle + exact node set, remove, assert clean.
+2. **Adversarial edge-case suite** — `tests/detectors-adversarial.test.ts`:
+   - minified one-liner (`def A():pass\ndef B():pass`) → no crash
+   - comment mentioning "A calls B, B calls A" → no false positive
+   - `if TYPE_CHECKING:` conditional import → open question: real edge or
+     skip? (tree-sitter currently extracts it as a real edge — confirm
+     whether that's desired before asserting)
+   - `getattr(obj, "method")()` dynamic call → dead-code detector must not
+     flag, or flag with `confidence: "low"`
+   - `test_*.py` / `*.test.ts` files → never flagged as dead
+3. **Scoring gate** — one run (vitest or `scripts/`): planted violation
+   across all 19 detectors → all fire; clean fixture repo → all empty.
+   Target: 19/19 both directions as a regression gate.
+
+**Why vitest, not a Python harness:** ARCLUX is TS + vitest; `tests/fixtures/`
+and `makeModule`/`makeRepository` already exist. Importing Python evalmut
+would add a second stack for a concept vitest covers natively.
+
+**Estimate:** 6-10h (2-3h mutations, 3-4h adversarial, 1-2h scoring gate).
+
+## 2026-08-15 — UPDATE: detector quality gate — graph mutations implemented
+
+**Status:** Done (items 1-3 implemented)
+
+`tests/mutation-graph.test.ts` added (11 tests, vitest): mutation-style
+suite for detectCircularDependency — acyclic baseline → 0 findings;
+plant edge c->a → cycle with exact node set + canonical rotation
+(issue #207); remove → clean (round-trip); forward-edge negative control;
+2-node cycle; entry-point rotation dedup; second cycle joins existing one
+without key collisions; unrelated-component mutation leaves finding
+untouched; self-loop documented; live-mutation ≡ fresh-index equivalence;
+sub-cycle excludes outsider node. Helpers mirror makeModule/makeRepository
+from tests/core-detectors.test.ts; mutateImports fails fast on unknown
+module ids. Full suite: 456/456 (42 files).
+
+Item 2 landed in the same pass: `tests/detectors-adversarial.test.ts`
+(15 tests). Source level (parsePython): minified one-liner, comment
+mentioning a cycle / string literal containing an import can't create
+edges, invalid syntax tolerated (ERROR nodes), empty source. Detector
+level: TYPE_CHECKING import is extracted as a real edge and closes a
+cycle — pinned current behavior, **OPEN QUESTION** (skip type-only edges
+at parse time?); test files with no importers are flagged as orphan and
+side-effect-imported test files are flagged as dead — pinned, **OPEN
+QUESTION** (exclude test files by convention like entry points?);
+dynamic-call usage is invisible to detectDeadCode (documented scope
+boundary — no call-extraction pass); namespace import counts as using
+every export (no false positive). Also fixed a latent type-error class
+uncovered while writing these: `ResolvedImport.kind` was missing in the
+makeModule helpers of core-detectors/detector/guard-inventory/runDoctor
+test files + a widened `language` param in runDoctor — all 5 files now
+LSP-clean. Suite: 471/471 (43 files).
+
+Item 3 (scoring gate): `tests/detector-score.test.ts` — registry-driven
+meta-gate iterating all 19 detectors with minimal planted-violation and
+clean fixtures: asserts every detector fires (positive) and stays empty
+(negative), plus an exact denominator check (19). Result: 19/19
+positive, 19/19 negative. Two product decisions surfaced by the
+adversarial suite are tracked as issues: #458 (TYPE_CHECKING imports as
+real edges) and #459 (test files flagged as orphan/dead). Suite:
+474/474 (44 files).
+
 ## 2026-08-13 — UPDATE: framework rule stubs — implemented
 
 All 10 remaining rule stubs in `packages/rules/*` (nextjs x4, nestjs x2,
