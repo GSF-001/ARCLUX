@@ -291,6 +291,13 @@ describe("detectEntryPoints", () => {
     expect(detectEntryPoints(repo).map((f) => f.filePath)).toEqual(["apps/cli/index.ts"]);
   });
 
+  it("recognizes the VS Code extension entry file (issue #463)", () => {
+    const repo = makeRepository([makeModule("apps/vscode-extension/src/extension.ts")]);
+    const findings = detectEntryPoints(repo);
+    expect(findings.map((f) => f.filePath)).toEqual(["apps/vscode-extension/src/extension.ts"]);
+    expect(findings[0].reason).toContain("VS Code");
+  });
+
   it("does not classify a plain orphaned file as an entry point", () => {
     const repo = makeRepository([makeModule("src/random.ts")]);
     expect(detectEntryPoints(repo)).toHaveLength(0);

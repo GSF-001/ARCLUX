@@ -171,6 +171,13 @@ describe("detectUnusedExports", () => {
     const repo = makeRepository([makeModule("apps/cli/index.ts", { exports: [named("main")] })]);
     expect(detectUnusedExports(repo)).toHaveLength(0);
   });
+
+  it("does not flag exports of the VS Code extension entry file — issue #463", () => {
+    const repo = makeRepository([
+      makeModule("apps/vscode-extension/src/extension.ts", { exports: [named("activate"), named("deactivate")] }),
+    ]);
+    expect(detectUnusedExports(repo)).toHaveLength(0);
+  });
 });
 
 describe("detectOrphanFiles", () => {
@@ -188,6 +195,11 @@ describe("detectOrphanFiles", () => {
 
   it("does not flag the CLI entry point as orphan — issue #4", () => {
     const repo = makeRepository([makeModule("apps/cli/index.ts")]);
+    expect(detectOrphanFiles(repo)).toHaveLength(0);
+  });
+
+  it("does not flag the VS Code extension entry file as orphan — issue #463", () => {
+    const repo = makeRepository([makeModule("apps/vscode-extension/src/extension.ts")]);
     expect(detectOrphanFiles(repo)).toHaveLength(0);
   });
 
