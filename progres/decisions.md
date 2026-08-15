@@ -2,6 +2,64 @@
 
 Why things were built the way they were. See PROGRES.md for the index.
 
+## 2026-08-15 — Decision matrix: #459 test files flagged as dead/orphan
+
+Context: test files with no importers were flagged by detectOrphanFiles /
+detectUnusedFiles / detectUnusedExports, and a test file imported for side
+effects with unused exports by detectDeadCode. But runners (vitest, pytest)
+invoke test files by naming convention — like entry points, not via import.
+
+| Variant | Behavior | Ready | Effort | Trade-off |
+|---|---|---|---|---|
+| **A — exclude by convention** | new `packages/detectors/testFiles.ts` (`isTestFilePath`: `*.test/spec.*`, `test_*.py`, `*_test.py`, `conftest.py`) wired into the 4 detectors | ✅ implemented (PR #461, 9a09a61) | done | false positives gone; convention is hard-coded (setup files like `vitest.setup.ts` not covered — documented) |
+| **B — keep + document** | findings stay; document that runners invoke by convention | 🔧 ready (1 comment in each detector) | 10m | false positives stay |
+| **C — config flag** | `excludeTestFiles` option on the 4 detectors (default on) | 📐 sketch only | 4-6h | flexibility; API change across 4 detectors + runDoctor/doctor wiring; no detector-config system exists yet |
+
+Recommendation: **A** — it mirrors the entry-point convention exclusion
+already used by the same detectors. Reconsider C only if real projects need
+to disable it.
+
+Status: A implemented, pending merge (PR #461). Owner choice: TBD.
+
+## 2026-08-15 — Decision matrix: #458 TYPE_CHECKING imports as graph edges
+
+Context: parsePython extracted imports under `if TYPE_CHECKING:` as real
+dependency edges — two modules connected only by type imports were reported
+as a circular dependency (false positive). TS already marks the concept via
+`RawImport.kind: "type-only"` (parseTs.ts, `importClause.isTypeOnly`).
+
+| Variant | Behavior | Ready | Effort | Trade-off |
+|---|---|---|---|---|
+| **A — skip at parse** | imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` are not extracted at all | ✅ implemented (PR #461, 9a09a61) | done | cycle false positive gone; type-only deps invisible to ALL consumers (an export used only via a type import becomes "unused") |
+| **B — keep + document** | edges stay; document that type-only cycles are possible | 🔧 ready (1 comment in parsePython) | 10m | false positive stays |
+| **C — filter at graph layer** | parsePython marks them `kind: "type-only"` (like TS) instead of skipping; buildIndex drops them from `module.imports` (graph edges) but keeps them in `module.resolvedImports` (identifier-level usage still counts) | 🔧 ready (snippets below) | 1-2h | type-dep info preserved; an export used only via type import stays "used" (arguably more correct than A for detectUnusedExports); touches parser + indexer |
+
+Recommendation: **A** (minimal, kills the false positive). Pick **C** if
+preserving type-only dependency info matters (e.g. future type-cycle
+analysis); the snippets below are ready to apply on top of the current
+branch after reverting A's parsePython change.
+
+Ready snippet for C — buildIndex.ts (inside the `for (const rawImport of
+parsed.imports)` loop, before `resolvedImportIds.push`):
+
+```ts
+// Type-only imports (if TYPE_CHECKING / import type) are not runtime
+// edges: excluded from module.imports (graph), kept in resolvedImports
+// (identifier-level usage still counts). Decision #458-C.
+if (rawImport.kind === "type-only") continue;
+```
+
+Ready snippet for C — parsePython.ts (replace A's skip: instead of `&&
+!inTypeOnly`, mark the kind, mirroring parseTs.ts):
+
+```ts
+// in extractImports visit(), when pushing an import_statement /
+// import_from_statement under a TYPE_CHECKING guard:
+kind: inTypeOnly ? ("type-only" as const) : ("static" as const),
+```
+
+Status: A implemented, pending merge (PR #461). Owner choice: TBD.
+
 ## 2026-08-03 — Update — GitHub infra + features/graph decision
 
 **Repo infrastructure added**: branch ruleset on `main` (PR required, no
