@@ -1,10 +1,10 @@
-# Framework-Specific Guides 🎨
+# Framework-Specific Guides 
 
 Using ARCLUX with your specific framework? Here's what to look for!
 
 ---
 
-## Next.js Projects 🚀
+## Next.js Projects 
 
 ### What ARCLUX Checks for Next.js
 
@@ -56,7 +56,7 @@ npx tsx apps/cli/index.ts doctor
 
 ---
 
-## NestJS Projects 🎯
+## NestJS Projects 
 
 ### What ARCLUX Checks for NestJS
 
@@ -105,7 +105,7 @@ npx tsx apps/cli/index.ts impact --file src/auth/auth.module.ts .
 
 ---
 
-## Express Projects ⚡
+## Express Projects 
 
 ### What ARCLUX Checks for Express
 
@@ -156,7 +156,7 @@ npx tsx apps/cli/index.ts doctor
 
 ---
 
-## React Projects ⚛️
+## React Projects 
 
 ### What ARCLUX Checks for React
 
@@ -207,7 +207,7 @@ npx tsx apps/cli/index.ts graph | grep "import.*component"
 
 ---
 
-## TypeScript Projects 📘
+## TypeScript Projects 
 
 ### What ARCLUX Checks for TypeScript
 
@@ -257,7 +257,7 @@ npx tsx apps/cli/index.ts graph
 
 ---
 
-## Multi-Language Projects 🌍
+## Multi-Language Projects 
 
 ### Using ARCLUX with Multiple Languages
 
@@ -292,7 +292,7 @@ project/
 
 Output:
 ```
-📊 Project Summary
+  Project Summary
   • Total modules: 35
   • Total files: 120
   • Languages: TypeScript, Python, Go
@@ -313,7 +313,7 @@ npx tsx apps/cli/index.ts analyze ./backend
 
 ---
 
-## Monorepo Projects 📦
+## Monorepo Projects 
 
 ### Using ARCLUX with Monorepos
 
@@ -371,7 +371,7 @@ You can still:
 - ✅ Check impact analysis
 - ✅ Find dead code
 
-It all works! Try it out! 🚀
+It all works! Try it out! 
 
 ---
 
