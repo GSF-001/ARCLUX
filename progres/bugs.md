@@ -2,6 +2,12 @@
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
+## 2026-08-15 — Итерация 3 аудита: editor-навигация + architecturalDiff без тестов (issue #451)
+
+**Status:** Fixed (PR #452, closes #451)
+
+Карта покрытия (batch-grep) нашла 2 пакета с РЕАЛЬНЫМИ CLI-потребителями и нулём тестов: (1) packages/editor (CodeNavigator — CLI open/edit; ImpactNavigator — getImpactCount в diagnose) — чистая Repository-логика; (2) packages/diff/architecturalDiff — ядро команды `arclux diff`. Fix: +8 тестов editor-navigation.test.ts (resolveModuleId POSIX, openFile tracked/untracked, dependency/consumer targets + fallback, getImpactCount/getImpactNavigation full/notFound) и +3 интеграционных architectural-diff.test.ts (реальный tmp git-репо по паттерну git-history: v1 entry→service→data, v2 модифицирует service.ts + добавляет unused.ts; индексация через реальный analyzeRepository; asserts changedFiles statuses + affected = транзитивные потребители изменённого). Закреплён документированный MVP-контракт diff (impact против текущего дерева, не dual-graph). suite 423/423.
+
 ## 2026-08-15 — Итерация 2 аудита: 5 impact-функций + 4 manifest-парсера без тестов (issues #445/#446)
 
 **Status:** Fixed (PR #448 + PR #449, closes #445 + #446)
