@@ -136,3 +136,9 @@ CONFIRMED (previously only suspected): origin/main and origin/ARCLUX.main are NO
 **Status:** Done
 
 Verified via `git ls-remote origin` + GitHub API: `refs/heads/main` no longer exists on the remote. Only ARCLUX.main remains, it is the default branch (origin/HEAD -> ARCLUX.main) and is protected. The divergence class from the 08-14 entry above cannot recur. Issue #355 can be closed. Working rule stays the same: work from ARCLUX.main.
+
+## 2026-08-15 — Bare 'docs/' in .gitignore silently blocked docs-site/docs/* from ever being committed
+
+**Status:** Done
+
+.gitignore had a bare 'docs/' pattern intended only for root's docs/ (MCP tooling output, see the comment above it). Gitignore patterns without a leading slash match at ANY depth, so this silently ignored every file under docs-site/docs/ too -- git add reported no error, files just never got staged. This caused PR #399 to merge without docs-site/docs/how-to-use.md even though the commit message claimed it was included; the file sat uncommitted on disk and the docs site never updated. Root cause found by noticing 'git log --oneline -- <path>' returned empty after a claimed merge, then 'git add' throwing a silent ignored-file hint. Fixed by anchoring the pattern to /docs/ (root only). LESSON: after any docs-site/docs/* change, verify with 'git log --oneline -1 -- <path>' after merge, don't just trust the push/merge succeeding -- gitignore can silently drop files with zero error output.
