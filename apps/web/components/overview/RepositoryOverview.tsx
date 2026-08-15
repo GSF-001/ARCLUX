@@ -16,6 +16,7 @@ import { RepositoryHeader } from "./RepositoryHeader";
 import { RepositoryInfo } from "./RepositoryInfo";
 import { ProjectStructure } from "./ProjectStructure";
 import { Explorer } from "@/components/explorer/Explorer";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { FileTreeNode } from "@/packages/graph/buildFolderGraph";
 import type { DependencyGraph } from "@/packages/shared/types";
 
@@ -58,6 +59,7 @@ export function RepositoryOverview({ org, repo, branch }: RepositoryOverviewProp
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [isTreeCollapsed, setIsTreeCollapsed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,21 +121,40 @@ export function RepositoryOverview({ org, repo, branch }: RepositoryOverviewProp
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">
             Project structure
           </h2>
-          <div className="flex gap-4">
-            <div className="max-h-[60vh] flex-1 overflow-auto rounded-lg bg-neutral-950/60 p-3">
-              <ProjectStructure
-                tree={data.folderTree}
-                selectedPath={selectedPath}
-                onSelectFile={setSelectedPath}
-              />
-            </div>
+          <div className="flex gap-2">
+            {!isTreeCollapsed && (
+              <div className="max-h-[60vh] flex-1 overflow-auto rounded-lg bg-neutral-950/60 p-3">
+                <ProjectStructure
+                  tree={data.folderTree}
+                  selectedPath={selectedPath}
+                  onSelectFile={setSelectedPath}
+                />
+              </div>
+            )}
             {selectedPath && (
-              <div className="max-h-[60vh] w-[45%] shrink-0 overflow-hidden rounded-lg bg-neutral-950/60">
+              <button
+                type="button"
+                onClick={() => setIsTreeCollapsed((c) => !c)}
+                aria-label={isTreeCollapsed ? "Show project structure" : "Hide project structure"}
+                className="flex h-8 w-6 shrink-0 items-center justify-center self-start rounded bg-neutral-900/60 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+              >
+                {isTreeCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+              </button>
+            )}
+            {selectedPath && (
+              <div
+                className={`max-h-[60vh] shrink-0 overflow-hidden rounded-lg bg-neutral-950/60 ${
+                  isTreeCollapsed ? "flex-1" : "w-[45%]"
+                }`}
+              >
                 <Explorer
                   repoUrl={repoUrl}
                   moduleId={selectedPath}
                   branch={branch}
-                  onClose={() => setSelectedPath(null)}
+                  onClose={() => {
+                    setSelectedPath(null);
+                    setIsTreeCollapsed(false);
+                  }}
                 />
               </div>
             )}
