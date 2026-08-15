@@ -9,6 +9,7 @@
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint",
     "test": "vitest run",
+    "check:diary": "npx tsx scripts/check-diary.ts",
     "typecheck": "tsc --noEmit -p apps/web/tsconfig.json"
   },
   "dependencies": {

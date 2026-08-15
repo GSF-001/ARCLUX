@@ -2,6 +2,62 @@
 
 Why things were built the way they were. See PROGRES.md for the index.
 
+## 2026-08-15 — Decision matrix: #459 test files flagged as dead/orphan
+
+Context: test files with no importers were flagged by detectOrphanFiles /
+detectUnusedFiles / detectUnusedExports, and a test file imported for side
+effects with unused exports by detectDeadCode. But runners (vitest, pytest)
+invoke test files by naming convention — like entry points, not via import.
+
+| Variant | Behavior | Ready | Effort | Trade-off |
+|---|---|---|---|---|
+| **A — exclude by convention** | new `packages/detectors/testFiles.ts` (`isTestFilePath`: `*.test/spec.*`, `test_*.py`, `*_test.py`, `conftest.py`) wired into the 4 detectors | ✅ implemented (PR #461, 9a09a61) | done | false positives gone; convention is hard-coded (setup files like `vitest.setup.ts` not covered — documented) |
+| **B — keep + document** | findings stay; document that runners invoke by convention | 🔧 ready (1 comment in each detector) | 10m | false positives stay |
+| **C — config flag** | `excludeTestFiles` option on the 4 detectors (default on) | 📐 sketch only | 4-6h | flexibility; API change across 4 detectors + runDoctor/doctor wiring; no detector-config system exists yet |
+
+Recommendation: **A — chosen** (research §1, 2026-08-15). Primary evidence:
+dependency-cruiser (the tool detectLayerViolation is adapted from) docs —
+its reachability examples explicitly exclude spec files
+(`pathNot: "\\.spec\\.(js|ts)$|\\.d\\.ts$"`, "spec files shouldn't be
+reachable from regular code anyway") — the same convention exclusion
+pattern ARCLUX uses for entry points. Reconsider C only if real projects
+need to disable it.
+
+Status: A chosen & implemented (research §1), pending merge (PR #461).
+Owner choice recorded: A.
+
+## 2026-08-15 — Decision matrix: #458 TYPE_CHECKING imports as graph edges
+
+Context: parsePython extracted imports under `if TYPE_CHECKING:` as real
+dependency edges — two modules connected only by type imports were reported
+as a circular dependency (false positive). TS already marks the concept via
+`RawImport.kind: "type-only"` (parseTs.ts, `importClause.isTypeOnly`).
+
+| Variant | Behavior | Ready | Effort | Trade-off |
+|---|---|---|---|---|
+| **A — skip at parse** | imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` are not extracted at all | ❌ superseded — initial impl., replaced by C after research | done | cycle false positive gone; type-only deps invisible to ALL consumers (an export used only via a type import becomes "unused") |
+| **B — keep + document** | edges stay; document that type-only cycles are possible | 🔧 ready (1 comment in parsePython) | 10m | false positive stays |
+| **C — mark + filter in cycle detector** | parsePython marks them `kind: "type-only"` (mirroring TS `import type`); detectCircularDependency excludes type-only edges from runtime-cycle reporting. Graph edges and identifier-level usage keep the type-only dep (importedBy/orphan semantics unaffected) | ✅ implemented (PR #461, 9a09a61) | done | type-dep info preserved; export used only via type import stays "used"; matches dependency-cruiser's `no-circular-at-runtime` rule pattern |
+
+Recommendation: **C — chosen** (research §1, 2026-08-15). Primary evidence:
+dependency-cruiser docs (rules-reference.md) — type-only imports are
+recorded with the `type-only` dependencyType (never dropped at parse), and
+cycles through them are excluded from runtime-cycle reporting via
+`viaOnly: { dependencyTypesNot: ["type-only"] }` (their documented
+"no-circular-at-runtime" pattern). Skip-at-parse (A) also creates a new
+false positive: an export used only via a type import becomes "unused" —
+C avoids both false positive classes. Implemented as filter in the
+DETECTOR (not buildIndex) so importedBy/orphan/usage semantics stay intact
+— the closest analog of dependency-cruiser's rule-level approach.
+
+Research sources (all fetched 2026-08-15):
+- sverweij/dependency-cruiser rules-reference.md — `type-only` dependency
+  type + `viaOnly.dependencyTypesNot` circular example + spec-file
+  exclusion in reachability examples (github.com/sverweij/dependency-cruiser/blob/main/doc/rules-reference.md)
+
+Status: C chosen & implemented (research §1), pending merge (PR #461).
+Owner choice recorded: C (A superseded).
+
 ## 2026-08-03 — Update — GitHub infra + features/graph decision
 
 **Repo infrastructure added**: branch ruleset on `main` (PR required, no

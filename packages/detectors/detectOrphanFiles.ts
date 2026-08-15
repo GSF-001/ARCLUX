@@ -10,6 +10,7 @@
 
 import type { Repository } from "../repository/Repository";
 import { detectEntryPoints } from "./detectEntryPoints";
+import { isTestFilePath } from "./testFiles";
 import { getEntryModuleIds } from "../indexer/resolveRoutes";
 
 export interface OrphanFileFinding {
@@ -35,7 +36,7 @@ export function detectOrphanFiles(repository: Repository): OrphanFileFinding[] {
 
   return repository
     .findModulesWithNoImporters()
-    .filter((module) => !entryModuleIds.has(module.id))
+    .filter((module) => !entryModuleIds.has(module.id) && !isTestFilePath(module.id))
     .map((module) => ({
       filePath: module.file.relativePath,
       message: `"${module.file.relativePath}" is never imported by any other file in the repository.`,

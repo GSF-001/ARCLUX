@@ -15,6 +15,7 @@
 import type { Repository } from "../repository/Repository";
 import type { ModuleInfo } from "../shared/types";
 import { detectEntryPoints } from "./detectEntryPoints";
+import { isTestFilePath } from "./testFiles";
 import { getEntryModuleIds } from "../indexer/resolveRoutes";
 
 export interface UnusedExportFinding {
@@ -164,6 +165,9 @@ export function detectUnusedExports(repository: Repository): UnusedExportFinding
 
   for (const module of modules) {
     if (entryModuleIds.has(module.id)) continue;
+    // Test files are invoked by the runner by convention — never "unused"
+    // (decision #459).
+    if (isTestFilePath(module.id)) continue;
 
     for (const exp of module.exports) {
       // Re-export entries forward another module's export under this

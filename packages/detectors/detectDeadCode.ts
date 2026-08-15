@@ -32,6 +32,7 @@
 
 import type { Repository } from "../repository/Repository";
 import { detectUnusedExports } from "./detectUnusedExports";
+import { isTestFilePath } from "./testFiles";
 
 export interface DeadCodeFinding {
   filePath: string;
@@ -55,6 +56,10 @@ export function detectDeadCode(repository: Repository): DeadCodeFinding[] {
     // detectUnusedExports.ts applies, kept consistent here.
     const ownExports = module.exports.filter((e) => e.kind !== "re-export");
     if (ownExports.length === 0) continue;
+
+    // Test files are invoked by the runner (vitest/pytest) by convention,
+    // not by import — never "dead code" (decision #459).
+    if (isTestFilePath(module.file.relativePath)) continue;
 
     // Already flagged by detectOrphanFiles — don't duplicate that finding
     // under a different name.

@@ -44,7 +44,19 @@ export function detectCircularDependency(repository: Repository): CircularDepend
 
     const module = repository.getModule(moduleId);
     if (module) {
+      // Type-only edges (TS `import type`, Python `if TYPE_CHECKING:`) are
+      // compile-time dependencies, not runtime edges — a cycle closed only
+      // through type-only imports is not a runtime cycle. Mirrors
+      // dependency-cruiser's `no-circular-at-runtime` rule
+      // (viaOnly.dependencyTypesNot: ["type-only"]). Decision #458, Variant C.
+      const typeOnlyTargets = new Set(
+        (module.resolvedImports ?? [])
+          .filter((r) => r.kind === "type-only")
+          .map((r) => r.moduleId)
+      );
+
       for (const dependencyId of module.imports) {
+        if (typeOnlyTargets.has(dependencyId)) continue;
         if (resolved.has(dependencyId)) continue;
 
         if (unresolved.has(dependencyId)) {
