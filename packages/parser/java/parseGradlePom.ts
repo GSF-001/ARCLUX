@@ -43,10 +43,25 @@ function parseGradle(content: string): ManifestDependency[] {
 
 function parseMaven(content: string): ManifestDependency[] {
   const dependencies: ManifestDependency[] = [];
+
+  // Strip non-project <dependency> contexts BEFORE matching blocks:
+  //   - <plugin><dependencies>   — the PLUGIN's own classpath, not the
+  //     project's (Maven compiles/executes the plugin with those, they do
+  //     not land on the project's dependency list).
+  //   - <dependencyManagement>    — version management only; entries there
+  //     do not add anything to the classpath unless also declared under
+  //     <dependencies>.
+  // Neither section nests itself nor contains the other, and profiles
+  // (<profiles><profile><dependencies>) are NOT stripped — their
+  // dependencies ARE project dependencies (conditional, but real).
+  const projectOnly = content
+    .replace(/<plugin>[\s\S]*?<\/plugin>/g, "")
+    .replace(/<dependencyManagement>[\s\S]*?<\/dependencyManagement>/g, "");
+
   const blockPattern = /<dependency>([\s\S]*?)<\/dependency>/g;
 
   let blockMatch: RegExpExecArray | null;
-  while ((blockMatch = blockPattern.exec(content)) !== null) {
+  while ((blockMatch = blockPattern.exec(projectOnly)) !== null) {
     const block = blockMatch[1];
     const groupId = block.match(/<groupId>([^<]+)<\/groupId>/)?.[1];
     const artifactId = block.match(/<artifactId>([^<]+)<\/artifactId>/)?.[1];
