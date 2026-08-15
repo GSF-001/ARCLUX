@@ -39,11 +39,11 @@ Run without --detach to see live output in the foreground instead.
 The daemon exposes a local HTTP+SSE bridge so any editor or terminal can connect:
 
 ```bash
-curl http://127.0.0.1:<port>/analysis
-curl http://127.0.0.1:<port>/events
+curl http://127.0.0.1:&lt;port&gt;/analysis
+curl http://127.0.0.1:&lt;port&gt;/events
 ```
 
-Find the port from ~/.arclux/endpoints/<daemonId>.json, written automatically when the daemon starts.
+Find the port from ~/.arclux/endpoints/&lt;daemonId&gt;.json, written automatically when the daemon starts.
 
 ## 3. Web dashboard
 
@@ -52,7 +52,7 @@ cd apps/web
 pnpm run dev
 ```
 
-Open localhost:3000/<org>/<repo> for a given GitHub URL. From the Overview page:
+Open localhost:3000/&lt;org&gt;/&lt;repo&gt; for a given GitHub URL. From the Overview page:
 - Click any file in the Project structure tree to open it
 - The File tab shows syntax-highlighted source (Python, JavaScript, TypeScript today) with inline diagnostic gutter markers -- a colored bar on any line with a finding, click it to expand the message + fix suggestion
 - Dependencies and Impact tabs show what a file needs and what breaks if you change it
