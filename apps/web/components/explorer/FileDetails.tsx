@@ -163,20 +163,21 @@ function renderLines(
         <button
           type="button"
           onClick={() => lineMarkers.length > 0 && setExpandedLine(isExpanded ? null : lineNumber)}
+          style={lineMarkers.length > 0 ? { backgroundColor: `${barColor}1A` } : undefined}
           className={`flex w-full items-start gap-3 px-2 text-left font-mono ${
-            lineMarkers.length > 0 ? "cursor-pointer hover:bg-neutral-900/60" : "cursor-default"
-          } ${isExpanded ? "bg-neutral-900/60" : ""}`}
+            lineMarkers.length > 0 ? "cursor-pointer hover:brightness-125" : "cursor-default"
+          } ${isExpanded ? "brightness-125" : ""}`}
         >
-          <span style={{ backgroundColor: barColor }} className="mt-0.5 h-full w-0.5 shrink-0 self-stretch" />
+          <span style={{ backgroundColor: barColor }} className="mt-0.5 h-full w-1 shrink-0 self-stretch" />
           <span className="w-8 shrink-0 select-none text-right text-neutral-600">{lineNumber}</span>
           <span className="flex-1 whitespace-pre">
             {renderLineTokens(lineText, lineStart, tokensByLineIndex[idx] ?? [])}
           </span>
         </button>
         {isExpanded &&
-          lineMarkers.map((marker) => (
+          lineMarkers.map((marker, markerIdx) => (
             <div
-              key={marker.checkId}
+              key={`${marker.checkId}-${markerIdx}`}
               className="ml-[52px] mr-2 mb-1 rounded bg-neutral-900/80 px-3 py-2 text-xs"
               style={{ borderLeft: `2px solid ${SEVERITY_COLOR[marker.severity]}` }}
             >
