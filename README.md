@@ -33,29 +33,9 @@ Dependency graph, impact analysis, and structural convention checking for your c
 
 ## Status: alpha
 
-This project is under active development with a small team. Expect breaking changes, missing pieces, and stubs that are not wired up yet. See [`PROGRES.md`](PROGRES.md) (and the linked files in [`progres/`](progres/)) for a detailed, honest breakdown of what works today vs. what is still a stub — that's the up-to-date source of truth, this README is a summary.
+Under active development. Core pipeline (parse/index/graph/impact), 19 detectors, 14 framework convention rules, CLI + web dashboard + always-on daemon + VS Code extension are solid and verified against real repos (vscode, react, vite, laravel). A few source parsers and the persistence/cache layers are still stubs.
 
-What is solid right now:
-- Core pipeline (clone, parse, index, dependency graph + call graph)
-- Parsing: TypeScript/TSX, JavaScript (ESM/JSX/CommonJS), Python, Go, Java + 10 manifest parsers
-- 19 structural detectors (circular deps, dead code, orphan files, duplicate modules, layer violations, entry points, component/route/story/test conventions, and more) — `arclux doctor` runs all of them; `arclux verify` gates on the core 10 for its PASS/FAIL verdict. Entry points (Next.js App Router files, CLI entry) are filtered out of unused-export/orphan false positives.
-- Full impact analysis (packages/impact/* - trace consumers/dependents, affected files/modules/components/routes)
-- Real search engine (packages/search/* — fuzzy path + export-name matching, used by `/api/search`)
-- Framework convention rules (14 rules: Next.js, NestJS, Express, Vite, Electron, React, Laravel — `arclux verify` gates on them)
-- CLI commands: analyze, graph, impact, doctor, config, diff, diagnose, verify
-- Web dashboard: overview page (stats + project structure tree), graph viewer with a module Explorer panel, real search page, and a workspace (file tree, impact, detector issues, branch switcher) — all backed by live API routes (/api/analyze, /api/graph, /api/search, /api/impact, /api/doctor, /api/branches)
-- Verified against large real-world repositories (microsoft/vscode, facebook/react, vitejs/vite, laravel/laravel) in addition to internal fixtures
-
-What is not there yet:
-- General-purpose source parsers for Rust, C#, C++, PHP, Ruby (dependency-manifest parsing exists for all of these; PHP has route-file parsing — `packages/parser/php/parsePhpRoutes.ts` — but the general `.php` source parser is deliberately deferred, see `progres/decisions.md`)
-- True per-file incremental re-analysis (`packages/incremental` + `packages/watcher` are built and verified standalone; `watchRepository` wraps the pipeline in a coarse change-level cache, but `buildIndex` still does a full rebuild — see `progres/decisions.md`)
-- Persistence layer: `packages/db/*` (schema, client, RepoStore/AnalysisStore/IssueStore) is 0% -- no database wired in yet, everything is in-memory per-run
-- Cache layer: `packages/cache/*` (CacheProvider, memoryCache) is 0% -- see `progres/decisions.md` for a documented design conflict blocking this
-- Several `packages/engine/analyze*.ts` files (analyzeFile, analyzeModule, analyzeImpact, analyzeConvention, analyzeArchitecture, analyzeDependency) and `generateSummary.ts`/`generateReport.ts` are stubs -- the actual analysis entry point is `packages/engine/pipeline.ts`'s `analyzeRepository()`, which is what's real and tested; these per-concern files are an unimplemented finer-grained API surface, not a broken core
-- `packages/ui/*` (graphLayout, graphTheme, graphAnimation, graphIcons) is 0% -- current graph rendering lives directly in `apps/web/components/graph/*` instead
-- `packages/watcher/watchGit.ts` and `packages/indexer/updateIndex.ts`/`watchIndex.ts`/`indexSchema.ts` are stubs -- live file-watching exists via `packages/daemon/` (see the Daemon section above), which wraps `watchRepository`/`watchFilesystem` directly rather than these
-
-Run `find packages -name "*.ts" -not -path "*/node_modules/*" | while read f; do [ "$(wc -l < "$f")" -le 9 ] && echo "$f"; done` to see the current, exact stub list yourself -- this list can drift as work continues.
+For the current, detailed breakdown -- see [progres/status-core.md](progres/status-core.md), [status-web.md](progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
 
 ## What it does
 
