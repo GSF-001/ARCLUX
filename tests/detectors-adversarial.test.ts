@@ -118,14 +118,16 @@ describe("adversarial — parsePython (source level)", () => {
     expect(parsed.imports).toEqual([]);
   });
 
-  it("TYPE_CHECKING conditional import is skipped — type-only imports are not edges (decision #458)", async () => {
+  it("TYPE_CHECKING imports are marked type-only — not runtime edges (decision #458)", async () => {
     const parsed = await parsePy(
       "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from B import something"
     );
-    // Decision #458 (Variant A): imports under `if TYPE_CHECKING:` are
-    // type-only and must not become dependency-graph edges. Only the
-    // `from typing import TYPE_CHECKING` line itself is extracted.
-    expect(parsed.imports.map((i) => i.source)).toEqual(["typing"]);
+    // Decision #458 (Variant C): the type-only import stays in the graph
+    // with kind "type-only" (mirroring TS `import type`) — the cycle
+    // detector excludes it from runtime-cycle reporting.
+    const b = parsed.imports.find((i) => i.source === "B");
+    expect(b).toBeDefined();
+    expect(b!.kind).toBe("type-only");
   });
 
   it("a non-TYPE_CHECKING conditional import is still extracted (guard does not over-skip)", async () => {
@@ -150,6 +152,39 @@ describe("adversarial — parsePython (source level)", () => {
 describe("adversarial — detectCircularDependency", () => {
   it("empty repository does not crash", () => {
     expect(detectCircularDependency(makeRepository([]))).toEqual([]);
+  });
+
+  it("a cycle closed only by a type-only edge is not reported (decision #458)", () => {
+    // a -> b is a real edge; b -> a exists only as type-only (TS `import
+    // type` / Python `if TYPE_CHECKING:`). The cycle is compile-time only
+    // — not a runtime cycle (dependency-cruiser's no-circular-at-runtime).
+    const repo = makeRepository([
+      makeModule("src/a.ts", { imports: ["src/b.ts"] }),
+      makeModule("src/b.ts", {
+        imports: ["src/a.ts"],
+        resolvedImports: [
+          { moduleId: "src/a.ts", kind: "type-only", namedImports: ["A"], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+    ]);
+    expect(detectCircularDependency(repo)).toEqual([]);
+  });
+
+  it("a real cycle is still reported when a separate type-only edge exists", () => {
+    const repo = makeRepository([
+      makeModule("src/a.ts", { imports: ["src/b.ts"] }),
+      makeModule("src/b.ts", { imports: ["src/a.ts"] }), // real cycle a <-> b
+      makeModule("src/c.ts", {
+        imports: ["src/d.ts"],
+        resolvedImports: [
+          { moduleId: "src/d.ts", kind: "type-only", namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+      makeModule("src/d.ts"),
+    ]);
+    const findings = detectCircularDependency(repo);
+    expect(findings).toHaveLength(1);
+    expect(new Set(findings[0].cycle)).toEqual(new Set(["src/a.ts", "src/b.ts"]));
   });
 });
 
@@ -220,6 +255,22 @@ describe("adversarial — detectDeadCode", () => {
 describe("adversarial — detectUnusedExports", () => {
   it("test files with unused exports are not flagged (decision #459)", () => {
     const repo = makeRepository([makeModule("src/utils.test.ts", { exports: [named("helper")] })]);
+    expect(detectUnusedExports(repo)).toEqual([]);
+  });
+
+  it("an export used only via a type-only import stays used (decision #458)", () => {
+    // A type-only usage is still a real reference for type-checking —
+    // removing the export would break it, so it is not "unused". This is
+    // Variant C's advantage over skip-at-parse (Variant A).
+    const repo = makeRepository([
+      makeModule("src/api.ts", { exports: [named("ApiType")] }),
+      makeModule("src/consumer.ts", {
+        imports: ["src/api.ts"],
+        resolvedImports: [
+          { moduleId: "src/api.ts", kind: "type-only", namedImports: ["ApiType"], hasDefaultImport: false, hasNamespaceImport: false, line: 1 },
+        ],
+      }),
+    ]);
     expect(detectUnusedExports(repo)).toEqual([]);
   });
 });

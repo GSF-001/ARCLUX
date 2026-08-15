@@ -15,11 +15,16 @@ invoke test files by naming convention — like entry points, not via import.
 | **B — keep + document** | findings stay; document that runners invoke by convention | 🔧 ready (1 comment in each detector) | 10m | false positives stay |
 | **C — config flag** | `excludeTestFiles` option on the 4 detectors (default on) | 📐 sketch only | 4-6h | flexibility; API change across 4 detectors + runDoctor/doctor wiring; no detector-config system exists yet |
 
-Recommendation: **A** — it mirrors the entry-point convention exclusion
-already used by the same detectors. Reconsider C only if real projects need
-to disable it.
+Recommendation: **A — chosen** (research §1, 2026-08-15). Primary evidence:
+dependency-cruiser (the tool detectLayerViolation is adapted from) docs —
+its reachability examples explicitly exclude spec files
+(`pathNot: "\\.spec\\.(js|ts)$|\\.d\\.ts$"`, "spec files shouldn't be
+reachable from regular code anyway") — the same convention exclusion
+pattern ARCLUX uses for entry points. Reconsider C only if real projects
+need to disable it.
 
-Status: A implemented, pending merge (PR #461). Owner choice: TBD.
+Status: A chosen & implemented (research §1), pending merge (PR #461).
+Owner choice recorded: A.
 
 ## 2026-08-15 — Decision matrix: #458 TYPE_CHECKING imports as graph edges
 
@@ -30,35 +35,28 @@ as a circular dependency (false positive). TS already marks the concept via
 
 | Variant | Behavior | Ready | Effort | Trade-off |
 |---|---|---|---|---|
-| **A — skip at parse** | imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` are not extracted at all | ✅ implemented (PR #461, 9a09a61) | done | cycle false positive gone; type-only deps invisible to ALL consumers (an export used only via a type import becomes "unused") |
+| **A — skip at parse** | imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` are not extracted at all | ❌ superseded — initial impl., replaced by C after research | done | cycle false positive gone; type-only deps invisible to ALL consumers (an export used only via a type import becomes "unused") |
 | **B — keep + document** | edges stay; document that type-only cycles are possible | 🔧 ready (1 comment in parsePython) | 10m | false positive stays |
-| **C — filter at graph layer** | parsePython marks them `kind: "type-only"` (like TS) instead of skipping; buildIndex drops them from `module.imports` (graph edges) but keeps them in `module.resolvedImports` (identifier-level usage still counts) | 🔧 ready (snippets below) | 1-2h | type-dep info preserved; an export used only via type import stays "used" (arguably more correct than A for detectUnusedExports); touches parser + indexer |
+| **C — mark + filter in cycle detector** | parsePython marks them `kind: "type-only"` (mirroring TS `import type`); detectCircularDependency excludes type-only edges from runtime-cycle reporting. Graph edges and identifier-level usage keep the type-only dep (importedBy/orphan semantics unaffected) | ✅ implemented (PR #461, 9a09a61) | done | type-dep info preserved; export used only via type import stays "used"; matches dependency-cruiser's `no-circular-at-runtime` rule pattern |
 
-Recommendation: **A** (minimal, kills the false positive). Pick **C** if
-preserving type-only dependency info matters (e.g. future type-cycle
-analysis); the snippets below are ready to apply on top of the current
-branch after reverting A's parsePython change.
+Recommendation: **C — chosen** (research §1, 2026-08-15). Primary evidence:
+dependency-cruiser docs (rules-reference.md) — type-only imports are
+recorded with the `type-only` dependencyType (never dropped at parse), and
+cycles through them are excluded from runtime-cycle reporting via
+`viaOnly: { dependencyTypesNot: ["type-only"] }` (their documented
+"no-circular-at-runtime" pattern). Skip-at-parse (A) also creates a new
+false positive: an export used only via a type import becomes "unused" —
+C avoids both false positive classes. Implemented as filter in the
+DETECTOR (not buildIndex) so importedBy/orphan/usage semantics stay intact
+— the closest analog of dependency-cruiser's rule-level approach.
 
-Ready snippet for C — buildIndex.ts (inside the `for (const rawImport of
-parsed.imports)` loop, before `resolvedImportIds.push`):
+Research sources (all fetched 2026-08-15):
+- sverweij/dependency-cruiser rules-reference.md — `type-only` dependency
+  type + `viaOnly.dependencyTypesNot` circular example + spec-file
+  exclusion in reachability examples (github.com/sverweij/dependency-cruiser/blob/main/doc/rules-reference.md)
 
-```ts
-// Type-only imports (if TYPE_CHECKING / import type) are not runtime
-// edges: excluded from module.imports (graph), kept in resolvedImports
-// (identifier-level usage still counts). Decision #458-C.
-if (rawImport.kind === "type-only") continue;
-```
-
-Ready snippet for C — parsePython.ts (replace A's skip: instead of `&&
-!inTypeOnly`, mark the kind, mirroring parseTs.ts):
-
-```ts
-// in extractImports visit(), when pushing an import_statement /
-// import_from_statement under a TYPE_CHECKING guard:
-kind: inTypeOnly ? ("type-only" as const) : ("static" as const),
-```
-
-Status: A implemented, pending merge (PR #461). Owner choice: TBD.
+Status: C chosen & implemented (research §1), pending merge (PR #461).
+Owner choice recorded: C (A superseded).
 
 ## 2026-08-03 — Update — GitHub infra + features/graph decision
 

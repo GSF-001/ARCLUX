@@ -121,12 +121,11 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
 
   /**
    * Imports under `if TYPE_CHECKING:` (or `if typing.TYPE_CHECKING:`) are
-   * type-only — they exist for the type checker, not the runtime, so they
-   * must not become dependency-graph edges (a type-only cycle is not a
-   * real cycle). Decision #458, Variant A: skip them at parse time.
-   * The TS parser marks the same concept via RawImport.kind "type-only"
-   * (see parseTs.ts) — Python has no equivalent import syntax, only this
-   * guard pattern.
+   * type-only — they exist for the type checker, not the runtime. They are
+   * MARKED with kind "type-only" (mirroring parseTs.ts's importClause.isTypeOnly)
+   * and stay in the graph; the cycle detector excludes them from runtime-cycle
+   * reporting (dependency-cruiser's `no-circular-at-runtime` pattern,
+   * viaOnly.dependencyTypesNot ["type-only"]). Decision #458, Variant C.
    */
   function isTypeCheckingGuard(node: TSNode): boolean {
     if (node.type !== "if_statement") return false;
@@ -140,7 +139,7 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
 
     const inTypeOnly = typeOnly || isTypeCheckingGuard(node);
 
-    if (node.type === "import_statement" && !inTypeOnly) {
+    if (node.type === "import_statement") {
       for (let i = 0; i < node.namedChildren.length; i++) {
         const child = node.namedChildren[i];
         if (!child) continue;
@@ -148,7 +147,7 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
         if (child.type === "dotted_name") {
           imports.push({
             source: dottedNameToString(child),
-            kind: "static",
+            kind: inTypeOnly ? "type-only" : "static",
             namedImports: [],
             hasDefaultImport: false,
             hasNamespaceImport: false,
@@ -159,7 +158,7 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
           if (name) {
             imports.push({
               source: dottedNameToString(name),
-              kind: "static",
+              kind: inTypeOnly ? "type-only" : "static",
               namedImports: [],
               hasDefaultImport: false,
               hasNamespaceImport: false,
@@ -170,7 +169,7 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
       }
     }
 
-    if (node.type === "import_from_statement" && !inTypeOnly) {
+    if (node.type === "import_from_statement") {
       const moduleNode = node.childForFieldName("module_name");
       const source = moduleNode ? dottedNameToString(moduleNode) : ".";
 
@@ -193,7 +192,7 @@ function extractImports(root: TSNode, warnings: string[]): RawImport[] {
 
       imports.push({
         source,
-        kind: "static",
+        kind: inTypeOnly ? "type-only" : "static",
         namedImports: isWildcard ? ["*"] : namedImports,
         hasDefaultImport: false,
         hasNamespaceImport: false,

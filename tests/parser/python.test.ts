@@ -94,24 +94,28 @@ fn = lambda: 1
     expect(names).toEqual(["outer"]);
   });
 
-  it("skips imports under if TYPE_CHECKING (type-only, decision #458)", async () => {
+  it("marks imports under if TYPE_CHECKING as type-only (decision #458)", async () => {
     const parsed = await parsePythonSource(
       "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from B import something"
     );
-    // Only the `from typing import TYPE_CHECKING` line itself is an edge;
-    // the type-only import under the guard is not (decision #458).
-    expect(parsed.imports.map((i) => i.source)).toEqual(["typing"]);
+    // Decision #458 (Variant C): the type-only import stays in the graph
+    // with kind "type-only" (mirroring TS `import type`) — the cycle
+    // detector excludes it from runtime-cycle reporting.
+    const b = parsed.imports.find((i) => i.source === "B");
+    expect(b).toBeDefined();
+    expect(b!.kind).toBe("type-only");
+    expect(parsed.imports.find((i) => i.source === "typing")?.kind).toBe("static");
   });
 
-  it("skips imports under if typing.TYPE_CHECKING as well", async () => {
+  it("marks imports under if typing.TYPE_CHECKING as type-only as well", async () => {
     const parsed = await parsePythonSource(
       "import typing\nif typing.TYPE_CHECKING:\n    from B import something"
     );
-    expect(parsed.imports.map((i) => i.source)).toEqual(["typing"]);
+    expect(parsed.imports.find((i) => i.source === "B")?.kind).toBe("type-only");
   });
 
-  it("still extracts imports under non-TYPE_CHECKING conditions", async () => {
+  it("keeps imports under non-TYPE_CHECKING conditions static", async () => {
     const parsed = await parsePythonSource("if SOME_FLAG:\n    from B import something");
-    expect(parsed.imports.map((i) => i.source)).toEqual(["B"]);
+    expect(parsed.imports.find((i) => i.source === "B")?.kind).toBe("static");
   });
 });
