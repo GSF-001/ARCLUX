@@ -178,6 +178,13 @@ describe("detectUnusedExports", () => {
     ]);
     expect(detectUnusedExports(repo)).toHaveLength(0);
   });
+
+  it("does not flag exports of GitHub workflow scripts — issue #464", () => {
+    const repo = makeRepository([
+      makeModule(".github/scripts/threatcrush-to-sarif.py", { exports: [named("to_sarif"), named("main")] }),
+    ]);
+    expect(detectUnusedExports(repo)).toHaveLength(0);
+  });
 });
 
 describe("detectOrphanFiles", () => {
