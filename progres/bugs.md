@@ -379,3 +379,15 @@ Contributor commit added apps/cli/commands/{edit,logs,open,verify}.ts using expo
 **Status:** Fixed (PR #426, closes issue #424)
 
 Original diagnosis ("mock/plain object doesn't implement getModule") was inaccurate. Root cause: impact functions were refactored from `(moduleId, graph)` to `(repository, moduleId)` and the test file still used the old signature on an empty Repository (which also has no `graph` property — graph is built separately by buildDependencyGraph). Fix: rewrote tests/impact.test.ts with real ModuleInfo fixtures (makeModule/makeRepository convention from tests/graph.test.ts) covering chain (entry->service->repository), circular (a->b->c->a, cycle guard), fan-out (a->{b,c}) and notFound behavior — 12 tests, all green. Related: tests/pipeline.test.ts fixed in PR #427 (issue #425): `/tmp/test` ThreatCrush finding was a false positive (path never touched — throws before I/O), replaced with portable os.tmpdir() path; weak `moduleCount >= 0` assertions replaced with deterministic fixture (tests/fixtures/pipeline-basic/, entry->service->repository) asserting exact moduleCount/edges/scanSummary (~1.8s -> ~22ms).
+
+## 2026-08-15 — Python relative imports resolve as external: from .x / from ..x / bare . and .. dropped from graph
+
+**Status:** Fixed (PR #431, closes issue #429)
+
+Python files using relative imports got ZERO dependency edges: `from .repository import x` in pkg/service.py, `from ..utils import x` in pkg/repository.py, `from .service import x` in pkg/__init__.py — all resolved as external. Root cause: resolvePath handled every leading-dot source with the JS branch (posix.join+normalize), which only resolves `/`-separated segments; Python's `.x`/`..x` are single segments, so normalize("pkg/..utils") stays "pkg/..utils" and never matches. Fix: dots-without-slash → Python package-relative branch (N dots = N-1 dirname steps up + dotted suffix); JS `./x`/`../x` untouched (naive `/^\.+(?!\/)/` lookahead misclassifies `../x` via regex backtracking — fixed with full-dot-run + explicit char check). +11 unit tests (tests/resolvePath.test.ts, first ever for this file) + first e2e for Python parser (tests/python-e2e.test.ts on tests/fixtures/python-basic/: all 3 relative forms produce exact graph edges).
+
+## 2026-08-15 — CommonJS whole-object exports not extracted: module.exports = { a, b } silently yields zero exports
+
+**Status:** Fixed (PR #432, closes issue #430)
+
+Known gap (documented in extractJs.ts + PROGRES.md): extractExportsJs only recognized per-property assignment (module.exports.NAME=/exports.NAME=); `module.exports = {…}` has bare LHS `module.exports` which matchCommonJsExportTarget never matched — exports silently dropped. Fix: bare `module.exports =`/`exports =` with ObjectLiteralExpression RHS → each property is a named export (shorthand `{a}`, renamed key `{foo: renamed}` → "foo", string keys, methods/getters; spread + computed keys skipped). +6 tests in tests/parser/javascript.test.ts. Single-value assignment (`module.exports = fn`) still out of scope (follow-up).
