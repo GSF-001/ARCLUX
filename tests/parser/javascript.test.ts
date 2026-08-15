@@ -89,4 +89,55 @@ describe("parseCommonJs", () => {
     expect(names).toContain("readFile");
     expect(names).toContain("SIZE");
   });
+
+  it("extracts whole-object exports: module.exports = { a, b } (issue #430)", async () => {
+    const parsed = await parseCommonJs.parse(
+      makeFile("src/obj.cjs", ".cjs"),
+      "const a = 1; const b = 2;\nmodule.exports = { a, b };"
+    );
+    const names = parsed.exports.map((e) => e.name);
+    expect(names).toEqual(["a", "b"]);
+    expect(parsed.exports.every((e) => e.kind === "named")).toBe(true);
+  });
+
+  it("extracts whole-object exports with renamed keys: module.exports = { foo: renamed }", async () => {
+    const parsed = await parseCommonJs.parse(
+      makeFile("src/renamed.cjs", ".cjs"),
+      "const renamed = 42;\nmodule.exports = { foo: renamed };"
+    );
+    // The EXPORTED name is the object key ("foo"), not the local binding.
+    expect(parsed.exports.map((e) => e.name)).toEqual(["foo"]);
+  });
+
+  it("supports the shorthand-and-longhand mix and skips spreads (issue #430)", async () => {
+    const parsed = await parseCommonJs.parse(
+      makeFile("src/mix.cjs", ".cjs"),
+      "const a = 1; const rest = { x: 1 };\nmodule.exports = { a, foo: rest, ...rest };"
+    );
+    expect(parsed.exports.map((e) => e.name)).toEqual(["a", "foo"]);
+  });
+
+  it("extracts methods and string keys in whole-object exports", async () => {
+    const parsed = await parseCommonJs.parse(
+      makeFile("src/methods.cjs", ".cjs"),
+      'module.exports = { run() {}, "dash-key": 1 };'
+    );
+    expect(parsed.exports.map((e) => e.name)).toEqual(["run", "dash-key"]);
+  });
+
+  it("combines whole-object and per-property assignments", async () => {
+    const parsed = await parseCommonJs.parse(
+      makeFile("src/combined.cjs", ".cjs"),
+      "module.exports = { a };\nmodule.exports.b = 2;"
+    );
+    expect(parsed.exports.map((e) => e.name)).toEqual(["a", "b"]);
+  });
+
+  it("handles bare `exports = { … }` assignment", async () => {
+    const parsed = await parseCommonJs.parse(
+      makeFile("src/exports-assign.cjs", ".cjs"),
+      "exports = { a, b };"
+    );
+    expect(parsed.exports.map((e) => e.name)).toEqual(["a", "b"]);
+  });
 });
