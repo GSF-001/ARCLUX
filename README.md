@@ -28,6 +28,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
 - [`PROGRES.md`](PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
 - [`ARCHITECTURE_MAP.md`](ARCHITECTURE_MAP.md) — boundary map for the codebase, read before adding new capabilities
+- [`SKILL.md`](SKILL.md) — auto-discovered by AI coding agents (Claude Code, Cursor, etc); teaches them to use the `arclux` CLI instead of guessing at codebase structure
 - [`CONTEXT.md`](CONTEXT.md) — project brief at a glance: stack, architecture, current state.
 - [`progres/roadmap.md`](progres/roadmap.md) — long-term direction, phased
 
