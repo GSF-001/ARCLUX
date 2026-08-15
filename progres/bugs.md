@@ -2,6 +2,12 @@
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
+## 2026-08-15 — Итерация 2 аудита: 5 impact-функций + 4 manifest-парсера без тестов (issues #445/#446)
+
+**Status:** Fixed (PR #448 + PR #449, closes #445 + #446)
+
+Аудит «зелёные тесты без доказанной механики», итерация 2 (MCP-first: get_symbol_info/intel_code_topology + batch-grep). (1) impact.test.ts покрывал 4 из 9 функций — пять (traceExports, traceImports, calculateAffectedComponents, calculateAffectedModules, calculateAffectedRoutes) имели 0 тестов И 0 вызовов по всему репо (dead code, только doc-comment ссылки в детекторах). +10 тестов, пинующих контракт каждой функции (attribution named/default/namespace, идентификаторы, фильтр .tsx PascalCase, группировка по package-id, routePath с route-group). Находка «0 callers» зафиксирована для будущего wiring-решения. (2) из 9 manifest-парсеров 4 не имели unit-тестов (parsePackageJson, parseGemfile, parseComposer, parseRequirements) — +6 тестов (runtime/dev split, platform-фильтр php/ext-*, version-операторы, malformed→[]). suite 412/412.
+
 ## 2026-08-15 — detector.test.ts: 19 placeholder-тестов (Array.isArray на пустом репо) заменены реальной механикой
 
 **Status:** Fixed (PR #442, closes issue #441)
