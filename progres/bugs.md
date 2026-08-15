@@ -427,5 +427,25 @@ Known gap (documented in extractJs.ts + PROGRES.md): extractExportsJs only recog
 
 **Status:** Fixed (PR #435, closes issue #434)
 
+docs/log-session-progress
+Test file uses a mock/plain object for repository that doesn't implement Repository class methods (getModule, etc). Needs fixing test setup to use real Repository instance or a proper mock with getModule. Not yet fixed.
+
+## 2026-08-15 — UPDATE: getModule/pipeline test bugs — resolved
+
+**Status:** Resolved
+
+Both CI-failing bugs fixed. `tests/impact.test.ts`: root cause was stale
+parameter order (`(moduleId, repo.graph)` instead of `(repository, moduleId)`)
+plus an empty Repository fixture — none of the tested functions
+(calculateAffectedFiles, buildImpactTree, traceConsumers, traceDependencies)
+were modified, only the test's calling convention and fixtures. Rewritten
+with real Repository.addModule() fixtures and assertions matching actual
+return shapes (some functions return objects like {direct, transitive,
+notFound}, not arrays). `tests/pipeline.test.ts`: full-repo analyzeRepository
+test was timing out on slower hardware (~5s runtime vs 5000ms default
+timeout) — bumped to 30000ms, no logic changed. Merged via PR #428 (and the
+impact.test.ts fix). CI on ARCLUX.main confirmed green after merge.
+
 parseMaven matched `<dependency>` blocks with a blanket regex in ANY context — probe: 2 false positives out of 4 (`maven-shared-utils` from `<plugin><dependencies>` — plugin's own classpath; `guava` from `<dependencyManagement>` — version management only). Fix: strip `<plugin>…</plugin>` and `<dependencyManagement>…</dependencyManagement>` before block matching (neither nests itself nor the other; profile deps KEPT — conditional but real). Also: FIRST tests ever for the manifest package (tests/manifest.test.ts, 8: parsePom kinds/scopes/plugin/dependencyManagement/profile/malformed, parseGradle_ patterns) + wiring proven e2e (status-core's «not wired to analyzeRepository» was outdated — detectDependencies IS called by both local/remote paths; fixture java-basic with pom.xml + Main.java asserts dependencies = 3 project deps only). suite 359/359.
 ARCLUX.main
+
