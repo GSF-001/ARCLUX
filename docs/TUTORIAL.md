@@ -792,7 +792,7 @@ git push origin feature/detect-my-issue
 
 ---
 
-## Recap: A-Z Journey
+## Recap: Journey
 
 | Stage | What | Time | Result |
 |-------|------|------|--------|
