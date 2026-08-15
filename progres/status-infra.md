@@ -439,3 +439,9 @@ Completed all 5 phases of the 'ARCLUX as always-on service' roadmap in one sessi
 **Status:** Done
 
 arclux diagnose output now wraps file paths in OSC 8 hyperlink escape sequences -- tappable/clickable in supporting terminals (Termux, iTerm2, VS Code integrated terminal), silent fallback to plain text elsewhere. Brings CLI to parity with the web Explorer's inline gutter markers (PR #389/#391) -- both surfaces now show file+line+message+suggestion, just via different interaction models suited to their medium (terminal list vs clickable gutter). See PR #397.
+
+## 2026-08-15 — daemon --health flag
+
+**Status:** done
+
+Added getDaemonHealth check to daemon status CLI, verifies bridge server reachability alongside process status. PR #420 opened to ARCLUX.main.
