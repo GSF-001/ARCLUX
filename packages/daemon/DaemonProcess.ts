@@ -111,6 +111,50 @@ export function getDaemonStatus(rootPath: string): DaemonPidRecord | null {
   return record;
 }
 
+export interface DaemonHealthStatus {
+  running: boolean;
+  pid: number | null;
+  startedAt: number | null;
+  /** true only if the pid is alive AND the local bridge HTTP server actually
+   * responded -- a stale pid file with a crashed bridge server otherwise
+   * looks identical to getDaemonStatus()'s pid-only check. */
+  bridgeReachable: boolean;
+}
+
+/**
+ * Like getDaemonStatus(), but also verifies the local bridge server is
+ * actually answering HTTP requests, not just that the pid is alive. Reads
+ * the port from the service endpoint file written by
+ * packages/networking/ServiceEndpoint.ts (createServiceEndpoint /
+ * writeServiceEndpoint, called from ArcluxDaemon.start()).
+ */
+export async function getDaemonHealth(rootPath: string): Promise<DaemonHealthStatus> {
+  const status = getDaemonStatus(rootPath);
+  if (!status) {
+    return { running: false, pid: null, startedAt: null, bridgeReachable: false };
+  }
+
+  const daemonId = computeDaemonId(rootPath);
+  let bridgeReachable = false;
+  try {
+    const { readServiceEndpoint } = await import("../networking/ServiceEndpoint");
+    const endpoint = readServiceEndpoint(daemonId);
+    if (endpoint) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1500);
+      const res = await fetch(`http://127.0.0.1:${endpoint.port}/analysis`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      bridgeReachable = res.ok;
+    }
+  } catch {
+    bridgeReachable = false;
+  }
+
+  return { running: true, pid: status.pid, startedAt: status.startedAt, bridgeReachable };
+}
+
 /** Sends SIGTERM to a running detached daemon for rootPath. Returns false if none was running. */
 export function stopDetached(rootPath: string): boolean {
   const status = getDaemonStatus(rootPath);
