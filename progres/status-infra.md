@@ -445,3 +445,9 @@ arclux diagnose output now wraps file paths in OSC 8 hyperlink escape sequences 
 **Status:** done
 
 Added getDaemonHealth check to daemon status CLI, verifies bridge server reachability alongside process status. PR #420 opened to ARCLUX.main.
+
+## 2026-08-15 — getDaemonHealth merged, duplicate definition found+fixed
+
+**Status:** Done
+
+getDaemonHealth() added to DaemonProcess.ts (bridge reachability check via HTTP GET /analysis, port read from ServiceEndpoint.ts). apps/cli/daemon.ts --health flag already existed from a parallel session's earlier merge. Merge caused an accidental duplicate function definition (same code pasted twice, back to back) — caught by tsc TS2393 duplicate implementation error before commit, removed the dup. Lesson: after a git pull fast-forwards in changes from another session, diff the file you're about to patch before assuming your patch target still matches what you last saw.
