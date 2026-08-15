@@ -13,14 +13,18 @@
 // wired" claim was already outdated — detectDependencies IS called by both
 // analyzeLocalPath and analyzeRemoteRepository).
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import path from "node:path";
+import os from "node:os";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { parsePom, parseGradle_ } from "../packages/parser/java/parseGradlePom";
+import { parseCsproj } from "../packages/parser/csharp/parseCsproj";
 import { manifestRegistry } from "../packages/parser/core/ManifestRegistry";
 import { analyzeRepository, ensureParsersRegistered, type AnalyzeRepositoryResult } from "../packages/engine/pipeline";
 
 const FIXTURE_PATH = path.join(__dirname, "fixtures", "java-basic");
 const GRADLE_KTS_FIXTURE = path.join(__dirname, "fixtures", "gradle-kts-basic");
+const CSHARP_FIXTURE = path.join(__dirname, "fixtures", "csharp-basic");
 
 describe("parsePom", () => {
   it("extracts project dependencies with correct kinds (test scope -> dev)", () => {
@@ -162,6 +166,59 @@ describe("parsePom", () => {
   });
 });
 
+describe("parseCsproj", () => {
+  it("extracts PackageReference — self-closing and open/close forms", () => {
+    const deps = parseCsproj.parse(`
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0"></PackageReference>
+  </ItemGroup>
+</Project>
+`);
+    expect(deps).toEqual([
+      { name: "Newtonsoft.Json", versionRange: "13.0.3", kind: "runtime" },
+      { name: "Microsoft.Extensions.Logging", versionRange: "8.0.0", kind: "runtime" },
+    ]);
+  });
+
+  it("matches by extension, not by an exact filename (issue #438)", () => {
+    expect(parseCsproj.filename).toEqual([]);
+    expect(parseCsproj.extension).toBe(".csproj");
+    expect(manifestRegistry.getParserForFilename(".csproj")).toBeUndefined();
+  });
+});
+
+describe("ManifestRegistry — extension-based discovery (issue #438)", () => {
+  let tempDir: string;
+
+  beforeAll(() => {
+    ensureParsersRegistered();
+    tempDir = mkdtempSync(path.join(os.tmpdir(), "arclux-csproj-"));
+    mkdirSync(path.join(tempDir, "src", "MyApp"), { recursive: true });
+    mkdirSync(path.join(tempDir, "src", "MyApp", "Tests"), { recursive: true });
+    writeFileSync(
+      path.join(tempDir, "src", "MyApp", "MyApp.csproj"),
+      `<Project><ItemGroup><PackageReference Include="Newtonsoft.Json" Version="13.0.3" /></ItemGroup></Project>`
+    );
+    // Nested deeper + a distractor file to prove the walk is recursive and targeted.
+    writeFileSync(
+      path.join(tempDir, "src", "MyApp", "Tests", "MyApp.Tests.csproj"),
+      `<Project><ItemGroup><PackageReference Include="xunit" Version="2.6.6" /></ItemGroup></Project>`
+    );
+    writeFileSync(path.join(tempDir, "README.md"), "# not a manifest\n");
+  });
+
+  afterAll(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("finds nested .csproj files via the extension pass", () => {
+    const names = manifestRegistry.detectDependencies(tempDir).map((d) => d.name).sort();
+    expect(names).toEqual(["Newtonsoft.Json", "xunit"]);
+  });
+});
+
 describe("parseGradle_", () => {
   it("extracts implementation/api/runtimeOnly as runtime, testImplementation as dev", () => {
     const deps = parseGradle_.parse(`
@@ -249,5 +306,21 @@ describe("Manifest wiring e2e: build.gradle.kts through analyzeRepository", () =
   it("surfaces Kotlin DSL dependencies from build.gradle.kts", () => {
     const names = result.dependencies.map((d) => d.name).sort();
     expect(names).toEqual(["junit:junit", "org.springframework:spring-core"]);
+  });
+});
+
+describe("Manifest wiring e2e: nested MyApp.csproj through analyzeRepository (issue #438)", () => {
+  let result: AnalyzeRepositoryResult;
+
+  beforeAll(async () => {
+    result = await analyzeRepository({ localPath: CSHARP_FIXTURE });
+  }, 30_000);
+
+  it("surfaces NuGet PackageReference dependencies from a nested .csproj", () => {
+    const names = result.dependencies.map((d) => d.name).sort();
+    expect(names).toEqual([
+      "Microsoft.Extensions.Logging",
+      "Newtonsoft.Json",
+    ]);
   });
 });
