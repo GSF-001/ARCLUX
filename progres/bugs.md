@@ -2,6 +2,12 @@
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
+## 2026-08-15 — parseCsproj: ".csproj" зарегистрирован как точное имя файла — реальные Foo.csproj никогда не сканировались
+
+**Status:** Fixed (PR #439, closes issue #438)
+
+parseCsproj регистрировался как filename ".csproj" — detectDependencies делает join(rootPath, filename), то есть ищет файл буквально названный ".csproj" в корне. Реальные .NET-проекты имеют per-project файлы в поддиректориях с произвольными именами (src/MyApp/MyApp.csproj) — все молча пропускались, NuGet-зависимости не попадали в AnalyzeRepositoryResult.dependencies. Fix: ManifestParserInterface получил optional extension?: string; ManifestRegistry хранит extension-парсеры отдельно (пустой filename-массив ничего не регистрирует в filename-map — поймано первым прогоном тестов) и делает второй проход — один рекурсивный walk (skip node_modules/.git) с парсингом каждого файла по extension; parseCsproj → filename: [], extension: ".csproj". +4 теста (parseCsproj unit self-closing/open-close, перенос регистрации, extension-pass на temp-дире с вложенными csproj + distractor, e2e csharp-basic через analyzeRepository). suite 369/369.
+
 ## 2026-08-03 — Update — Python resolver bug + TS export default double-count bug (fixed)
 
 Tested against playground/python-demo (6-file fixture, existed already)
