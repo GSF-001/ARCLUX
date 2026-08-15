@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FileDetails, type DiagnosticMarker } from "./FileDetails";
 import { DependencyList } from "./DependencyList";
 import { ImpactSummary } from "./ImpactSummary";
 
 type ExplorerTab = "file" | "dependencies" | "impact";
+
+interface RawDiagnosticEvent {
+  filePath: string;
+  line: number;
+  severity: "error" | "warning";
+  message: string;
+  checkId: string;
+}
 
 const TABS: { id: ExplorerTab; label: string }[] = [
   { id: "file", label: "File" },
@@ -40,13 +48,12 @@ export interface ExplorerProps {
  */
 export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) {
   const [activeTab, setActiveTab] = useState<ExplorerTab>("file");
-  const [fileDiagnostics, setFileDiagnostics] = useState<DiagnosticMarker[]>([]);
-
   // Fetches once per repoUrl/branch (not per file switch) -- POST /api/diagnostics
   // does a full clone+index per call (same cost as /api/analyze, /api/doctor),
   // so re-fetching on every file open inside the same repo would be wasteful.
-  // Findings are filtered by moduleId client-side per render instead.
-  const [allDiagnostics, setAllDiagnostics] = useState<any[]>([]);
+  // Filtered to the currently open file via useMemo below, instead of a
+  // second useEffect calling setState (which triggers a cascading render).
+  const [allDiagnostics, setAllDiagnostics] = useState<RawDiagnosticEvent[]>([]);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/diagnostics", {
@@ -66,17 +73,13 @@ export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) 
     };
   }, [repoUrl, branch]);
 
-  useEffect(() => {
-    const filtered: DiagnosticMarker[] = allDiagnostics
-      .filter((e: any) => e.filePath === moduleId)
-      .map((e: any) => ({
-        line: e.line,
-        severity: e.severity,
-        message: e.message,
-        checkId: e.checkId,
-      }));
-    setFileDiagnostics(filtered);
-  }, [allDiagnostics, moduleId]);
+  const fileDiagnostics = useMemo<DiagnosticMarker[]>(
+    () =>
+      allDiagnostics
+        .filter((e) => e.filePath === moduleId)
+        .map((e) => ({ line: e.line, severity: e.severity, message: e.message, checkId: e.checkId })),
+    [allDiagnostics, moduleId]
+  );
 
   return (
     <div className="flex h-full flex-col bg-background">
