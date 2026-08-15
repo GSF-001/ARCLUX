@@ -19,6 +19,10 @@ import os from "node:os";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { parsePom, parseGradle_ } from "../packages/parser/java/parseGradlePom";
 import { parseCsproj } from "../packages/parser/csharp/parseCsproj";
+import { parsePackageJson } from "../packages/parser/config/parsePackageJson";
+import { parseGemfile } from "../packages/parser/ruby/parseGemfile";
+import { parseComposer } from "../packages/parser/php/parseComposer";
+import { parseRequirements } from "../packages/parser/python/parseRequirements";
 import { manifestRegistry } from "../packages/parser/core/ManifestRegistry";
 import { analyzeRepository, ensureParsersRegistered, type AnalyzeRepositoryResult } from "../packages/engine/pipeline";
 
@@ -321,6 +325,86 @@ describe("Manifest wiring e2e: nested MyApp.csproj through analyzeRepository (is
     expect(names).toEqual([
       "Microsoft.Extensions.Logging",
       "Newtonsoft.Json",
+    ]);
+  });
+});
+
+describe("parsePackageJson", () => {
+  it("extracts dependencies -> runtime and devDependencies -> dev", () => {
+    const deps = parsePackageJson.parse(
+      JSON.stringify({
+        name: "app",
+        dependencies: { react: "^18.2.0", lodash: "^4.17.21" },
+        devDependencies: { vitest: "^1.0.0" },
+      })
+    );
+    expect(deps).toEqual([
+      { name: "react", versionRange: "^18.2.0", kind: "runtime" },
+      { name: "lodash", versionRange: "^4.17.21", kind: "runtime" },
+      { name: "vitest", versionRange: "^1.0.0", kind: "dev" },
+    ]);
+  });
+
+  it("returns [] for malformed JSON instead of throwing", () => {
+    expect(parsePackageJson.parse("not json")).toEqual([]);
+  });
+});
+
+describe("parseGemfile", () => {
+  it("extracts gem name + first version string and strips comments", () => {
+    const deps = parseGemfile.parse(`
+source "https://rubygems.org"
+
+gem "rails", "~> 7.0"
+gem "puma", "~> 6.0"
+gem "nokogiri" # no version pin
+# gem "commented-out", "1.0.0"
+`);
+    expect(deps.map((d) => d.name)).toEqual(["rails", "puma", "nokogiri"]);
+    expect(deps[0]).toMatchObject({ name: "rails", versionRange: "~> 7.0", kind: "runtime" });
+    expect(deps[1]).toMatchObject({ name: "puma", versionRange: "~> 6.0", kind: "runtime" });
+    expect(deps[2].versionRange).toBeUndefined();
+  });
+});
+
+describe("parseComposer", () => {
+  it("filters platform requirements (php, ext-*) and separates require-dev", () => {
+    const deps = parseComposer.parse(
+      JSON.stringify({
+        require: { php: "^8.1", "ext-mbstring": "*", "laravel/framework": "^10.0" },
+        "require-dev": { "phpunit/phpunit": "^9.5" },
+      })
+    );
+    expect(deps).toEqual([
+      { name: "laravel/framework", versionRange: "^10.0", kind: "runtime" },
+      { name: "phpunit/phpunit", versionRange: "^9.5", kind: "dev" },
+    ]);
+  });
+
+  it("returns [] for malformed JSON instead of throwing", () => {
+    expect(parseComposer.parse("not json")).toEqual([]);
+  });
+});
+
+describe("parseRequirements", () => {
+  it("keeps version operators, strips comments, env markers and option flags", () => {
+    const deps = parseRequirements.parse(`
+requests==2.31.0
+numpy>=1.24
+flask~=3.0
+pydantic!=2.0
+# commented
+--index-url https://pypi.org/simple
+-r other.txt
+-e ./local
+boto3; python_version < "3.8"
+`);
+    expect(deps.map((d) => `${d.name}:${d.versionRange ?? "none"}`)).toEqual([
+      "requests:==2.31.0",
+      "numpy:>=1.24",
+      "flask:~=3.0",
+      "pydantic:!=2.0",
+      "boto3:none",
     ]);
   });
 });
