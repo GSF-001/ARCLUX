@@ -2,6 +2,12 @@
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
+## 2026-08-15 — detector.test.ts: 19 placeholder-тестов (Array.isArray на пустом репо) заменены реальной механикой
+
+**Status:** Fixed (PR #442, closes issue #441)
+
+Весь «Detector Suite» был паттерном «зелёный тест без доказанной механики»: 19 тестов проверяли только Array.isArray(findings) на ПУСТОМ Repository — детектор, возвращающий [] для любого входа, прошёл бы. Реальная механика была только у 3 детекторов (core-detectors.test.ts: circular, unused exports, orphan). Fix: tests/detector.test.ts переписан с реальными fixtures (makeModule/makeRepository): каждый из 16 непокрытых детекторов (largeModules, duplicateModules, sharedModules, indexFiles, layerViolation, deadCode, entryPoints, missingExports, routeConvention, componentConvention, featureStructure, repositoryPattern, storyConvention, testConvention, unusedFiles, ambiguousSymbolResolution) получил positive (точный filePath/severity/цикл/ruleName) + negative кейсы. 3 placeholder-входа для circular/unused/orphan удалены (дублируют core-detectors). suite 396/396 (369 + 27).
+
 ## 2026-08-15 — parseCsproj: ".csproj" зарегистрирован как точное имя файла — реальные Foo.csproj никогда не сканировались
 
 **Status:** Fixed (PR #439, closes issue #438)
