@@ -63,7 +63,7 @@ pnpm install
 # Check if ARCLUX works
 npx tsx apps/cli/index.ts --help
 
-# You should see list of commands. If yes, you're good! ✅
+# You should see list of commands. If yes, you're good! 
 ```
 
 ## Success Checklist
@@ -74,7 +74,7 @@ npx tsx apps/cli/index.ts --help
 - ✅ `pnpm install` completed without errors
 - ✅ `npx tsx apps/cli/index.ts --help` works
 
-**If all ✅, move to Part 2!**
+**If all , move to Part 2!**
 
 ---
 
@@ -104,30 +104,30 @@ npx tsx apps/cli/index.ts analyze .
 ## Expected Output
 
 ```
-✨ ARCLUX Analysis Report
+ ARCLUX Analysis Report
 
-📊 Project Summary
+  Project Summary
   • Total modules: 42
   • Total files: 156
   • Languages: TypeScript, JavaScript
 
-🎨 Frameworks Detected
+ Frameworks Detected
   ✓ React
   ✓ Next.js
   ✓ TypeScript
 
-⚠️  Issues Found: 7
+  Issues Found: 7
 
-  🔄 Circular Dependencies (2)
+   Circular Dependencies (2)
      Issue #1: src/utils/auth.ts → src/hooks/useAuth.ts → src/utils/auth.ts
      Issue #2: src/lib/form.ts → src/components/Form.tsx → src/lib/form.ts
 
-  📦 Unused Exports (3)
+     Unused Exports (3)
      • src/utils/old-helper.ts
      • src/config/deprecated.ts
      • src/types/legacy.ts
 
-  👻 Orphan Files (2)
+     Orphan Files (2)
      • src/pages/old-feature.tsx
      • src/unused/module.ts
 ```
@@ -141,7 +141,7 @@ ARCLUX:
 4. ✅ Found problems automatically
 5. ✅ Generated this report
 
-**In seconds!** ⚡
+**In seconds!** 
 
 ---
 
@@ -149,7 +149,7 @@ ARCLUX:
 
 ## The Report Sections (READ CAREFULLY)
 
-### 📊 Project Summary
+###  Project Summary
 
 ```
 Total modules: 42
@@ -166,7 +166,7 @@ Languages: TypeScript, JavaScript
 ```
 **Translation:** Your code uses these languages.
 
-### 🎨 Frameworks Detected
+###  Frameworks Detected
 
 ```
 ✓ React
@@ -177,13 +177,13 @@ Languages: TypeScript, JavaScript
 
 **Why it matters:** Helps ARCLUX check framework-specific conventions.
 
-### ⚠️ Issues Found
+###  Issues Found
 
 This is the IMPORTANT part. Let's break it down:
 
 ---
 
-## Issue Type 1: Circular Dependencies 🔄
+## Issue Type 1: Circular Dependencies 
 
 ```
 Issue #1: src/utils/auth.ts → src/hooks/useAuth.ts → src/utils/auth.ts
@@ -246,7 +246,7 @@ import { validateToken } from './auth'  // Good!
 
 ---
 
-## Issue Type 2: Unused Exports 📦
+## Issue Type 2: Unused Exports 
 
 ```
 • src/utils/old-helper.ts
@@ -308,7 +308,7 @@ export function helpMe() { ... }
 
 ---
 
-## Issue Type 3: Orphan Files 👻
+## Issue Type 3: Orphan Files 
 
 ```
 • src/pages/old-feature.tsx
@@ -446,10 +446,10 @@ npx tsx apps/cli/index.ts analyze .
 
 Expected output:
 ```
-Issues Found: 0 ✅
+Issues Found: 0 
 ```
 
-**Congratulations! Clean codebase!** 🎉
+**Congratulations! Clean codebase!** 
 
 ---
 
@@ -493,7 +493,7 @@ jobs:
         run: npx tsx apps/cli/index.ts verify .
 ```
 
-**Result:** Every PR gets automatic code quality check! ✅
+**Result:** Every PR gets automatic code quality check! 
 
 ### Step 2: Add Pre-Commit Hook
 
@@ -502,15 +502,15 @@ Create `.githooks/pre-commit`:
 ```bash
 #!/bin/bash
 
-echo "🔍 Running ARCLUX check..."
+echo " Running ARCLUX check..."
 npx tsx apps/cli/index.ts doctor
 
 if [ $? -ne 0 ]; then
-  echo "❌ Issues found! Fix before committing."
+  echo " Issues found! Fix before committing."
   exit 1
 fi
 
-echo "✅ Code passed!"
+echo " Code passed!"
 ```
 
 Enable it:
@@ -533,7 +533,7 @@ Create `ARCLUX_STANDARDS.md`:
 1. ❌ Zero circular dependencies (MANDATORY)
 2. ❌ No orphan files (MANDATORY)
 3. ✅ Framework conventions followed (MANDATORY)
-4. ⚠️  Minimize unused exports (SHOULD)
+4.  Minimize unused exports (SHOULD)
 
 ## Workflow
 
@@ -582,7 +582,7 @@ Transitive consumers:
 
 **Meaning:** If you change auth.ts, you MUST test these 4 files.
 
-**Action:** Refactor safely knowing exactly what to test! ✅
+**Action:** Refactor safely knowing exactly what to test! 
 
 ---
 
@@ -695,7 +695,7 @@ jobs:
       - name: Fail if issues
         run: |
           if grep -q "Circular" doctor.log; then
-            echo "❌ Circular dependencies found!"
+            echo " Circular dependencies found!"
             exit 1
           fi
 ```
@@ -805,7 +805,7 @@ git push origin feature/detect-my-issue
 | 7 | Integration | 20 min | Production-ready workflow |
 | 8 | Contribute | 30 min | Submit to ARCLUX |
 
-**TOTAL: ~2 hours to become ARCLUX power user!** 🚀
+**TOTAL: ~2 hours to become ARCLUX power user!** 
 
 ---
 
