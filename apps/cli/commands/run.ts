@@ -14,6 +14,7 @@
  * here as other internal services (watcher, indexer) get wired in.
  */
 
+import type { Command } from "commander";
 import { RuntimeManager } from "../../../packages/runtime/RuntimeManager";
 import type { ProcessSpec } from "../../../packages/runtime/ProcessSpec";
 
@@ -28,7 +29,7 @@ const KNOWN_SERVICES: Record<string, ProcessSpec> = {
   },
 };
 
-export async function runCommand(args: string[]): Promise<void> {
+async function runCommand(args: string[]): Promise<void> {
   const [serviceName] = args;
   const spec = serviceName ? KNOWN_SERVICES[serviceName] : undefined;
 
@@ -49,4 +50,13 @@ export async function runCommand(args: string[]): Promise<void> {
   });
 
   runtime.startService(spec);
+}
+
+export function registerRunCommand(program: Command): void {
+  program
+    .command("run <service>")
+    .description("Start a named internal service (web, ...)")
+    .action(async (service: string) => {
+      await runCommand([service]);
+    });
 }
