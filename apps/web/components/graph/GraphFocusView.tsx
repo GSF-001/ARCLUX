@@ -32,6 +32,7 @@ import { useState } from "react";
 import { useGraphContext } from "./GraphProvider";
 import { getGraphNodeColor } from "@/theme/graphColors";
 import { getNodeIconPath } from "./nodeIcons";
+import { getEffectiveNodeType } from "./GraphNode";
 import type { GraphNode as GraphNodeData } from "@/packages/shared/types";
 
 // Reuses the existing "hook" node color (#E06C75 dark) as the impact/
@@ -41,12 +42,16 @@ const IMPACT_COLOR = "#E06C75";
 const INITIAL_VISIBLE = 30;
 
 function NodeIcon({ node, size = 16 }: { node: GraphNodeData; size?: number }) {
-  const color = getGraphNodeColor(node.type, "dark");
+  // Same effective-type classification as the canvas (GraphNode.tsx): the
+  // pipeline emits everything as "file", so without this every card icon
+  // would render in the single file-blue even though the canvas is colored.
+  const type = getEffectiveNodeType(node);
+  const color = getGraphNodeColor(type, "dark");
   return (
     <svg width={size} height={size} viewBox="-8 -8 16 16" className="shrink-0">
       <circle r={7} fill={color} opacity={0.9} />
       <path
-        d={getNodeIconPath(node.type)}
+        d={getNodeIconPath(type)}
         fill="none"
         stroke="#fff"
         strokeWidth={0.9}

@@ -718,3 +718,15 @@ New GraphCanvas3D.tsx using react-force-graph-3d (Three.js/WebGL, d3-force-3d ph
 **Status:** In Progress
 
 GraphCanvas3D.tsx brought to functional parity with the 2D canvas: importance rings (torus halo for fan-in >= 20/100 — same tiers as GraphNode.tsx's impact halo), node size by fan-in (nodeVal), selection white fill, hover tracking, background-click deselect, right-click context menu (position synthesized via PointerEvent since right-click alone doesn't fire pointermove), double-click camera focus, controlType="orbit" (predictable mobile gestures), showNavInfo off, and coarse-pointer optimizations (sphere resolution 6, no link particles, no MSAA via rendererConfig.antialias=false). P0 fix: the #470 revert silently dropped react-force-graph-3d/three from apps/web/package.json during the #471 3-way merge (revert's deletion won), so deps restored + @types/three added. tsc 0, lint 0, suite 487/487.
+
+## 2026-08-16 — 2D graph: node color mapping fix (route/hook/component classification)
+
+**Status:** In Progress
+
+Root cause of "uniform blue" 2D nodes: packages/graph/buildDependencyGraph.ts emits every node as type:"file" (semantic route/component/hook types are only assigned by indexer resolvers that feed detectors, not the rendered graph; external-package/folder nodes are TODO). Fixed 2D-side (GraphNode.tsx only, no shared/3D changes): getEffectiveNodeType() classifies from the same conventions when node.type==="file" (Next.js App Router entry set from resolveRoutes.ts, use* hook prefix, PascalCase .tsx components); real node.type wins otherwise. Icons follow the effective type (nodeIcons already covers all 6). Palette untouched (graphColors.ts is shared with 3D — legend already matches); rings/size/perf untouched (halo LOD + memo already in place). tsc 0, lint 0, classification validated on 8 real paths (incl. ARCLUX's own app/hooks/components).
+
+## 2026-08-16 — 2D graph: fade-out on selection, selection glow, route-link dash
+
+**Status:** In Progress
+
+Visual polish (GraphCanvas/GraphNode/GraphEdge, all 2D-only): (1) fade-out — selecting or hovering a node dims everything NOT connected to it (connected set memoized per active node; nodes opacity 0.3, edges 0.12, selected/hovered stay full) so the active subgraph reads instantly; (2) selection glow — double accent ring (r+5 @ 0.5, r+8 @ 0.15) around the selected node; (3) route-link edges now dashed ("4 3") per the edge legend. Edge colors already matched the legend via getGraphEdgeColor (import #454545 / export #9D7CD8 / call #52A8FF / route-link #56B6C2). z-index overlay layering verified (Search z-10 left, Menu z-10/20 right, FocusView z-20, context menu z-50). tsc 0, lint 0, suite 487/487.

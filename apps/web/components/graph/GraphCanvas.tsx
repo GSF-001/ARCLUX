@@ -9,7 +9,7 @@
 "use client";
 import { AnalyzingProgress } from "./AnalyzingProgress";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
 import {
   forceSimulation,
   forceLink,
@@ -89,6 +89,21 @@ export function GraphCanvas() {
   // Coarse pointer (touch) devices get the larger node hit target; mouse
   // keeps precise 6px targeting on dense graphs.
   const isCoarsePointer = useMediaQuery("(pointer: coarse)");
+
+  // When a node is selected or hovered, everything NOT connected to it
+  // fades out (low opacity) so the active subgraph reads instantly — the
+  // connected edges/nodes keep full strength. Computed once per active
+  // node (memoized), not per node/edge, so a pan/zoom re-render stays cheap.
+  const activeNodeId = selectedNodeId ?? hoveredNodeId;
+  const connectedNodeIds = useMemo(() => {
+    if (!activeNodeId || !graph) return null;
+    const ids = new Set<string>([activeNodeId]);
+    for (const e of graph.edges) {
+      if (e.source === activeNodeId) ids.add(e.target);
+      if (e.target === activeNodeId) ids.add(e.source);
+    }
+    return ids;
+  }, [activeNodeId, graph]);
 
   useEffect(() => {
     liveTransform.current = transform;
@@ -389,6 +404,7 @@ export function GraphCanvas() {
                 sourcePos={sourcePos}
                 targetPos={targetPos}
                 isHighlighted={isHighlighted}
+                isDimmed={connectedNodeIds !== null && !isHighlighted}
               />
             );
           })}
@@ -413,6 +429,7 @@ export function GraphCanvas() {
                 importCount={importCounts.get(node.id) ?? 0}
                 zoomScale={transform.scale}
                 hitRadius={isCoarsePointer ? NODE_HIT_RADIUS : undefined}
+                isDimmed={connectedNodeIds !== null && !isSelected && !isHovered && !connectedNodeIds.has(node.id)}
               />
             );
           })}
