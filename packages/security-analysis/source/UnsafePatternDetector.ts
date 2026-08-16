@@ -41,6 +41,14 @@ export interface UnsafePatternOptions {
   allowlistPaths?: RegExp[];
 }
 
+// The patterns below ARE the detection definitions: they describe attacks
+// (eval/Function/exec calls, XSS sinks) so the scanner can find them in
+// OTHER repos. They are matched, never executed, by this detector —
+// ThreatCrush flags the literal strings as js-dynamic-code-execution /
+// js-unescaped-html-sink, which is a false positive by the repo guard
+// "check the execution path, not the presence of the string"
+// (AGENT_DIARY 2026-08-13 ThreatCrush entry). Kept as readable regexes on
+// purpose — the pattern is the product's documentation.
 export const DEFAULT_UNSAFE_PATTERN_RULES: UnsafePatternRule[] = [
   {
     id: "unsafe-eval",

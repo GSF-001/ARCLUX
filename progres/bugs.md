@@ -461,3 +461,9 @@ impact.test.ts fix). CI on ARCLUX.main confirmed green after merge.
 parseMaven matched `<dependency>` blocks with a blanket regex in ANY context — probe: 2 false positives out of 4 (`maven-shared-utils` from `<plugin><dependencies>` — plugin's own classpath; `guava` from `<dependencyManagement>` — version management only). Fix: strip `<plugin>…</plugin>` and `<dependencyManagement>…</dependencyManagement>` before block matching (neither nests itself nor the other; profile deps KEPT — conditional but real). Also: FIRST tests ever for the manifest package (tests/manifest.test.ts, 8: parsePom kinds/scopes/plugin/dependencyManagement/profile/malformed, parseGradle_ patterns) + wiring proven e2e (status-core's «not wired to analyzeRepository» was outdated — detectDependencies IS called by both local/remote paths; fixture java-basic with pom.xml + Main.java asserts dependencies = 3 project deps only). suite 359/359.
 ARCLUX.main
 
+
+## 2026-08-16 — ThreatCrush false positives in security packages — 27 findings triaged
+
+**Status:** Done
+
+ThreatCrush scan (run 31964856937 comment) found 27: (1) insecure-temp-file x9 — /tmp paths in in-memory test fixtures (never written) — FIXED in source per repo convention: rootPath 'in-memory' + os.tmpdir() for validation paths (remote.test.ts, architecture-security.test.ts, security-analysis.test.ts); (2) js-dynamic-code-execution x4 in UnsafePatternDetector regex patterns — patterns are detection data, never executed — documented in-file (guard: check execution path, not string presence, AGENT_DIARY 2026-08-13); (3) remaining 14 (test-content strings eval/innerHTML + intentional fake secrets in fixtures/tests) are deliberate positive controls for the security detectors — cannot remove without breaking tests; ThreatCrush 0.11.0 has NO ignore mechanism (verified in package source); documented as expected noise.

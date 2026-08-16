@@ -122,7 +122,7 @@ describe("detectCrossBoundaryCalls", () => {
       org: "local",
       name: "unit",
       defaultBranch: "main",
-      rootPath: "/tmp/unit",
+      rootPath: "in-memory",
       detectedFrameworks: [],
       packageManager: "unknown",
       analyzedAt: new Date().toISOString(),
@@ -136,7 +136,7 @@ describe("detectCrossBoundaryCalls", () => {
     return {
       id,
       file: {
-        absolutePath: `/tmp/unit/${path2}`,
+        absolutePath: `in-memory/${path2}`,
         relativePath: path2,
         language: "typescript",
         extension: ".ts",
@@ -159,7 +159,7 @@ describe("detectCrossBoundaryCalls", () => {
       module("handlers/login.ts", "handlers/login.ts", [{ moduleId: "services/auth.service.ts", calleeName: "verifyToken", line: 7 }]),
       module("services/auth.service.ts", "services/auth.service.ts", []),
     ]);
-    const findings = detectCrossBoundaryCalls(repo, new DiskSourceProvider("/tmp/unit"));
+    const findings = detectCrossBoundaryCalls(repo, new DiskSourceProvider("in-memory"));
     expect(findings).toHaveLength(1);
     expect(findings[0].ruleId).toBe("cross-boundary-call");
     expect(findings[0].location.line).toBe(7);
@@ -171,7 +171,7 @@ describe("detectCrossBoundaryCalls", () => {
       module("handlers/login.ts", "handlers/login.ts", [{ moduleId: "utils/format.ts", calleeName: "format", line: 2 }]),
       module("utils/format.ts", "utils/format.ts", []),
     ]);
-    expect(detectCrossBoundaryCalls(repo, new DiskSourceProvider("/tmp/unit"))).toHaveLength(0);
+    expect(detectCrossBoundaryCalls(repo, new DiskSourceProvider("in-memory"))).toHaveLength(0);
   });
 });
 
