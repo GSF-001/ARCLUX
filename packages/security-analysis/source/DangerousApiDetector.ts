@@ -6,4 +6,17 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/source/DangerousApiDetector — not yet implemented.
+import type { SecurityFinding } from "../SecurityFinding";
+const APIS: Array<[RegExp, string]> = [
+  [/child_process\.(?:exec|execSync|spawn|spawnSync)/, "Node process execution"],
+  [/subprocess\.(?:run|Popen|call)/, "Python process execution"],
+  [/Runtime\.getRuntime\(\)\.exec/, "Java process execution"],
+];
+export function detectDangerousApis(file: string, source: string): SecurityFinding[] {
+  return source.split(/\r?\n/).flatMap((line, index) => APIS.filter(([pattern]) => pattern.test(line)).map(([pattern, title]) => ({
+    id: `api-${file}-${index + 1}`, title, category: "dangerous-api" as const, severity: "medium" as const,
+    message: "A process-execution API was detected; validate all arguments and authorization.", confidence: 0.76,
+    remediation: "Use an allowlist and avoid passing untrusted input to process execution APIs.",
+    evidence: [{ file, line: index + 1, source: line.trim(), reason: `Matched ${pattern.source}.` }],
+  })));
+}

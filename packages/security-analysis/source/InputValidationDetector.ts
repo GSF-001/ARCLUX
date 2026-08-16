@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/source/InputValidationDetector — not yet implemented.
+import type { SecurityFinding } from "../SecurityFinding"; export interface InputValidationDetector { detect(file: string, source: string): SecurityFinding[]; }
+export function createInputValidationDetector(): InputValidationDetector { return { detect: () => [] }; }

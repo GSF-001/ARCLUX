@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/architecture/SecurityImpactAnalyzer — not yet implemented.
+import type { SecurityFinding } from "../SecurityFinding"; export interface SecurityImpactAnalyzer { analyze(findings: SecurityFinding[]): number; }
+export function createSecurityImpactAnalyzer(): SecurityImpactAnalyzer { return { analyze: (findings) => findings.reduce((score, f) => score + ({ info: 0, low: 1, medium: 3, high: 6, critical: 10 }[f.severity]), 0) }; }

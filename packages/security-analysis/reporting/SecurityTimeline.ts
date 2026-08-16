@@ -1,9 +1,2 @@
-// Copyright 2026 Mikatoshi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Scaffold: security-analysis/reporting/SecurityTimeline — not yet implemented.
+export interface SecurityTimeline { target: string; events: Array<{ at: string; label: string }>; }
+export function createSecurityTimeline(target: string): SecurityTimeline { return { target, events: [{ at: new Date().toISOString(), label: "security-analysis" }] }; }

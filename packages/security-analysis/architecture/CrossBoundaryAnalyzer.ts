@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/architecture/CrossBoundaryAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface CrossBoundaryAnalyzer extends LayerRecord { boundary: string; }
+export function createCrossBoundaryAnalyzer(boundary: string, source?: string): CrossBoundaryAnalyzer { return { id: crypto.randomUUID(), boundary, source }; }

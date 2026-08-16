@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/architecture/TrustBoundaryAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface TrustBoundaryAnalyzer extends LayerRecord { trusted: string[]; untrusted: string[]; }
+export function createTrustBoundaryAnalyzer(trusted: string[] = [], untrusted: string[] = []): TrustBoundaryAnalyzer { return { id: crypto.randomUUID(), trusted: [...trusted], untrusted: [...untrusted] }; }

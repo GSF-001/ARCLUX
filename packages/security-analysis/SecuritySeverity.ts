@@ -6,4 +6,4 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/SecuritySeverity — not yet implemented.
+export type SecuritySeverity = "info" | "low" | "medium" | "high" | "critical";

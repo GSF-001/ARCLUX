@@ -6,4 +6,17 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/SecurityFinding — not yet implemented.
+import type { SecurityCategory } from "./SecurityCategory";
+import type { SecuritySeverity } from "./SecuritySeverity";
+import type { SecurityEvidence } from "./SecurityEvidence";
+
+export interface SecurityFinding {
+  id: string;
+  title: string;
+  category: SecurityCategory;
+  severity: SecuritySeverity;
+  message: string;
+  evidence: SecurityEvidence[];
+  confidence: number;
+  remediation?: string;
+}

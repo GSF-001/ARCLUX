@@ -1,9 +1,2 @@
-// Copyright 2026 Mikatoshi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Scaffold: security-analysis/correlation/AttackSurfaceMapper — not yet implemented.
+export interface AttackSurfaceMapper { map(files: string[]): string[]; }
+export function createAttackSurfaceMapper(): AttackSurfaceMapper { return { map: (files) => files.filter((file) => /route|controller|handler|api/i.test(file)) }; }

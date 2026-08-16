@@ -1,9 +1,2 @@
-// Copyright 2026 Mikatoshi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Scaffold: security-analysis/correlation/EvidenceCorrelator — not yet implemented.
+import type { SecurityEvidence } from "../SecurityEvidence"; export interface EvidenceCorrelator { merge(evidence: SecurityEvidence[]): SecurityEvidence[]; }
+export function createEvidenceCorrelator(): EvidenceCorrelator { return { merge: (items) => Array.from(new Map(items.map((item) => [`${item.file}:${item.line}:${item.source}`, item])).values()) }; }

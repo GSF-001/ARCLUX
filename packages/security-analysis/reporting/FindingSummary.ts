@@ -1,9 +1,2 @@
-// Copyright 2026 Mikatoshi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Scaffold: security-analysis/reporting/FindingSummary — not yet implemented.
+import type { SecurityFinding } from "../SecurityFinding"; export interface FindingSummary { total: number; bySeverity: Record<string, number>; byCategory: Record<string, number>; }
+export function summarizeFindings(findings: SecurityFinding[]): FindingSummary { const bySeverity: Record<string, number> = {}; const byCategory: Record<string, number> = {}; for (const finding of findings) { bySeverity[finding.severity] = (bySeverity[finding.severity] ?? 0) + 1; byCategory[finding.category] = (byCategory[finding.category] ?? 0) + 1; } return { total: findings.length, bySeverity, byCategory }; }

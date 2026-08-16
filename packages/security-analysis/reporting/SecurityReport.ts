@@ -1,9 +1,3 @@
-// Copyright 2026 Mikatoshi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Scaffold: security-analysis/reporting/SecurityReport — not yet implemented.
+import type { SecurityAnalysis } from "../SecurityAnalysis"; import { summarizeFindings, type FindingSummary } from "./FindingSummary";
+export interface SecurityReport { target: string; generatedAt: string; summary: FindingSummary; findings: SecurityAnalysis["findings"]; }
+export function createSecurityReport(analysis: SecurityAnalysis): SecurityReport { return { target: analysis.target, generatedAt: new Date().toISOString(), summary: summarizeFindings(analysis.findings), findings: analysis.findings }; }

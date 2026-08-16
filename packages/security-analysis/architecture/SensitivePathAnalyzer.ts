@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/architecture/SensitivePathAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface SensitivePathAnalyzer extends LayerRecord { paths: string[]; }
+export function createSensitivePathAnalyzer(paths: string[] = []): SensitivePathAnalyzer { return { id: crypto.randomUUID(), paths: [...paths] }; }

@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/architecture/PrivilegeFlowAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface PrivilegeFlowAnalyzer extends LayerRecord { principals: string[]; }
+export function createPrivilegeFlowAnalyzer(principals: string[] = []): PrivilegeFlowAnalyzer { return { id: crypto.randomUUID(), principals: [...principals] }; }

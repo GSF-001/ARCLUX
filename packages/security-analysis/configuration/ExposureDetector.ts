@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/configuration/ExposureDetector — not yet implemented.
+import type { SecurityFinding } from "../SecurityFinding"; export interface ExposureDetector { detect(findings: SecurityFinding[]): SecurityFinding[]; }
+export function createExposureDetector(): ExposureDetector { return { detect: (findings) => findings.filter((finding) => finding.category === "exposure") }; }

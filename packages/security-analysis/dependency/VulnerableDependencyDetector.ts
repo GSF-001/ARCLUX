@@ -1,9 +1,2 @@
-// Copyright 2026 Mikatoshi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Scaffold: security-analysis/dependency/VulnerableDependencyDetector — not yet implemented.
+import type { SecurityFinding } from "../SecurityFinding"; export interface VulnerableDependencyDetector { detect(dependency: string): SecurityFinding[]; }
+export function createVulnerableDependencyDetector(): VulnerableDependencyDetector { return { detect: () => [] }; }

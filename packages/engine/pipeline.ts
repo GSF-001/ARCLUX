@@ -36,6 +36,8 @@ import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
 import { ArcluxError, isArcluxError } from "../shared/errors";
 import type { DependencyGraph, RepositoryMeta, ScanSummary } from "../shared/types";
 import type { Repository } from "../repository/Repository";
+import { analyzeRepositorySecurity } from "../security-analysis/integration";
+import type { SecurityAnalysis } from "../security-analysis/SecurityAnalysis";
 
 // Register known parsers once, at module load. As more languages get parser
 // implementations (parseJs, parsePython, ...) they get registered here too.
@@ -101,6 +103,7 @@ export interface AnalyzeRepositoryResult {
   repository: Repository;
   /** Combined dependency list from every manifest file present in the repo (package.json, go.mod, etc). See ManifestRegistry.ts. */
   dependencies: import("../parser/core/ManifestParserInterface").ManifestDependency[];
+  securityAnalysis?: SecurityAnalysis;
 }
 
 /** Parses "org/name" out of a git URL, for https, ssh, and shorthand forms */
@@ -211,6 +214,7 @@ async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryRes
     },
     repository,
     dependencies: manifestRegistry.detectDependencies(resolvedPath),
+    securityAnalysis: analyzeRepositorySecurity(repository, resolvedPath),
   };
 }
 
@@ -295,6 +299,7 @@ async function analyzeRemoteRepository(
       },
       repository,
       dependencies: manifestRegistry.detectDependencies(localPath),
+      securityAnalysis: analyzeRepositorySecurity(repository, localPath),
     };
   } finally {
     // Always clean up the temp clone, even if analysis threw partway through.

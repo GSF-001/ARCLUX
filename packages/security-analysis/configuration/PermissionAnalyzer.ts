@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/configuration/PermissionAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface PermissionAnalyzer extends LayerRecord { permissions: string[]; }
+export function createPermissionAnalyzer(permissions: string[] = []): PermissionAnalyzer { return { id: crypto.randomUUID(), permissions: [...permissions] }; }

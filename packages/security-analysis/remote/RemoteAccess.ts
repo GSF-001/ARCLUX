@@ -1,0 +1,2 @@
+export interface RemoteAccess { source: string; allowed: boolean; reason?: string; }
+export function checkRemoteAccess(source: string, allowedHosts: string[], allowRemote = true): RemoteAccess { try { const host = new URL(source).hostname; const allowed = allowRemote && (allowedHosts.length === 0 || allowedHosts.includes(host)); return { source, allowed, reason: allowed ? undefined : `Remote host is not allowed: ${host}` }; } catch { return { source, allowed: false, reason: "Source is not a valid URL." }; } }
