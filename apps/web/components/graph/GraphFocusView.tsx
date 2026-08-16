@@ -51,7 +51,7 @@ function NodeIcon({ node, size = 16 }: { node: GraphNodeData; size?: number }) {
     <svg width={size} height={size} viewBox="-8 -8 16 16" className="shrink-0">
       <circle r={7} fill={color} opacity={0.9} />
       <path
-        d={getNodeIconPath(type)}
+        d={getNodeIconPath(type, node.label)}
         fill="none"
         stroke="#fff"
         strokeWidth={0.9}

@@ -180,13 +180,14 @@ function GraphNodeComponent({
       <circle
         r={radius}
         fill={color}
-        stroke={isSelected ? "#fff" : "transparent"}
-        strokeWidth={1.5}
+        stroke={isSelected ? "#fff" : color}
+        strokeWidth={isSelected ? 1.5 : 0.8}
+        strokeOpacity={isSelected ? 1 : 0.4}
         opacity={isDimmed ? 0.3 : isSelected || isHovered ? 1 : 0.85}
       />
       {zoomScale >= MIN_ZOOM_FOR_ICON && (
         <path
-          d={getNodeIconPath(effectiveType)}
+          d={getNodeIconPath(effectiveType, node.label)}
           fill="none"
           stroke="#fff"
           strokeWidth={0.6}

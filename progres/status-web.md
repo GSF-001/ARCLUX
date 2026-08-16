@@ -730,3 +730,9 @@ Root cause of "uniform blue" 2D nodes: packages/graph/buildDependencyGraph.ts em
 **Status:** In Progress
 
 Visual polish (GraphCanvas/GraphNode/GraphEdge, all 2D-only): (1) fade-out — selecting or hovering a node dims everything NOT connected to it (connected set memoized per active node; nodes opacity 0.3, edges 0.12, selected/hovered stay full) so the active subgraph reads instantly; (2) selection glow — double accent ring (r+5 @ 0.5, r+8 @ 0.15) around the selected node; (3) route-link edges now dashed ("4 3") per the edge legend. Edge colors already matched the legend via getGraphEdgeColor (import #454545 / export #9D7CD8 / call #52A8FF / route-link #56B6C2). z-index overlay layering verified (Search z-10 left, Menu z-10/20 right, FocusView z-20, context menu z-50). tsc 0, lint 0, suite 487/487.
+
+## 2026-08-16 — 2D: material-style icons by file extension/folder + type color border; P0 junk purge
+
+**Status:** In Progress
+
+(1) nodeIcons.tsx: getMaterialIcon(fileName, isFolder) — extension-based icons (.py/.ts/.tsx/.js/.json/.yaml/.toml/.env/.md/.txt/.sql/.db, Dockerfile/docker-compose) and architectural folder icons (src/tests/components/core/utils); getNodeIconPath(type, fileName?) resolves file/folder nodes through it, others keep their type shape. GraphNode + GraphFocusView pass node.label. (2) GraphNode: thin node-type-colored border (stroke 0.8 @ 0.4; white + glow when selected) — legend badge look. (3) P0: PR #474's merge commit (6fb8557) injected merge-conflict junk lines ("fix/graph-menu-3d-toggle", "ARCLUX.main") into GraphCanvas3D.tsx (7 sites), apps/web/package.json (broken JSON), pnpm-lock.yaml (6 sites) — broke 3D chunk (ChunkLoadError) and tsc. Restored all 3 files from the clean 9c066ae (kept 3D dev's rich-visual commit, @types/three ^0.185.4). tsc 0, lint 0, suite 487/487.
