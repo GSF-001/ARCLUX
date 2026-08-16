@@ -11,23 +11,12 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useGraphContext } from "./GraphProvider";
+import { graphNodeColors } from "@/theme/graphColors";
 
 // react-force-graph-3d touches `window` at import time (Three.js/WebGL),
 // so it must be loaded client-side only -- ssr: false is required, not
 // optional, or Next.js build/SSR will crash.
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
-
-// Color coding by node type, matches whatever palette the 2D view uses --
-// adjust if GraphNode.tsx already defines a shared color map to import
-// instead of duplicating here.
-const NODE_COLORS: Record<string, string> = {
-  file: "#0070F3",
-  folder: "#8E4EC6",
-  "external-package": "#878787",
-  route: "#46A758",
-  component: "#F2A700",
-  hook: "#E5484D",
-};
 
 export function GraphCanvas3D() {
   const { graph, isLoading, error, selectedNodeId, selectNode } = useGraphContext();
@@ -39,7 +28,10 @@ export function GraphCanvas3D() {
         id: n.id,
         name: n.label,
         val: 1,
-        color: NODE_COLORS[n.type] ?? "#ededed",
+        // Same palette as the 2D canvas (GraphNode.tsx -> getGraphNodeColor,
+        // dark mode) so a node's color doesn't change when toggling 2D/3D —
+        // otherwise the legend in GraphMenu would lie about node types.
+        color: graphNodeColors[n.type].dark,
       })),
       links: graph.edges.map((e) => ({
         source: e.source,
