@@ -9,21 +9,114 @@
 import type { GraphNodeType } from "@/packages/shared/types";
 
 /**
- * Minimal SVG path icons per node type, drawn inside GraphNode's circle.
- * Deliberately simple single-path shapes (not a full icon library import
- * like lucide-react here) — these get rendered once per node, and a graph
- * can have thousands of nodes (see the 1,842-node reference mockup this
- * was scoped down from). Each path is designed to fit inside an 8x8
- * viewBox centered at origin, matching GraphNode's BASE_RADIUS.
+ * Minimal SVG path icons for node rendering. Deliberately simple
+ * single-path shapes (not a full icon library import like lucide-react
+ * here) — these get rendered once per node, and a graph can have
+ * thousands of nodes (see the 1,842-node reference mockup this was
+ * scoped down from). Each path is designed to fit inside an 8x8 viewBox
+ * centered at origin, matching GraphNode's BASE_RADIUS.
+ *
+ * Node-type icons (getNodeIconPath) are used for non-file node types
+ * (folder/package/route/component/hook). File nodes resolve their icon
+ * from the FILE NAME via getMaterialIcon — a Material-Icon-Theme-style
+ * mapping (file extension / special folder names), so a .py node looks
+ * different from a .ts node.
  */
-export function getNodeIconPath(type: GraphNodeType): string {
+
+// ---------------------------------------------------------------------------
+// Material-style file icons, keyed by lowercased extension. Values are
+// simple recognizable shapes (not pixel-perfect Material assets) drawn in
+// the same ±3.5 coordinate box as the node-type icons.
+// ---------------------------------------------------------------------------
+
+// Generic code file (page with folded corner) — TS/JS default.
+const CODE_FILE = "M-2.5,-3.5 L0.5,-3.5 L2.5,-1.5 L2.5,3.5 L-2.5,3.5 Z M0.5,-3.5 L0.5,-1.5 L2.5,-1.5";
+// Python-ish: two interlocked loops (simplified infinity/snake motif).
+const PYTHON_FILE = "M-2,-2 Q0,-3.6 2,-2 Q3.6,0 2,2 Q0,3.6 -2,2 Q-3.6,0 -2,-2 M-2,2 L2,-2";
+// Config: curly braces.
+const CONFIG_FILE = "M-1.5,-3.5 L-1.5,-1.5 C-1.5,0 -2.5,0.5 -2.5,0 C-2.5,-0.5 -1.5,0 -1.5,1.5 L-1.5,3.5 M1.5,-3.5 L1.5,-1.5 C1.5,0 2.5,0.5 2.5,0 C2.5,-0.5 1.5,0 1.5,1.5 L1.5,3.5";
+// Documentation: page with text lines.
+const DOC_FILE = "M-2.5,-3.5 L2.5,-3.5 L2.5,3.5 L-2.5,3.5 Z M-1.5,-1.5 L1.5,-1.5 M-1.5,0 L1.5,0 M-1.5,1.5 L0.5,1.5";
+// Docker: stacked container boxes.
+const DOCKER_FILE = "M-3,-3 L3,-3 L3,-1 L-3,-1 Z M-3,-1 L3,-1 L1.5,2 L-1.5,2 Z M-1.5,2 L1.5,2";
+// Database: cylinder (ellipse + body).
+const DATABASE_FILE = "M-3,-1 C-3,-2.8 3,-2.8 3,-1 C3,0.8 -3,0.8 -3,-1 M-3,-1 L-3,2 C-3,3.8 3,3.8 3,2 L3,-1";
+
+const MATERIAL_FILE_ICONS: Record<string, string> = {
+  ".py": PYTHON_FILE,
+  ".ts": CODE_FILE,
+  ".tsx": CODE_FILE,
+  ".js": CODE_FILE,
+  ".jsx": CODE_FILE,
+  ".json": CONFIG_FILE,
+  ".yaml": CONFIG_FILE,
+  ".yml": CONFIG_FILE,
+  ".toml": CONFIG_FILE,
+  ".env": CONFIG_FILE,
+  ".md": DOC_FILE,
+  ".txt": DOC_FILE,
+  ".sql": DATABASE_FILE,
+  ".db": DATABASE_FILE,
+};
+
+// ---------------------------------------------------------------------------
+// Material-style folder icons, keyed by lowercased folder name. All inherit
+// the base folder silhouette; the extras mark the architectural role.
+// ---------------------------------------------------------------------------
+
+const FOLDER_BASE = "M-3,-2 L-1,-2 L-0.2,-1 L3,-1 L3,2.5 L-3,2.5 Z";
+// Source: folder with a solid dot in the middle.
+const FOLDER_SRC = FOLDER_BASE + " M0,0.8 A1.3 1.3 0 1 1 0.1,0.8";
+// Test: folder with a checkmark.
+const FOLDER_TEST = FOLDER_BASE + " M-1.2,0.8 L0,2 L2,-1";
+// Components: folder with a plus.
+const FOLDER_COMPONENTS = FOLDER_BASE + " M0,-1.3 L0,2.3 M-1.8,0.5 L1.8,0.5";
+// Core: folder with a star.
+const FOLDER_CORE = FOLDER_BASE + " M0,-0.2 L0.7,0.9 L2,1.2 L1.2,2.2 L1.4,3.5 L0,2.8 L-1.4,3.5 L-1.2,2.2 L-2,1.2 L-0.7,0.9 Z";
+// Utils: folder with a gear-ish ring + center dot.
+const FOLDER_UTILS = FOLDER_BASE + " M0,0.8 A1.6 1.6 0 1 1 0.1,0.8 M0,0.8 A0.7 0.7 0 1 1 0.05,0.8";
+
+const MATERIAL_FOLDER_ICONS: Record<string, string> = {
+  src: FOLDER_SRC,
+  tests: FOLDER_TEST,
+  test: FOLDER_TEST,
+  components: FOLDER_COMPONENTS,
+  core: FOLDER_CORE,
+  utils: FOLDER_UTILS,
+};
+
+/**
+ * Material-Icon-Theme-style resolver: returns an SVG path for a node based
+ * on its file name (extension) or, for folders, its directory name.
+ * Unknown extensions fall back to a generic code file; unknown folders to
+ * the base folder silhouette.
+ */
+export function getMaterialIcon(fileName: string, isFolder: boolean): string {
+  if (isFolder) {
+    return MATERIAL_FOLDER_ICONS[fileName.toLowerCase()] ?? FOLDER_BASE;
+  }
+
+  // Name-based specials (no extension to key on).
+  if (fileName === "Dockerfile" || fileName.startsWith("docker-compose")) {
+    return DOCKER_FILE;
+  }
+
+  const extMatch = /(\.[^.]+)$/.exec(fileName);
+  const ext = extMatch ? extMatch[1].toLowerCase() : "";
+  return MATERIAL_FILE_ICONS[ext] ?? CODE_FILE;
+}
+
+/**
+ * Icon path for a node, keyed by node type. File/folder nodes with a known
+ * file name get the Material-style icon resolved from that name; all other
+ * types use their fixed shape.
+ */
+export function getNodeIconPath(type: GraphNodeType, fileName?: string): string {
   switch (type) {
     case "file":
-      // Simple document/page shape
-      return "M-2.5,-3.5 L0.5,-3.5 L2.5,-1.5 L2.5,3.5 L-2.5,3.5 Z M0.5,-3.5 L0.5,-1.5 L2.5,-1.5";
+      return fileName ? getMaterialIcon(fileName, false) : CODE_FILE;
     case "folder":
-      // Folder shape
-      return "M-3,-2 L-1,-2 L-0.2,-1 L3,-1 L3,2.5 L-3,2.5 Z";
+      return fileName ? getMaterialIcon(fileName, true) : FOLDER_BASE;
     case "external-package":
       // Package/box shape (hexagon-ish cube outline, simplified to a diamond)
       return "M0,-3.2 L3,0 L0,3.2 L-3,0 Z M-3,0 L3,0 M0,-3.2 L0,3.2";
