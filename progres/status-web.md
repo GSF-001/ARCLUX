@@ -700,3 +700,9 @@ Added packages/parser/javascript/highlightJs.ts using the same walk-up-from-cwd 
 **Status:** Done
 
 docs-site/skill.mdx added under Getting Started: points to SKILL.md on GitHub, summarizes what it covers, one example command. Registered in docs.json nav.
+
+## 2026-08-16 — 3D graph view added
+
+**Status:** In Progress
+
+New GraphCanvas3D.tsx using react-force-graph-3d (Three.js/WebGL, d3-force-3d physics). Toggle button added to GraphViewport.tsx to switch between 2D (existing custom d3-force canvas) and 3D view. Reuses same DependencyGraph data from GraphProvider context, no changes to data pipeline. Not yet visually tested end-to-end.
