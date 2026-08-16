@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
     branches: [ARCLUX.main]
+  push:
+    branches: [ARCLUX.main]
 
 jobs:
   checks:
@@ -18,6 +20,33 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run lint
       - run: pnpm run test
+
+  # KI-049: a merge commit once shipped junk lines ("fix/graph-menu-3d-toggle",
+  # "ARCLUX.main") into GraphCanvas3D.tsx / package.json / pnpm-lock.yaml,
+  # breaking the 3D chunk and tsc. PR-triggered CI can't see merge commits,
+  # so re-verify main after every push: reject code files containing those
+  # markers and re-run the web typecheck on the merged tree.
+  post-merge-guard:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Reject merge-conflict junk markers
+        run: |
+          if grep -rnE "fix/graph-menu-3d-toggle|^ ARCLUX\\.main" \
+            --include="*.ts" --include="*.tsx" --include="*.js" --include="*.mjs" \
+            --include="*.json" --include="*.yaml" --include="*.yml" \
+            apps packages pnpm-lock.yaml; then
+            echo "::error::Merge-conflict junk found in code files (lines above)."
+            exit 1
+          fi
+      - name: Web typecheck on merged tree
+        run: pnpm run typecheck
 
   docs-build:
     runs-on: ubuntu-latest
