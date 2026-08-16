@@ -42,3 +42,21 @@ export {
   type DataFlowRule,
   type SensitiveDataFlowOptions,
 } from "./source/SensitiveDataFlowDetector";
+
+export {
+  detectTrustBoundaryViolations,
+  classifyTrustZone,
+  DEFAULT_TRUST_ZONES,
+  type TrustZoneDefinition,
+  type TrustZoneId,
+  type TrustBoundaryOptions,
+} from "./architecture/TrustBoundaryAnalyzer";
+
+export { detectCrossBoundaryCalls } from "./architecture/CrossBoundaryAnalyzer";
+
+export {
+  analyzeSecurityImpact,
+  attachImpactToFindings,
+  type SecurityImpactReport,
+  type ImpactedFinding,
+} from "./architecture/SecurityImpactAnalyzer";
