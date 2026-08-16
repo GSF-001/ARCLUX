@@ -701,8 +701,20 @@ Added packages/parser/javascript/highlightJs.ts using the same walk-up-from-cwd 
 
 docs-site/skill.mdx added under Getting Started: points to SKILL.md on GitHub, summarizes what it covers, one example command. Registered in docs.json nav.
 
+## 2026-08-16 — 3D graph canvas: unify node palette with the 2D view
+
+**Status:** In Progress
+
+GraphCanvas3D.tsx hardcoded its own NODE_COLORS that differed from the 2D canvas for ALL six node types (e.g. external-package rendered as the 2D folder color), so toggling 2D/3D changed a node's color and the GraphMenu legend was wrong in 3D. Now imports graphNodeColors from @/theme/graphColors (dark variant), matching GraphNode.tsx's getGraphNodeColor(node.type, "dark"). Verified with npx tsc --noEmit -p apps/web/tsconfig.json. See PR #471.
+
 ## 2026-08-16 — 3D graph view added
 
 **Status:** In Progress
 
 New GraphCanvas3D.tsx using react-force-graph-3d (Three.js/WebGL, d3-force-3d physics). Toggle button added to GraphViewport.tsx to switch between 2D (existing custom d3-force canvas) and 3D view. Reuses same DependencyGraph data from GraphProvider context, no changes to data pipeline. Not yet visually tested end-to-end.
+
+## 2026-08-16 — 3D graph: 2D parity (importance rings, events, mobile perf) + restored deps
+
+**Status:** In Progress
+
+GraphCanvas3D.tsx brought to functional parity with the 2D canvas: importance rings (torus halo for fan-in >= 20/100 — same tiers as GraphNode.tsx's impact halo), node size by fan-in (nodeVal), selection white fill, hover tracking, background-click deselect, right-click context menu (position synthesized via PointerEvent since right-click alone doesn't fire pointermove), double-click camera focus, controlType="orbit" (predictable mobile gestures), showNavInfo off, and coarse-pointer optimizations (sphere resolution 6, no link particles, no MSAA via rendererConfig.antialias=false). P0 fix: the #470 revert silently dropped react-force-graph-3d/three from apps/web/package.json during the #471 3-way merge (revert's deletion won), so deps restored + @types/three added. tsc 0, lint 0, suite 487/487.

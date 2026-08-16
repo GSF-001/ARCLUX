@@ -34,7 +34,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    fix/graph-menu-3d-toggle
     "@types/three": "^0.185.4",
+
+    "@types/three": "^0.185.0",
+    ARCLUX.main
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
