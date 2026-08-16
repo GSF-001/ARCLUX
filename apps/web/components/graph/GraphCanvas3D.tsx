@@ -227,15 +227,9 @@ function buildNodeObject(node: NodeDatum): THREE.Object3D {
       depthWrite: false,
     })
   );
-  numberSprite.scale.set(6, 6, 1);
+  numberSprite.scale.set(8, 8, 1);
   numberSprite.renderOrder = 999;
-  numberSprite.visible = false;
-  numberSprite.onBeforeRender = (renderer, scene, camera) => {
-    const worldPos = new THREE.Vector3();
-    numberSprite.getWorldPosition(worldPos);
-    const distance = camera.position.distanceTo(worldPos);
-    numberSprite.visible = distance < NUMBER_VISIBLE_DISTANCE;
-  };
+  numberSprite.visible = true;
   group.add(numberSprite);
 
   return group;
