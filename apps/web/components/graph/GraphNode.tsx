@@ -37,6 +37,10 @@ export interface GraphNodeProps {
    * circle. Undefined on fine pointers (mouse) — desktop keeps precise
    * 6px targeting on dense graphs. */
   hitRadius?: number;
+  /** Dimmed because another node is selected/hovered and this one is NOT
+   * connected to it (fade-out feedback — GraphCanvas computes the
+   * connected set). Applied as group opacity so halo/icon/label fade too. */
+  isDimmed?: boolean;
 }
 
 const BASE_RADIUS = 6;
@@ -141,6 +145,7 @@ function GraphNodeComponent({
   importCount = 0,
   zoomScale = 1,
   hitRadius,
+  isDimmed = false,
 }: GraphNodeProps) {
   const effectiveType = getEffectiveNodeType(node);
   const color = getGraphNodeColor(effectiveType, "dark");
@@ -166,14 +171,18 @@ function GraphNodeComponent({
         />
       )}
       {isSelected && (
-        <circle r={radius + 5} fill="none" stroke={color} strokeWidth={1} strokeOpacity={0.4} />
+        <>
+          {/* Bright accent ring (selection glow). */}
+          <circle r={radius + 8} fill="none" stroke={color} strokeWidth={1} strokeOpacity={0.15} />
+          <circle r={radius + 5} fill="none" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />
+        </>
       )}
       <circle
         r={radius}
         fill={color}
         stroke={isSelected ? "#fff" : "transparent"}
         strokeWidth={1.5}
-        opacity={isSelected || isHovered ? 1 : 0.85}
+        opacity={isDimmed ? 0.3 : isSelected || isHovered ? 1 : 0.85}
       />
       {zoomScale >= MIN_ZOOM_FOR_ICON && (
         <path

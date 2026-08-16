@@ -18,6 +18,9 @@ export interface GraphEdgeProps {
   sourcePos: GraphNodePosition;
   targetPos: GraphNodePosition;
   isHighlighted: boolean;
+  /** Another node is selected/hovered and this edge is NOT part of its
+   * connected subgraph — fade it out (GraphCanvas computes this). */
+  isDimmed?: boolean;
   /**
    * Rendered radius of source/target node circles, so the line can be
    * shortened to stop cleanly at each boundary instead of ending at the
@@ -65,6 +68,7 @@ export function GraphEdgeComponent({
   sourcePos,
   targetPos,
   isHighlighted,
+  isDimmed = false,
   sourceRadius = DEFAULT_NODE_RADIUS,
   targetRadius = DEFAULT_NODE_RADIUS,
 }: GraphEdgeProps) {
@@ -89,7 +93,8 @@ export function GraphEdgeComponent({
       y2={adjustedTarget.y}
       stroke={color}
       strokeWidth={isHighlighted ? 2 : 1}
-      strokeOpacity={isHighlighted ? 1 : 0.35}
+      strokeOpacity={isHighlighted ? 1 : isDimmed ? 0.12 : 0.35}
+      strokeDasharray={edge.type === "route-link" ? "4 3" : undefined}
       style={isHighlighted ? { filter: `drop-shadow(0 0 3px ${color})` } : undefined}
       className="pointer-events-none"
     />
