@@ -29,6 +29,13 @@
 - **Assigned**: date
 -->
 
+### main session (owner) — Security & Remote Analysis Subsystems
+- **Task**: Implement approved plan (docs/SECURITY_ANALYSIS_PLAN.md): packages/remote, packages/provenance, packages/correlation, packages/security-analysis + CLI `arclux security`
+- **Files**: `packages/{remote,provenance,correlation,security-analysis}/**`, `apps/cli/security.ts`, `tests/{security-analysis,attack-surface,provenance,remote-snapshot,sarif-export}.test.ts`, `tests/fixtures/security-leaks/`
+- **Status**: in progress (branch feat/security-analysis, phase 1: provenance + remote)
+- **Assigned**: 2026-08-16
+- **Note**: Parallel-work coordination — this area is claimed by this session per the approved plan. Other agents: do NOT touch these paths without checking git log + this file first. Core packages (engine/graph/impact/detectors/shared) are off-limits for everyone (ARCHITECTURE_MAP).
+
 ### mwakidenis — issue #147
 - **Task**: Implement 3 remaining apps/web/hooks stubs
 - **Files**: `apps/web/hooks/useClipboard.ts`, `useCommandPalette.ts`, `useMediaQuery.ts`
