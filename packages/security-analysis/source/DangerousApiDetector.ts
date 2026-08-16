@@ -14,9 +14,16 @@ const APIS: Array<[RegExp, string]> = [
 ];
 export function detectDangerousApis(file: string, source: string): SecurityFinding[] {
   return source.split(/\r?\n/).flatMap((line, index) => APIS.filter(([pattern]) => pattern.test(line)).map(([pattern, title]) => ({
-    id: `api-${file}-${index + 1}`, title, category: "dangerous-api" as const, severity: "medium" as const,
-    message: "A process-execution API was detected; validate all arguments and authorization.", confidence: 0.76,
-    remediation: "Use an allowlist and avoid passing untrusted input to process execution APIs.",
-    evidence: [{ file, line: index + 1, source: line.trim(), reason: `Matched ${pattern.source}.` }],
+    id: `dangerous-api:${file}:${index + 1}`,
+    ruleId: "dangerous-process-api",
+    title,
+    description: "A process-execution API was detected; validate all arguments and authorization.",
+    severity: "medium" as const,
+    confidence: "medium" as const,
+    location: { moduleId: file, filePath: file, line: index + 1 },
+    remediation: {
+      summary: "Validate process arguments and use an allowlist.",
+      detail: `Matched ${pattern.source}.`,
+    },
   })));
 }

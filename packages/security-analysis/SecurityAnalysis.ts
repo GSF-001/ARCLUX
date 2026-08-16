@@ -9,8 +9,6 @@
 import type { SecurityFinding } from "./SecurityFinding";
 import type { SecurityFile, SecurityAnalysisOptions } from "./contracts";
 import { detectDangerousApis } from "./source/DangerousApiDetector";
-import { detectSecretExposure } from "./source/SecretExposureDetector";
-import { detectUnsafePatterns } from "./source/UnsafePatternDetector";
 
 export interface SecurityAnalysis {
   target: string;
@@ -25,9 +23,9 @@ export function createSecurityAnalysis(target: string, findings: SecurityFinding
 /** Run all source-level checks against an immutable source snapshot. */
 export function analyzeSecuritySource(options: SecurityAnalysisOptions): SecurityAnalysis {
   const findings = options.files.flatMap(({ file, source }) => [
-    ...detectSecretExposure(file, source),
+    ...detectLegacySecrets(file, source),
+    ...detectLegacyUnsafePatterns(file, source),
     ...detectDangerousApis(file, source),
-    ...detectUnsafePatterns(file, source),
   ]);
   return {
     target: options.target,
@@ -39,10 +37,51 @@ export function analyzeSecuritySource(options: SecurityAnalysisOptions): Securit
 function deduplicateFindings(findings: SecurityFinding[]): SecurityFinding[] {
   const seen = new Set<string>();
   return findings.filter((finding) => {
-    const evidence = finding.evidence[0];
-    const key = `${finding.category}:${evidence?.file ?? ""}:${evidence?.line ?? 0}:${finding.title}`;
+    const key = `${finding.ruleId}:${finding.location.filePath}:${finding.location.line ?? 0}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+function detectLegacySecrets(file: string, source: string): SecurityFinding[] {
+  const patterns = [
+    /(?:api[_-]?key|secret|access[_-]?token|private[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/i,
+    /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+  ];
+  return source.split(/\r?\n/).flatMap((line, index) =>
+    patterns.some((pattern) => pattern.test(line))
+      ? [{
+          id: `legacy-secret:${file}:${index + 1}`,
+          ruleId: "legacy-secret-exposure",
+          title: "Potential secret exposure",
+          description: "A source line matches a credential-like pattern.",
+          severity: "high" as const,
+          confidence: "medium" as const,
+          location: { moduleId: file, filePath: file, line: index + 1 },
+        }]
+      : [],
+  );
+}
+
+function detectLegacyUnsafePatterns(file: string, source: string): SecurityFinding[] {
+  const patterns: Array<[RegExp, string]> = [
+    [/\beval\s*\(/, "Dynamic code evaluation"],
+    [/\bnew\s+Function\s*\(/, "Dynamic function construction"],
+  ];
+  return source.split(/\r?\n/).flatMap((line, index) =>
+    patterns.flatMap(([pattern, title]) =>
+      pattern.test(line)
+        ? [{
+            id: `legacy-unsafe:${file}:${index + 1}`,
+            ruleId: "legacy-unsafe-pattern",
+            title,
+            description: "A potentially unsafe dynamic execution pattern was detected.",
+            severity: "medium" as const,
+            confidence: "medium" as const,
+            location: { moduleId: file, filePath: file, line: index + 1 },
+          }]
+        : [],
+    ),
+  );
 }

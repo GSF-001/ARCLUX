@@ -45,7 +45,11 @@ const edgeLabels: Record<GraphEdgeType, string> = {
  * Narrow surface of the ForceGraph3D instance the view controls need. The
  * library's own types require a `position` argument on cameraPosition even
  * though calling it with none returns the current camera coords (getter),
- * so the ref is cast to this shape once at the call site.
+ * so the ref is cast to this shape once at the call site. `controls()`
+ * returns the live orbit controls (TrackballControls by default) whose
+ * `target` is the REAL screen-center anchor — unlike the getter's synthetic
+ * lookAt, which is a point 1000 units in front of the camera (see
+ * 3d-force-graph's getLookAt) and drifts PAST the graph when zoomed out.
  */
 interface CameraControls {
   cameraPosition(
@@ -54,6 +58,7 @@ interface CameraControls {
     transitionMs?: number
   ): { x: number; y: number; z: number; lookAt: { x: number; y: number; z: number } };
   zoomToFit(durationMs?: number, padding?: number): void;
+  controls(): { target: { x: number; y: number; z: number } };
 }
 
 export interface GraphMenuProps {
@@ -69,30 +74,37 @@ export function GraphMenu({ is3D, onToggle3D, fgRef }: GraphMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const { graph, zoomIn, zoomOut, resetView, transform } = useGraphContext();
 
-  /** 3D zoom = move the camera along its view axis (z * factor) toward the
-   * point it is currently looking at. The library resets lookAt to the
-   * origin when given null/undefined (three-render-objects: `lookAt ||
-   * {x:0,y:0,z:0}`), so the current lookAt is threaded through explicitly
-   * to keep the zoom anchored in place instead of yanking the view.
+  /** 3D zoom = move the camera ALONG the camera->focus axis by a factor
+   * (true dolly). The focus is the live controls target — the point the
+   * camera actually orbits/looks at (screen center). The cameraPosition()
+   * getter's lookAt is NOT used as the anchor: it is a synthetic point 1000
+   * units in front of the camera, so for cameras closer than 1000 units it
+   * sits BEYOND the graph and each zoom pushes the anchor further — the
+   * view drifts and zoom reads as "going somewhere above" (user feedback).
    * Falls back to the 2D transform handlers when not in 3D mode. */
+  const dolly3D = (factor: number) => {
+    if (!(is3D && fgRef?.current)) return false;
+    const fg = fgRef.current as unknown as CameraControls;
+    const { x, y, z } = fg.cameraPosition();
+    const target = fg.controls().target;
+    fg.cameraPosition(
+      {
+        x: target.x + (x - target.x) * factor,
+        y: target.y + (y - target.y) * factor,
+        z: target.z + (z - target.z) * factor,
+      },
+      { x: target.x, y: target.y, z: target.z },
+      300
+    );
+    return true;
+  };
+
   const handleZoomIn = () => {
-    if (is3D && fgRef?.current) {
-      const camera = fgRef.current as unknown as CameraControls;
-      const { x, y, z, lookAt } = camera.cameraPosition();
-      camera.cameraPosition({ x, y, z: z * 0.75 }, lookAt, 300);
-    } else {
-      zoomIn();
-    }
+    if (!dolly3D(0.75)) zoomIn();
   };
 
   const handleZoomOut = () => {
-    if (is3D && fgRef?.current) {
-      const camera = fgRef.current as unknown as CameraControls;
-      const { x, y, z, lookAt } = camera.cameraPosition();
-      camera.cameraPosition({ x, y, z: z * 1.25 }, lookAt, 300);
-    } else {
-      zoomOut();
-    }
+    if (!dolly3D(1.25)) zoomOut();
   };
 
   const handleResetView = () => {

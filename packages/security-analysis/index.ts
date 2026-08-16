@@ -1,19 +1,108 @@
-export * from "./SecurityAnalysis";
-export * from "./SecurityFinding";
-export * from "./SecurityEvidence";
-export * from "./SecuritySeverity";
-export * from "./SecurityCategory";
-export * from "./contracts";
-export * from "./integration";
-export * from "./acquisition";
-export * from "./adapters";
-export * from "./boundaries";
-export * from "./correlation";
-export * from "./dependency";
-export * from "./diagnostics";
-export * from "./observation";
-export * from "./provenance";
-export * from "./remote";
-export * from "./remote-analysis";
-export * from "./reporting";
-export * from "./web-intake";
+// Copyright 2026 Mikatoshi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Clean package exports for the security-analysis package. Architecture
+// analyzers (architecture/) and reporting (reporting/) are added in later
+// phases of the approved plan; this file grows with them.
+
+export type {
+  SecuritySeverity,
+  SecurityConfidence,
+} from "./SecuritySeverity";
+export type {
+  SecurityLocation,
+  SecurityFinding,
+  RemediationSuggestion,
+} from "./SecurityFinding";
+
+export { DiskSourceProvider, type SourceProvider } from "./SourceProvider";
+
+export {
+  detectSecretExposure,
+  shannonEntropy,
+  DEFAULT_SECRET_RULES,
+  type SecretRule,
+  type SecretDetectionOptions,
+} from "./source/SecretExposureDetector";
+
+export {
+  detectUnsafePatterns,
+  DEFAULT_UNSAFE_PATTERN_RULES,
+  type UnsafePatternRule,
+  type UnsafePatternOptions,
+} from "./source/UnsafePatternDetector";
+
+export {
+  detectSensitiveDataFlow,
+  DEFAULT_DATA_FLOW_RULES,
+  type DataFlowRule,
+  type SensitiveDataFlowOptions,
+} from "./source/SensitiveDataFlowDetector";
+
+export {
+  detectTrustBoundaryViolations,
+  classifyTrustZone,
+  DEFAULT_TRUST_ZONES,
+  type TrustZoneDefinition,
+  type TrustZoneId,
+  type TrustBoundaryOptions,
+} from "./architecture/TrustBoundaryAnalyzer";
+
+export { detectCrossBoundaryCalls } from "./architecture/CrossBoundaryAnalyzer";
+
+export {
+  analyzeSecurityImpact,
+  attachImpactToFindings,
+  type SecurityImpactReport,
+  type ImpactedFinding,
+} from "./architecture/SecurityImpactAnalyzer";
+
+export {
+  remediateRule,
+  attachRemediations,
+} from "./reporting/RemediationSuggestion";
+
+export {
+  buildSecurityReport,
+  summarize,
+  type SecurityReport,
+  type SecurityReportSummary,
+  type ReportAttackSurface,
+  type BuildSecurityReportInput,
+} from "./reporting/SecurityReport";
+
+export {
+  parseLockfiles,
+  normalizeVersion,
+  LOCKFILE_NAMES,
+  type LockedDependency,
+  type LockfileParseResult,
+} from "./dependency/LockfileAnalyzer";
+
+export {
+  compareSemver,
+  isVulnerable,
+  detectVulnerableDependencies,
+  toSecurityFindings,
+  DEFAULT_KNOWN_VULNERABILITIES,
+  type KnownVulnerability,
+  type VulnerableDependencyFinding,
+} from "./dependency/VulnerableDependencyDetector";
+
+export {
+  analyzeTransitiveRisk,
+  vulnerableNames,
+  type TransitiveRiskReport,
+} from "./dependency/TransitiveRiskAnalyzer";
+
+export {
+  analyzeDependencyRisk,
+  isUnpinnedRange,
+  type DependencyRiskInput,
+  type DependencyRiskResult,
+} from "./dependency/DependencyRiskAnalyzer";

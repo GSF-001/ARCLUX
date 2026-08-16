@@ -51,7 +51,7 @@ export function Sidebar({ org, repo, collapsed = false, overlay = false, onClose
   return (
     <aside
       className={cn(
-        "flex h-full flex-col gap-1 overflow-hidden p-3 text-sidebar-foreground select-none",
+        "flex h-full flex-col gap-1 overflow-hidden p-3 text-sidebar-foreground select-none transition-all duration-300",
         collapsed ? "w-16" : "w-64",
         overlay ? "glass-overlay" : "glass-panel"
       )}
