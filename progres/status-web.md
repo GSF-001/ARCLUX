@@ -736,3 +736,75 @@ Visual polish (GraphCanvas/GraphNode/GraphEdge, all 2D-only): (1) fade-out — s
 **Status:** In Progress
 
 (1) nodeIcons.tsx: getMaterialIcon(fileName, isFolder) — extension-based icons (.py/.ts/.tsx/.js/.json/.yaml/.toml/.env/.md/.txt/.sql/.db, Dockerfile/docker-compose) and architectural folder icons (src/tests/components/core/utils); getNodeIconPath(type, fileName?) resolves file/folder nodes through it, others keep their type shape. GraphNode + GraphFocusView pass node.label. (2) GraphNode: thin node-type-colored border (stroke 0.8 @ 0.4; white + glow when selected) — legend badge look. (3) P0: PR #474's merge commit (6fb8557) injected merge-conflict junk lines ("fix/graph-menu-3d-toggle", "ARCLUX.main") into GraphCanvas3D.tsx (7 sites), apps/web/package.json (broken JSON), pnpm-lock.yaml (6 sites) — broke 3D chunk (ChunkLoadError) and tsc. Restored all 3 files from the clean 9c066ae (kept 3D dev's rich-visual commit, @types/three ^0.185.4). tsc 0, lint 0, suite 487/487.
+
+## 2026-08-16 — Graph polish: hub count badges, drawer default tab = Impact, icon map extended
+
+**Status:** Done (tsc 0 apps/web, eslint 0)
+
+(1) GraphNode.tsx: numeric hub badges — small pill at node top-right, ONLY when importCount >= 5 AND zoom >= 1.0 (same LOD tier as the impact halo). Tiers: red #FF3B30 for >100, orange #FFB224 for 20-100 (dark text), neutral #3D444D for 5-19. 2D impact halo re-stroked from node-type color to red/orange (was type-colored) so 2D/3D signal importance identically (3D already used IMPACT_TINT_HIGH/MEDIUM). (2) Explorer.tsx: drawer now opens on the Impact tab (was File) when a node is clicked, and resets to Impact when the inspected node changes; consistent with Workspace.tsx's Tabs defaultValue="impact". (3) nodeIcons.tsx: material-style icon map extended to every ARCLUX-supported language (.mjs/.cjs/.go/.java/.cs/.php/.rb/.rs/.cpp/.cc/.h/.hpp) + web/assets (.css/.scss/.sass/.less/.html/.htm/.xml/.svg/.png/.jpg/.jpeg/.gif/.webp/.ico) + dotfiles (.gitignore/.editorconfig/.prettierrc/.eslintrc/.babelrc/.npmrc); Dockerfile/JSON/YAML/TOML/py/ts/js already mapped. Mapping logic verified 32/32 cases via sandbox test.
+
+## 2026-08-16 — Drawer fix: Dependencies default (instant, from context) + 3D hub count badges
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+(1) Drawer "didn't show a panel" root cause: default tab was Impact, and GET /api/impact re-clones + re-indexes the ENTIRE repo per call (no caching) — the drawer sat on a spinner/error instead of content. Additionally DependencyList was re-fetching the graph via /api/graph (another full clone) even though the graph is already in GraphProvider context (Explorer renders inside it). Fixed: default tab = Dependencies; DependencyList rewritten to read useGraphContext() — zero network calls, instant content. Impact stays one click away (its slowness is a known backend limitation). (2) 3D hub count badges: canvas-texture sprites hovering above nodes (y=11, scale 8x2), same rule as 2D (importCount >= 5) and same tier colors (red >100 / orange 20-100 / neutral 5-19, reusing IMPACT_TINT_*); textures cached by count since nodeThreeObject rebuilds objects on selection/hover. No zoom gate in 3D (sprites scale naturally with camera distance; no per-frame camera hook) — documented in code.
+
+## 2026-08-16 — Central panel back for file nodes (no overlap), bigger badges, 3D zoom dolly fix
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+(1) GraphFocusView's `if (node.type === "file") return null` guard removed — the central panel (This file needs / If you change this) now opens for EVERY node, including file nodes, and coexists with the right Code Drawer: on md+ the panel shifts left of the drawer's 480px width (right-[31rem]) so the two never overlap. The old clipping bug (drawer covering the modal) is fixed by LAYOUT, not by hiding one surface. (2) Count badges enlarged: 2D pill 8→11px tall with 8.5px font (was 7), 3D sprite scale 8x2 → 16x4 (2x the sphere diameter) with 44px texture font (was 34) so numbers read at default camera distance. (3) 3D zoom buttons were moving the camera along the world Z axis only (x/y fixed) — with the isometric default view that shifts the view direction and reads as "rotating instead of zooming". Fixed with dolly3D(): camera moves along the camera->lookAt axis (new pos = lookAt + (pos - lookAt) * factor), anchored on the focus point. GraphMenu.tsx.
+
+## 2026-08-16 — Hub counts readable at overview + central panel collapse button + 3D edge highlight
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+(1) Count badges now keep a CONSTANT screen size at any zoom (user: "numbers only appeared at near zoom"). 2D: the badge group is counter-scaled (transform scale(1/zoomScale), anchored at the pill center so it stays glued to the node's top-right); the zoom gate dropped from 1.0 to 0.35 (only prevents pill-on-pill overlap in the most zoomed-out overviews). 3D: SpriteMaterial sizeAttenuation:false, sprite scale 88x22 CSS px (matches 4:1 texture) — readable at overview distance. (2) GraphFocusView (the restored central panel) got a collapse/expand button pinned to its right edge, vertically centered (ChevronRight/ChevronLeft; moves with the panel to right-[31rem] when the drawer is open). The collapsed state persists across node changes for manual control — lets the user tuck the panel away and navigate the map by clicking nodes. (3) 3D now highlights the selected node's edges: links carry a `highlighted` flag (source/target === selectedNodeId, graphData depends on selectedNodeId) and linkColor renders bright #E5E5E5 for highlighted vs dim rgba(255,255,255,0.12) — same navigation affordance the 2D canvas already had via its connected-set fade-out.
+
+## 2026-08-16 — Collapse button slides left when panel closed + desktop sidebar auto-collapse to icons
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+(1) GraphFocusView's collapse button no longer floats on the right after collapsing: while the panel is open it stays pinned to the panel's right edge (right-4 / right-[31rem], half-outside via translate-x-full); when collapsed it slides to the canvas LEFT edge (left-4) with the chevron flipped (open → ChevronLeft "collapse", collapsed → ChevronRight "expand"); transition-all animates the move. (2) Desktop sidebar (WorkspaceLayout) now starts COLLAPSED to a w-16 icon rail and expands on hover (temporarily) or via the Navbar menu button (pinned): effective width = !sidebarCollapsed || sidebarHovered, with onMouseEnter/onMouseLeave on the desktop wrapper. (3) Sidebar.tsx got the transition-all duration-300 its own doc comment claimed for the width animation but was missing from the className.
+
+## 2026-08-16 — 3D white-out fixed: SpriteMaterial sizeAttenuation:false scale is NOT pixels
+
+**Status:** Done (tsc 0 apps/web, eslint 0)
+
+The 3D view turned all-white/gray at every zoom level (colored circles and links faintly visible through it). Root cause: the constant-screen-size badge attempt used `SpriteMaterial({ sizeAttenuation: false })` with `sprite.scale.set(88, 22, 1)`. In three.js the sprite vertex shader applies `scale *= -mvPosition.z` when sizeAttenuation is off, so scale is multiplied by camera DEPTH — an "88px" badge becomes a quad ~19,000 CSS px tall (screen px = scale * viewportHeight / (2*tan(fov/2))), a giant sheet over the whole viewport. The renderer clear color was correctly black (library setClearColor from backgroundColor) — the quad was the culprit. Fixed: sizeAttenuation stays TRUE (world-space, perspective-correct, scales with distance) with sprite scale 20x5 (2.5x the sphere's diameter, matches the 4:1 texture) — readable at the default camera distance, shrinks naturally when zoomed out. Verified against the shader source node_modules/three/src/renderers/shaders/ShaderLib/sprite.glsl.js. Trap documented in progres/gotchas.md (KI-055).
+
+## 2026-08-16 — Zoom anchors fixed (2D cursor / 3D real target) + python icon no longer reads as a crossed-out circle
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+(1) 2D mouse wheel zoom now zooms toward the CURSOR: the world point under the pointer stays fixed on screen (old code scaled around the top-left transform anchor, so the view drifted up-left on every wheel step — user: "it zooms somewhere above"). Touch pinch untouched (already zooms around the fingers' midpoint). (2) 3D +/- dolly now anchors on `fg.controls().target` — the real orbit/rotation center (screen center). The previous anchor came from the cameraPosition() getter's lookAt, which in 3d-force-graph is a SYNTHETIC point 1000 units in front of the camera ((0,0,-1000).applyQuaternion(...) + position, verified in the dist source) — for cameras closer than 1000 units that point sits BEYOND the graph, so each zoom pushed the target past the graph and the view drifted ("zooms above"). (3) The Python node icon (infinity + diagonal slash `M-2,2 L2,-2`) read as a prohibition sign — a crossed-out circle — at 6px node size on every .py file of Python repos. Removed the slash, kept the lemniscate.
+
+## 2026-08-16 — 3D: clicking a node no longer restarts the d3 simulation
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+Clicking any node in 3D re-rendered the whole graph from scratch. Root cause: the edge-highlighting feature marked links with a `highlighted` flag inside `graphData`, and `graphData`'s useMemo depended on `selectedNodeId` — a new nodes/links array on every click made react-force-graph-3d treat it as a full graphData change and restart the d3-force simulation (positions re-computed from scratch). Fixed: `selectedNodeId` removed from the graphData deps (simulation stays stable); the highlight now flows through the `linkColor` accessor closure — a fresh arrow function per render changes its identity, the kapsule's changedProps check (hasAnyPropChanged in 3d-force-graph dist, linkColor is in the links-rebuild list) rebuilds LINKS ONLY, never the simulation. The nodeThreeObject closure (selected node → white core/glow) already worked the same way. Guard: graphData is the simulation source — never derive selection visuals from it; use accessor props (nodeThreeObject/linkColor/linkWidth).
+
+## 2026-08-16 — Count badges: pill → CIRCLE (2D + 3D)
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+User: "make all the numbers be in a circle, the author wanted it that way". (1) 2D GraphNode: the rounded-rect `<rect rx>` badge became a `<circle>` — radius grows with the digit count ((digits*5.2)/2 + 4.5), centered where the pill's center was (node top-right), counter-scale for constant screen size preserved; text stays 8.5px monospace with the same tier colors. (2) 3D getBadgeTexture: the rounded pill is now a `ctx.arc` circle filling the canvas height (diameter = height, horizontally centered); the font auto-shrinks to fit the circle (min(88, D*0.52/(digits*0.58))), sprite scale 20x5 → 24x6 so the circle renders as a true 6-unit circle (0.75x sphere diameter) on the 4:1 quad. Tier colors (red/orange/neutral + dark text on orange) unchanged.
+
+## 2026-08-16 — Count badge moved into the node center (2D): number in the middle of the circle
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+User: "the numbers should be not to the side but in the center of the circle". The 2D badge was a circle sitting to the top-right of the node; now the badge circle is CENTERED ON THE NODE (the count sits in the middle of the node circle): the group is scaled 1/zoomScale around the node origin (no translate), radius still grows with digit count, tier color fills the disc, and the node TYPE color is preserved as a thin ring (stroke=color, opacity 0.8) so the legend identity survives. File icons are skipped for hubs (count >= 5) since the number replaces the icon at the node center. Counter-scale kept — readable at overview. BADGE_HEIGHT constant removed. 3D untouched (its badge floats ABOVE the node, not to the side).
+
+## 2026-08-16 — 3D badge centered on the sphere too (number in the middle of the node)
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+User: "in 3D too" (follow-up to the 2D centered badge). The sprite badge moved from y=12 (above the sphere) to the NODE CENTER (0,0,0) — the count now sits in the middle of the sphere circle like the 2D badge. The texture gained an optional node-TYPE-color ring (8px stroke at radius-4, ~6% of the diameter) so the legend identity survives, matching the 2D stroke. getBadgeTexture(count, ringColor?) now caches by `${count}|${ringColor}` (bounded: counts × type colors); NodeDatum.ringColor carries the base NODE_COLORS color (pre-importance-tint). Text centered exactly (fillText at cy). depthWrite:false and sizeAttenuation:true unchanged (the KI-055 trap).
+
+## 2026-08-16 — 3D numbers were INVISIBLE: sprite at node center fails depth test — count now drawn ON the sphere
+
+**Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
+
+After moving the badge sprite to the node center (0,0,0) the numbers became completely invisible: a sprite is a flat quad at the sphere-center depth, while the sphere's FRONT surface is closer to the camera — the sprite fails the depth test and is hidden by its own sphere (transparent pass renders after opaque but depthTest stays on). Fixed by removing the sprite entirely: for hubs (count >= 5) the number is drawn ON the sphere — a square, fully opaque canvas texture (tier fill + type-color ring + digit dead-center) becomes the sphere's map (MeshBasicMaterial); the hub core is scaled x1.3 for readability. This is the true "number in the center of the node circle" in 3D, with no occlusion artifacts. getBadgeTexture/sprite cache removed, replaced by getSphereBadgeTexture(count, ringColor) cached by count|color. Guard: a flat sprite at the sphere center is invisible (depth test) — numbers belong on the sphere's own texture; a sphere material with a transparent map would erase its edges — fill fully. (KI-061)

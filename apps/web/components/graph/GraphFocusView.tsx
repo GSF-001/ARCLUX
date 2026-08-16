@@ -27,9 +27,10 @@
 
 "use client";
 
-import { X, ArrowLeft, AlertTriangle } from "lucide-react";
+import { X, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useGraphContext } from "./GraphProvider";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { getGraphNodeColor } from "@/theme/graphColors";
 import { getNodeIconPath } from "./nodeIcons";
 import { getEffectiveNodeType } from "./GraphNode";
@@ -96,6 +97,15 @@ export function GraphFocusView() {
 
   const [depsExpanded, setDepsExpanded] = useState(false);
   const [dependentsExpanded, setDependentsExpanded] = useState(false);
+  // Manual collapse toggle (persists across node changes): lets the user
+  // tuck the panel away and navigate the map by clicking nodes, following
+  // the highlighted connections — see the collapsible button on the panel's
+  // right edge. Reset when the panel fully closes (deselect).
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Mirrors ExplorerPanel's breakpoint: the right drawer is full-width on
+  // mobile (backdrop covers the canvas), 480px (md:w-120) on md+ — only the
+  // latter needs the panel to shift left.
+  const isMdUp = useMediaQuery("(min-width: 48rem)");
 
   // Collapse both sides again whenever the focused node changes, so
   // navigating to a new file (via a card click or the back button)
@@ -112,15 +122,41 @@ export function GraphFocusView() {
   const node = graph?.nodes.find((n) => n.id === selectedNodeId);
   if (!node || !graph || !isFocusPanelOpen) return null;
 
-  // Single source of truth (see GraphViewport.tsx CodeDrawer): "file"-type
-  // nodes open the right-side Code Drawer (File/Dependencies/Impact tabs),
-  // so this central modal must NOT render for them — otherwise both panels
-  // stack and the drawer clips the modal's right half. Non-file nodes
-  // (folders, external packages) have no drawer (FileDetails hits
-  // /api/file), so they keep this modal as their only inspection surface.
-  // Gate on the RAW backend type to mirror ExplorerPanel's isOpen check,
-  // not getEffectiveNodeType (which only reclassifies for color).
-  if (node.type === "file") return null;
+  // Coexists with the right-side Code Drawer (GraphViewport.tsx): "file"-type
+  // nodes open the drawer (File/Dependencies/Impact tabs) AND this central
+  // panel. On md+ the panel shifts left of the drawer's 480px (md:w-120)
+  // width (right-[31rem] = 30rem drawer + 1rem gap) so the two never overlap
+  // — the old pre-172d7d0 clipping bug is fixed by LAYOUT, not by hiding one
+  // surface. On mobile the drawer is full-width behind a backdrop, so the
+  // panel stays at its normal inset. Non-file nodes (folders, external
+  // packages) have no drawer and use the full-width inset.
+  const drawerIsOpen = node.type === "file" && isMdUp;
+
+  // Collapse/expand toggle. While the panel is OPEN it is pinned to the
+  // panel's right edge (vertically centered, half-outside via
+  // translate-x-full). When COLLAPSED the panel is gone, so the button
+  // slides LEFT to the canvas's left edge (left-4) instead of floating on
+  // the right — the user's explicit ask ("should move left after closing").
+  // Chevron follows the direction of the next action: collapse → left,
+  // expand → right.
+  const collapseButton = (
+    <button
+      type="button"
+      onClick={() => setIsCollapsed((v) => !v)}
+      aria-label={isCollapsed ? "Expand dependency panel" : "Collapse dependency panel"}
+      className={`absolute top-1/2 z-30 flex h-16 w-6 -translate-y-1/2 items-center justify-center bg-neutral-900/85 text-neutral-400 transition-all hover:bg-neutral-800 hover:text-neutral-200 ${
+        isCollapsed
+          ? "left-4 rounded-r-md border border-l-0"
+          : `translate-x-full rounded-r-md border border-l-0 ${
+              drawerIsOpen ? "right-[31rem]" : "right-4"
+            }`
+      }`}
+    >
+      {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+    </button>
+  );
+
+  if (isCollapsed) return <>{collapseButton}</>;
 
   const dependencies = graph.edges
     .filter((e) => e.source === node.id)
@@ -133,7 +169,12 @@ export function GraphFocusView() {
     .filter((n): n is GraphNodeData => Boolean(n));
 
   return (
-    <div className="glass-panel absolute inset-4 z-20 flex flex-col overflow-hidden rounded-lg">
+    <>
+      <div
+        className={`glass-panel absolute top-4 bottom-4 left-4 z-20 flex flex-col overflow-hidden rounded-lg ${
+          drawerIsOpen ? "right-[31rem]" : "right-4"
+        }`}
+      >
       <div className="flex items-center justify-between bg-neutral-900/40 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           {canGoBack && (
@@ -215,6 +256,8 @@ export function GraphFocusView() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      {collapseButton}
+    </>
   );
 }

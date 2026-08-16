@@ -1,16 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useGraphContext } from "@/components/graph/GraphProvider";
 import { LoadingState } from "@/components/patterns/LoadingState";
-import { ErrorState } from "@/components/patterns/ErrorState";
 import { EmptyState } from "@/components/patterns/EmptyState";
-import { fetchGraph } from "@/lib/graph";
-import type { DependencyGraph, GraphNode } from "@/packages/shared/types";
-
-// Verified against app/api/graph/route.ts: DependencyGraph.nodes/edges
-// match GraphNode/GraphEdge exactly. The local GraphResponse type that
-// used to live here (a guess made before this was confirmed) is gone --
-// this now imports the real shared types via lib/graph.ts's fetchGraph().
+import type { GraphNode } from "@/packages/shared/types";
 
 export interface DependencyListProps {
   repoUrl: string;
@@ -19,59 +12,30 @@ export interface DependencyListProps {
 }
 
 /**
- * STATUS: belum ada consumer (grep Explorer.tsx kosong saat file ini
- * ditulis) -- desain prop & asumsi query param /api/graph
- * (?repoUrl=&branch=, ngikutin pola /api/file dan /api/impact) BELUM
- * dikonfirmasi terhadap app/api/graph/route.ts yang sebenarnya. Cek dulu
- * sebelum percaya ini jalan tanpa modifikasi.
+ * Incoming/outgoing dependency lists for a module, read from the graph
+ * ALREADY loaded by GraphProvider — no network call of its own.
  *
- * Fetch graph penuh lalu filter client-side (bukan endpoint khusus
- * dependency) -- konsisten sama pola GraphProvider.tsx yang udah ada
- * (importCounts dihitung client-side dari graph.edges, bukan lewat API
- * baru). Kalau Explorer ini nanti dirender di dalam tree yang sama
- * dengan GraphProvider, fetch ini jadi redundant -- pertimbangkan ganti
- * ke useGraphContext() saat itu terjadi, jangan biarin 2 sumber data
- * graph yang beda hidup berdampingan.
+ * This used to `fetchGraph()` (/api/graph), but that endpoint re-clones
+ * and re-indexes the ENTIRE repository on every call (no caching, same
+ * cost as /api/analyze). Explorer renders inside GraphProvider's tree
+ * (ExplorerPanel is a child of GraphViewport), so the full
+ * DependencyGraph is already in context by the time a node is clicked —
+ * re-fetching it would double the clone cost for zero new information.
+ * The leftover `repoUrl`/`branch` props are kept for interface stability
+ * (Explorer passes them through); they are not used here anymore.
  */
-export function DependencyList({ repoUrl, moduleId, branch }: DependencyListProps) {
-  const [data, setData] = useState<DependencyGraph | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function DependencyList({ moduleId }: DependencyListProps) {
+  const { graph } = useGraphContext();
+  if (!graph) return <LoadingState label="Loading dependencies..." />;
 
-  useEffect(() => {
-    let cancelled = false;
+  const nodesById = new Map(graph.nodes.map((n) => [n.id, n]));
 
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const graph = await fetchGraph(repoUrl, branch);
-        if (!cancelled) setData(graph);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load dependencies");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [repoUrl, branch]);
-
-  if (isLoading) return <LoadingState label="Loading dependencies..." />;
-  if (error) return <ErrorState title="Couldn't load dependencies" message={error} />;
-  if (!data) return null;
-
-  const nodesById = new Map(data.nodes.map((n) => [n.id, n]));
-
-  const imports = data.edges
+  const imports = graph.edges
     .filter((e) => e.type === "import" && e.source === moduleId)
     .map((e) => nodesById.get(e.target))
     .filter((n): n is GraphNode => Boolean(n));
 
-  const importedBy = data.edges
+  const importedBy = graph.edges
     .filter((e) => e.type === "import" && e.target === moduleId)
     .map((e) => nodesById.get(e.source))
     .filter((n): n is GraphNode => Boolean(n));
