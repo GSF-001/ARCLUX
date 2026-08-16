@@ -10,7 +10,7 @@ import { hashObject } from "../shared/hash";
 import type { Repository } from "../repository/Repository";
 import type { DependencyGraph } from "../shared/types";
 import type { AnalyzeRepositoryResult } from "../engine/pipeline";
-import type { SecurityFinding } from "../security-analysis/types";
+import type { SecurityFinding } from "../security-analysis/SecurityFinding";
 import type { ProvenanceRecord } from "../provenance/ProvenanceRecord";
 import type { RemoteSource } from "./RemoteSource";
 

@@ -18,7 +18,8 @@
 // detector reports what the core model actually sees, nothing more.
 
 import type { Repository } from "../../repository/Repository";
-import type { SecurityFinding, SourceProvider } from "../types";
+import type { SecurityFinding } from "../SecurityFinding";
+import type { SourceProvider } from "../SourceProvider";
 import {
   classifyTrustZone,
   DEFAULT_TRUST_ZONES,

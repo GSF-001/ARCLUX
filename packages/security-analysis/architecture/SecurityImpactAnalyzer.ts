@@ -15,7 +15,7 @@
 import type { Repository } from "../../repository/Repository";
 import { buildImpactTree, type ImpactTreeNode } from "../../impact/buildImpactTree";
 import { calculateAffectedFiles } from "../../impact/calculateAffectedFiles";
-import type { SecurityFinding } from "../types";
+import type { SecurityFinding } from "../SecurityFinding";
 
 export interface SecurityImpactReport {
   moduleId: string;

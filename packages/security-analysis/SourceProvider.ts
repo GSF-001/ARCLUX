@@ -8,7 +8,20 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { SourceProvider } from "./types";
+
+/**
+ * Content channel for content-based detectors (secrets, unsafe patterns).
+ *
+ * ARCLUX's Repository deliberately does NOT carry file contents (verified
+ * in buildIndex.ts: content is read, used for resolveSameScopeDependencies,
+ * then discarded). Detectors that need the raw text take a SourceProvider
+ * as an explicit extension input — the file LIST still comes from the
+ * Repository, so detectors never re-scan the filesystem themselves.
+ */
+export interface SourceProvider {
+  /** Returns the file content, or null when the path is unknown/unreadable. */
+  read(relativePath: string): string | null;
+}
 
 /**
  * Default SourceProvider backed by the filesystem. Reads relative paths

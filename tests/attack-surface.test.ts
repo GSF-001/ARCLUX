@@ -37,7 +37,7 @@ import {
 import { correlateFindingsWithImpact, scoreFinding } from "../packages/correlation/ImpactCorrelation";
 import { linkFindingsToProvenance } from "../packages/correlation/EvidenceCorrelator";
 import { buildImpactSnapshot } from "../packages/correlation/ImpactSnapshot";
-import type { SecurityFinding } from "../packages/security-analysis/types";
+import type { SecurityFinding } from "../packages/security-analysis/SecurityFinding";
 
 parserRegistry.register(parseTs);
 parserRegistry.register(parsePython);

@@ -11,7 +11,9 @@
 // always advisory). Unknown rule ids yield null so callers can fall back
 // to their own text.
 
-import type { RemediationSuggestion, SecurityFinding } from "../types";
+import type { RemediationSuggestion, SecurityFinding } from "../SecurityFinding";
+
+export type { RemediationSuggestion } from "../SecurityFinding";
 
 const TEMPLATES: Record<string, Omit<RemediationSuggestion, "summary"> & { summary: string }> = {
   "aws-access-key": {

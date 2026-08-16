@@ -11,7 +11,8 @@
 // runs, so duplicate reports merge naturally) and severity/file grouping
 // for reports.
 
-import type { SecurityFinding, SecuritySeverity } from "../security-analysis/types";
+import type { SecuritySeverity } from "../security-analysis/SecuritySeverity";
+import type { SecurityFinding } from "../security-analysis/SecurityFinding";
 
 export function dedupeFindings(findings: SecurityFinding[]): SecurityFinding[] {
   const seen = new Set<string>();
