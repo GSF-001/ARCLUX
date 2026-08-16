@@ -8,10 +8,12 @@
 
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import dynamic from "next/dynamic";
 import * as THREE from "three";
 import { useGraphContext } from "./GraphProvider";
+import { getEffectiveNodeType } from "./GraphNode";
+import type { ForceGraphMethods } from "react-force-graph-3d";
 
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
 
@@ -110,7 +112,13 @@ function buildNodeObject(node: NodeDatum): THREE.Object3D {
   return group;
 }
 
-export function GraphCanvas3D() {
+export interface GraphCanvas3DProps {
+  /** Mutable handle the parent fills with the live ForceGraph3D instance;
+   * GraphMenu reads it to drive camera zoom/fit in 3D mode. */
+  fgRef: MutableRefObject<ForceGraphMethods | undefined>;
+}
+
+export function GraphCanvas3D({ fgRef }: GraphCanvas3DProps) {
   const { graph, isLoading, error, selectedNodeId, selectNode, importCounts } = useGraphContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -131,7 +139,7 @@ export function GraphCanvas3D() {
     if (!graph) return { nodes: [], links: [] };
     return {
       nodes: graph.nodes.map((n) => {
-        const baseColor = NODE_COLORS[n.type] ?? "#ededed";
+        const baseColor = NODE_COLORS[getEffectiveNodeType(n)] ?? "#ededed";
         const importCount = importCounts.get(n.id) ?? 0;
         return {
           id: n.id,
@@ -151,6 +159,7 @@ export function GraphCanvas3D() {
       {error && <div>Error: {error}</div>}
       {!isLoading && !error && graph && dimensions.width > 0 && dimensions.height > 0 && (
         <ForceGraph3D
+          ref={fgRef}
           width={dimensions.width}
           height={dimensions.height}
           graphData={graphData}

@@ -23,6 +23,7 @@ import { useGraphContext } from "./GraphProvider";
 import { Button } from "@/components/ui/button";
 import { graphNodeColors, graphEdgeColors } from "@/theme/graphColors";
 import type { GraphNodeType, GraphEdgeType } from "@/packages/shared/types";
+import type { ForceGraphMethods } from "react-force-graph-3d";
 
 const nodeLabels: Record<GraphNodeType, string> = {
   file: "File",
@@ -40,9 +41,71 @@ const edgeLabels: Record<GraphEdgeType, string> = {
   "route-link": "Route link",
 };
 
-export function GraphMenu({ is3D, onToggle3D }: { is3D?: boolean; onToggle3D?: () => void } = {}) {
+/**
+ * Narrow surface of the ForceGraph3D instance the view controls need. The
+ * library's own types require a `position` argument on cameraPosition even
+ * though calling it with none returns the current camera coords (getter),
+ * so the ref is cast to this shape once at the call site.
+ */
+interface CameraControls {
+  cameraPosition(
+    position?: { x: number; y: number; z: number },
+    lookAt?: { x: number; y: number; z: number } | null,
+    transitionMs?: number
+  ): { x: number; y: number; z: number; lookAt: { x: number; y: number; z: number } };
+  zoomToFit(durationMs?: number, padding?: number): void;
+}
+
+export interface GraphMenuProps {
+  is3D?: boolean;
+  onToggle3D?: () => void;
+  /** ForceGraph3D instance (populated only while the 3D canvas is mounted)
+   * so the view controls drive the 3D camera instead of the 2D transform.
+   * Passed by GraphViewport; optional so standalone renderers still work. */
+  fgRef?: React.MutableRefObject<ForceGraphMethods | undefined>;
+}
+
+export function GraphMenu({ is3D, onToggle3D, fgRef }: GraphMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
-  const { zoomIn, zoomOut, resetView, transform } = useGraphContext();
+  const { graph, zoomIn, zoomOut, resetView, transform } = useGraphContext();
+
+  /** 3D zoom = move the camera along its view axis (z * factor) toward the
+   * point it is currently looking at. The library resets lookAt to the
+   * origin when given null/undefined (three-render-objects: `lookAt ||
+   * {x:0,y:0,z:0}`), so the current lookAt is threaded through explicitly
+   * to keep the zoom anchored in place instead of yanking the view.
+   * Falls back to the 2D transform handlers when not in 3D mode. */
+  const handleZoomIn = () => {
+    if (is3D && fgRef?.current) {
+      const camera = fgRef.current as unknown as CameraControls;
+      const { x, y, z, lookAt } = camera.cameraPosition();
+      camera.cameraPosition({ x, y, z: z * 0.75 }, lookAt, 300);
+    } else {
+      zoomIn();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (is3D && fgRef?.current) {
+      const camera = fgRef.current as unknown as CameraControls;
+      const { x, y, z, lookAt } = camera.cameraPosition();
+      camera.cameraPosition({ x, y, z: z * 1.25 }, lookAt, 300);
+    } else {
+      zoomOut();
+    }
+  };
+
+  const handleResetView = () => {
+    if (is3D && fgRef?.current) {
+      const camera = fgRef.current as unknown as CameraControls;
+      // zoomToFit needs a non-empty bbox; an empty graph has nothing to fit.
+      if ((graph?.nodes.length ?? 0) > 0) {
+        camera.zoomToFit(400, 20);
+      }
+    } else {
+      resetView();
+    }
+  };
 
   return (
     <>
@@ -101,17 +164,17 @@ export function GraphMenu({ is3D, onToggle3D }: { is3D?: boolean; onToggle3D?: (
                 View controls
               </h3>
               <div className="flex items-center gap-1 rounded-md border p-1">
-                <Button variant="ghost" size="icon-sm" onClick={zoomOut} aria-label="Zoom out">
+                <Button variant="ghost" size="icon-sm" onClick={handleZoomOut} aria-label="Zoom out">
                   <ZoomOut className="h-4 w-4" />
                 </Button>
                 <span className="min-w-[3rem] flex-1 text-center font-mono text-xs text-muted-foreground">
-                  {Math.round(transform.scale * 100)}%
+                  {is3D ? "3D" : `${Math.round(transform.scale * 100)}%`}
                 </span>
-                <Button variant="ghost" size="icon-sm" onClick={zoomIn} aria-label="Zoom in">
+                <Button variant="ghost" size="icon-sm" onClick={handleZoomIn} aria-label="Zoom in">
                   <ZoomIn className="h-4 w-4" />
                 </Button>
                 <div className="mx-1 h-4 w-px bg-border" />
-                <Button variant="ghost" size="icon-sm" onClick={resetView} aria-label="Reset view">
+                <Button variant="ghost" size="icon-sm" onClick={handleResetView} aria-label="Reset view">
                   <Maximize2 className="h-4 w-4" />
                 </Button>
               </div>

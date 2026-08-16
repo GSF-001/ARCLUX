@@ -112,6 +112,16 @@ export function GraphFocusView() {
   const node = graph?.nodes.find((n) => n.id === selectedNodeId);
   if (!node || !graph || !isFocusPanelOpen) return null;
 
+  // Single source of truth (see GraphViewport.tsx CodeDrawer): "file"-type
+  // nodes open the right-side Code Drawer (File/Dependencies/Impact tabs),
+  // so this central modal must NOT render for them — otherwise both panels
+  // stack and the drawer clips the modal's right half. Non-file nodes
+  // (folders, external packages) have no drawer (FileDetails hits
+  // /api/file), so they keep this modal as their only inspection surface.
+  // Gate on the RAW backend type to mirror ExplorerPanel's isOpen check,
+  // not getEffectiveNodeType (which only reclassifies for color).
+  if (node.type === "file") return null;
+
   const dependencies = graph.edges
     .filter((e) => e.source === node.id)
     .map((e) => graph.nodes.find((n) => n.id === e.target))

@@ -8,7 +8,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { ForceGraphMethods } from "react-force-graph-3d";
 
 import { GraphProvider, useGraphContext } from "./GraphProvider";
 import { GraphCanvas } from "./GraphCanvas";
@@ -26,57 +27,71 @@ export interface GraphViewportProps {
 }
 
 /**
- * Right-hand module explorer, mounted when a FILE node is selected. Lives
- * in the flex layout OUTSIDE the canvas column (sibling, not overlay), so
- * GraphFocusView's inset-4 overlay never collides with it — the canvas
- * column just narrows. Folders / external packages have no file source to
- * inspect (FileDetails hits /api/file), so only "file"-type nodes open it.
+ * Right-hand code drawer ("CodeDrawer"), opened when a FILE node is
+ * selected. Always mounted so the slide-in/out transition can run in both
+ * directions; the Explorer content only renders while open. Positioned as
+ * a fixed overlay (z-60) over the canvas on ALL viewports — desktop is
+ * a 480px right-side sheet, mobile is full-width with a click-to-close
+ * backdrop (z-59). Single source of truth for file inspection: GraphFocusView
+ * self-hides for "file" nodes (see its type guard), so this drawer and the
+ * central modal can never be open at the same time — no clipping.
+ * Folders / external packages have no file source to inspect (FileDetails
+ * hits /api/file), so only "file"-type nodes open it.
  *
- * Closing the Explorer deselects the node (selectNode(null)), which also
+ * Closing the drawer deselects the node (selectNode(null)), which also
  * closes the focus view — consistent with "close = stop inspecting this
- * module". Closing the focus view alone (its own X) keeps the Explorer
+ * module". Closing the focus view alone (its own X) keeps the drawer
  * open: the node stays selected, so the deep inspection persists.
  */
 function ExplorerPanel({ repoUrl, branch }: { repoUrl: string; branch?: string }) {
   const { graph, selectedNodeId, selectNode } = useGraphContext();
-  // md+ keeps the Explorer as a 380px flex sibling (canvas column narrows);
-  // below md a 380px sibling would leave the canvas ~0px wide on a phone,
-  // so it becomes a full-screen overlay instead. Safe to branch on the
-  // hook here: the panel only mounts after a client-side node selection.
   const isMdUp = useMediaQuery("(min-width: 48rem)");
 
-  if (!selectedNodeId) return null;
-  const selected = graph?.nodes.find((n) => n.id === selectedNodeId);
-  if (!selected || selected.type !== "file") return null;
+  const selectedNode = selectedNodeId ? graph?.nodes.find((n) => n.id === selectedNodeId) : null;
+  const isOpen = selectedNode?.type === "file";
 
   return (
-    <div
-      className={
-        isMdUp
-          ? "h-full w-[380px] shrink-0"
-          : "fixed inset-0 z-50 shadow-2xl"
-      }
-    >
-      <Explorer
-        repoUrl={repoUrl}
-        moduleId={selectedNodeId}
-        branch={branch}
-        onClose={() => selectNode(null)}
-      />
-    </div>
+    <>
+      {!isMdUp && isOpen && (
+        <div
+          className="fixed inset-0 z-59 bg-black/60"
+          onClick={() => selectNode(null)}
+          aria-hidden="true"
+        />
+      )}
+      <div
+        className={`fixed top-0 right-0 bottom-0 z-60 w-full md:w-120 bg-[#0d1117] border-l border-[#30363d] shadow-2xl overflow-y-auto transition-transform ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        aria-hidden={!isOpen}
+      >
+        {isOpen && selectedNode && (
+          <Explorer
+            repoUrl={repoUrl}
+            moduleId={selectedNode.id}
+            branch={branch}
+            onClose={() => selectNode(null)}
+          />
+        )}
+      </div>
+    </>
   );
 }
 
 export function GraphViewport({ repoUrl, branch }: GraphViewportProps) {
   const [is3D, setIs3D] = useState(false);
+  // Shared handle to the live ForceGraph3D instance (undefined in 2D mode),
+  // filled by GraphCanvas3D and read by GraphMenu so the view controls
+  // drive the 3D camera instead of the 2D transform when in 3D mode.
+  const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
   return (
     <GraphProvider repoUrl={repoUrl} branch={branch}>
       <div className="flex h-full w-full">
         <div className="relative h-full min-w-0 flex-1">
           <div style={{ position: "relative", width: "100%", height: "100%" }}>
-            {is3D ? <GraphCanvas3D /> : <GraphCanvas />}
+            {is3D ? <GraphCanvas3D fgRef={fgRef} /> : <GraphCanvas />}
           </div>
-          <GraphMenu is3D={is3D} onToggle3D={() => setIs3D((v) => !v)} />
+          <GraphMenu is3D={is3D} onToggle3D={() => setIs3D((v) => !v)} fgRef={fgRef} />
           <GraphSearch />
           <GraphFocusView />
           <GraphContextMenu />
