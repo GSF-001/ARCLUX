@@ -736,3 +736,9 @@ Visual polish (GraphCanvas/GraphNode/GraphEdge, all 2D-only): (1) fade-out — s
 **Status:** In Progress
 
 (1) nodeIcons.tsx: getMaterialIcon(fileName, isFolder) — extension-based icons (.py/.ts/.tsx/.js/.json/.yaml/.toml/.env/.md/.txt/.sql/.db, Dockerfile/docker-compose) and architectural folder icons (src/tests/components/core/utils); getNodeIconPath(type, fileName?) resolves file/folder nodes through it, others keep their type shape. GraphNode + GraphFocusView pass node.label. (2) GraphNode: thin node-type-colored border (stroke 0.8 @ 0.4; white + glow when selected) — legend badge look. (3) P0: PR #474's merge commit (6fb8557) injected merge-conflict junk lines ("fix/graph-menu-3d-toggle", "ARCLUX.main") into GraphCanvas3D.tsx (7 sites), apps/web/package.json (broken JSON), pnpm-lock.yaml (6 sites) — broke 3D chunk (ChunkLoadError) and tsc. Restored all 3 files from the clean 9c066ae (kept 3D dev's rich-visual commit, @types/three ^0.185.4). tsc 0, lint 0, suite 487/487.
+
+## 2026-08-16 — 3D graph glow, dust ring, and impact-count number restored/added
+
+**Status:** In Progress
+
+PR #479: restored glowing planet-style nodes + tilted importance rings in 3D view that were lost in purge commit 6bf31dc1 (collision with collaborator ManSio's parallel work on the same file). Upgraded from flat mesh glow/ring to particle-based dust texture (THREE.Points with soft radial-gradient sprite, additive blending) matching a phone-cleaner app reference for a grainier, more organic look than solid transparent geometry. Added impact-count number sprite inside each node, hidden by default, revealed via Object3D.onBeforeRender when camera distance < NUMBER_VISIBLE_DISTANCE (120, untuned starting value) -- shows fan-in count as a billboard text sprite when zoomed in close. Not yet visually verified end-to-end on device; NUMBER_VISIBLE_DISTANCE threshold may need tuning.
