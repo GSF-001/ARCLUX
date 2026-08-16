@@ -51,6 +51,8 @@ directly outside of `engine/`.
   `indexer/resolveRoutes.ts`'s `getEntryModuleIds()`.
 - **`impact`** — answers "what breaks if I change this file?" by tracing
   consumers/dependents through the graph.
+- **`security-analysis`** — source security findings plus mock-only behavioral
+  capability classification for adversarial fixtures.
 - **`rules`** — framework-specific convention checks (Next.js routes,
   React hooks, NestJS modules, Express routing, Vite config, Electron
   main/preload boundaries, Laravel route→controller existence).
