@@ -31,7 +31,6 @@ const NODE_COLORS: Record<string, string> = {
 
 export function GraphCanvas3D() {
   const { graph, isLoading, error, selectedNodeId, selectNode } = useGraphContext();
-  const fgRef = useRef<any>(null);
 
   const graphData = useMemo(() => {
     if (!graph) return { nodes: [], links: [] };
@@ -55,7 +54,6 @@ export function GraphCanvas3D() {
 
   return (
     <ForceGraph3D
-      ref={fgRef}
       graphData={graphData}
       nodeLabel="name"
       nodeColor={(node: any) => (node.id === selectedNodeId ? "#ffffff" : node.color)}
