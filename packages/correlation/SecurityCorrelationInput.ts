@@ -15,7 +15,7 @@
 
 import type { Repository } from "../repository/Repository";
 import type { DependencyGraph } from "../shared/types";
-import type { SecurityFinding } from "../security-analysis/types";
+import type { SecurityFinding } from "../security-analysis/SecurityFinding";
 import type { ProvenanceRecord } from "../provenance/ProvenanceRecord";
 import type { ImpactSnapshot } from "./ImpactSnapshot";
 

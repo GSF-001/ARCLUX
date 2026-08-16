@@ -11,7 +11,7 @@
 // on a finding lets consumers answer "where did this finding come from and
 // can I reproduce it" — the analysis-provenance analogue of SLSA's idea.
 
-import type { SecurityFinding } from "../security-analysis/types";
+import type { SecurityFinding } from "../security-analysis/SecurityFinding";
 import { createProvenanceRecord } from "../provenance/ProvenanceRecord";
 import type { SourceOrigin } from "../provenance/SourceOrigin";
 import type { EvidenceOrigin } from "../provenance/EvidenceOrigin";

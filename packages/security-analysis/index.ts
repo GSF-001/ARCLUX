@@ -13,13 +13,14 @@
 export type {
   SecuritySeverity,
   SecurityConfidence,
+} from "./SecuritySeverity";
+export type {
   SecurityLocation,
   SecurityFinding,
   RemediationSuggestion,
-  SourceProvider,
-} from "./types";
+} from "./SecurityFinding";
 
-export { DiskSourceProvider } from "./SourceProvider";
+export { DiskSourceProvider, type SourceProvider } from "./SourceProvider";
 
 export {
   detectSecretExposure,
