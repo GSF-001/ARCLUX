@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote-analysis/RemoteAnalysisRequest — not yet implemented.
+export interface RemoteAnalysisRequest {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteAnalysisRequest(source?: string): RemoteAnalysisRequest {
+  return { id: crypto.randomUUID(), source };
+}

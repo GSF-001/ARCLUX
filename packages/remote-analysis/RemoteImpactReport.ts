@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote-analysis/RemoteImpactReport — not yet implemented.
+export interface RemoteImpactReport {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteImpactReport(source?: string): RemoteImpactReport {
+  return { id: crypto.randomUUID(), source };
+}

@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote/RemoteSnapshot — not yet implemented.
+export interface RemoteSnapshot {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteSnapshot(source?: string): RemoteSnapshot {
+  return { id: crypto.randomUUID(), source };
+}

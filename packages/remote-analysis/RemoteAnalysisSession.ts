@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote-analysis/RemoteAnalysisSession — not yet implemented.
+export interface RemoteAnalysisSession {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteAnalysisSession(source?: string): RemoteAnalysisSession {
+  return { id: crypto.randomUUID(), source };
+}

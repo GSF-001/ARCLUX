@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: acquisition/RepositoryAcquirer — not yet implemented.
+export interface RepositoryAcquirer {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRepositoryAcquirer(source?: string): RepositoryAcquirer {
+  return { id: crypto.randomUUID(), source };
+}

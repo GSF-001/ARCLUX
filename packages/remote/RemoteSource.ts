@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote/RemoteSource — not yet implemented.
+export interface RemoteSource {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteSource(source?: string): RemoteSource {
+  return { id: crypto.randomUUID(), source };
+}
