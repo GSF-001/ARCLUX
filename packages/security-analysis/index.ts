@@ -17,4 +17,3 @@ export * from "./remote";
 export * from "./remote-analysis";
 export * from "./reporting";
 export * from "./web-intake";
-export * from "./capability";

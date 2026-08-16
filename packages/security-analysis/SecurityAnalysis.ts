@@ -11,13 +11,11 @@ import type { SecurityFile, SecurityAnalysisOptions } from "./contracts";
 import { detectDangerousApis } from "./source/DangerousApiDetector";
 import { detectSecretExposure } from "./source/SecretExposureDetector";
 import { detectUnsafePatterns } from "./source/UnsafePatternDetector";
-import type { CapabilityAssessment } from "./capability/AssessmentOrchestrator";
 
 export interface SecurityAnalysis {
   target: string;
   findings: SecurityFinding[];
   analyzedAt: string;
-  capabilityAssessment?: CapabilityAssessment;
 }
 
 export function createSecurityAnalysis(target: string, findings: SecurityFinding[]): SecurityAnalysis {
