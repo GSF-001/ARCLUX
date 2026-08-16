@@ -65,7 +65,9 @@ function makeRepository(relativePaths: string[]): Repository {
     org: "local",
     name: "unit",
     defaultBranch: "main",
-    rootPath: "/tmp/unit",
+    // In-memory fixture: no files are written, so this is a marker value,
+    // not a real path (avoids ThreatCrush insecure-temp-file noise).
+    rootPath: "in-memory",
     detectedFrameworks: [],
     packageManager: "unknown",
     analyzedAt: new Date().toISOString(),
@@ -75,7 +77,7 @@ function makeRepository(relativePaths: string[]): Repository {
     repo.addModule({
       id: relativePath,
       file: {
-        absolutePath: `/tmp/unit/${relativePath}`,
+        absolutePath: `in-memory/${relativePath}`,
         relativePath,
         language: "typescript",
         extension: ".ts",
@@ -221,7 +223,7 @@ describe("detectSensitiveDataFlow (unit, in-memory)", () => {
       org: "local",
       name: "unit",
       defaultBranch: "main",
-      rootPath: "/tmp/unit",
+      rootPath: "in-memory",
       detectedFrameworks: [],
       packageManager: "unknown",
       analyzedAt: new Date().toISOString(),
@@ -229,7 +231,7 @@ describe("detectSensitiveDataFlow (unit, in-memory)", () => {
     repo.addModule({
       id: "logger.ts",
       file: {
-        absolutePath: "/tmp/unit/logger.ts",
+        absolutePath: "in-memory/logger.ts",
         relativePath: "logger.ts",
         language: "typescript",
         extension: ".ts",

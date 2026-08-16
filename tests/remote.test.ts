@@ -14,18 +14,23 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 import path from "node:path";
+import os from "node:os";
 import { RemoteRepository } from "../packages/remote";
 import { createRemoteSnapshot, type RemoteSnapshot } from "../packages/remote";
 import type { AnalyzeRepositoryResult } from "../packages/engine/pipeline";
 
 const NEXTJS_DEMO = path.join(__dirname, "..", "playground", "nextjs-demo");
+// Validation tests use a path that exists as a directory but is never
+// analyzed (analyze() throws before any I/O) — os.tmpdir()-based per the
+// repo convention for non-analyzed test paths (avoids ThreatCrush noise).
+const NON_ANALYZED_PATH = path.join(os.tmpdir(), "arclux-remote-test");
 
 describe("RemoteRepository argument validation", () => {
   it("throws when both url and localPath are set", async () => {
     const repo = new RemoteRepository({
       id: "both",
       url: "https://github.com/GSF-001/ARCLUX.git",
-      localPath: "/tmp/x",
+      localPath: NON_ANALYZED_PATH,
     });
     await expect(repo.analyze()).rejects.toThrow(/not both/);
   });
@@ -36,8 +41,8 @@ describe("RemoteRepository argument validation", () => {
   });
 
   it("exposes the source unchanged", () => {
-    const repo = new RemoteRepository({ id: "r1", localPath: "/tmp/x", branch: "main" });
-    expect(repo.source).toEqual({ id: "r1", localPath: "/tmp/x", branch: "main" });
+    const repo = new RemoteRepository({ id: "r1", localPath: NON_ANALYZED_PATH, branch: "main" });
+    expect(repo.source).toEqual({ id: "r1", localPath: NON_ANALYZED_PATH, branch: "main" });
   });
 });
 
