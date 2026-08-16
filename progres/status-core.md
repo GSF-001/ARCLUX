@@ -806,3 +806,9 @@ CacheProvider.ts (facade/stats over fileCache/repositoryCache/graphCache -- conf
 **Status:** Done
 
 NetworkRegistry.ts (lists all registered daemon endpoints from ~/.arclux/endpoints/) and ConnectionManager.ts (liveness check via existing GET /analysis route) implemented, completing packages/networking/ alongside PortManager.ts and ServiceEndpoint.ts from the daemon session.
+
+## 2026-08-16 — Security & Remote analysis packages implemented (phases 1-5)
+
+**Status:** Done
+
+New extension packages per approved plan (docs/SECURITY_ANALYSIS_PLAN.md): packages/provenance (SourceOrigin/EvidenceOrigin/ProvenanceRecord), packages/remote (RemoteSource/RemoteRepository/RemoteSnapshot), packages/security-analysis (source/ detectors: secrets gitleaks-model, unsafe patterns Semgrep-model, sensitive-data-flow CodeQL-inspired; architecture/: trust boundary, cross-boundary, impact; reporting/: SecurityReport + SARIF 2.1.0 export + remediation templates), packages/correlation (AttackSurfaceMapper BFS validated by experiment, Finding/Evidence/ImpactCorrelator, ImpactSnapshot). Core engine untouched; consumes Repository/DependencyGraph via analyzeRepository. suite 551/551.

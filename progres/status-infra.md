@@ -478,3 +478,9 @@ Known Termux-specific gotcha: `sharp` has no android-arm64 binary, needs
 
 docs-site/ rebuilt on Mintlify instead of Docusaurus. mint.json config with dark-mode locked, colors matching ARCLUX design tokens. Content generator reads README/PROGRES/ARCHITECTURE_MAP/TOOLING/CONTEXT/QUICKSTART directly and regenerates .mdx on demand. Known Termux gotcha: sharp needs wasm32 fallback for mintlify dev.
 ARCLUX.main
+
+## 2026-08-16 — CLI: arclux security command (phase 6)
+
+**Status:** Done
+
+New CLI command apps/cli/security.ts: runs secrets + unsafe patterns + data-flow + trust boundary + cross-boundary detectors and the attack-surface map, prints summary or --json/--sarif report; exit 1 on critical/high findings (--no-fail to override). Wired into apps/cli/index.ts. Verified on playground/nextjs-demo (0 findings, 4 reachable/2 unreachable = experiment match) and tests/fixtures/security-leaks (findings + valid SARIF).
