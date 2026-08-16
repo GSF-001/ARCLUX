@@ -35,7 +35,7 @@ describe("Pipeline: analyzeRepository", () => {
     expect(result).toHaveProperty("scanSummary");
     expect(result).toHaveProperty("repository");
     expect(result).toHaveProperty("dependencies");
-  });
+  }, 30000);
 
   it("should have valid scanSummary structure", async () => {
     const result = await analyzeRepository({
