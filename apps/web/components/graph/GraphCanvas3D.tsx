@@ -56,8 +56,8 @@ export function GraphCanvas3D() {
     <ForceGraph3D
       graphData={graphData}
       nodeLabel="name"
-      nodeColor={(node: { id: string; color: string }) => (node.id === selectedNodeId ? "#ffffff" : node.color)}
-      onNodeClick={(node: { id: string }) => selectNode(node.id)}
+      nodeColor={(node: any) => (node.id === selectedNodeId ? "#ffffff" : node.color)}
+      onNodeClick={(node: any, _event: MouseEvent) => selectNode(node.id)}
       backgroundColor="#000000"
       linkColor={() => "rgba(255,255,255,0.2)"}
       linkDirectionalParticles={1}
