@@ -11,7 +11,7 @@
 import { memo } from "react";
 import { getGraphNodeColor } from "@/theme/graphColors";
 import { getNodeIconPath } from "./nodeIcons";
-import type { GraphNode as GraphNodeData } from "@/packages/shared/types";
+import type { GraphNode as GraphNodeData, GraphNodeType } from "@/packages/shared/types";
 
 export interface GraphNodePosition {
   x: number;
@@ -40,6 +40,66 @@ export interface GraphNodeProps {
 }
 
 const BASE_RADIUS = 6;
+
+// ---------------------------------------------------------------------------
+// 2D-only semantic node classification.
+//
+// The backend graph builder (packages/graph/buildDependencyGraph.ts) emits
+// every node with type: "file" — route/component/hook types are only ever
+// assigned by packages/indexer/* resolver helpers, which currently feed
+// detectors, not the rendered graph. Until the pipeline assigns real types,
+// classify here from the same conventions so the canvas matches the
+// GraphMenu legend instead of rendering everything in the single "file"
+// color. When the pipeline starts emitting real types, node.type wins and
+// this whole fallback becomes dead code (keep the `node.type !== "file"`
+// short-circuit so it removes cleanly).
+//
+// Conventions mirrored from packages/indexer/resolveRoutes.ts and the
+// component/hook detectors (progres/PROGRES-decisions.md).
+const NEXT_APP_ROUTER_ENTRY_FILENAMES = new Set([
+  "page",
+  "layout",
+  "route",
+  "loading",
+  "error",
+  "not-found",
+  "template",
+  "default",
+  "global-error",
+]);
+const NEXT_APP_ROUTER_EXTENSIONS = new Set([".tsx", ".ts", ".jsx", ".js"]);
+
+function getEffectiveNodeType(node: GraphNodeData): GraphNodeType {
+  if (node.type !== "file") return node.type;
+
+  const segments = (node.filePath ?? "").split("/");
+  const fileName = segments[segments.length - 1] ?? "";
+  const extMatch = /\.([^.]+)$/.exec(fileName);
+  const ext = extMatch ? "." + extMatch[1] : "";
+  const base = extMatch ? fileName.slice(0, -ext.length) : fileName;
+
+  // Next.js App Router entry file inside an app/ folder (page/layout/route/
+  // loading/error/not-found/template/default/global-error).
+  if (
+    segments.includes("app") &&
+    NEXT_APP_ROUTER_ENTRY_FILENAMES.has(base) &&
+    NEXT_APP_ROUTER_EXTENSIONS.has(ext)
+  ) {
+    return "route";
+  }
+
+  // React hook: use* prefix with a capital letter (useState, useMemo, ...).
+  if (/^use[A-Z]/.test(base) && (ext === ".ts" || ext === ".tsx")) {
+    return "hook";
+  }
+
+  // React component: PascalCase .tsx/.jsx file.
+  if ((ext === ".tsx" || ext === ".jsx") && /^[A-Z]/.test(base)) {
+    return "component";
+  }
+
+  return "file";
+}
 
 // Fan-in tiers for the impact halo. Starting thresholds, not yet tuned
 // against a wide variety of real repos -- see progres/PROGRES-decisions.md.
@@ -82,7 +142,8 @@ function GraphNodeComponent({
   zoomScale = 1,
   hitRadius,
 }: GraphNodeProps) {
-  const color = getGraphNodeColor(node.type, "dark");
+  const effectiveType = getEffectiveNodeType(node);
+  const color = getGraphNodeColor(effectiveType, "dark");
   const radius = isSelected ? BASE_RADIUS + 3 : isHovered ? BASE_RADIUS + 1.5 : BASE_RADIUS;
   const impactHaloRadius = zoomScale >= MIN_ZOOM_FOR_HALO ? getImpactHaloRadius(importCount) : null;
 
@@ -116,7 +177,7 @@ function GraphNodeComponent({
       />
       {zoomScale >= MIN_ZOOM_FOR_ICON && (
         <path
-          d={getNodeIconPath(node.type)}
+          d={getNodeIconPath(effectiveType)}
           fill="none"
           stroke="#fff"
           strokeWidth={0.6}
