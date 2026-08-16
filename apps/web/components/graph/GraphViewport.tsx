@@ -32,10 +32,11 @@ export interface GraphViewportProps {
  * directions; the Explorer content only renders while open. Positioned as
  * a fixed overlay (z-60) over the canvas on ALL viewports — desktop is
  * a 480px right-side sheet, mobile is full-width with a click-to-close
- * backdrop (z-59). Stacking above GraphFocusView (z-20) is deliberate:
- * the drawer must never tuck "under" the impact modal. Folders / external
- * packages have no file source to inspect (FileDetails hits /api/file),
- * so only "file"-type nodes open it.
+ * backdrop (z-59). Single source of truth for file inspection: GraphFocusView
+ * self-hides for "file" nodes (see its type guard), so this drawer and the
+ * central modal can never be open at the same time — no clipping.
+ * Folders / external packages have no file source to inspect (FileDetails
+ * hits /api/file), so only "file"-type nodes open it.
  *
  * Closing the drawer deselects the node (selectNode(null)), which also
  * closes the focus view — consistent with "close = stop inspecting this
