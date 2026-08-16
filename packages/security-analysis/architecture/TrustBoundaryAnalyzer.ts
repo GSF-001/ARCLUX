@@ -30,7 +30,9 @@
 
 import type { Repository } from "../../repository/Repository";
 import type { ModuleInfo } from "../../shared/types";
-import type { SecurityFinding, SecuritySeverity, SourceProvider } from "../types";
+import type { SecuritySeverity } from "../SecuritySeverity";
+import type { SecurityFinding } from "../SecurityFinding";
+import type { SourceProvider } from "../SourceProvider";
 
 export interface TrustZoneDefinition {
   /** Exact path-segment names (case-insensitive) that put a module in this zone. */

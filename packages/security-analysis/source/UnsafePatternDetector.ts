@@ -15,7 +15,9 @@
 // SensitiveDataFlowDetector.ts.
 
 import type { Repository } from "../../repository/Repository";
-import type { SecurityFinding, SecuritySeverity, SourceProvider } from "../types";
+import type { SecuritySeverity } from "../SecuritySeverity";
+import type { SecurityFinding } from "../SecurityFinding";
+import type { SourceProvider } from "../SourceProvider";
 
 export interface UnsafePatternRule {
   id: string;

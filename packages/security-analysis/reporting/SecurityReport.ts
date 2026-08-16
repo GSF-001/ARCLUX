@@ -21,7 +21,8 @@
 // never imports packages/correlation (which imports security-analysis —
 // that would be a cycle).
 
-import type { SecurityFinding, SecuritySeverity } from "../types";
+import type { SecuritySeverity } from "../SecuritySeverity";
+import type { SecurityFinding } from "../SecurityFinding";
 import type { ProvenanceRecord } from "../../provenance/ProvenanceRecord";
 import { attachRemediations } from "./RemediationSuggestion";
 

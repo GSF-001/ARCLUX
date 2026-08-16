@@ -16,7 +16,8 @@
 // Larger = fix first. Deterministic — same inputs, same score.
 
 import type { Repository } from "../repository/Repository";
-import type { SecurityFinding, SecuritySeverity } from "../security-analysis/types";
+import type { SecuritySeverity } from "../security-analysis/SecuritySeverity";
+import type { SecurityFinding } from "../security-analysis/SecurityFinding";
 import {
   attachImpactToFindings,
   type SecurityImpactReport,

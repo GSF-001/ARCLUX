@@ -26,7 +26,9 @@
 
 import type { Repository } from "../../repository/Repository";
 import type { ModuleInfo, ResolvedImport } from "../../shared/types";
-import type { SecurityFinding, SecuritySeverity, SourceProvider } from "../types";
+import type { SecuritySeverity } from "../SecuritySeverity";
+import type { SecurityFinding } from "../SecurityFinding";
+import type { SourceProvider } from "../SourceProvider";
 
 export interface DataFlowRule {
   /** Import specifier fragments that mark a module as a data SOURCE. */

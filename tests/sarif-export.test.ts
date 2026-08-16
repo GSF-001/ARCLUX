@@ -17,7 +17,7 @@ import {
   type ReportAttackSurface,
 } from "../packages/security-analysis/reporting/SecurityReport";
 import { remediateRule, attachRemediations } from "../packages/security-analysis/reporting/RemediationSuggestion";
-import type { SecurityFinding } from "../packages/security-analysis/types";
+import type { SecurityFinding } from "../packages/security-analysis/SecurityFinding";
 
 function finding(id: string, severity: SecurityFinding["severity"], ruleId: string, filePath: string, line?: number): SecurityFinding {
   return {
