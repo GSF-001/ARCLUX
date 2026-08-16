@@ -77,6 +77,41 @@ function getSpriteTexture(): THREE.Texture {
   return cachedSpriteTexture;
 }
 
+// Camera distance below which the impact-count number becomes visible --
+// tuned to roughly correspond to ~50% zoom (closer than default orbit
+// distance, but before you are right on top of the node).
+const NUMBER_VISIBLE_DISTANCE = 120;
+
+// Text sprites cached per unique number string -- most nodes share small
+// counts (0, 1, 2...), so this avoids redrawing identical canvases.
+const numberTextureCache = new Map<string, THREE.Texture>();
+function getNumberTexture(value: number): THREE.Texture {
+  const key = String(value);
+  const cached = numberTextureCache.get(key);
+  if (cached) return cached;
+
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 56px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  // Soft dark outline so the white number stays readable regardless of
+  // the node's own color behind it.
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "rgba(0,0,0,0.6)";
+  ctx.strokeText(key, size / 2, size / 2);
+  ctx.fillText(key, size / 2, size / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  numberTextureCache.set(key, texture);
+  return texture;
+}
+
 const CORE_GEOMETRY = new THREE.SphereGeometry(4, 16, 16);
 
 // Glow dust: particles scattered in a thin shell around the core radius,
@@ -178,6 +213,30 @@ function buildNodeObject(node: NodeDatum): THREE.Object3D {
     ringDust.rotation.x = Math.PI / 2.6;
     group.add(ringDust);
   }
+
+  // Impact-count number sprite -- a billboard (always faces camera) placed
+  // at the node center, hidden by default and revealed by onBeforeRender
+  // once the camera is close enough (see NUMBER_VISIBLE_DISTANCE). This
+  // runs every frame Three.js renders this sprite, no manual render-loop
+  // wiring needed.
+  const numberSprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: getNumberTexture(node.importCount),
+      transparent: true,
+      depthTest: false, // always readable on top of the core sphere
+      depthWrite: false,
+    })
+  );
+  numberSprite.scale.set(6, 6, 1);
+  numberSprite.renderOrder = 999;
+  numberSprite.visible = false;
+  numberSprite.onBeforeRender = (renderer, scene, camera) => {
+    const worldPos = new THREE.Vector3();
+    numberSprite.getWorldPosition(worldPos);
+    const distance = camera.position.distanceTo(worldPos);
+    numberSprite.visible = distance < NUMBER_VISIBLE_DISTANCE;
+  };
+  group.add(numberSprite);
 
   return group;
 }
