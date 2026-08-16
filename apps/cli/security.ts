@@ -25,6 +25,7 @@ import { detectSensitiveDataFlow } from "../../packages/security-analysis/source
 import { detectTrustBoundaryViolations } from "../../packages/security-analysis/architecture/TrustBoundaryAnalyzer";
 import { detectCrossBoundaryCalls } from "../../packages/security-analysis/architecture/CrossBoundaryAnalyzer";
 import { mapAttackSurface } from "../../packages/correlation/AttackSurfaceMapper";
+import { analyzeDependencyRisk } from "../../packages/security-analysis/dependency/DependencyRiskAnalyzer";
 import { buildSecurityReport } from "../../packages/security-analysis/reporting/SecurityReport";
 
 export function registerSecurityCommand(program: Command): void {
@@ -49,6 +50,7 @@ export function registerSecurityCommand(program: Command): void {
           ...detectSensitiveDataFlow(result.repository, sources),
           ...detectTrustBoundaryViolations(result.repository, sources),
           ...detectCrossBoundaryCalls(result.repository, sources),
+          ...analyzeDependencyRisk({ manifestDependencies: result.dependencies, sources }).findings,
         ];
         const attackSurface = mapAttackSurface(result.repository, result.graph);
 

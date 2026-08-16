@@ -75,3 +75,34 @@ export {
   type ReportAttackSurface,
   type BuildSecurityReportInput,
 } from "./reporting/SecurityReport";
+
+export {
+  parseLockfiles,
+  normalizeVersion,
+  LOCKFILE_NAMES,
+  type LockedDependency,
+  type LockfileParseResult,
+} from "./dependency/LockfileAnalyzer";
+
+export {
+  compareSemver,
+  isVulnerable,
+  detectVulnerableDependencies,
+  toSecurityFindings,
+  DEFAULT_KNOWN_VULNERABILITIES,
+  type KnownVulnerability,
+  type VulnerableDependencyFinding,
+} from "./dependency/VulnerableDependencyDetector";
+
+export {
+  analyzeTransitiveRisk,
+  vulnerableNames,
+  type TransitiveRiskReport,
+} from "./dependency/TransitiveRiskAnalyzer";
+
+export {
+  analyzeDependencyRisk,
+  isUnpinnedRange,
+  type DependencyRiskInput,
+  type DependencyRiskResult,
+} from "./dependency/DependencyRiskAnalyzer";
