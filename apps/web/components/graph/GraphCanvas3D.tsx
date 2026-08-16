@@ -10,6 +10,7 @@
 
 import { useMemo, useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import * as THREE from "three";
 import { useGraphContext } from "./GraphProvider";
 
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
@@ -23,18 +24,11 @@ const NODE_COLORS: Record<string, string> = {
   hook: "#E5484D",
 };
 
-// Same fan-in tiers as GraphNode.tsx's impact halo (IMPACT_HIGH_THRESHOLD /
-// IMPACT_MEDIUM_THRESHOLD) -- kept in sync manually since 2D reads these
-// from GraphNode.tsx's own module scope, not a shared export yet.
 const IMPACT_HIGH_THRESHOLD = 100;
 const IMPACT_MEDIUM_THRESHOLD = 20;
 
-// Warm colors that get MORE intense as importance rises, applied as a tint
-// over the node's base type-color rather than replacing it -- so you can
-// still tell "this is a route" vs "this is a hook" AND "this is critical"
-// at the same time, instead of importance fully overriding type identity.
-const IMPACT_TINT_HIGH = "#FF3B30"; // hot red -- 100+ files depend on this
-const IMPACT_TINT_MEDIUM = "#FFB224"; // amber -- 20-99 files depend on this
+const IMPACT_TINT_HIGH = "#FF3B30";
+const IMPACT_TINT_MEDIUM = "#FFB224";
 
 function hexToRgb(hex: string) {
   const n = parseInt(hex.slice(1), 16);
@@ -50,13 +44,70 @@ function mixColor(baseHex: string, tintHex: string, amount: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-/** Blends the node's type color toward a warning tint based on fan-in
- * (importCount), same thresholds as GraphNode.tsx's halo tiers. Low
- * importance = pure type color. High importance = strongly tinted red. */
 function getImportanceColor(baseColor: string, importCount: number): string {
   if (importCount > IMPACT_HIGH_THRESHOLD) return mixColor(baseColor, IMPACT_TINT_HIGH, 0.75);
   if (importCount >= IMPACT_MEDIUM_THRESHOLD) return mixColor(baseColor, IMPACT_TINT_MEDIUM, 0.55);
   return baseColor;
+}
+
+function getImpactTier(importCount: number): "high" | "medium" | "none" {
+  if (importCount > IMPACT_HIGH_THRESHOLD) return "high";
+  if (importCount >= IMPACT_MEDIUM_THRESHOLD) return "medium";
+  return "none";
+}
+
+const CORE_GEOMETRY = new THREE.SphereGeometry(4, 16, 16);
+const GLOW_GEOMETRY = new THREE.SphereGeometry(4, 16, 16);
+const RING_GEOMETRY = new THREE.RingGeometry(7, 9, 32);
+
+type NodeDatum = {
+  id: string;
+  name: string;
+  color: string;
+  importCount: number;
+  isSelected: boolean;
+};
+
+function buildNodeObject(node: NodeDatum): THREE.Object3D {
+  const group = new THREE.Group();
+  const displayColor = node.isSelected ? "#ffffff" : node.color;
+
+  const core = new THREE.Mesh(CORE_GEOMETRY, new THREE.MeshBasicMaterial({ color: displayColor }));
+  group.add(core);
+
+  const glowScale = node.isSelected ? 1.9 : 1.5;
+  const glow = new THREE.Mesh(
+    GLOW_GEOMETRY,
+    new THREE.MeshBasicMaterial({
+      color: displayColor,
+      transparent: true,
+      opacity: node.isSelected ? 0.35 : 0.18,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  glow.scale.setScalar(glowScale);
+  group.add(glow);
+
+  const tier = getImpactTier(node.importCount);
+  if (tier !== "none") {
+    const ringColor = tier === "high" ? IMPACT_TINT_HIGH : IMPACT_TINT_MEDIUM;
+    const ring = new THREE.Mesh(
+      RING_GEOMETRY,
+      new THREE.MeshBasicMaterial({
+        color: ringColor,
+        transparent: true,
+        opacity: tier === "high" ? 0.85 : 0.6,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
+    );
+    ring.rotation.x = Math.PI / 2.6;
+    if (tier === "high") ring.scale.setScalar(1.3);
+    group.add(ring);
+  }
+
+  return group;
 }
 
 export function GraphCanvas3D() {
@@ -87,12 +138,10 @@ export function GraphCanvas3D() {
           name: n.label,
           val: 1,
           color: getImportanceColor(baseColor, importCount),
+          importCount,
         };
       }),
-      links: graph.edges.map((e) => ({
-        source: e.source,
-        target: e.target,
-      })),
+      links: graph.edges.map((e) => ({ source: e.source, target: e.target })),
     };
   }, [graph, importCounts]);
 
@@ -106,10 +155,11 @@ export function GraphCanvas3D() {
           height={dimensions.height}
           graphData={graphData}
           nodeLabel="name"
-          nodeColor={(node) => {
-            const n = node as { id: string; color: string };
-            return n.id === selectedNodeId ? "#ffffff" : n.color;
+          nodeThreeObject={(node) => {
+            const n = node as unknown as NodeDatum;
+            return buildNodeObject({ ...n, isSelected: n.id === selectedNodeId });
           }}
+          nodeThreeObjectExtend={false}
           onNodeClick={(node) => selectNode((node as { id: string }).id)}
           backgroundColor="#000000"
           linkColor={() => "rgba(255,255,255,0.2)"}
