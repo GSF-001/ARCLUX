@@ -959,3 +959,9 @@ untested. AstDiff's before/after content must be supplied by the caller
 
 Implemented all 5 semantic-diff files as thin wiring around existing packages per Blueprint Integration map -- no new parser/graph logic. AstDiff wraps ParserRegistry, SymbolDiff wraps SymbolEngine, DependencyDiff wraps architecturalDiff + calculateAffectedFiles, DiffRenderer formats output, SemanticDiff orchestrates. No new tests yet, tsc passes and existing 325 tests still green. PR #433 open, not yet merged.
 ARCLUX.main
+
+## 2026-08-16 — Security analysis as extension packages, not core
+
+**Status:** Done
+
+Approved plan (docs/SECURITY_ANALYSIS_PLAN.md) implements security/remote/provenance/correlation as NEW top-level packages consuming Repository + DependencyGraph via analyzeRepository() only — per ARCHITECTURE_MAP.md boundary. Key constraints discovered: (1) Repository carries no file content (buildIndex discards it) -> content-based detectors take SourceProvider as extension input; (2) detectEntryPoints is convention-only -> AttackSurfaceMapper unions convention+structural+explicit entries (experiment-validated); (3) RawCall carries no arguments -> sensitive-data-flow is module-level heuristic, documented limitation; (4) SARIF export is a minimal valid 2.1.0 subset (codeFlows/taxonomies deferred).
