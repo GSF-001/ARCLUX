@@ -73,7 +73,7 @@ const NEXT_APP_ROUTER_ENTRY_FILENAMES = new Set([
 ]);
 const NEXT_APP_ROUTER_EXTENSIONS = new Set([".tsx", ".ts", ".jsx", ".js"]);
 
-function getEffectiveNodeType(node: GraphNodeData): GraphNodeType {
+export function getEffectiveNodeType(node: GraphNodeData): GraphNodeType {
   if (node.type !== "file") return node.type;
 
   const segments = (node.filePath ?? "").split("/");
