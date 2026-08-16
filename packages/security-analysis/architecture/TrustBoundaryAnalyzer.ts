@@ -33,7 +33,6 @@ import type { ModuleInfo } from "../../shared/types";
 import type { SecurityFinding, SecuritySeverity, SourceProvider } from "../types";
 
 export interface TrustZoneDefinition {
-  id: string;
   /** Exact path-segment names (case-insensitive) that put a module in this zone. */
   dirSegments: string[];
   /** File-name suffixes (case-insensitive) that put a module in this zone. */
