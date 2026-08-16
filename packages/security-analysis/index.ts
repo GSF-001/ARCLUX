@@ -60,3 +60,17 @@ export {
   type SecurityImpactReport,
   type ImpactedFinding,
 } from "./architecture/SecurityImpactAnalyzer";
+
+export {
+  remediateRule,
+  attachRemediations,
+} from "./reporting/RemediationSuggestion";
+
+export {
+  buildSecurityReport,
+  summarize,
+  type SecurityReport,
+  type SecurityReportSummary,
+  type ReportAttackSurface,
+  type BuildSecurityReportInput,
+} from "./reporting/SecurityReport";
