@@ -26,8 +26,8 @@ interface WorkspaceLayoutProps {
 /**
  * Shared app shell for every /[org]/[repo]/* page, responsive across three
  * breakpoints (Tailwind `md` = 768px, `lg` = 1024px):
- * - Desktop (lg+): inline Sidebar, collapsible to an icon rail via the
- *   Navbar menu button.
+ * - Desktop (lg+): inline Sidebar, an icon rail by default — expands on
+ *   hover (temporarily) or via the Navbar menu button (pinned).
  * - Tablet (md–lg): Sidebar becomes a fixed overlay drawer opened by the
  *   same menu button; hidden by default.
  * - Mobile (<md): no sidebar at all — BottomNav takes over navigation;
@@ -41,9 +41,16 @@ interface WorkspaceLayoutProps {
  */
 export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceLayoutProps) {
   const { isDesktop } = useBreakpoint()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Desktop sidebar starts COLLAPSED to a bare icon rail; hovering it (or
+  // pinning via the Navbar menu button) expands it. The explicit collapsed
+  // flag + hover flag combine: hover always expands temporarily, the menu
+  // button pins the expanded state.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  const [sidebarHovered, setSidebarHovered] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+
+  const sidebarExpanded = !sidebarCollapsed || sidebarHovered
 
   function handleMenuClick() {
     if (isDesktop) {
@@ -65,9 +72,15 @@ export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceL
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop: inline collapsible sidebar. Hidden below lg (CSS). */}
-        <div className="hidden lg:block">
-          <Sidebar org={org} repo={repo} collapsed={sidebarCollapsed} />
+        {/* Desktop: inline collapsible sidebar. Hidden below lg (CSS).
+            Defaults to the icon rail; hovering expands it, the menu button
+            pins it expanded (or back to the rail). */}
+        <div
+          className="hidden lg:block"
+          onMouseEnter={() => setSidebarHovered(true)}
+          onMouseLeave={() => setSidebarHovered(false)}
+        >
+          <Sidebar org={org} repo={repo} collapsed={!sidebarExpanded} />
         </div>
 
         {/* Tablet: overlay drawer. Always mounted so resize to desktop hides

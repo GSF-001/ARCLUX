@@ -47,7 +47,24 @@ export interface ExplorerProps {
  * manual di sini biar gak nge-couple ke komponen yang belum pasti jalan.
  */
 export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) {
-  const [activeTab, setActiveTab] = useState<ExplorerTab>("file");
+  // Dependencies is the default tab when a node is clicked: it shows the
+  // incoming/outgoing imports for the module INSTANTLY (read from the
+  // graph GraphProvider already loaded — no API call). Impact was tried
+  // as the default first, but /api/impact re-clones + re-indexes the
+  // whole repo per request, so the drawer sat on a spinner instead of
+  // showing content (live feedback from dogfooding, 2026-08-16). File
+  // stays one click away for users who want the source.
+  const [activeTab, setActiveTab] = useState<ExplorerTab>("dependencies");
+  // Reset to the default tab whenever the inspected node changes, so a
+  // fresh node click always lands on Dependencies even if the user had
+  // switched to File/Impact for the previous node. React-recommended
+  // render-time state adjustment keyed on the previous prop (same pattern
+  // as GraphFocusView's collapse-on-node-change).
+  const [prevModuleId, setPrevModuleId] = useState(moduleId);
+  if (prevModuleId !== moduleId) {
+    setPrevModuleId(moduleId);
+    setActiveTab("dependencies");
+  }
   // Fetches once per repoUrl/branch (not per file switch) -- POST /api/diagnostics
   // does a full clone+index per call (same cost as /api/analyze, /api/doctor),
   // so re-fetching on every file open inside the same repo would be wasteful.

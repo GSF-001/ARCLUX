@@ -304,7 +304,28 @@ export function GraphCanvas() {
   function handleWheel(e: React.WheelEvent) {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setTransform((t) => ({ ...t, scale: Math.min(3, Math.max(0.2, t.scale * delta)) }));
+    const rect = containerRef.current?.getBoundingClientRect();
+    // Zoom toward the CURSOR: keep the world point under the pointer fixed
+    // on screen. The old code scaled around the top-left transform anchor,
+    // so the view drifted up-left on every wheel step (user: "it zooms
+    // somewhere above"). Touch pinch already zooms around the fingers'
+    // midpoint, so this only affects mouse wheel.
+    if (!rect) {
+      setTransform((t) => ({ ...t, scale: Math.min(3, Math.max(0.2, t.scale * delta)) }));
+      return;
+    }
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+    setTransform((t) => {
+      const newScale = Math.min(3, Math.max(0.2, t.scale * delta));
+      const worldX = (cursorX - t.x) / t.scale;
+      const worldY = (cursorY - t.y) / t.scale;
+      return {
+        scale: newScale,
+        x: cursorX - worldX * newScale,
+        y: cursorY - worldY * newScale,
+      };
+    });
   }
 
   if (isLoading) {

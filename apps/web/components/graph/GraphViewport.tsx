@@ -28,19 +28,24 @@ export interface GraphViewportProps {
 
 /**
  * Right-hand code drawer ("CodeDrawer"), opened when a FILE node is
- * selected. Always mounted so the slide-in/out transition can run in both
+ * selected — a 480px sheet (md:w-120) with File/Dependencies/Impact tabs.
+ * Always mounted so the slide-in/out transition can run in both
  * directions; the Explorer content only renders while open. Positioned as
- * a fixed overlay (z-60) over the canvas on ALL viewports — desktop is
- * a 480px right-side sheet, mobile is full-width with a click-to-close
- * backdrop (z-59). Single source of truth for file inspection: GraphFocusView
- * self-hides for "file" nodes (see its type guard), so this drawer and the
- * central modal can never be open at the same time — no clipping.
- * Folders / external packages have no file source to inspect (FileDetails
- * hits /api/file), so only "file"-type nodes open it.
+ * a fixed overlay (z-60) over the canvas on ALL viewports — desktop is a
+ * 480px right-side sheet, mobile is full-width with a click-to-close
+ * backdrop (z-59).
+ *
+ * The central focus panel (GraphFocusView) opens ALONGSIDE this drawer for
+ * file nodes: on md+ screens it shifts left of the drawer's 480px width
+ * (right-[31rem]), so the two surfaces never overlap — the old clipping
+ * bug is fixed by layout, not by hiding one of them (see GraphFocusView.tsx
+ * for the positioning logic). Folders / external packages have no file
+ * source to inspect (FileDetails hits /api/file), so only "file"-type
+ * nodes open the drawer; they still get the full-width central panel.
  *
  * Closing the drawer deselects the node (selectNode(null)), which also
- * closes the focus view — consistent with "close = stop inspecting this
- * module". Closing the focus view alone (its own X) keeps the drawer
+ * closes the focus panel — consistent with "close = stop inspecting this
+ * module". Closing the focus panel alone (its own X) keeps the drawer
  * open: the node stays selected, so the deep inspection persists.
  */
 function ExplorerPanel({ repoUrl, branch }: { repoUrl: string; branch?: string }) {
