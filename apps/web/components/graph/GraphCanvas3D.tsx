@@ -56,7 +56,9 @@ export function GraphCanvas3D() {
     <ForceGraph3D
       graphData={graphData}
       nodeLabel="name"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       nodeColor={(node: any) => (node.id === selectedNodeId ? "#ffffff" : node.color)}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onNodeClick={(node: any, _event: MouseEvent) => selectNode(node.id)}
       backgroundColor="#000000"
       linkColor={() => "rgba(255,255,255,0.2)"}
