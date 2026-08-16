@@ -56,9 +56,69 @@ function getImpactTier(importCount: number): "high" | "medium" | "none" {
   return "none";
 }
 
+// Soft circular sprite (radial gradient, white center fading to transparent)
+// drawn once on an offscreen canvas and reused as every particle's texture.
+// This is what gives points a soft "dust" look instead of hard square dots.
+let cachedSpriteTexture: THREE.Texture | null = null;
+function getSpriteTexture(): THREE.Texture {
+  if (cachedSpriteTexture) return cachedSpriteTexture;
+  const size = 64;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gradient.addColorStop(0, "rgba(255,255,255,1)");
+  gradient.addColorStop(0.4, "rgba(255,255,255,0.5)");
+  gradient.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  cachedSpriteTexture = new THREE.CanvasTexture(canvas);
+  return cachedSpriteTexture;
+}
+
 const CORE_GEOMETRY = new THREE.SphereGeometry(4, 16, 16);
-const GLOW_GEOMETRY = new THREE.SphereGeometry(4, 16, 16);
-const RING_GEOMETRY = new THREE.RingGeometry(7, 9, 32);
+
+// Glow dust: particles scattered in a thin shell around the core radius,
+// random jitter per particle instead of a uniform surface -- reads as a
+// soft "planet atmosphere" texture rather than a flat glass sphere.
+function buildGlowDustGeometry(count: number, radius: number, spread: number): THREE.BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const r = radius + (Math.random() - 0.5) * spread;
+    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = r * Math.cos(phi);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  return geo;
+}
+
+// Ring dust: particles scattered in a flat annulus (donut shape) with
+// thickness jitter -- the Saturn-ring dust-particle look from the
+// reference image, instead of a flat solid ring mesh.
+function buildRingDustGeometry(count: number, innerR: number, outerR: number, thickness: number): THREE.BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = innerR + Math.random() * (outerR - innerR);
+    positions[i * 3] = r * Math.cos(angle);
+    positions[i * 3 + 1] = (Math.random() - 0.5) * thickness;
+    positions[i * 3 + 2] = r * Math.sin(angle);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  return geo;
+}
+
+// Cached once, reused across all nodes -- only material color/opacity
+// differs per node, geometry (particle positions) is shared.
+const GLOW_DUST_GEOMETRY = buildGlowDustGeometry(60, 5.5, 2.5);
+const RING_DUST_GEOMETRY_MEDIUM = buildRingDustGeometry(90, 6.5, 9, 1.2);
+const RING_DUST_GEOMETRY_HIGH = buildRingDustGeometry(140, 8, 12, 1.5);
 
 type NodeDatum = {
   id: string;
@@ -71,40 +131,52 @@ type NodeDatum = {
 function buildNodeObject(node: NodeDatum): THREE.Object3D {
   const group = new THREE.Group();
   const displayColor = node.isSelected ? "#ffffff" : node.color;
+  const sprite = getSpriteTexture();
 
+  // Solid core "planet" -- stays a flat-shaded sphere so the node has a
+  // clear clickable center, dust particles only decorate around it.
   const core = new THREE.Mesh(CORE_GEOMETRY, new THREE.MeshBasicMaterial({ color: displayColor }));
   group.add(core);
 
-  const glowScale = node.isSelected ? 1.9 : 1.5;
-  const glow = new THREE.Mesh(
-    GLOW_GEOMETRY,
-    new THREE.MeshBasicMaterial({
+  // Glowing dust shell around the core.
+  const glowDust = new THREE.Points(
+    GLOW_DUST_GEOMETRY,
+    new THREE.PointsMaterial({
       color: displayColor,
+      size: node.isSelected ? 1.6 : 1.1,
+      map: sprite,
       transparent: true,
-      opacity: node.isSelected ? 0.35 : 0.18,
+      opacity: node.isSelected ? 0.9 : 0.6,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      sizeAttenuation: true,
     })
   );
-  glow.scale.setScalar(glowScale);
-  group.add(glow);
+  group.add(glowDust);
 
+  // Dust ring, only for medium/high fan-in tiers -- same thresholds as the
+  // 2D impact halo in GraphNode.tsx.
   const tier = getImpactTier(node.importCount);
   if (tier !== "none") {
     const ringColor = tier === "high" ? IMPACT_TINT_HIGH : IMPACT_TINT_MEDIUM;
-    const ring = new THREE.Mesh(
-      RING_GEOMETRY,
-      new THREE.MeshBasicMaterial({
+    const ringGeometry = tier === "high" ? RING_DUST_GEOMETRY_HIGH : RING_DUST_GEOMETRY_MEDIUM;
+    const ringDust = new THREE.Points(
+      ringGeometry,
+      new THREE.PointsMaterial({
         color: ringColor,
+        size: tier === "high" ? 1.4 : 1.0,
+        map: sprite,
         transparent: true,
-        opacity: tier === "high" ? 0.85 : 0.6,
-        side: THREE.DoubleSide,
+        opacity: tier === "high" ? 0.95 : 0.75,
+        blending: THREE.AdditiveBlending,
         depthWrite: false,
+        sizeAttenuation: true,
       })
     );
-    ring.rotation.x = Math.PI / 2.6;
-    if (tier === "high") ring.scale.setScalar(1.3);
-    group.add(ring);
+    // Tilt like Saturn's rings so it reads as a ring from most camera
+    // angles instead of vanishing edge-on when viewed top-down.
+    ringDust.rotation.x = Math.PI / 2.6;
+    group.add(ringDust);
   }
 
   return group;
