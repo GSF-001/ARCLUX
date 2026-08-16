@@ -18,7 +18,7 @@
 "use client";
 
 import { useState } from "react";
-import { PanelRight, ZoomIn, ZoomOut, Maximize2, X } from "lucide-react";
+import { PanelRight, ZoomIn, ZoomOut, Maximize2, X, Box, Square } from "lucide-react";
 import { useGraphContext } from "./GraphProvider";
 import { Button } from "@/components/ui/button";
 import { graphNodeColors, graphEdgeColors } from "@/theme/graphColors";
@@ -40,7 +40,7 @@ const edgeLabels: Record<GraphEdgeType, string> = {
   "route-link": "Route link",
 };
 
-export function GraphMenu() {
+export function GraphMenu({ is3D, onToggle3D }: { is3D?: boolean; onToggle3D?: () => void } = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const { zoomIn, zoomOut, resetView, transform } = useGraphContext();
 
@@ -59,7 +59,7 @@ export function GraphMenu() {
       </div>
 
       {isOpen && (
-        <div className="absolute inset-y-4 right-4 z-20 flex w-72 flex-col overflow-hidden rounded-lg border bg-background/95 shadow-lg backdrop-blur">
+        <div className="absolute inset-y-4 right-4 z-20 flex w-72 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border bg-background/95 shadow-lg backdrop-blur">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <p className="text-sm font-semibold">Graph Menu</p>
             <Button variant="ghost" size="icon-xs" onClick={() => setIsOpen(false)} aria-label="Close menu">
@@ -68,6 +68,34 @@ export function GraphMenu() {
           </div>
 
           <div className="flex-1 space-y-6 overflow-y-auto p-4 text-sm">
+            {onToggle3D && (
+              <section>
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  View mode
+                </h3>
+                <div className="flex items-center gap-1 rounded-md border p-1">
+                  <Button
+                    variant={!is3D ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => is3D && onToggle3D()}
+                    className="flex-1 gap-1.5"
+                  >
+                    <Square className="h-3.5 w-3.5" />
+                    2D
+                  </Button>
+                  <Button
+                    variant={is3D ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => !is3D && onToggle3D()}
+                    className="flex-1 gap-1.5"
+                  >
+                    <Box className="h-3.5 w-3.5" />
+                    3D
+                  </Button>
+                </div>
+              </section>
+            )}
+
             <section>
               <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 View controls

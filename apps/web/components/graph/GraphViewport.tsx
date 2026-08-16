@@ -8,8 +8,11 @@
 
 "use client";
 
+import { useState } from "react";
+
 import { GraphProvider, useGraphContext } from "./GraphProvider";
 import { GraphCanvas } from "./GraphCanvas";
+import { GraphCanvas3D } from "./GraphCanvas3D";
 import { GraphMenu } from "./GraphMenu";
 import { GraphSearch } from "./GraphSearch";
 import { GraphFocusView } from "./GraphFocusView";
@@ -65,12 +68,15 @@ function ExplorerPanel({ repoUrl, branch }: { repoUrl: string; branch?: string }
 }
 
 export function GraphViewport({ repoUrl, branch }: GraphViewportProps) {
+  const [is3D, setIs3D] = useState(false);
   return (
     <GraphProvider repoUrl={repoUrl} branch={branch}>
       <div className="flex h-full w-full">
         <div className="relative h-full min-w-0 flex-1">
-          <GraphCanvas />
-          <GraphMenu />
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            {is3D ? <GraphCanvas3D /> : <GraphCanvas />}
+          </div>
+          <GraphMenu is3D={is3D} onToggle3D={() => setIs3D((v) => !v)} />
           <GraphSearch />
           <GraphFocusView />
           <GraphContextMenu />
