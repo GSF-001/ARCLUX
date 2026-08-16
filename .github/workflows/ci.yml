@@ -36,6 +36,10 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      # KI-049 follow-up: the guard typechecks the merged tree but never
+      # installed dependencies, so every push failed with "Cannot find
+      # module 'react'" across all apps/web files. Mirrors the checks job.
+      - run: pnpm install --frozen-lockfile
       - name: Reject merge-conflict junk markers
         run: |
           if grep -rnE "fix/graph-menu-3d-toggle|^ ARCLUX\\.main" \
