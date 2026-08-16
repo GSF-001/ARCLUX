@@ -12,8 +12,6 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useGraphContext } from "./GraphProvider";
 
-// react-force-graph-3d touches `window` at import time (Three.js/WebGL),
-// so it must be loaded client-side only -- ssr: false is required.
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
 
 const NODE_COLORS: Record<string, string> = {
@@ -25,24 +23,53 @@ const NODE_COLORS: Record<string, string> = {
   hook: "#E5484D",
 };
 
+// Same fan-in tiers as GraphNode.tsx's impact halo (IMPACT_HIGH_THRESHOLD /
+// IMPACT_MEDIUM_THRESHOLD) -- kept in sync manually since 2D reads these
+// from GraphNode.tsx's own module scope, not a shared export yet.
+const IMPACT_HIGH_THRESHOLD = 100;
+const IMPACT_MEDIUM_THRESHOLD = 20;
+
+// Warm colors that get MORE intense as importance rises, applied as a tint
+// over the node's base type-color rather than replacing it -- so you can
+// still tell "this is a route" vs "this is a hook" AND "this is critical"
+// at the same time, instead of importance fully overriding type identity.
+const IMPACT_TINT_HIGH = "#FF3B30"; // hot red -- 100+ files depend on this
+const IMPACT_TINT_MEDIUM = "#FFB224"; // amber -- 20-99 files depend on this
+
+function hexToRgb(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function mixColor(baseHex: string, tintHex: string, amount: number): string {
+  const base = hexToRgb(baseHex);
+  const tint = hexToRgb(tintHex);
+  const r = Math.round(base.r + (tint.r - base.r) * amount);
+  const g = Math.round(base.g + (tint.g - base.g) * amount);
+  const b = Math.round(base.b + (tint.b - base.b) * amount);
+  return `rgb(${r},${g},${b})`;
+}
+
+/** Blends the node's type color toward a warning tint based on fan-in
+ * (importCount), same thresholds as GraphNode.tsx's halo tiers. Low
+ * importance = pure type color. High importance = strongly tinted red. */
+function getImportanceColor(baseColor: string, importCount: number): string {
+  if (importCount > IMPACT_HIGH_THRESHOLD) return mixColor(baseColor, IMPACT_TINT_HIGH, 0.75);
+  if (importCount >= IMPACT_MEDIUM_THRESHOLD) return mixColor(baseColor, IMPACT_TINT_MEDIUM, 0.55);
+  return baseColor;
+}
+
 export function GraphCanvas3D() {
-  const { graph, isLoading, error, selectedNodeId, selectNode } = useGraphContext();
+  const { graph, isLoading, error, selectedNodeId, selectNode, importCounts } = useGraphContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // ForceGraph3D needs explicit pixel width/height (not CSS %) or it
-  // falls back to a wrong default size, which was inflating this
-  // container's height and pushing GraphFocusView's absolute inset-4
-  // panel far below the visible viewport in portrait orientation.
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
-        setDimensions({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
+        setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
       }
     });
     observer.observe(containerRef.current);
@@ -52,18 +79,22 @@ export function GraphCanvas3D() {
   const graphData = useMemo(() => {
     if (!graph) return { nodes: [], links: [] };
     return {
-      nodes: graph.nodes.map((n) => ({
-        id: n.id,
-        name: n.label,
-        val: 1,
-        color: NODE_COLORS[n.type] ?? "#ededed",
-      })),
+      nodes: graph.nodes.map((n) => {
+        const baseColor = NODE_COLORS[n.type] ?? "#ededed";
+        const importCount = importCounts.get(n.id) ?? 0;
+        return {
+          id: n.id,
+          name: n.label,
+          val: 1,
+          color: getImportanceColor(baseColor, importCount),
+        };
+      }),
       links: graph.edges.map((e) => ({
         source: e.source,
         target: e.target,
       })),
     };
-  }, [graph]);
+  }, [graph, importCounts]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
