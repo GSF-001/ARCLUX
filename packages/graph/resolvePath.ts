@@ -15,6 +15,19 @@ const INDEX_FILENAMES = [
   "__init__.py", // Python's equivalent of index.ts for package-style relative imports
 ];
 
+// ESM extension substitution (TypeScript HandBook, Modules → Reference → File extension substitution).
+// An import specifier naming a JS runtime file (./mod.js, ./mod.mjs, ./mod.cjs) resolves to the
+// analogous TS input file when that input exists. Without this, ESM projects using NodeNext
+// (package.json `type: module` → from './mod.js') lose every internal edge. The exact candidate
+// match (a real .js/.mjs/.cjs file on disk) is handled FIRST in tryResolveInternal, so these
+// substitutions only kick in when no exact file exists.
+const EXTENSION_SUBSTITUTION: Record<string, string[]> = {
+  ".js": [".ts", ".tsx", ".d.ts", ".js", ".jsx"],
+  ".jsx": [".tsx", ".d.ts", ".jsx", ".ts"],
+  ".mjs": [".mts", ".d.mts", ".mjs"],
+  ".cjs": [".cts", ".d.cts", ".cjs"],
+};
+
 export type PathResolution =
   | { type: "internal"; moduleId: string }
   | { type: "external"; packageName: string };
@@ -107,7 +120,9 @@ export function resolvePath(
   // external and silently dropped from the dependency graph.
   const siblingCandidate = posix.normalize(posix.join(importerDir, importSource));
   const siblingResolved = tryResolveInternal(siblingCandidate, knownFiles);
-  if (siblingResolved) return siblingResolved;
+  // Self-guard: файл, названный как npm-пакет (mongodb.ts ← import 'mongodb'), не может
+  // импортировать сам себя — иначе строится ложное self-ребро (см. infrawise-аудит, KI-066).
+  if (siblingResolved && siblingResolved.type === "internal" && siblingResolved.moduleId !== importerRelativePath) return siblingResolved;
 
   // Python dotted absolute imports: `import src.core.embedder` or
   // `from src.core import embedder` both produce a source string like
@@ -147,6 +162,19 @@ export function resolvePath(
 function tryResolveInternal(candidate: string, knownFiles: Set<string>): PathResolution | undefined {
   if (knownFiles.has(candidate)) {
     return { type: "internal", moduleId: candidate };
+  }
+
+  // ESM extension substitution (TS model): src/mod.js → src/mod.ts / src/mod.tsx / src/mod.d.ts.
+  for (const [suffix, alts] of Object.entries(EXTENSION_SUBSTITUTION)) {
+    if (candidate.endsWith(suffix)) {
+      const base = candidate.slice(0, -suffix.length);
+      for (const ext of alts) {
+        const substituted = base + ext;
+        if (knownFiles.has(substituted)) {
+          return { type: "internal", moduleId: substituted };
+        }
+      }
+    }
   }
 
   for (const ext of RESOLVABLE_EXTENSIONS) {

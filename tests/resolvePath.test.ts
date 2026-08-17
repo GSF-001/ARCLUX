@@ -112,3 +112,49 @@ describe("resolvePath — Python dotted absolute (existing behavior guard)", () 
     });
   });
 });
+
+describe("resolvePath — ESM .js extension substitution (NodeNext)", () => {
+  it("resolves ./index.js to the .ts implementation file", () => {
+    const files = knownFiles("src/core/index.ts", "src/core/config.ts");
+    expect(resolvePath("src/core/config.ts", "./index.js", files)).toEqual({
+      type: "internal",
+      moduleId: "src/core/index.ts",
+    });
+  });
+
+  it("resolves ../../types.js across directories", () => {
+    const files = knownFiles("src/types.ts", "src/adapters/aws/dynamodb.ts");
+    expect(resolvePath("src/adapters/aws/dynamodb.ts", "../../types.js", files)).toEqual({
+      type: "internal",
+      moduleId: "src/types.ts",
+    });
+  });
+
+  it("resolves .mjs to .mts and .cjs to .cts", () => {
+    const files = knownFiles("src/mod.mts", "src/addon.cts", "src/main.ts");
+    expect(resolvePath("src/main.ts", "./mod.mjs", files)).toEqual({
+      type: "internal",
+      moduleId: "src/mod.mts",
+    });
+    expect(resolvePath("src/main.ts", "./addon.cjs", files)).toEqual({
+      type: "internal",
+      moduleId: "src/addon.cts",
+    });
+  });
+
+  it("prefers a real .js file over a .ts sibling", () => {
+    const files = knownFiles("src/index.ts", "src/index.js", "src/config.ts");
+    expect(resolvePath("src/config.ts", "./index.js", files)).toEqual({
+      type: "internal",
+      moduleId: "src/index.js",
+    });
+  });
+
+  it("does not resolve a bare specifier to the importing file itself (npm pkg name == file name)", () => {
+    const files = knownFiles("src/adapters/db/mongodb.ts");
+    expect(resolvePath("src/adapters/db/mongodb.ts", "mongodb", files)).toEqual({
+      type: "external",
+      packageName: "mongodb",
+    });
+  });
+});
