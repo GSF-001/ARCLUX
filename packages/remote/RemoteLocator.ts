@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote/RemoteLocator — not yet implemented.
+export interface RemoteLocator {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteLocator(source?: string): RemoteLocator {
+  return { id: crypto.randomUUID(), source };
+}

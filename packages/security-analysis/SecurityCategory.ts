@@ -6,4 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/SecurityCategory — not yet implemented.
+export type SecurityCategory =
+  | "secret-exposure" | "unsafe-pattern" | "dangerous-api" | "input-validation"
+  | "sensitive-data-flow" | "dependency" | "configuration" | "exposure"
+  | "architecture" | "web";

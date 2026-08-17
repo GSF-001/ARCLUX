@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote/RemoteRevision — not yet implemented.
+export interface RemoteRevision {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteRevision(source?: string): RemoteRevision {
+  return { id: crypto.randomUUID(), source };
+}

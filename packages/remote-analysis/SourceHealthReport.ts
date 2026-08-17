@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote-analysis/SourceHealthReport — not yet implemented.
+export interface SourceHealthReport {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createSourceHealthReport(source?: string): SourceHealthReport {
+  return { id: crypto.randomUUID(), source };
+}

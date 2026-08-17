@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/web/ClientExposureAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface ClientExposureAnalyzer extends LayerRecord { publicVariables: string[]; }
+export function createClientExposureAnalyzer(publicVariables: string[] = []): ClientExposureAnalyzer { return { id: crypto.randomUUID(), publicVariables: [...publicVariables] }; }

@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/configuration/SecurityConfigDetector — not yet implemented.
+import type { SecurityFinding } from "../SecurityFinding"; export interface SecurityConfigDetector { detect(files: string[]): SecurityFinding[]; }
+export function createSecurityConfigDetector(): SecurityConfigDetector { return { detect: () => [] }; }

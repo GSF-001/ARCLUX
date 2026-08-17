@@ -6,4 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: remote/RemoteAccess — not yet implemented.
+export interface RemoteAccess {
+  id: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function createRemoteAccess(source?: string): RemoteAccess {
+  return { id: crypto.randomUUID(), source };
+}

@@ -6,4 +6,10 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: acquisition/AcquisitionResult — not yet implemented.
+import type { SourceSnapshot } from "./SourceSnapshot";
+
+export interface AcquisitionResult {
+  ok: boolean;
+  snapshot?: SourceSnapshot;
+  errors: string[];
+}

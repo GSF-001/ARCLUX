@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/web/AssetExposureAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface AssetExposureAnalyzer extends LayerRecord { assets: string[]; }
+export function createAssetExposureAnalyzer(assets: string[] = []): AssetExposureAnalyzer { return { id: crypto.randomUUID(), assets: [...assets] }; }

@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/web/SecurityHeaderAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface SecurityHeaderAnalyzer extends LayerRecord { headers: Record<string, string>; }
+export function createSecurityHeaderAnalyzer(headers: Record<string, string> = {}): SecurityHeaderAnalyzer { return { id: crypto.randomUUID(), headers: { ...headers } }; }

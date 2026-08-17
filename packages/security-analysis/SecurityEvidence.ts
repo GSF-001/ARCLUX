@@ -6,4 +6,11 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/SecurityEvidence — not yet implemented.
+export interface SecurityEvidence {
+  file?: string;
+  line?: number;
+  column?: number;
+  symbol?: string;
+  source: string;
+  reason: string;
+}

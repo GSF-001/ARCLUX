@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/configuration/EnvironmentConfigAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface EnvironmentConfigAnalyzer extends LayerRecord { variables: string[]; }
+export function createEnvironmentConfigAnalyzer(variables: string[] = []): EnvironmentConfigAnalyzer { return { id: crypto.randomUUID(), variables: [...variables] }; }

@@ -6,4 +6,5 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Scaffold: security-analysis/web/SourceMapExposureAnalyzer — not yet implemented.
+import type { LayerRecord } from "../contracts"; export interface SourceMapExposureAnalyzer extends LayerRecord { sourceMaps: string[]; }
+export function createSourceMapExposureAnalyzer(sourceMaps: string[] = []): SourceMapExposureAnalyzer { return { id: crypto.randomUUID(), sourceMaps: [...sourceMaps] }; }
