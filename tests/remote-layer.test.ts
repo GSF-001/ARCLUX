@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createSourceAcquirer } from "../packages/acquisition";
+import { createArchiveAcquirer, createRepositoryAcquirer, createSourceAcquirer } from "../packages/acquisition";
 import { createRemoteAccess, createRemoteLocator, createRemoteProvider, createRemoteRevision } from "../packages/remote";
 import { createRemoteImpactReport, createSourceHealthReport } from "../packages/remote-analysis";
+import { analyzeRemoteRequest } from "../packages/remote-analysis/analyzeRemoteSource";
+import { createRemoteAnalysisRequest } from "../packages/remote-analysis/RemoteAnalysisRequest";
 
 describe("remote acquisition contracts", () => {
   it("rejects remote sources when policy disallows them", async () => {
@@ -14,6 +16,11 @@ describe("remote acquisition contracts", () => {
     const result = await createSourceAcquirer("tests/fixtures/security-leaks").acquire();
     expect(result.ok).toBe(true);
     expect(result.snapshot?.files).toEqual(["app.ts", "safe.ts"]);
+  });
+
+  it("keeps repository and archive acquirers honest about their inputs", async () => {
+    expect((await createRepositoryAcquirer().acquire("not-a-repository")).ok).toBe(false);
+    expect((await createArchiveAcquirer().acquire("not-an-archive" as string)).ok).toBe(false);
   });
 });
 
@@ -35,5 +42,11 @@ describe("remote reports", () => {
     expect(createSourceHealthReport("local", { ok: true, files: 2, parsedFiles: 2 }).skippedFiles).toBe(0);
     expect(createRemoteImpactReport("local").affectedFiles).toEqual([]);
     expect(createRemoteImpactReport("local").severity).toBe("none");
+  });
+
+  it("returns a correlated failure for a missing analysis source", async () => {
+    const result = await analyzeRemoteRequest(createRemoteAnalysisRequest());
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("source is required");
   });
 });
