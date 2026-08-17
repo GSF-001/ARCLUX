@@ -9,9 +9,23 @@
 export interface RemoteAccess {
   id: string;
   source?: string;
+  allowed: boolean;
+  reason?: string;
   metadata?: Record<string, unknown>;
 }
 
-export function createRemoteAccess(source?: string): RemoteAccess {
-  return { id: crypto.randomUUID(), source };
+export function createRemoteAccess(source?: string, allowedHosts: string[] = []): RemoteAccess {
+  if (!source) return { id: crypto.randomUUID(), source, allowed: false, reason: "A source is required." };
+  try {
+    const host = new URL(source).hostname;
+    const allowed = allowedHosts.length === 0 || allowedHosts.includes(host);
+    return {
+      id: crypto.randomUUID(),
+      source,
+      allowed,
+      reason: allowed ? undefined : `Remote host is not allowed: ${host}`,
+    };
+  } catch {
+    return { id: crypto.randomUUID(), source, allowed: false, reason: "Source is not a valid URL." };
+  }
 }

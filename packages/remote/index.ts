@@ -11,6 +11,10 @@
 
 export type { RemoteSource } from "./RemoteSource";
 export { RemoteRepository } from "./RemoteRepository";
+export * from "./RemoteAccess";
+export * from "./RemoteLocator";
+export * from "./RemoteProvider";
+export * from "./RemoteRevision";
 export {
   createRemoteSnapshot,
   type RemoteSnapshot,

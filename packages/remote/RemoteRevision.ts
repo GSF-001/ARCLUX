@@ -9,9 +9,16 @@
 export interface RemoteRevision {
   id: string;
   source?: string;
+  value?: string;
+  immutable: boolean;
   metadata?: Record<string, unknown>;
 }
 
-export function createRemoteRevision(source?: string): RemoteRevision {
-  return { id: crypto.randomUUID(), source };
+export function createRemoteRevision(value?: string, source?: string): RemoteRevision {
+  return {
+    id: crypto.randomUUID(),
+    source,
+    value,
+    immutable: value ? /^[0-9a-f]{7,64}$/i.test(value) : false,
+  };
 }

@@ -6,12 +6,18 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
+import type { AcquisitionPolicy } from "./AcquisitionPolicy";
+import type { AcquisitionResult } from "./AcquisitionResult";
+import { createSourceAcquirer } from "./SourceAcquirer";
+
 export interface RepositoryAcquirer {
   id: string;
   source?: string;
   metadata?: Record<string, unknown>;
+  acquire(source?: string, policy?: Partial<AcquisitionPolicy>): Promise<AcquisitionResult>;
 }
 
 export function createRepositoryAcquirer(source?: string): RepositoryAcquirer {
-  return { id: crypto.randomUUID(), source };
+  const delegate = createSourceAcquirer(source);
+  return { ...delegate, id: delegate.id };
 }
