@@ -74,7 +74,9 @@ export const DEFAULT_UNSAFE_PATTERN_RULES: UnsafePatternRule[] = [
   },
   {
     id: "shell-exec",
-    regex: /\b(?:exec|execSync|spawn|spawnSync)\s*\(/,
+    // execSync/spawn всегда; «exec(» — только НЕ как метод: `(?<![.\w])` исключает
+    // RegExp.prototype.exec (regex.exec(...)) и obj.exec(...) — они не shell-вызовы.
+    regex: /(?:execSync|spawn|spawnSync)\s*\(|(?<![.\w])exec\s*\(/,
     keywords: ["exec(", "execSync(", "spawn(", "spawnSync("],
     notInside: ["//", "*"],
     severity: "high",

@@ -152,6 +152,14 @@ describe("detectSecretExposure (unit, in-memory)", () => {
     expect(findings).toHaveLength(0); // "changeme" is a stopword
   });
 
+  it("does not flag a PascalCase identifier value as a secret", () => {
+    const repo = makeRepository(["config.ts"]);
+    const sources = new MapSourceProvider({
+      "config.ts": "const NODE_SOURCE = { secret: 'secretsManager', parameter: 'ssm' };\n",
+    });
+    expect(detectSecretExposure(repo, sources)).toHaveLength(0); // value is a type name, not a credential
+  });
+
   it("skips modules when the content channel has no data", () => {
     const repo = makeRepository(["config.ts"]);
     const sources = new MapSourceProvider({}); // read() -> null
@@ -191,6 +199,24 @@ describe("detectUnsafePatterns (unit, in-memory)", () => {
     expect(findings[0].ruleId).toBe("unsafe-eval");
     expect(findings[0].location.line).toBe(1);
     expect(findings[0].cwe).toContain("CWE-95");
+  });
+
+  it("does not flag RegExp.prototype.exec as shell execution", () => {
+    const repo = makeRepository(["x.ts"]);
+    const sources = new MapSourceProvider({
+      "x.ts": "const apiId = /^([a-z0-9]+)\\.execute-api\\./.exec(origin.domainName);\n",
+    });
+    const findings = detectUnsafePatterns(repo, sources);
+    expect(findings.filter((f) => f.ruleId === "shell-exec")).toHaveLength(0);
+  });
+
+  it("still flags execSync from child_process", () => {
+    const repo = makeRepository(["x.ts"]);
+    const sources = new MapSourceProvider({
+      "x.ts": "const { execSync } = require('child_process'); execSync('rm -rf /tmp/x');\n",
+    });
+    const findings = detectUnsafePatterns(repo, sources);
+    expect(findings.some((f) => f.ruleId === "shell-exec")).toBe(true);
   });
 
   it("ignores eval inside comments via notInside", () => {

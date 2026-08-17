@@ -113,7 +113,8 @@ export const DEFAULT_SECRET_RULES: SecretRule[] = [
   {
     id: "generic-password-assignment",
     description: "Password/secret assigned a literal string",
-    regex: /(?:password|passwd|pwd|secret|api[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/i,
+    regex: /(?:password|passwd|pwd|secret|api[_-]?key)\s*[:=]\s*["']([^"']{8,})["']/i,
+    secretGroup: 1, // значение в кавычках, а не весь матч ("secret: 'x'" → "x") — нужен захват в regex
     entropy: 2.5,
     keywords: ["password", "passwd", "pwd", "secret", "api_key", "api-key", "apikey"],
     stopwords: ["example", "test", "fake", "local-dev-only", "changeme"],
@@ -200,6 +201,13 @@ function extractSecret(line: string, rule: SecretRule): string | null {
   if (secret === undefined || secret.length === 0) return null;
 
   if (rule.stopwords && rule.stopwords.some((w) => secret.toLowerCase().includes(w.toLowerCase()))) {
+    return null;
+  }
+  // FP-guard: значение-идентификатор (camelCase/PascalCase, только буквы со смешанным
+  // регистром) — это имя типа/константы (напр. { secret: 'secretsManager' } в маппинге
+  // типов нод), не секрет. Значения с цифрами/спецсимволами guard не пропускает.
+  const isIdentifierWord = /^[A-Za-z]+$/.test(secret) && /[a-z].*[A-Z]|[A-Z].*[a-z]/.test(secret);
+  if (isIdentifierWord) {
     return null;
   }
   if (rule.entropy !== undefined && shannonEntropy(secret) < rule.entropy) {
