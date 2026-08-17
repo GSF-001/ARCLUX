@@ -11,7 +11,7 @@ import { statSync } from "node:fs";
 import { scanFiles } from "../parser/core/scanFiles";
 import { RemoteRepository } from "../remote/RemoteRepository";
 import type { AcquisitionPolicy } from "./AcquisitionPolicy";
-import { assertSourceAllowed, defaultAcquisitionPolicy, resolveAcquisitionPolicy } from "./AcquisitionPolicy";
+import { assertSourceAllowed, defaultAcquisitionPolicy, isAbsoluteLocalPath, resolveAcquisitionPolicy } from "./AcquisitionPolicy";
 import type { AcquisitionResult } from "./AcquisitionResult";
 import { createSnapshotFromFiles } from "./SourceSnapshot";
 
@@ -65,6 +65,7 @@ export function createSourceAcquirer(source?: string): SourceAcquirer {
 }
 
 function isRemoteSource(source: string): boolean {
+  if (isAbsoluteLocalPath(source)) return false;
   try {
     const url = new URL(source);
     return ["http:", "https:", "ssh:", "git:"].includes(url.protocol);

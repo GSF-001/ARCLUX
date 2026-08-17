@@ -7,6 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import type { AcquisitionPolicy } from "./AcquisitionPolicy";
+import { isAbsoluteLocalPath } from "./AcquisitionPolicy";
 import type { AcquisitionResult } from "./AcquisitionResult";
 import { createSourceAcquirer } from "./SourceAcquirer";
 import { statSync } from "node:fs";
@@ -34,14 +35,23 @@ export function createRepositoryAcquirer(source?: string): RepositoryAcquirer {
 }
 
 function isRepositorySource(source: string): boolean {
+  // Node's URL parser accepts "D:/foo" WITHOUT throwing (protocol === "d:"),
+  // so Windows drive-letter paths never reach the statSync fallback below.
+  if (isAbsoluteLocalPath(source)) {
+    return isLocalDirectory(source);
+  }
   try {
     const url = new URL(source);
     return ["http:", "https:", "ssh:", "git:"].includes(url.protocol);
   } catch {
-    try {
-      return statSync(source).isDirectory();
-    } catch {
-      return false;
-    }
+    return isLocalDirectory(source);
+  }
+}
+
+function isLocalDirectory(source: string): boolean {
+  try {
+    return statSync(source).isDirectory();
+  } catch {
+    return false;
   }
 }

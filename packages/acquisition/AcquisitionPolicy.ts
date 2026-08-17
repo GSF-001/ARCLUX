@@ -33,7 +33,22 @@ export function resolveAcquisitionPolicy(
   return { ...resolved, allowedHosts: [...resolved.allowedHosts] };
 }
 
+const WINDOWS_DRIVE_RE = /^[A-Za-z]:[\\/]/;
+const POSIX_ABSOLUTE_RE = /^\//;
+const UNC_RE = /^\\\\/;
+
+/**
+ * True для абсолютных локальных путей (C:\…, /home/…, \\\\server\share).
+ * Node's `new URL("D:/foo")` парсит "D:" как схему БЕЗ исключения — такие пути
+ * нельзя доверять URL-парсеру при классификации source (см. RepositoryAcquirer).
+ */
+export function isAbsoluteLocalPath(source: string): boolean {
+  return WINDOWS_DRIVE_RE.test(source) || POSIX_ABSOLUTE_RE.test(source) || UNC_RE.test(source);
+}
+
 export function assertSourceAllowed(source: string, policy: AcquisitionPolicy): void {
+  // Локальный источник — политика remote (allowRemote/hosts) не применима.
+  if (isAbsoluteLocalPath(source)) return;
   let url: URL;
   try {
     url = new URL(source);
