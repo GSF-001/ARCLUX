@@ -1,7 +1,7 @@
 import { RemoteRepository } from "../remote/RemoteRepository";
 import type { RemoteSource } from "../remote/RemoteSource";
 import { createRemoteSource } from "../remote/RemoteSource";
-import { createSourceAcquirer } from "../acquisition/SourceAcquirer";
+import { createRepositoryAcquirer } from "../acquisition/RepositoryAcquirer";
 import { createSnapshotFromFiles } from "../acquisition/SourceSnapshot";
 import { createRemoteImpactReport } from "./RemoteImpactReport";
 import { createSourceHealthReport } from "./SourceHealthReport";
@@ -14,7 +14,7 @@ export async function analyzeRemoteSource(source: RemoteSource): Promise<RemoteA
   const startedAt = new Date().toISOString();
   try {
     const acquisition = source.localPath
-      ? await createSourceAcquirer(source.localPath).acquire()
+      ? await createRepositoryAcquirer(source.localPath).acquire()
       : undefined;
     if (acquisition && !acquisition.ok) {
       throw new Error(acquisition.errors.join("; "));
