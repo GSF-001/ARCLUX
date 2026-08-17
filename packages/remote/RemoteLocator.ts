@@ -9,9 +9,19 @@
 export interface RemoteLocator {
   id: string;
   source?: string;
+  protocol?: string;
+  host?: string;
+  path?: string;
+  revision?: string;
   metadata?: Record<string, unknown>;
 }
 
-export function createRemoteLocator(source?: string): RemoteLocator {
-  return { id: crypto.randomUUID(), source };
+export function createRemoteLocator(source?: string, revision?: string): RemoteLocator {
+  if (!source) return { id: crypto.randomUUID(), source, revision };
+  try {
+    const url = new URL(source);
+    return { id: crypto.randomUUID(), source, revision, protocol: url.protocol, host: url.hostname, path: url.pathname };
+  } catch {
+    return { id: crypto.randomUUID(), source, revision, path: source };
+  }
 }

@@ -27,3 +27,11 @@ export function createSourceSnapshot(
     files: [...files],
   };
 }
+
+export function createSnapshotFromFiles(
+  source: string,
+  files: readonly string[],
+  revision?: string,
+): SourceSnapshot {
+  return createSourceSnapshot(source, [...new Set(files)].sort(), revision);
+}
