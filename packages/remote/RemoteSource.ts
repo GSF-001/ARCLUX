@@ -10,6 +10,9 @@
 // a bare clone. Mirrors engine/pipeline.ts's AnalyzeRepositoryOptions
 // contract (repoUrl XOR localPath) and adds attack-surface configuration.
 
+import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
+
 export interface RemoteSource {
   /** Stable caller-supplied id, e.g. "repo:gsf-001/arclux". */
   id: string;
@@ -25,4 +28,17 @@ export interface RemoteSource {
    * whose entry convention detectEntryPoints doesn't know).
    */
   extraEntryPaths?: string[];
+}
+
+export function createRemoteSource(
+  source: string,
+  options: Omit<RemoteSource, "id" | "url" | "localPath"> = {},
+): RemoteSource {
+  if (!source.trim()) throw new Error("Remote source cannot be empty.");
+  const remote = /^(?:https?|ssh|git):\/\//i.test(source) || /^(?:git@|github:|gitlab:)/i.test(source);
+  return {
+    id: randomUUID(),
+    ...(remote ? { url: source } : { localPath: resolve(source) }),
+    ...options,
+  };
 }

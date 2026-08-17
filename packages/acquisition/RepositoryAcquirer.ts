@@ -9,6 +9,7 @@
 import type { AcquisitionPolicy } from "./AcquisitionPolicy";
 import type { AcquisitionResult } from "./AcquisitionResult";
 import { createSourceAcquirer } from "./SourceAcquirer";
+import { statSync } from "node:fs";
 
 export interface RepositoryAcquirer {
   id: string;
@@ -19,5 +20,28 @@ export interface RepositoryAcquirer {
 
 export function createRepositoryAcquirer(source?: string): RepositoryAcquirer {
   const delegate = createSourceAcquirer(source);
-  return { ...delegate, id: delegate.id };
+  return {
+    id: delegate.id,
+    source,
+    metadata: { kind: "repository" },
+    async acquire(requestedSource = source, policy) {
+      if (!requestedSource || !isRepositorySource(requestedSource)) {
+        return { ok: false, errors: ["Repository acquisition requires a git URL or local directory."] };
+      }
+      return delegate.acquire(requestedSource, policy);
+    },
+  };
+}
+
+function isRepositorySource(source: string): boolean {
+  try {
+    const url = new URL(source);
+    return ["http:", "https:", "ssh:", "git:"].includes(url.protocol);
+  } catch {
+    try {
+      return statSync(source).isDirectory();
+    } catch {
+      return false;
+    }
+  }
 }

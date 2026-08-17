@@ -35,5 +35,15 @@ export function updateRemoteAnalysisSession(
   session: RemoteAnalysisSession,
   update: Pick<RemoteAnalysisSession, "status"> & Partial<RemoteAnalysisSession>,
 ): RemoteAnalysisSession {
+  if (!canTransition(session.status, update.status)) {
+    throw new Error(`Invalid remote analysis transition: ${session.status} -> ${update.status}.`);
+  }
   return { ...session, ...update };
+}
+
+function canTransition(from: RemoteAnalysisStatus, to: RemoteAnalysisStatus): boolean {
+  if (from === to) return true;
+  if (from === "pending") return to === "running" || to === "failed";
+  if (from === "running") return to === "completed" || to === "failed";
+  return false;
 }

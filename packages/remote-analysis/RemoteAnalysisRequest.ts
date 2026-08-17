@@ -19,5 +19,11 @@ export function createRemoteAnalysisRequest(
   source?: RemoteSource | string,
   revision?: string,
 ): RemoteAnalysisRequest {
-  return { id: crypto.randomUUID(), source, revision };
+  if (typeof source === "string" && source.trim() === "") {
+    throw new Error("Remote analysis source cannot be empty.");
+  }
+  if (revision !== undefined && revision.trim() === "") {
+    throw new Error("Remote analysis revision cannot be empty.");
+  }
+  return { id: crypto.randomUUID(), source, revision, metadata: { requestedAt: new Date().toISOString() } };
 }

@@ -17,7 +17,9 @@
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { analyzeRepository } from "../../packages/engine/pipeline";
+import { createRemoteSource } from "../../packages/remote/RemoteSource";
+import { createRemoteAnalysisRequest } from "../../packages/remote-analysis/RemoteAnalysisRequest";
+import { analyzeRemoteRequest } from "../../packages/remote-analysis/analyzeRemoteSource";
 import { DiskSourceProvider } from "../../packages/security-analysis";
 import { detectSecretExposure } from "../../packages/security-analysis/source/SecretExposureDetector";
 import { detectUnsafePatterns } from "../../packages/security-analysis/source/UnsafePatternDetector";
@@ -41,7 +43,11 @@ export function registerSecurityCommand(program: Command): void {
       spinner.start(`Running security analysis on ${targetPath}`);
 
       try {
-        const result = await analyzeRepository({ localPath: targetPath });
+        const remoteResult = await analyzeRemoteRequest(createRemoteAnalysisRequest(createRemoteSource(targetPath)));
+        if (!remoteResult.ok || !remoteResult.analysis) {
+          throw new Error(remoteResult.error ?? "Remote analysis did not produce a result.");
+        }
+        const result = remoteResult.analysis;
 
         const sources = new DiskSourceProvider(targetPath);
         const findings = [

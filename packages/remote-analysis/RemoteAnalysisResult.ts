@@ -9,6 +9,9 @@
 import type { AnalyzeRepositoryResult } from "../engine/pipeline";
 import type { SecurityAnalysis } from "../security-analysis/SecurityAnalysis";
 import type { RemoteAnalysisRequest } from "./RemoteAnalysisRequest";
+import type { SourceSnapshot } from "../acquisition/SourceSnapshot";
+import type { RemoteImpactReport } from "./RemoteImpactReport";
+import type { SourceHealthReport } from "./SourceHealthReport";
 
 export interface RemoteAnalysisResult {
   id: string;
@@ -18,6 +21,9 @@ export interface RemoteAnalysisResult {
   completedAt: string;
   analysis?: AnalyzeRepositoryResult;
   security?: SecurityAnalysis;
+  snapshot?: SourceSnapshot;
+  health?: SourceHealthReport;
+  impact?: RemoteImpactReport;
   error?: string;
   metadata?: Record<string, unknown>;
 }
