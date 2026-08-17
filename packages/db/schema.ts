@@ -28,7 +28,7 @@ export interface RepoRecord {
   defaultBranch: string;
   rootPath: string;
   detectedFrameworks: string[];
-  packageManager: "npm" | "pnpm" | "yarn" | "unknown";
+  packageManager: "npm" | "pnpm" | "yarn" | "poetry" | "uv" | "pipenv" | "pdm" | "pip" | "unknown";
   analyzedAt: string;
 }
 

@@ -160,7 +160,7 @@ export interface RepositoryMeta {
   defaultBranch: string;
   rootPath: string;
   detectedFrameworks: string[]; // e.g. ["nextjs", "react"]
-  packageManager: "npm" | "pnpm" | "yarn" | "unknown";
+  packageManager: "npm" | "pnpm" | "yarn" | "poetry" | "uv" | "pipenv" | "pdm" | "pip" | "unknown";
   analyzedAt: string; // ISO timestamp
 }
 
