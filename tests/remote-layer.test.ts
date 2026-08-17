@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { createArchiveAcquirer, createRepositoryAcquirer, createSourceAcquirer } from "../packages/acquisition";
 import { createRemoteAccess, createRemoteLocator, createRemoteProvider, createRemoteRevision } from "../packages/remote";
 import { createRemoteImpactReport, createSourceHealthReport } from "../packages/remote-analysis";
@@ -21,6 +24,20 @@ describe("remote acquisition contracts", () => {
   it("keeps repository and archive acquirers honest about their inputs", async () => {
     expect((await createRepositoryAcquirer().acquire("not-a-repository")).ok).toBe(false);
     expect((await createArchiveAcquirer().acquire("not-an-archive" as string)).ok).toBe(false);
+  });
+
+  it("accepts an absolute local directory path (Windows drive-letter form included)", async () => {
+    // Regression: Node's `new URL("D:/...")` yields protocol "d:" without throwing,
+    // so Windows drive-letter paths never hit the statSync fallback — the
+    // `security` CLI command rejected every local Windows path. On POSIX the
+    // tmp path has no scheme and falls back to statSync as before.
+    const tmpDir = mkdtempSync(path.join(tmpdir(), "arclux-acq-"));
+    try {
+      const result = await createRepositoryAcquirer().acquire(tmpDir);
+      expect(result.ok).toBe(true);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
 

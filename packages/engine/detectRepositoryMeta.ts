@@ -35,7 +35,14 @@ const LOCKFILE_MARKERS: Array<{ filename: string; packageManager: RepositoryMeta
   { filename: "pnpm-lock.yaml", packageManager: "pnpm" },
   { filename: "yarn.lock", packageManager: "yarn" },
   { filename: "package-lock.json", packageManager: "npm" },
+  { filename: "poetry.lock", packageManager: "poetry" },
+  { filename: "uv.lock", packageManager: "uv" },
+  { filename: "Pipfile.lock", packageManager: "pipenv" },
+  { filename: "pdm.lock", packageManager: "pdm" },
 ];
+
+// Python-манифесты без lockfile — признак pip-установки (requirements/pyproject).
+const PYTHON_MANIFEST_FALLBACKS = ["requirements.txt", "pyproject.toml"] as const;
 
 interface PackageJsonShape {
   dependencies?: Record<string, string>;
@@ -125,15 +132,20 @@ export function detectFrameworks(rootPath: string): string[] {
 
 /**
  * Detects the package manager a repo uses by checking for its lockfile at the
- * repo root. Checked in order pnpm -> yarn -> npm since a repo might have a
- * stray lockfile left over from switching tools; the first match wins.
- * Returns "unknown" if no recognized lockfile is present.
+ * repo root. Checked in order pnpm -> yarn -> npm -> poetry -> uv -> pipenv -> pdm
+ * since a repo might have a stray lockfile left over from switching tools; the
+ * first match wins. Python repos without a lockfile fall back to "pip" when
+ * requirements.txt or pyproject.toml is present. Returns "unknown" otherwise.
  */
 export function detectPackageManager(rootPath: string): RepositoryMeta["packageManager"] {
   for (const marker of LOCKFILE_MARKERS) {
     if (existsSync(join(rootPath, marker.filename))) {
       return marker.packageManager;
     }
+  }
+
+  if (PYTHON_MANIFEST_FALLBACKS.some((filename) => existsSync(join(rootPath, filename)))) {
+    return "pip";
   }
 
   return "unknown";
