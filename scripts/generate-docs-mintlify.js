@@ -145,6 +145,14 @@ const context = readIfExists('CONTEXT.md');
 }
 
 {
+  const tutorial = readIfExists('docs/TUTORIAL.md');
+  const body = tutorial
+    ? stripFrontmatter(tutorial)
+    : '_docs/TUTORIAL.md tidak ditemukan — edit sumbernya dulu._';
+  writeDoc('tutorial.mdx', 'Complete Tutorial', 'End-to-end ARCLUX tutorial (verified against real repos)', body);
+}
+
+{
   const arch = readIfExists('ARCHITECTURE_MAP.md');
   const body = arch ? stripFrontmatter(arch) : '_ARCHITECTURE_MAP.md tidak ditemukan di root repo._';
   writeDoc('architecture.mdx', 'Arsitektur', 'Peta struktur & boundary codebase ARCLUX', body);

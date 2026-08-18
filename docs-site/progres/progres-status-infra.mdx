@@ -437,6 +437,57 @@ apps/cli/commands/diagnose.ts was an 11-line unregistered stub, duplicate name o
 
 ## 2026-08-14 — Full daemon roadmap implemented: Phase 1-5
 
+**Status:** Verified (build + daemon e2e, see below; only VS Code F5 manual test pending)
+
+Completed all 5 phases of the 'ARCLUX as always-on service' roadmap in one session: (1) packages/daemon/ArcluxDaemon.ts -- push-based re-analysis via DaemonRepositoryWatcher wrapping watchRepository.ts, wired to Kernel's SignalBus, runs diagnostics automatically. (2) packages/daemon/LocalBridgeServer.ts -- HTTP+SSE bridge (GET /analysis, GET /events) so any editor/terminal can connect without a custom protocol, plus packages/networking/PortManager.ts + ServiceEndpoint.ts for port allocation and cross-process discovery. (3) packages/environment/EnvironmentDetector.ts -- walks up from cwd to nearest .git, so 'arclux daemon' works from any subfolder. (4) packages/daemon/DaemonProcess.ts -- --detach/--stop/--status flags, real background process via detached spawn + unref (PM2 pattern). (5) apps/vscode-extension/ -- minimal VS Code extension (status bar + Problems panel via daemon SSE). CAVEAT RESOLVED: verified 2026-08-14 -- 'pnpm install --filter arclux-vscode && pnpm --filter arclux-vscode build' pass (tsc strict, 0 errors, dist/ generated; only missing dep was @types/vscode). Daemon e2e ALSO verified against this repo: 'arclux daemon --detach' started a real background process (pid + log + endpoint file at ~/.arclux/endpoints/&lt;id>.json), GET /analysis returned &#123;moduleCount:565, meta&#125;, GET /diagnostics returned 20 findings, GET /events delivered ': connected' + 'analysis' + 'diagnostics' SSE events triggered by a real file change. Remaining: manual test in VS Code's Extension Development Host (F5).
+
+## 2026-08-15 — CLI diagnose: clickable file links via OSC 8
+
+**Status:** Done
+
+arclux diagnose output now wraps file paths in OSC 8 hyperlink escape sequences -- tappable/clickable in supporting terminals (Termux, iTerm2, VS Code integrated terminal), silent fallback to plain text elsewhere. Brings CLI to parity with the web Explorer's inline gutter markers (PR #389/#391) -- both surfaces now show file+line+message+suggestion, just via different interaction models suited to their medium (terminal list vs clickable gutter). See PR #397.
+
+## 2026-08-15 — daemon --health flag
+
+**Status:** done
+
+Added getDaemonHealth check to daemon status CLI, verifies bridge server reachability alongside process status. PR #420 opened to ARCLUX.main.
+
+## 2026-08-15 — getDaemonHealth merged, duplicate definition found+fixed
+
+**Status:** Done
+
+getDaemonHealth() added to DaemonProcess.ts (bridge reachability check via HTTP GET /analysis, port read from ServiceEndpoint.ts). apps/cli/daemon.ts --health flag already existed from a parallel session's earlier merge. Merge caused an accidental duplicate function definition (same code pasted twice, back to back) — caught by tsc TS2393 duplicate implementation error before commit, removed the dup. Lesson: after a git pull fast-forwards in changes from another session, diff the file you're about to patch before assuming your patch target still matches what you last saw.
+
+ docs/log-session-progress
+## 2026-08-15 — Docs site migrated Docusaurus → Mintlify
+
+**Status:** Done
+
+docs-site/ rebuilt from scratch on Mintlify instead of Docusaurus (matches
+the framework code.claude.com/docs actually uses — Docusaurus was the wrong
+target for visual parity). mint.json config with dark-mode locked
+(modeToggle.isHidden), colors matching ARCLUX's own design tokens
+(primary #0070F3, background #000000, from apps/web design-tokens colors.ts).
+Content generator (scripts/generate-docs-mintlify.js) reads README.md,
+PROGRES.md, ARCHITECTURE_MAP.md, TOOLING.md, CONTEXT.md, QUICKSTART.md
+directly and regenerates .mdx pages on demand — rerun after any repo change,
+no manual doc rewriting needed. MDX-safe sanitization added (bulldozer
+angle-bracket escaping) after repeated build failures from placeholder text
+like `<old title>` being parsed as JSX.
+Known Termux-specific gotcha: `sharp` has no android-arm64 binary, needs
+`npm install --cpu=wasm32 sharp` + `@img/sharp-wasm32` fallback for
+`mintlify dev` to run — not yet fully verified working end-to-end.
+
+## 2026-08-15 — Docs site migrated Docusaurus to Mintlify
+
 **Status:** In Progress
 
-Completed all 5 phases of the 'ARCLUX as always-on service' roadmap in one session: (1) packages/daemon/ArcluxDaemon.ts -- push-based re-analysis via DaemonRepositoryWatcher wrapping watchRepository.ts, wired to Kernel's SignalBus, runs diagnostics automatically. (2) packages/daemon/LocalBridgeServer.ts -- HTTP+SSE bridge (GET /analysis, GET /events) so any editor/terminal can connect without a custom protocol, plus packages/networking/PortManager.ts + ServiceEndpoint.ts for port allocation and cross-process discovery. (3) packages/environment/EnvironmentDetector.ts -- walks up from cwd to nearest .git, so 'arclux daemon' works from any subfolder. (4) packages/daemon/DaemonProcess.ts -- --detach/--stop/--status flags, real background process via detached spawn + unref (PM2 pattern). (5) apps/vscode-extension/ -- minimal VS Code extension (status bar + Problems panel via daemon SSE). CAVEAT: apps/vscode-extension was written against the documented VS Code API but NOT built or typechecked -- no network access in this session's environment to install @types/vscode. Needs 'pnpm install && pnpm build' plus manual testing in VS Code's Extension Development Host before considered verified. Also unverified end-to-end: actually running 'arclux daemon --detach' and confirming the bridge server + SSE events work against a real repo -- was verified via tsc --noEmit only, not runtime execution.
+docs-site/ rebuilt on Mintlify instead of Docusaurus. mint.json config with dark-mode locked, colors matching ARCLUX design tokens. Content generator reads README/PROGRES/ARCHITECTURE_MAP/TOOLING/CONTEXT/QUICKSTART directly and regenerates .mdx on demand. Known Termux gotcha: sharp needs wasm32 fallback for mintlify dev.
+ARCLUX.main
+
+## 2026-08-16 — CLI: arclux security command (phase 6)
+
+**Status:** Done
+
+New CLI command apps/cli/security.ts: runs secrets + unsafe patterns + data-flow + trust boundary + cross-boundary detectors and the attack-surface map, prints summary or --json/--sarif report; exit 1 on critical/high findings (--no-fail to override). Wired into apps/cli/index.ts. Verified on playground/nextjs-demo (0 findings, 4 reachable/2 unreachable = experiment match) and tests/fixtures/security-leaks (findings + valid SARIF).

@@ -9,6 +9,36 @@ description: "Detail progres: bugs"
 
 Incidents found and how they were fixed. See PROGRES.md for the index.
 
+## 2026-08-15 — Итерация 4 аудита: cache/ и db/ — последние пакеты без тестов (issue #455)
+
+**Status:** Fixed (PR #456, closes #455)
+
+Карта покрытия: cache/ (repositoryCache/graphCache — consume analyzeRemoteRepository; fileCache — buildIndex; CacheProvider; MemoryCache — DEAD CODE, 0 импортеров) и db/ (JSON-file-per-record клиент + RepoStore/AnalysisStore/IssueStore) — 0 тестов. Fix: +12 тестов cache.test.ts (fingerprint order-independent/content-sensitive, hit/miss/invalidate/clear/size, fileCache content-hash staleness, CacheProvider stats, MemoryCache TTL с fake timers) и +10 тестов db.test.ts (ARCLUX_ROOT→tmp: roundtrip + __schemaVersion strip + corrupt/missing tolerance, RepoStore/AnalysisStore/IssueStore семантика). Находка: MemoryCache — dead code (зафиксировано). suite 445/445.
+
+## 2026-08-15 — Итерация 3 аудита: editor-навигация + architecturalDiff без тестов (issue #451)
+
+**Status:** Fixed (PR #452, closes #451)
+
+Карта покрытия (batch-grep) нашла 2 пакета с РЕАЛЬНЫМИ CLI-потребителями и нулём тестов: (1) packages/editor (CodeNavigator — CLI open/edit; ImpactNavigator — getImpactCount в diagnose) — чистая Repository-логика; (2) packages/diff/architecturalDiff — ядро команды `arclux diff`. Fix: +8 тестов editor-navigation.test.ts (resolveModuleId POSIX, openFile tracked/untracked, dependency/consumer targets + fallback, getImpactCount/getImpactNavigation full/notFound) и +3 интеграционных architectural-diff.test.ts (реальный tmp git-репо по паттерну git-history: v1 entry→service→data, v2 модифицирует service.ts + добавляет unused.ts; индексация через реальный analyzeRepository; asserts changedFiles statuses + affected = транзитивные потребители изменённого). Закреплён документированный MVP-контракт diff (impact против текущего дерева, не dual-graph). suite 423/423.
+
+## 2026-08-15 — Итерация 2 аудита: 5 impact-функций + 4 manifest-парсера без тестов (issues #445/#446)
+
+**Status:** Fixed (PR #448 + PR #449, closes #445 + #446)
+
+Аудит «зелёные тесты без доказанной механики», итерация 2 (MCP-first: get_symbol_info/intel_code_topology + batch-grep). (1) impact.test.ts покрывал 4 из 9 функций — пять (traceExports, traceImports, calculateAffectedComponents, calculateAffectedModules, calculateAffectedRoutes) имели 0 тестов И 0 вызовов по всему репо (dead code, только doc-comment ссылки в детекторах). +10 тестов, пинующих контракт каждой функции (attribution named/default/namespace, идентификаторы, фильтр .tsx PascalCase, группировка по package-id, routePath с route-group). Находка «0 callers» зафиксирована для будущего wiring-решения. (2) из 9 manifest-парсеров 4 не имели unit-тестов (parsePackageJson, parseGemfile, parseComposer, parseRequirements) — +6 тестов (runtime/dev split, platform-фильтр php/ext-*, version-операторы, malformed→[]). suite 412/412.
+
+## 2026-08-15 — detector.test.ts: 19 placeholder-тестов (Array.isArray на пустом репо) заменены реальной механикой
+
+**Status:** Fixed (PR #442, closes issue #441)
+
+Весь «Detector Suite» был паттерном «зелёный тест без доказанной механики»: 19 тестов проверяли только Array.isArray(findings) на ПУСТОМ Repository — детектор, возвращающий [] для любого входа, прошёл бы. Реальная механика была только у 3 детекторов (core-detectors.test.ts: circular, unused exports, orphan). Fix: tests/detector.test.ts переписан с реальными fixtures (makeModule/makeRepository): каждый из 16 непокрытых детекторов (largeModules, duplicateModules, sharedModules, indexFiles, layerViolation, deadCode, entryPoints, missingExports, routeConvention, componentConvention, featureStructure, repositoryPattern, storyConvention, testConvention, unusedFiles, ambiguousSymbolResolution) получил positive (точный filePath/severity/цикл/ruleName) + negative кейсы. 3 placeholder-входа для circular/unused/orphan удалены (дублируют core-detectors). suite 396/396 (369 + 27).
+
+## 2026-08-15 — parseCsproj: ".csproj" зарегистрирован как точное имя файла — реальные Foo.csproj никогда не сканировались
+
+**Status:** Fixed (PR #439, closes issue #438)
+
+parseCsproj регистрировался как filename ".csproj" — detectDependencies делает join(rootPath, filename), то есть ищет файл буквально названный ".csproj" в корне. Реальные .NET-проекты имеют per-project файлы в поддиректориях с произвольными именами (src/MyApp/MyApp.csproj) — все молча пропускались, NuGet-зависимости не попадали в AnalyzeRepositoryResult.dependencies. Fix: ManifestParserInterface получил optional extension?: string; ManifestRegistry хранит extension-парсеры отдельно (пустой filename-массив ничего не регистрирует в filename-map — поймано первым прогоном тестов) и делает второй проход — один рекурсивный walk (skip node_modules/.git) с парсингом каждого файла по extension; parseCsproj → filename: [], extension: ".csproj". +4 теста (parseCsproj unit self-closing/open-close, перенос регистрации, extension-pass на temp-дире с вложенными csproj + distractor, e2e csharp-basic через analyzeRepository). suite 369/369.
+
 ## 2026-08-03 — Update — Python resolver bug + TS export default double-count bug (fixed)
 
 Tested against playground/python-demo (6-file fixture, existed already)
@@ -362,3 +392,85 @@ ProcessManager.start() mutated entry.pid/entry.startedAt directly on the in-memo
 **Status:** Done
 
 apps/cli/index.ts diagnose crashed with JavaScript heap out of memory on Django (~989 unique moduleIds across 650 findings), even with NODE_OPTIONS=--max-old-space-size=4096 (4GB). Root cause: packages/diagnostics/ErrorContext.ts attachImpactContextToAll called getImpactNavigation() once per unique moduleId and retained the FULL ImpactNavigationResult (including a materialized affected-files array and a complete impact tree from buildImpactTree) for all of them simultaneously in memory. But packages/diagnostics/DiagnosticEvent.ts only ever reads .totalAffected (one number) from each result -- the array and tree were computed and retained for nothing. Fix: added getImpactCount() to packages/editor/ImpactNavigator.ts, a lightweight variant that skips buildImpactTree entirely and returns just the affected-file count. ErrorContext.ts now caches numbers (Map&lt;string, number>) instead of full ImpactNavigationResult objects, shared across all findings in one diagnose run. Verified: diagnose ~/django now completes successfully with NODE_OPTIONS=--max-old-space-size=4096, printing all findings and affects N file(s) counts correctly. Without the memory flag it likely still needs it for a repo this size (Django is ~1300 files touched per impact call) but no longer crashes with it set.
+
+## 2026-08-14 — loadAliasConfig doesn't handle per-app tsconfig in monorepo (root cause not found)
+
+**Status:** Not Started
+
+packages/graph/resolveAliases.ts's loadAliasConfig only reads repoRoot's tsconfig.json, not apps/*/tsconfig.json. Confirmed via ARCLUX doctor run against its own repo: apps/web/components/* (Navbar, Sidebar, WorkspaceLayout, Breadcrumbs, etc -- ~235 files) show as unusedExports/orphanFiles false positives because their '@/...' imports resolve against root's tsconfig paths (which point at repo root) instead of apps/web/tsconfig.json's paths (which point at apps/web/). Attempted a fix this session (merge rules from repoRoot + every apps/*/tsconfig.json) but loadOneConfig() mysteriously returned [] even with a confirmed-valid, confirmed-parseable tsconfig.json -- root cause not found before running out of budget. Reverted the broken attempt cleanly; resolveAliases.ts is unchanged from before this session (bug still present, nothing new broken). See issue on GitHub for reproduction + suggested next debugging step.
+
+## 2026-08-15 — Python WASM path regression #3 — require.resolve() reintroduced again, fixed with directory walk-up
+
+**Status:** Done
+
+Same failure mode as the two prior regressions (2026-08-10 entries): parsePython.ts's getPythonRuntime() had again been changed to use require.resolve('tree-sitter-wasms/out/tree-sitter-python.wasm') directly, despite an explicit in-code warning comment saying not to -- this returns a webpack-bundle-relative path (not a real filesystem path) inside Next.js's dev/build runtime, causing Language.load() to fail silently, caught by the outer try/catch, returning empty imports/exports per file with zero visible error. Symptom: graph showed only isolated file nodes with no edges when analyzing Python repos (ManSio/mscodebase-intelligence, pallets/flask), identical to issue #186's original symptom. First fix attempt (path.join(process.cwd(), 'node_modules', ...)) was incomplete: process.cwd() depends on where the dev server is started (repo root vs apps/web), and pnpm hoists tree-sitter-wasms to the monorepo root's node_modules only, not apps/web's -- so starting the server from apps/web (the documented way, per QUICKSTART.md) broke the naive path. Final fix: findWasmPath() walks upward from process.cwd() (same algorithm Node's own module resolution uses) checking node_modules/tree-sitter-wasms/out/tree-sitter-python.wasm via existsSync at each level, instead of assuming a fixed relative depth. Verified end-to-end: dev server started from apps/web, analyzed pallets/flask (previously zero edges), graph now shows real dependency edges between files. Process note: this is the THIRD time this exact bug has regressed after being fixed. The in-code comment warning against require.resolve() clearly did not prevent it. Worth considering a regression test that asserts parsePython.ts never calls require.resolve/nodeRequire.resolve, if that becomes feasible.
+
+## 2026-08-15 — Fixed broken contributor CLI files (open.ts syntax error, unregistered edit/open/verify)
+
+**Status:** Done
+
+Contributor commit added apps/cli/commands/&#123;edit,logs,open,verify&#125;.ts using export const xCommand pattern (not matching registerXCommand convention), none registered in index.ts. open.ts had unterminated template literal (backtick opened, quote closed) -- syntax error, failed tsc entirely. commands/verify.ts duplicated existing registered apps/cli/verify.ts. edit.ts/open.ts also diverged from our CodeNavigator-based design from earlier this session (dependency/consumer navigation) with a different concept (replace file content wholesale). Fix: rewrote edit.ts/open.ts using CodeNavigator (openFile/listDependencyTargets/listDirectConsumerTargets), registered both in index.ts, deleted duplicate commands/verify.ts. logs.ts left unregistered -- assumes ~/.arclux/logs/*.log files which nothing in the codebase writes (state is JSON via SnapshotManager, not log files); needs its own fix before wiring in.
+
+  docs/log-session-progress-v2
+## 2026-08-15 — getModule/pipeline test bugs resolved
+
+**Status:** Done
+
+Both CI-failing bugs fixed. tests/impact.test.ts: root cause was stale parameter order plus empty Repository fixture -- none of the tested functions were modified, only the test's calling convention and fixtures. tests/pipeline.test.ts: timeout bumped 5000ms to 30000ms for slower hardware, no logic changed. CI on ARCLUX.main confirmed green after merge.
+
+## 2026-08-15 — CI failing: tests/impact.test.ts all 6 tests fail, repository.getModule is not a function
+
+**Status:** Fixed (PR #426, closes issue #424)
+
+Original diagnosis ("mock/plain object doesn't implement getModule") was inaccurate. Root cause: impact functions were refactored from `(moduleId, graph)` to `(repository, moduleId)` and the test file still used the old signature on an empty Repository (which also has no `graph` property — graph is built separately by buildDependencyGraph). Fix: rewrote tests/impact.test.ts with real ModuleInfo fixtures (makeModule/makeRepository convention from tests/graph.test.ts) covering chain (entry->service->repository), circular (a->b->c->a, cycle guard), fan-out (a->&#123;b,c&#125;) and notFound behavior — 12 tests, all green. Related: tests/pipeline.test.ts fixed in PR #427 (issue #425): `/tmp/test` ThreatCrush finding was a false positive (path never touched — throws before I/O), replaced with portable os.tmpdir() path; weak `moduleCount >= 0` assertions replaced with deterministic fixture (tests/fixtures/pipeline-basic/, entry->service->repository) asserting exact moduleCount/edges/scanSummary (~1.8s -> ~22ms).
+
+## 2026-08-15 — Python relative imports resolve as external: from .x / from ..x / bare . and .. dropped from graph
+
+**Status:** Fixed (PR #431, closes issue #429)
+
+Python files using relative imports got ZERO dependency edges: `from .repository import x` in pkg/service.py, `from ..utils import x` in pkg/repository.py, `from .service import x` in pkg/__init__.py — all resolved as external. Root cause: resolvePath handled every leading-dot source with the JS branch (posix.join+normalize), which only resolves `/`-separated segments; Python's `.x`/`..x` are single segments, so normalize("pkg/..utils") stays "pkg/..utils" and never matches. Fix: dots-without-slash → Python package-relative branch (N dots = N-1 dirname steps up + dotted suffix); JS `./x`/`../x` untouched (naive `/^\.+(?!\/)/` lookahead misclassifies `../x` via regex backtracking — fixed with full-dot-run + explicit char check). +11 unit tests (tests/resolvePath.test.ts, first ever for this file) + first e2e for Python parser (tests/python-e2e.test.ts on tests/fixtures/python-basic/: all 3 relative forms produce exact graph edges).
+
+## 2026-08-15 — CommonJS whole-object exports not extracted: module.exports = &#123; a, b &#125; silently yields zero exports
+
+**Status:** Fixed (PR #432, closes issue #430)
+
+Known gap (documented in extractJs.ts + PROGRES.md): extractExportsJs only recognized per-property assignment (module.exports.NAME=/exports.NAME=); `module.exports = {…}` has bare LHS `module.exports` which matchCommonJsExportTarget never matched — exports silently dropped. Fix: bare `module.exports =`/`exports =` with ObjectLiteralExpression RHS → each property is a named export (shorthand `{a}`, renamed key `{foo: renamed}` → "foo", string keys, methods/getters; spread + computed keys skipped). +6 tests in tests/parser/javascript.test.ts. Single-value assignment (`module.exports = fn`) still out of scope (follow-up).
+
+## 2026-08-15 — Manifest parsers part 2: pom.xml $&#123;property&#125; versions unresolved + build.gradle.kts never scanned
+
+**Status:** Fixed (PR #437, closes issue #436)
+
+(1) parsePom записывал versionRange литерально (`${spring.version}`) — теперь резолвит из `<properties>`-секции того же pom (итеративно для chained-ссылок; неизвестные `${project.version}` остаются литеральными). (2) build.gradle.kts никогда не сканировался: parseGradle_ регистрировался только как filename "build.gradle", а ManifestRegistry мапил один filename на парсер. Fix: `filename: string | readonly string[]` в ManifestParserInterface, registry итерирует filenames, parseGradle_ → ["build.gradle", "build.gradle.kts"] (Kotlin DSL строковая форма group:artifact:version уже матчилась существующим regex — probe подтвердил, регистрации не хватало). +6 тестов (свойства direct/chained/unknown, Kotlin DSL, registry multi-filename, e2e gradle-kts-basic fixture). Наблюдение (не фиксилось): parseCsproj регистрирует filename ".csproj" (расширение как имя — реальный Foo.csproj не найдётся, только файл буквально названный .csproj).
+
+## 2026-08-15 — Maven pom.xml parser: regex captures plugin and dependencyManagement dependencies as project deps
+
+**Status:** Fixed (PR #435, closes issue #434)
+
+docs/log-session-progress
+Test file uses a mock/plain object for repository that doesn't implement Repository class methods (getModule, etc). Needs fixing test setup to use real Repository instance or a proper mock with getModule. Not yet fixed.
+
+## 2026-08-15 — UPDATE: getModule/pipeline test bugs — resolved
+
+**Status:** Resolved
+
+Both CI-failing bugs fixed. `tests/impact.test.ts`: root cause was stale
+parameter order (`(moduleId, repo.graph)` instead of `(repository, moduleId)`)
+plus an empty Repository fixture — none of the tested functions
+(calculateAffectedFiles, buildImpactTree, traceConsumers, traceDependencies)
+were modified, only the test's calling convention and fixtures. Rewritten
+with real Repository.addModule() fixtures and assertions matching actual
+return shapes (some functions return objects like &#123;direct, transitive,
+notFound&#125;, not arrays). `tests/pipeline.test.ts`: full-repo analyzeRepository
+test was timing out on slower hardware (~5s runtime vs 5000ms default
+timeout) — bumped to 30000ms, no logic changed. Merged via PR #428 (and the
+impact.test.ts fix). CI on ARCLUX.main confirmed green after merge.
+
+parseMaven matched `<dependency>` blocks with a blanket regex in ANY context — probe: 2 false positives out of 4 (`maven-shared-utils` from `<plugin><dependencies>` — plugin's own classpath; `guava` from `<dependencyManagement>` — version management only). Fix: strip `<plugin>…</plugin>` and `<dependencyManagement>…</dependencyManagement>` before block matching (neither nests itself nor the other; profile deps KEPT — conditional but real). Also: FIRST tests ever for the manifest package (tests/manifest.test.ts, 8: parsePom kinds/scopes/plugin/dependencyManagement/profile/malformed, parseGradle_ patterns) + wiring proven e2e (status-core's «not wired to analyzeRepository» was outdated — detectDependencies IS called by both local/remote paths; fixture java-basic with pom.xml + Main.java asserts dependencies = 3 project deps only). suite 359/359.
+ARCLUX.main
+
+
+## 2026-08-16 — ThreatCrush false positives in security packages — 27 findings triaged
+
+**Status:** Done
+
+ThreatCrush scan (run 31964856937 comment) found 27: (1) insecure-temp-file x9 — /tmp paths in in-memory test fixtures (never written) — FIXED in source per repo convention: rootPath 'in-memory' + os.tmpdir() for validation paths (remote.test.ts, architecture-security.test.ts, security-analysis.test.ts); (2) js-dynamic-code-execution x4 in UnsafePatternDetector regex patterns — patterns are detection data, never executed — documented in-file (guard: check execution path, not string presence, AGENT_DIARY 2026-08-13); (3) remaining 14 (test-content strings eval/innerHTML + intentional fake secrets in fixtures/tests) are deliberate positive controls for the security detectors — cannot remove without breaking tests; ThreatCrush 0.11.0 has NO ignore mechanism (verified in package source); documented as expected noise.
