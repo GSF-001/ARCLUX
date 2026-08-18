@@ -15,6 +15,12 @@ Dependency graph, impact analysis, and structural convention checking for your c
   <img src="assets/demo.gif" alt="ARCLUX CLI in action: arclux analyze . and arclux doctor" />
 </p>
 
+<p align="center">
+  <img src="assets/graph-3d-preview.png" alt="ARCLUX 3D dependency graph in the web dashboard" />
+  <br>
+  <em>Interactive 3D dependency graph — nodes sized by fan-in, colored by type</em>
+</p>
+
 -----
 
 [](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
