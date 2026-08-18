@@ -9,6 +9,102 @@ description: "Detail progres: status backlog"
 
 See PROGRES.md for the index. Split by topic from the original PROGRES-status.md.
 
+## 2026-08-15 — PLAN: detector quality gate (graph mutations + adversarial suite + scoring)
+
+> **[STATUS UPDATE, 2026-08-15]: items 1 (graph-mutation tests, 11
+> tests), 2 (adversarial suite, 15 tests) and 3 (scoring gate, 19/19 both
+> directions) are now implemented — suite green 474/474 (44 files).
+> See "UPDATE: detector quality gate — graph mutations implemented" below.**
+
+**Status:** Not Started
+
+**Context.** From a cross-project audit (MSCodeBase → ARCLUX). Claims were
+fact-checked against current code first so nothing already done gets re-done:
+- 2026-08-15 detector work already gives every one of the 19 detectors a
+  positive/negative control with real fixtures (`tests/detector.test.ts`,
+  `tests/core-detectors.test.ts`, `tests/detectors-wired.test.ts`)
+- Python relative imports are fixed & tested (issue #429 —
+  `tests/python-e2e.test.ts`, `tests/resolvePath.test.ts`)
+
+**Gap, verified this session:**
+
+1. **Graph-mutation tests** — nothing asserts that inserting an edge into an
+   acyclic graph makes `detectCircularDependency` fire (and removing it
+   clears the finding). The evalmut "add_edge_to_make_cyclic" idea, in TS:
+   `tests/mutation-graph.test.ts` — build a 3-module acyclic fixture, assert
+   no cycle, add an edge, assert cycle + exact node set, remove, assert clean.
+2. **Adversarial edge-case suite** — `tests/detectors-adversarial.test.ts`:
+   - minified one-liner (`def A():pass\ndef B():pass`) → no crash
+   - comment mentioning "A calls B, B calls A" → no false positive
+   - `if TYPE_CHECKING:` conditional import → open question: real edge or
+     skip? (tree-sitter currently extracts it as a real edge — confirm
+     whether that's desired before asserting)
+   - `getattr(obj, "method")()` dynamic call → dead-code detector must not
+     flag, or flag with `confidence: "low"`
+   - `test_*.py` / `*.test.ts` files → never flagged as dead
+3. **Scoring gate** — one run (vitest or `scripts/`): planted violation
+   across all 19 detectors → all fire; clean fixture repo → all empty.
+   Target: 19/19 both directions as a regression gate.
+
+**Why vitest, not a Python harness:** ARCLUX is TS + vitest; `tests/fixtures/`
+and `makeModule`/`makeRepository` already exist. Importing Python evalmut
+would add a second stack for a concept vitest covers natively.
+
+**Estimate:** 6-10h (2-3h mutations, 3-4h adversarial, 1-2h scoring gate).
+
+## 2026-08-15 — UPDATE: detector quality gate — graph mutations implemented
+
+**Status:** Done (items 1-3 implemented)
+
+`tests/mutation-graph.test.ts` added (11 tests, vitest): mutation-style
+suite for detectCircularDependency — acyclic baseline → 0 findings;
+plant edge c->a → cycle with exact node set + canonical rotation
+(issue #207); remove → clean (round-trip); forward-edge negative control;
+2-node cycle; entry-point rotation dedup; second cycle joins existing one
+without key collisions; unrelated-component mutation leaves finding
+untouched; self-loop documented; live-mutation ≡ fresh-index equivalence;
+sub-cycle excludes outsider node. Helpers mirror makeModule/makeRepository
+from tests/core-detectors.test.ts; mutateImports fails fast on unknown
+module ids. Full suite: 456/456 (42 files).
+
+Item 2 landed in the same pass: `tests/detectors-adversarial.test.ts`
+(15 tests). Source level (parsePython): minified one-liner, comment
+mentioning a cycle / string literal containing an import can't create
+edges, invalid syntax tolerated (ERROR nodes), empty source. Detector
+level: TYPE_CHECKING import is extracted as a real edge and closes a
+cycle — pinned current behavior, **OPEN QUESTION** (skip type-only edges
+at parse time?); test files with no importers are flagged as orphan and
+side-effect-imported test files are flagged as dead — pinned, **OPEN
+QUESTION** (exclude test files by convention like entry points?);
+dynamic-call usage is invisible to detectDeadCode (documented scope
+boundary — no call-extraction pass); namespace import counts as using
+every export (no false positive). Also fixed a latent type-error class
+uncovered while writing these: `ResolvedImport.kind` was missing in the
+makeModule helpers of core-detectors/detector/guard-inventory/runDoctor
+test files + a widened `language` param in runDoctor — all 5 files now
+LSP-clean. Suite: 471/471 (43 files).
+
+Item 3 (scoring gate): `tests/detector-score.test.ts` — registry-driven
+meta-gate iterating all 19 detectors with minimal planted-violation and
+clean fixtures: asserts every detector fires (positive) and stays empty
+(negative), plus an exact denominator check (19). Result: 19/19
+negative, 19/19 negative. Two product decisions surfaced by the
+adversarial suite are tracked as issues: #458 (TYPE_CHECKING imports as
+real edges) and #459 (test files flagged as orphan/dead). Suite:
+474/474 (44 files).
+
+Decisions #458/#459 implemented (Variant A): `parsePython` now skips
+imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` — type-only
+imports are not graph edges (a type-only cycle is no longer reported);
+new `packages/detectors/testFiles.ts` (`isTestFilePath`) excludes test
+files by convention from detectOrphanFiles / detectUnusedFiles /
+detectUnusedExports / detectDeadCode (same pattern as entry points).
+Adversarial tests flipped from pinned behavior to negative controls;
++6 tests (3 parser TYPE_CHECKING incl. non-guard control, 2 test-file,
+isTestFilePath describe). Boundaries documented in issues #458/#459
+(vitest.setup.ts not covered by the *.test.ts convention;
+detectMissingExports untouched). Suite: 478/478 (44 files).
+
 ## 2026-08-13 — UPDATE: framework rule stubs — implemented
 
 All 10 remaining rule stubs in `packages/rules/*` (nextjs x4, nestjs x2,
@@ -19,6 +115,43 @@ react/requirePropsTyping remains a documented deferral; **14 rules as of
 for issue #8 completed: graph, impact, indexer, pipeline, and per-language
 parser suites — 141 tests / 20 files, vitest green. See the old entry
 below for the historical stub list.
+
+## 2026-08-15 — Test coverage expanded (detector, pipeline, impact)
+
+**Status:** Done
+
+Added `tests/detector.test.ts` (19 detector smoke tests, one per detector
+covering basic signature/return type), `tests/pipeline.test.ts` (6 tests:
+error handling for invalid options, AnalyzeRepositoryResult structure
+validation, scanSummary shape check), `tests/impact.test.ts` (5 tests:
+calculateAffectedFiles/buildImpactTree/traceConsumers/traceDependencies).
+Tests are non-dogmatic placeholder level (no fixtures, signature-only —
+detectors already have guard-inventory.test.ts with real fixtures) but
+establish that all 19 detectors return arrays without crashing on an empty
+repo. Verified: `npx vitest tests/{detector,pipeline,impact}.test.ts` green.
+
+## 2026-08-15 — CLI commands stubbed out (open, verify, logs, edit)
+
+> **[STATUS UPDATE, 2026-08-15]: logs and run are now WIRED into the CLI
+> router (issue #465). open.ts and logs.ts remain placeholders; verify.ts
+> and edit.ts were already real implementations. See status-infra.md.**
+
+**Status:** Done
+
+Added 4 command files to `apps/cli/commands/`: 
+- `open.ts` — open analysis results in browser or editor (not yet implemented,
+  honest placeholder with --browser/--editor flags)
+- `verify.ts` — run all framework rules + detectors via runDoctor, output
+  grouped by check, JSON support. Real implementation calling
+  analyzeRepository + runDoctor
+- `logs.ts` — view daemon or CLI logs from ~/.arclux/logs/
+- `edit.ts` — read current + replacement file, show diff preview, apply with
+  --apply flag
+
+open.ts and logs.ts are placeholders (print what they would do). verify.ts and
+edit.ts are real implementations. None wired into apps/cli/index.ts CLI router
+yet — that's a follow-up (consistent with "add files, update PROGRES.md, don't
+create orphans" rule).
 
 ## 2026-08-03 — ❌ STILL EMPTY (8-line stub, license header only)
 
@@ -94,7 +227,7 @@ see "packages/impact/* already done" update below**
 
 **Status:** Done
 
-Confirmed via grep: zero references to Explorer in apps/web/app. Component exists, works standalone, but no page renders it. Worth prioritizing -- a working workspace/explorer view is probably what makes ARCLUX feel alive to new visitors vs just a graph viewer.
+Confirmed via grep: zero references to Explorer in apps/web/app. Component exists, works standalone, but no page renders it. Worth prioritizing -- a working workspace/explorer view is probably wha[...]
 
 ## 2026-08-14 — UPDATE: the 2026-08-03 "STILL EMPTY" list — mostly resolved
 
@@ -124,3 +257,9 @@ framework detection extended to read composer.json (`laravel/framework`
 extracted, closures correctly skipped; DDD layouts give false
 "missing" — documented v1 limitation) and laravel/laravel 11.x
 (closure-only → 0 refs, correct). 8 tests (tests/rules-laravel.test.ts).
+
+## 2026-08-15 — Remaining stub files as of this session
+
+**Status:** Not Started
+
+Confirmed via line-count scan (find packages -name '*.ts' | wc -l &lt;= 9): packages/parser/&#123;csharp,ruby,rust,cpp&#125;/* (source parsers, manifest parsing already exists per earlier decisions), packages[...]

@@ -36,6 +36,13 @@ description: "Detail progres: collaborators"
 - **Assigned**: date
 */}
 
+### main session (owner) — Security & Remote Analysis Subsystems
+- **Task**: Implement approved plan (docs/SECURITY_ANALYSIS_PLAN.md): packages/remote, packages/provenance, packages/correlation, packages/security-analysis + CLI `arclux security`
+- **Files**: `packages/{remote,provenance,correlation,security-analysis}/**`, `apps/cli/security.ts`, `tests/{security-analysis,attack-surface,provenance,remote-snapshot,sarif-export}.test.ts`, `tests/fixtures/security-leaks/`
+- **Status**: in progress (branch feat/security-analysis, phase 1: provenance + remote)
+- **Assigned**: 2026-08-16
+- **Note**: Parallel-work coordination — this area is claimed by this session per the approved plan. Other agents: do NOT touch these paths without checking git log + this file first. Core packages (engine/graph/impact/detectors/shared) are off-limits for everyone (ARCHITECTURE_MAP).
+
 ### mwakidenis — issue #147
 - **Task**: Implement 3 remaining apps/web/hooks stubs
 - **Files**: `apps/web/hooks/useClipboard.ts`, `useCommandPalette.ts`, `useMediaQuery.ts`
@@ -77,3 +84,9 @@ CODEOWNERS if/when they become active again.
 **Status:** Done
 
 4th active collaborator independently added CITATION.cff (Citation File Format) before being assigned anything. Linked it from README's License section. Assigned issue #147 (apps/web/hooks stubs) separately the same day.
+
+## 2026-08-15 — ManSio: language layer, system layer, VS Code extension verified, daemon e2e verified, glassmorphism UI
+
+**Status:** Done
+
+Resolved issues #346 (VS Code extension build+verify), #348 (packages/language/), #350 (packages/system/), plus daemon end-to-end verification, glassmorphism UI polish (1/3), universal responsive UI, and multiple gotchas/bugs logged along the way. Very active this session.

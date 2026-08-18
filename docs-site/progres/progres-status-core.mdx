@@ -606,6 +606,168 @@ structural death framing — full decision in progres/decisions.md):
 Tests: 224/224 (208 + 14 guard-inventory + 1 safeRun + 1 scanSummary).
 tsc 0.
 
+## 2026-08-14 — notifications/ implemented + wired to daemon (issue #353)
+
+**Status:** Done
+
+`packages/notifications/` was 3 stub files; now real:
+- `Notification.ts` — channel-neutral shape (id, severity, message, at,
+  source, filePath, line), normalized from DiagnosticFinding.
+- `NotificationChannel.ts` — `NotificationChannel` interface + reference
+  `ConsoleNotificationChannel` implementation.
+- `NotificationManager.ts` — subscribes to kernel.signalBus
+  `daemon:diagnostics:updated`, normalizes findings, fans out to
+  registered channels; idempotent start/stop, broken channel can't starve
+  the rest (try/catch per channel).
+
+Wired into `ArcluxDaemon`: new `notificationChannels` option registered
+onto `daemon.notifications`, subscribed in `start()` before the first
+analysis can emit, unsubscribed first in `stop()`. Existing subscribers
+(apps/cli/daemon.ts, LocalBridgeServer) untouched — additive only.
++11 tests (tests/notifications.test.ts), incl. end-to-end event flow
+through a real Kernel SignalBus. Tests: 236/236, tsc 0.
+
+## 2026-08-14 — packages/terminal/ implemented (issue #351)
+
+**Status:** Done
+
+`packages/terminal/` was 4 stub files; now a managed shell execution layer
+(issue #351): runs commands through Sandbox capability checks instead of
+calling child_process directly.
+- `ShellEnvironment.ts` — `buildShellEnvironment()` (process.env + overrides,
+  drops undefined values).
+- `CommandSession.ts` — session shape (status running/exited/error,
+  exitCode, stdout/stderr, timestamps).
+- `CommandExecutor.ts` — spawns a ProcessSpec with `sandbox.enforce()`
+  BEFORE the process starts (denied commands never launch); spawn
+  `error` → reject (session marked "error", not fake clean exit);
+  optional timeoutMs → SIGKILL; settled-guard against error+close double-fire.
+- `TerminalManager.ts` — owns PermissionManager + Sandbox (same wiring as
+  ProcessManager), default-grants EXEC+ENV_WRITE on first run,
+  rejects duplicate session ids, records every run as a session.
+
++15 tests (tests/terminal.test.ts): env merge, stdout/stderr capture,
+non-zero exit, timeout kill, sandbox deny (no capability / wrong set),
+spawn-error, session lifecycle, duplicate id, list, env override.
+Bonus: fixed pre-existing type error in Sandbox.ts:35 (required array
+needed `CapabilityValue[]` annotation — was in KNOWN_ISSUES as owner
+error). Tests: 251/251, tsc 0.
+
+## 2026-08-14 — packages/orchestration/ implemented (issue #352)
+
+**Status:** Done
+
+`packages/orchestration/` was 4 stub files; now the glue layer that
+generalizes the wiring ArcluxDaemon used to do inline (issue #352):
+- `EventRouter.ts` — declarative routes (`from` → `to` + optional
+  transform) on top of Kernel's SignalBus; `routeMany` + single
+  unsubscribe for teardown.
+- `PlatformOrchestrator.ts` — turns a push-based analysis source into the
+  platform pipeline on the signal bus: `analysis:updated` →
+  `daemon:analysis:updated` (moduleCount) + `runDiagnostics` →
+  `daemon:diagnostics:updated`, `analysis:error` →
+  `daemon:analysis:error`. Emitted names/shapes identical to the old
+  daemon wiring, so existing subscribers are unaffected.
+- `TaskOrchestrator.ts` — runs multi-step tasks in order, per-step state,
+  stops at first failure, emits task:started/step:done/completed/failed.
+- `RecoveryOrchestrator.ts` — subscribes to a failure signal, runs a
+  recovery task via TaskOrchestrator, caps attempts (reset on success),
+  guards against overlapping recoveries.
+
+`ArcluxDaemon` now delegates its watcher→analysis→diagnostics wiring to
+`PlatformOrchestrator` (behavior unchanged — same event names/payloads).
++12 tests (tests/orchestration.test.ts): routing, transforms, single
+unsubscribe, orchestrator wiring + idempotent start/stop, task ordering
++ failure stop, recovery cap/reset/overlap-guard. Tests: 263/263, tsc 0.
+
+## 2026-08-14 — packages/workspace/ implemented (issue #349)
+
+**Status:** Done
+
+`packages/workspace/` was 4 stub files; now the session concept tying
+project + environment + services + processes together (issue #349):
+- `WorkspaceState.ts` — per-workspace state: rootPath, repositoryRoot,
+  wasStartPath, status (active/closed/error), timestamps.
+- `WorkspaceSnapshot.ts` — immutable point-in-time capture (state +
+  shallow-copied processes + services) for restore/UI reads, mirroring
+  ProcSnapshot's philosophy.
+- `WorkspaceSession.ts` — owns a Kernel scoped to a detected root;
+  registerProcess/registerService/snapshot/close/setError.
+- `WorkspaceManager.ts` — open() walks up to the repo root via
+  EnvironmentDetector (idempotent per root, fallback to startPath when no
+  .git), list/get/close/closeAll/snapshots.
+
+Wired into the CLI: `arclux workspace <path>` opens a session and prints
+its snapshot (formatted or `--json`), verified running. Sessions are
+in-process only (no cross-process persistence yet) — the command prints
+in the same invocation; no misleading list/snapshot subcommands.
++9 tests (tests/workspace.test.ts): walk-up detection, idempotent open,
+no-git fallback, close/shutdown, snapshot immutability, error state,
+kernel injection, duplicate service rejection. Tests: 272/272, tsc 0.
+
+## 2026-08-14 — packages/system/ implemented (issue #350)
+
+**Status:** Done
+
+`packages/system/` was 4 stub files; now the central state aggregator
+(issue #350):
+- `ConfigurationStore.ts` — in-memory key/value with typed defaults
+  (get falls back to default, set overrides, delete restores, listKeys/
+  entries only cover explicit values).
+- `HealthMonitor.ts` — component health checks (register/unregister/
+  check); per-check try/catch so a throwing check marks that component
+  "down" without taking the whole report down; overall ok/degraded/down.
+- `SystemState.ts` — one immutable snapshot aggregating workspaces +
+  processes + services + jobs + capabilities + configuration + health.
+- `SystemManager.ts` — composes the already-existing pieces (Kernel,
+  WorkspaceManager, JobScheduler, PermissionManager, ConfigurationStore)
+  into SystemState.snapshot(); wires default health checks for
+  kernel/workspaces/jobs (failed jobs → degraded).
+
+Additive methods added so aggregation can read them: `JobScheduler.list()`
+and `PermissionManager.list()` (no behavior change).
+Wired into the CLI: `arclux system status` (formatted or `--json`),
+verified running — aggregates a fresh Kernel + health in a one-shot CLI
+process.
++11 tests (tests/system.test.ts): config defaults/override/delete/list,
+health ok/degraded/down (incl. throwing check), full aggregation, workspace
+inclusion, config inclusion, failed-job degradation, custom checks.
+Tests: 283/283, tsc 0.
+
+## 2026-08-14 — packages/language/ implemented (issue #348)
+
+**Status:** Done
+
+`packages/language/` was 6 stub files; now the language-intelligence layer
+wrapping packages/parser/* + the indexed Repository (issue #348):
+- `SyntaxEngine.ts` — per-file parsing via the shared ParserRegistry
+  (parseFile/analyze), language detection, UNSUPPORTED_LANGUAGE error.
+  `ensureParsersRegistered` is now exported from engine/pipeline.ts
+  (additive) so this layer can guarantee parsers are registered.
+- `SymbolEngine.ts` — symbol → declaration/importers/callers over a
+  Repository (getSymbols/findByName/forModule/consumers).
+- `LanguageService.ts` — entry facade: parseFile/language/getSymbols/
+  findSymbol/symbolsForModule/consumers (repository optional).
+- `CompletionEngine.ts` — prefix auto-completion over repository exports,
+  dedupe preferring symbols from already-imported modules.
+- `FormattingEngine.ts` — honest minimal normalization (CRLF→LF, trailing
+  whitespace, final newline, tab↔space by tabWidth) — no prettier
+  dependency exists, a full formatter is out of scope and documented.
+- `DiffEngine.ts` — symbol-level diff of two ParsedFile versions
+  (exports/imports added/removed/kept, calls kept, changeCount).
+
+IMPORTANT finding: blueprint (docs-site map-packages-platform.mdx) cites
+packages/engine/analyzeFile.ts / analyzeModule.ts / analyzeDependency.ts
+as "existing" — they are all EMPTY 8-line stubs. Rule 4 (check real
+shapes) applied: language/ wraps the real parserRegistry/Repository
+instead. Wired into the CLI: `arclux language <file>` (formatted or
+`--json`), verified running on real files.
++12 tests (tests/language.test.ts): parsing, language detection,
+unsupported-language error, symbol resolution (importers/callers),
+findSymbol multi-module, completion + imported-boost, formatting
+normalization (CRLF/tabs/trailing), symbol diff add/remove/no-change.
+Tests: 295/295, tsc 0.
+
 ## 2026-08-14 — Daemon verified end-to-end (issue #347) + 2 runtime bugs fixed
 
 **Status:** Done
@@ -633,3 +795,39 @@ Full runtime verification on the arclux repo itself:
    tsc 0. Side observation (not fixed here): the diagnostics themselves
    flag a type-only import cycle daemon ArcluxDaemon ↔
    LocalBridgeServer — worth a follow-up.
+
+## 2026-08-15 — packages/db/ implemented as JSON-record store
+
+**Status:** Done
+
+Was 0%. No database dependency installed (confirmed no sqlite/lowdb/knex/prisma/drizzle) and no network access to add one this session. Implemented as JSON-file-per-record store through RecoveryManager.writeTransactional instead of raw fs writes, for crash safety. schema.ts (RepoRecord/AnalysisRecord/IssueRecord + SCHEMA_VERSION for future real-DB migration), client.ts (generic put/get/list/delete), RepoStore/AnalysisStore/IssueStore wrapping existing shapes. Wired into daemon.ts, verified end-to-end at runtime (not just typecheck) -- ran daemon, triggered a re-analysis, confirmed real files written to ~/.arclux/db/. See PR #380.
+
+## 2026-08-15 — packages/cache/ 5/5 files complete
+
+**Status:** Done
+
+CacheProvider.ts (facade/stats over fileCache/repositoryCache/graphCache -- confirmed all 3 already implemented and wired into buildIndex.ts + engine/pipeline.ts) and memoryCache.ts (generic TTL Map cache utility, resolves the 'unclear purpose' from the 2026-08-08 decisions entry) implemented. See PR #382.
+
+## 2026-08-15 — packages/networking/ 4/4 files complete
+
+**Status:** Done
+
+NetworkRegistry.ts (lists all registered daemon endpoints from ~/.arclux/endpoints/) and ConnectionManager.ts (liveness check via existing GET /analysis route) implemented, completing packages/networking/ alongside PortManager.ts and ServiceEndpoint.ts from the daemon session.
+
+## 2026-08-16 — Security & Remote analysis packages implemented (phases 1-5)
+
+**Status:** Done
+
+New extension packages per approved plan (docs/SECURITY_ANALYSIS_PLAN.md): packages/provenance (SourceOrigin/EvidenceOrigin/ProvenanceRecord), packages/remote (RemoteSource/RemoteRepository/RemoteSnapshot), packages/security-analysis (source/ detectors: secrets gitleaks-model, unsafe patterns Semgrep-model, sensitive-data-flow CodeQL-inspired; architecture/: trust boundary, cross-boundary, impact; reporting/: SecurityReport + SARIF 2.1.0 export + remediation templates), packages/correlation (AttackSurfaceMapper BFS validated by experiment, Finding/Evidence/ImpactCorrelator, ImpactSnapshot). Core engine untouched; consumes Repository/DependencyGraph via analyzeRepository. suite 551/551.
+
+## 2026-08-18 — Daemon re-analysis routed through JobScheduler (workqueue max_active pattern)
+
+**Status:** Done
+
+DaemonRepositoryWatcher now routes every analysis trigger through packages/scheduler's JobScheduler (maxActive=1, ordered): change bursts coalesce (already-pending work is not requeued, mirroring kernel/workqueue.c queue_work), analyses never overlap, and direct getAnalysis() polls serialize behind an in-flight re-index. Also fixed a latent JobScheduler gap found while wiring: a delayed job (notBefore/delayMs) sat in the queue forever because nothing re-triggered drain() after its delay expired -- drain() now arms a timer for the earliest notBefore. First production consumer for packages/scheduler. Tests: tests/daemon-scheduler.test.ts (7 cases), full suite 580/580 green, typecheck clean.
+
+## 2026-08-18 — arclux exec: TerminalManager gets its first consumer
+
+**Status:** Done
+
+New CLI command 'arclux exec &lt;cmd> [args...]' (apps/cli/commands/exec.ts) runs commands through packages/terminal's TerminalManager -- sandbox capability checks + session recording (issue #351 layer). TerminalManager was built and tested (tests/terminal.test.ts, 15 cases) but had zero production consumers; this wires it to the CLI. Also confirmed packages/acquisition IS wired (remote-analysis/analyzeRemoteSource.ts imports createRepositoryAcquirer -- wired via relative path so earlier consumer greps missed it); the remaining stub packages (boundaries/adapters/observation/web-intake/package-manager) are intentionally kept -- they are planned work, not dead code. Full suite 580/580, typecheck clean.
