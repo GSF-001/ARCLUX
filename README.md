@@ -1,4 +1,4 @@
-# ARCLUX 🐳
+# ARCLUX 🦖
 - OPEN SOURCE
 
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
