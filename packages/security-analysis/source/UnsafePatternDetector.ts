@@ -52,7 +52,9 @@ export interface UnsafePatternOptions {
 export const DEFAULT_UNSAFE_PATTERN_RULES: UnsafePatternRule[] = [
   {
     id: "unsafe-eval",
-    regex: /\beval\s*\(/,
+    // Lookbehind matches Bandit B307 (ast.Call with a bare `eval` name):
+    // `model.eval()` / `regex.eval()` are attribute calls, not the builtin.
+    regex: /(?<![.\w])eval\s*\(/,
     keywords: ["eval("],
     notInside: ["//", "/*"],
     severity: "high",
@@ -127,6 +129,35 @@ export const DEFAULT_UNSAFE_PATTERN_RULES: UnsafePatternRule[] = [
   },
 ];
 
+/**
+ * True when the match at `matchIndex` sits inside a string literal or a
+ * comment on that line. Line-based heuristic (quote parity + `#`-comments):
+ * - an odd number of unescaped `"` or `'` before the match -> inside a string
+ * - an unquoted `#` before the match -> inside a (#) comment (Python etc.)
+ *
+ * Purpose: a pattern inside a string is a denylist constant / doc text, not
+ * a real call — flagging it is a false positive (e.g. MSCodeBase
+ * `BLOCKED_STR_PATTERNS = {"eval(", "exec(", ...}` and `model.eval()` in
+ * comments, EXPERIMENTS_LOG 2026-08-18). Limitations: multiline strings and
+ * JS template literals (backticks) are not tracked — accepted for a line
+ * scanner.
+ */
+export function isInsideStringOrComment(line: string, matchIndex: number): boolean {
+  let inDouble = false;
+  let inSingle = false;
+  for (let i = 0; i < matchIndex; i++) {
+    const c = line[i];
+    if (c === "\\") {
+      i += 1; // skip the escaped character
+      continue;
+    }
+    if (c === '"') inDouble = !inDouble;
+    else if (c === "'") inSingle = !inSingle;
+    else if (c === "#" && !inDouble && !inSingle) return true; // Python-style comment
+  }
+  return inDouble || inSingle;
+}
+
 export function detectUnsafePatterns(
   repository: Repository,
   sources: SourceProvider,
@@ -148,7 +179,11 @@ export function detectUnsafePatterns(
       for (const rule of rules) {
         if (rule.keywords && rule.keywords.length > 0 && !rule.keywords.some((k) => line.includes(k))) continue;
         if (rule.notInside && rule.notInside.some((n) => line.includes(n))) continue;
-        if (!rule.regex.test(line)) continue;
+        const match = rule.regex.exec(line);
+        if (!match) continue;
+        // FP guard: a pattern inside a string literal or comment is a denylist
+        // constant / doc text, not a real call (MSCodeBase audit 2026-08-18).
+        if (isInsideStringOrComment(line, match.index)) continue;
 
         findings.push({
           id: `${rule.id}:${relativePath}:${i + 1}`,
