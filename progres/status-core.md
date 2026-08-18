@@ -818,3 +818,9 @@ New extension packages per approved plan (docs/SECURITY_ANALYSIS_PLAN.md): packa
 **Status:** Done
 
 DaemonRepositoryWatcher now routes every analysis trigger through packages/scheduler's JobScheduler (maxActive=1, ordered): change bursts coalesce (already-pending work is not requeued, mirroring kernel/workqueue.c queue_work), analyses never overlap, and direct getAnalysis() polls serialize behind an in-flight re-index. Also fixed a latent JobScheduler gap found while wiring: a delayed job (notBefore/delayMs) sat in the queue forever because nothing re-triggered drain() after its delay expired -- drain() now arms a timer for the earliest notBefore. First production consumer for packages/scheduler. Tests: tests/daemon-scheduler.test.ts (7 cases), full suite 580/580 green, typecheck clean.
+
+## 2026-08-18 — arclux exec: TerminalManager gets its first consumer
+
+**Status:** Done
+
+New CLI command 'arclux exec <cmd> [args...]' (apps/cli/commands/exec.ts) runs commands through packages/terminal's TerminalManager -- sandbox capability checks + session recording (issue #351 layer). TerminalManager was built and tested (tests/terminal.test.ts, 15 cases) but had zero production consumers; this wires it to the CLI. Also confirmed packages/acquisition IS wired (remote-analysis/analyzeRemoteSource.ts imports createRepositoryAcquirer -- wired via relative path so earlier consumer greps missed it); the remaining stub packages (boundaries/adapters/observation/web-intake/package-manager) are intentionally kept -- they are planned work, not dead code. Full suite 580/580, typecheck clean.
