@@ -34,6 +34,7 @@ import {
 import {
   detectUnsafePatterns,
   DEFAULT_UNSAFE_PATTERN_RULES,
+  isInsideStringOrComment,
 } from "../packages/security-analysis/source/UnsafePatternDetector";
 import { detectSensitiveDataFlow } from "../packages/security-analysis/source/SensitiveDataFlowDetector";
 
@@ -235,6 +236,59 @@ describe("detectUnsafePatterns (unit, in-memory)", () => {
     const ids = findings.map((f) => f.ruleId);
     expect(ids).toContain("innerhtml-assignment");
     expect(ids).toContain("dangerously-set-innerhtml");
+  });
+
+  // FP regression: MSCodeBase audit 2026-08-18 (all 12 high were FPs)
+  it("does not flag .eval() method calls (model.eval())", () => {
+    const repo = makeRepository(["model.py"]);
+    const sources = new MapSourceProvider({ "model.py": "model.eval()\n" });
+    const findings = detectUnsafePatterns(repo, sources);
+    expect(findings.filter((f) => f.ruleId === "unsafe-eval")).toHaveLength(0);
+  });
+
+  it("does not flag denylist string constants", () => {
+    const repo = makeRepository(["denylist.py"]);
+    const sources = new MapSourceProvider({
+      "denylist.py": 'BLOCKED = {"eval(", "exec(", "compile(", "subprocess"}\n',
+    });
+    const findings = detectUnsafePatterns(repo, sources);
+    expect(findings.filter((f) => f.ruleId === "unsafe-eval")).toHaveLength(0);
+    expect(findings.filter((f) => f.ruleId === "shell-exec")).toHaveLength(0);
+  });
+
+  it("does not flag Python comments mentioning eval", () => {
+    const repo = makeRepository(["c.py"]);
+    const sources = new MapSourceProvider({ "c.py": "# model.eval() switches to inference mode\n" });
+    const findings = detectUnsafePatterns(repo, sources);
+    expect(findings.filter((f) => f.ruleId === "unsafe-eval")).toHaveLength(0);
+  });
+
+  it("still flags a bare eval() call next to a string literal", () => {
+    const repo = makeRepository(["x.ts"]);
+    const sources = new MapSourceProvider({
+      "x.ts": 'const label = "eval( is fine in text";\nconst y = eval(code);\n',
+    });
+    const findings = detectUnsafePatterns(repo, sources);
+    expect(findings.filter((f) => f.ruleId === "unsafe-eval")).toHaveLength(1);
+    expect(findings.filter((f) => f.ruleId === "unsafe-eval")[0].location.line).toBe(2);
+  });
+});
+
+describe("isInsideStringOrComment (unit)", () => {
+  it("detects matches inside double-quoted strings", () => {
+    expect(isInsideStringOrComment('BLOCKED = {"eval(", x', 12)).toBe(true);
+  });
+  it("detects matches inside single-quoted strings", () => {
+    expect(isInsideStringOrComment("x = 'eval( text'", 5)).toBe(true);
+  });
+  it("detects matches after a Python # comment", () => {
+    expect(isInsideStringOrComment("# model.eval()", 5)).toBe(true);
+  });
+  it("returns false for a bare call", () => {
+    expect(isInsideStringOrComment("const y = eval(code);", 10)).toBe(false);
+  });
+  it("does not treat a # inside a string as a comment", () => {
+    expect(isInsideStringOrComment('x = "# not a comment" eval(', 22)).toBe(false);
   });
 });
 
