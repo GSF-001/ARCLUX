@@ -812,3 +812,9 @@ NetworkRegistry.ts (lists all registered daemon endpoints from ~/.arclux/endpoin
 **Status:** Done
 
 New extension packages per approved plan (docs/SECURITY_ANALYSIS_PLAN.md): packages/provenance (SourceOrigin/EvidenceOrigin/ProvenanceRecord), packages/remote (RemoteSource/RemoteRepository/RemoteSnapshot), packages/security-analysis (source/ detectors: secrets gitleaks-model, unsafe patterns Semgrep-model, sensitive-data-flow CodeQL-inspired; architecture/: trust boundary, cross-boundary, impact; reporting/: SecurityReport + SARIF 2.1.0 export + remediation templates), packages/correlation (AttackSurfaceMapper BFS validated by experiment, Finding/Evidence/ImpactCorrelator, ImpactSnapshot). Core engine untouched; consumes Repository/DependencyGraph via analyzeRepository. suite 551/551.
+
+## 2026-08-18 — Daemon re-analysis routed through JobScheduler (workqueue max_active pattern)
+
+**Status:** Done
+
+DaemonRepositoryWatcher now routes every analysis trigger through packages/scheduler's JobScheduler (maxActive=1, ordered): change bursts coalesce (already-pending work is not requeued, mirroring kernel/workqueue.c queue_work), analyses never overlap, and direct getAnalysis() polls serialize behind an in-flight re-index. Also fixed a latent JobScheduler gap found while wiring: a delayed job (notBefore/delayMs) sat in the queue forever because nothing re-triggered drain() after its delay expired -- drain() now arms a timer for the earliest notBefore. First production consumer for packages/scheduler. Tests: tests/daemon-scheduler.test.ts (7 cases), full suite 580/580 green, typecheck clean.
