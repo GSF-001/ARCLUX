@@ -484,3 +484,44 @@ ARCLUX.main
 **Status:** Done
 
 New CLI command apps/cli/security.ts: runs secrets + unsafe patterns + data-flow + trust boundary + cross-boundary detectors and the attack-surface map, prints summary or --json/--sarif report; exit 1 on critical/high findings (--no-fail to override). Wired into apps/cli/index.ts. Verified on playground/nextjs-demo (0 findings, 4 reachable/2 unreachable = experiment match) and tests/fixtures/security-leaks (findings + valid SARIF).
+
+## 2026-08-18 — Shell: interactive session (PR #514)
+
+**Status:** Done
+
+`arclux shell` interactive REPL (apps/cli/shell.ts + packages/shell/ArcluxShell.ts + plugins.ts). node:repl with custom eval + promise chain for piped stdin (`echo "analyze ~/flask" | arclux shell`). Commands: analyze/impact/deps/consumers/graph/doctor/search/plugins/run/watch/system/processes/services/exit/help. `~` expanded to $HOME (Termux has no /tmp). Analyzed repo stays in memory so impact/doctor/search/graph are O(1)-ish. Merged into ARCLUX.main.
+
+## 2026-08-18 — Shell: watch on/off (PR #515)
+
+**Status:** Done
+
+`watch on|off` in the shell wraps watchRepository + chokidar with `ignoreInitial: true`. Prompt changes to `flask*>`. Known race: initial scan emits watch events during the first analyze — chokidar's ready event ordering; mitigate with a debounce window. Verified standalone via tests + manual run on ~/flask.
+
+## 2026-08-18 — Shell: platform layer (PR #516)
+
+**Status:** Done
+
+User-space detectors (`~/.arclux/detectors/*.ts` → runDoctor extraDetectors, 19 built-in + N user), ShellSession (workspace + environment + processes + services, session.ts), RepositoryQuery (query.ts), plugin args (ctx.args). Doctor report shows built-in vs user detector counts. Merged into ARCLUX.main.
+
+## 2026-08-19 — Boundaries package (PR #517)
+
+**Status:** Done
+
+Filled the boundaries stub package (was 9-line placeholder) with 4 real policies + index.ts:
+
+- **SourceBoundaryPolicy** — classify (local / remote-git / unknown), allowedRoots/denyRoots, symlink containment (only when the textual path is inside an allowed root — avoids double-reporting). Roots realpath'd in constructor because Termux `/tmp` is a symlink.
+- **RemoteAccessPolicy** — SSRF guard: blocks 10/8, 127/8, 169.254.x.x metadata, 172.16/12, 192.168/16, 0/8, ≥224, IPv6 loopback/link-local/ULA. Protocol + host allowlists, maxUrlLength 2048. IPv6 brackets stripped before isIP() — URL.hostname keeps `[::1]` brackets.
+- **AnalysisBoundary** — hard caps: maxFiles 100k / maxBytes 2GiB / maxModules 100k; denied path segments node_modules/.git/vendor + extra.
+- **EvidenceBoundary** — redact() secrets (api key, token/secret/password with `["'\s:=]+` separator, bearer, gh[pousr]_, AKIA, private keys, connection strings) + cap() per-check limits + message length trim.
+- index.ts exports all four; zero new runtime deps.
+
+Wired into real consumers (no dead code):
+- `analyzeRemoteSource` (packages/remote-analysis/analyzeRemoteSource.ts) — SSRF assert on `source.url` before anything else.
+- Shell `analyze` — appends `Boundary:` violation lines from SourceBoundaryPolicy + AnalysisBoundary.
+- Shell `doctor` — EvidenceBoundary({maxFindingsPerCheck: 20}) redact+cap with `(capped)` marker.
+
+Verified end-to-end on ~/flask: analyze clean (0 violations, permissive defaults), doctor shows `circularDependency: 20 (capped)`, SSRF guard blocks `http://169.254.169.254/latest/meta-data/` and `http://[::1]/x.git` while `https://github.com/...` passes. 16 new tests in tests/boundaries.test.ts → suite 625→641.
+
+Gotchas learned: SCP-style `git@github.com:foo/bar.git` is NOT a URL (use ssh://); "token is sk_..." regex never matches (is is a word, not a value — use `token=sk_...`); private-key pattern needs the `-----` fence; `/etc` on Termux is a symlink (use a second tmpdir in tests).
+
+Infra note: vitest 4's rolldown bundler has no native Termux binary — needs `@rolldown/binding-wasm32-wasi` + emnapi runtime. On this machine: `pnpm install --force` restored the working tree; NAPI_RS_NATIVE_LIBRARY_PATH / NAPI_RS_FORCE_WASI are the escape hatches.
