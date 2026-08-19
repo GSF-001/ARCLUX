@@ -42,8 +42,10 @@ export function registerShellCommand(program: Command): void {
       // explicitly through a promise chain.
       let queue: Promise<void> = Promise.resolve();
 
+      const prompt = (): string => `${shell.promptLabel}${shell.watchActive ? "*" : ""}> `;
+
       const rl = repl.start({
-        prompt: `${shell.promptLabel}> `,
+        prompt: prompt(),
         useGlobal: false,
         ignoreUndefined: true,
         // Custom eval: every line goes to ArcluxShell.handleCommand as a
@@ -71,7 +73,7 @@ export function registerShellCommand(program: Command): void {
           } catch (err) {
             cb(err instanceof Error ? err : new Error(String(err)));
           }
-          rl.setPrompt(`${shell.promptLabel}> `);
+          rl.setPrompt(prompt());
           rl.prompt();
         },
       });
