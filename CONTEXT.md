@@ -16,7 +16,8 @@ Dashboard.
 - Monorepo: apps/web (Next.js 16, App Router, **Webpack bukan Turbopack**
   — gak support Termux arm64), packages/* (framework-agnostic)
 - Package manager: **pnpm** (bukan npm)
-- Parsing: TypeScript Compiler API (TS/TSX) + web-tree-sitter (Python)
+- Parsing: TypeScript Compiler API (TS/TSX) + web-tree-sitter — 10 bahasa:
+  TS/JS/Python/Go/Java/PHP/Ruby/Rust/C++/C#
 - Graph render: SVG + d3-force
 - Environment: **Termux di Android** — gak ada `/tmp`, pakai `~` sebagai
   gantinya
@@ -24,8 +25,8 @@ Dashboard.
   bukan 0 baris, jadi "kosong" = ≤9 baris bukan `==0`
 
 ## Arsitektur ringkas
-packages/git, parser (per-bahasa: ts/py/js/go/java + manifest parsers,
-PHP route-file parser parsePhpRoutes), indexer (buildIndex,
+packages/git, parser (10 bahasa per-bahasa: ts/js/py/go/java/php/ruby/
+rust/cpp/csharp + manifest parsers + parsePhpRoutes), indexer (buildIndex,
 resolveRoutes/Exports/Components/Hooks/Providers — getEntryModuleIds dipakai
 detector entry-point filter), graph (buildDependencyGraph/ImportGraph/
 ExportGraph/FolderGraph/CallGraph — call graph selesai issue #50), engine
@@ -34,9 +35,16 @@ repoUrl), detectors (19 file, semua wired ke apps/cli/doctor.ts;
 unusedExports/orphanFiles sudah entry-point-aware issue #4), rules (14:
 nextjs/nestjs/express/vite/electron/react/laravel), search (SearchEngine/
 SearchIndex/SearchFilters + /api/search — issue #9), impact (8/8
-selesai), repository, db (0%), cache (3/5 wired: fileCache/repositoryCache/
-graphCache; CacheProvider+memoryCache stub), incremental/watcher (built,
-watchRepository wraps pipeline API, belum ada consumer), shared/types.ts
+selesai), repository, db (DONE: JSON-record store — schema/client/
+RepoStore/AnalysisStore/IssueStore, wired ke daemon.ts, verified), cache
+(5 file semua berisi: fileCache/repositoryCache/graphCache wired ke
+buildIndex+pipeline; CacheProvider/memoryCache ada tapi pemakaiannya
+belum jelas), boundaries (DONE: SourceBoundaryPolicy/RemoteAccessPolicy/
+AnalysisBoundary/EvidenceBoundary — SSRF guard wired ke
+analyzeRemoteSource, report+redact di shell), shell (ArcluxShell/plugins/
+detectors/query/session + REPL + watch + user detectors),
+incremental/watcher (Cell/Database/Query built + verified standalone,
+tapi buildIndex masih full rebuild tiap kali), shared/types.ts
 (kamus tipe wajib dipakai semua package).
 apps/web/components: graph/ (GraphCanvas, GraphProvider, GraphFocusView),
 explorer/, workspace/, overview/, vendor-ui/ (shadcn+aceternity+magic-ui);
@@ -46,8 +54,8 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
 ## Yang udah solid — jangan disentuh tanpa alasan kuat
 - packages/engine/pipeline.ts (satu entry point, jangan panggil step
   individual dari luar engine/)
-- Parser TS/Python/JS/Go/Java + manifest parsers (semua di-wire ke
-  parserRegistry/manifestRegistry di pipeline.ts)
+- Parser TS/JS/Python/Go/Java/PHP/Ruby/Rust/C++/C# + manifest parsers
+  (semua di-wire ke parserRegistry/manifestRegistry di pipeline.ts)
 - 19 detector file, GraphCanvas/GraphProvider/GraphFocusView (history nav
   + expand-on-demand udah di-fix & diverifikasi browser)
 - Call graph (buildCallGraph), search engine (packages/search), 14 rules
@@ -88,10 +96,11 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
    kalau pindah ke npm/yarn.
 
 ## Prioritas aktif sekarang
-1. `packages/db/*` — 0%, belum ada persistence layer sama sekali
-2. `packages/cache/CacheProvider.ts` + `memoryCache.ts` — 2/5 masih stub
-   (3 content-hash cache udah wired; CacheProvider/memoryCache belum jelas
-   masih dibutuhin atau nggak)
+1. `packages/db` — persistence udah jalan (JSON-record store wired ke
+   daemon), yang belum: query layer di atasnya + web/CLI consume
+2. `packages/cache/CacheProvider.ts` + `memoryCache.ts` — ada tapi
+   pemakaiannya belum jelas: masih dibutuhin atau nggak (3 content-hash
+   cache udah wired ke buildIndex+pipeline)
 3. True per-file incremental — `packages/incremental` + `watcher` built
    dan verified standalone, tapi `buildIndex` masih full rebuild tiap
    kali (keputusan #6: coarse watchRepository dulu, per-file deferred)
