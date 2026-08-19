@@ -56,6 +56,24 @@ export interface RunDoctorResult {
 }
 
 /**
+ * A user-space detector: same contract as the 19 built-in detectors, but
+ * loaded from a file (see packages/shell/detectors.ts). ARCLUX ships with
+ * the built-in suite; anything a team wants that the suite doesn't cover
+ * is written as a file, not a core change — mechanism, not policy.
+ */
+export interface UserDetector {
+  checkId: string;
+  severity: DoctorSeverity;
+  /** Runs against the analyzed repository; returns zero or more findings. */
+  run(repository: Repository): Array<{ filePath?: string; message: string }>;
+}
+
+export interface RunDoctorOptions {
+  /** Extra detectors run AFTER the built-in suite, wrapped in safeRun. */
+  extraDetectors?: UserDetector[];
+}
+
+/**
  * Runs one detector, isolating crashes (structural-death guard): if a
  * detector throws, the suite keeps going and the failure is surfaced as
  * an error finding instead of silently killing the whole run. A detector
@@ -87,7 +105,7 @@ function locationOf(f: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-export function runDoctor(repository: Repository): RunDoctorResult {
+export function runDoctor(repository: Repository, options: RunDoctorOptions = {}): RunDoctorResult {
   const findings: DoctorFinding[] = [];
 
   // Every detector is wrapped in safeRun — a detector that throws must
@@ -227,6 +245,22 @@ export function runDoctor(repository: Repository): RunDoctorResult {
       filePath: f.filePath,
       message: f.reason,
     });
+  }
+
+  // ── user-space detectors ────────────────────────────────────
+  // Same isolation contract as the built-ins: a crashing user detector
+  // surfaces as an error finding instead of killing the suite.
+  for (const detector of options.extraDetectors ?? []) {
+    safeRun(detector.checkId, detector.severity, () => {
+      for (const finding of detector.run(repository)) {
+        findings.push({
+          checkId: detector.checkId,
+          severity: detector.severity,
+          filePath: finding.filePath,
+          message: finding.message,
+        });
+      }
+    }, findings);
   }
 
   return {
