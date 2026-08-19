@@ -13,14 +13,36 @@
   "contributes": {
     "commands": [
       {
-        "command": "arclux.showAnalysis",
-        "title": "ARCLUX: Show Analysis"
+        "command": "arclux.menu",
+        "title": "ARCLUX: Command Menu"
       },
       {
-        "command": "arclux.connectDaemon",
+        "command": "arclux.refresh",
+        "title": "ARCLUX: Refresh Status"
+      },
+      {
+        "command": "arclux.impact",
+        "title": "ARCLUX: Trace Impact of a File"
+      },
+      {
+        "command": "arclux.connect",
         "title": "ARCLUX: Connect to Daemon"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "arclux.impact",
+          "group": "arclux@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "arclux.menu",
+          "when": "true"
+        }
+      ]
+    }
   },
   "scripts": {
     "build": "tsc -p .",

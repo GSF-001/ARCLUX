@@ -23,6 +23,7 @@ import { computeDaemonId } from "./DaemonProcess";
 import { NotificationManager } from "../notifications/NotificationManager";
 import type { NotificationChannel } from "../notifications/NotificationChannel";
 import { PlatformOrchestrator } from "../orchestration/PlatformOrchestrator";
+import { calculateAffectedFiles } from "../impact/calculateAffectedFiles";
 
 export interface ArcluxDaemonOptions {
   rootPath: string;
@@ -34,6 +35,18 @@ export interface ArcluxDaemonOptions {
    * and emits, just nobody receives notifications.
    */
   notificationChannels?: NotificationChannel[];
+}
+
+export interface ImpactQueryResult {
+  ok: boolean;
+  file: string;
+  moduleId?: string;
+  error?: string;
+  suggestions?: string[];
+  consumers?: string[];
+  directConsumers?: number;
+  affected?: { moduleId: string; filePath: string; distance: number }[];
+  totalAffected?: number;
 }
 
 export class ArcluxDaemon {
@@ -62,6 +75,44 @@ export class ArcluxDaemon {
   async getAnalysis() {
     if (!this.watcher) throw new Error("daemon not started");
     return this.watcher.getAnalysis();
+  }
+
+  /**
+   * Impact analysis for one file, computed live from the in-memory
+   * repository: direct consumers (importers) plus the transitive
+   * affected set (calculateAffectedFiles). Serves GET /impact?file=.
+   */
+  async getImpact(filePath: string): Promise<ImpactQueryResult> {
+    if (!this.watcher) throw new Error("daemon not started");
+    const result = await this.watcher.getAnalysis();
+    const repository = result.repository;
+
+    const module = repository
+      .getAllModules()
+      .find((m) => m.file.relativePath === filePath || m.file.relativePath.endsWith(`/${filePath}`));
+    if (!module) {
+      return {
+        ok: false,
+        file: filePath,
+        error: `module not found: ${filePath}`,
+        suggestions: repository
+          .getAllModules()
+          .map((m) => m.file.relativePath)
+          .filter((p) => p.toLowerCase().includes(filePath.toLowerCase()))
+          .slice(0, 5),
+      };
+    }
+
+    const impact = calculateAffectedFiles(repository, module.id);
+    return {
+      ok: true,
+      file: module.file.relativePath,
+      moduleId: module.id,
+      consumers: module.importedBy.map((id) => repository.getModule(id)?.file.relativePath ?? id),
+      directConsumers: module.importedBy.length,
+      affected: impact.affectedFiles,
+      totalAffected: impact.totalAffected,
+    };
   }
 
   start(): void {
