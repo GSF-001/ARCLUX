@@ -26,6 +26,8 @@
  *   plugins                   list user-space plugins
  *   run <plugin> [args...]    run a user-space plugin against the session
  *   system                    workspace/system snapshot (kernel state)
+ *   watch on|off              pick up file edits automatically (re-analyze
+ *                             only when the tree actually changed)
  *   help                      command list
  *   exit / .exit              leave
  *
@@ -41,6 +43,7 @@ import { calculateAffectedFiles } from "../impact/calculateAffectedFiles";
 import { buildSearchIndex } from "../search/SearchIndex";
 import { search } from "../search/SearchEngine";
 import { buildDependencyGraph } from "../graph/buildDependencyGraph";
+import { watchRepository, type RepositoryWatcher } from "../watcher/watchRepository";
 import { Kernel } from "../kernel/Kernel";
 import { SystemManager } from "../system/SystemManager";
 import type { Repository } from "../repository/Repository";
@@ -60,6 +63,7 @@ export class ArcluxShell {
   private meta: RepositoryMeta | null = null;
   private rootPath = "";
   private plugins: LoadedPlugin[] = [];
+  private watcher: RepositoryWatcher | null = null;
 
   constructor(private readonly pluginsDir?: string) {}
 
@@ -68,13 +72,42 @@ export class ArcluxShell {
     return this.meta?.name ?? "arclux";
   }
 
-  async analyze(rootPath: string): Promise<ShellCommandResult> {
-    const expanded = rootPath === "~" ? homedir() : rootPath.startsWith("~/") ? join(homedir(), rootPath.slice(2)) : rootPath;
-    const resolved = resolve(expanded);
-    const result: AnalyzeRepositoryResult = await analyzeRepository({ localPath: resolved });
+  /** True while `watch on` is active — the prompt shows a `*` suffix. */
+  get watchActive(): boolean {
+    return this.watcher !== null;
+  }
+
+  /** Closes the watcher and any other resources. Idempotent. */
+  async dispose(): Promise<void> {
+    if (this.watcher) {
+      await this.watcher.close();
+      this.watcher = null;
+    }
+  }
+
+  private applyResult(result: AnalyzeRepositoryResult): void {
     this.repository = result.repository;
     this.graph = result.graph;
     this.meta = result.meta;
+  }
+
+  /**
+   * While watching, pulls the latest analysis from the watcher BEFORE a
+   * query — instant on cache hit (tree unchanged), full re-analyze only
+   * when the tree actually changed (the watcher's debounced ChangeQueue
+   * decides). This is the "edit file → next query sees it" experience.
+   */
+  private async refreshFromWatcher(): Promise<void> {
+    if (!this.watcher) return;
+    this.applyResult(await this.watcher.getAnalysis());
+  }
+
+  async analyze(rootPath: string): Promise<ShellCommandResult> {
+    await this.dispose();
+    const expanded = rootPath === "~" ? homedir() : rootPath.startsWith("~/") ? join(homedir(), rootPath.slice(2)) : rootPath;
+    const resolved = resolve(expanded);
+    const result: AnalyzeRepositoryResult = await analyzeRepository({ localPath: resolved });
+    this.applyResult(result);
     this.rootPath = resolved;
     return {
       output: [
@@ -109,6 +142,7 @@ export class ArcluxShell {
 
       case "impact": {
         if (!this.repository) return { output: ["no repo — analyze <path> first"] };
+        await this.refreshFromWatcher();
         if (!arg) return { output: ["usage: impact <file>"] };
         const module = this.repository.getModule(arg);
         if (!module) return { output: [`module not found: ${arg}`] };
@@ -125,6 +159,7 @@ export class ArcluxShell {
 
       case "deps": {
         if (!this.repository) return { output: ["no repo — analyze <path> first"] };
+        await this.refreshFromWatcher();
         if (!arg) return { output: ["usage: deps <file>"] };
         const module = this.repository.getModule(arg);
         if (!module) return { output: [`module not found: ${arg}`] };
@@ -133,6 +168,7 @@ export class ArcluxShell {
 
       case "consumers": {
         if (!this.repository) return { output: ["no repo — analyze <path> first"] };
+        await this.refreshFromWatcher();
         if (!arg) return { output: ["usage: consumers <file>"] };
         const module = this.repository.getModule(arg);
         if (!module) return { output: [`module not found: ${arg}`] };
@@ -141,6 +177,7 @@ export class ArcluxShell {
 
       case "graph": {
         if (!this.repository) return { output: ["no repo — analyze <path> first"] };
+        await this.refreshFromWatcher();
         if (arg) {
           const module = this.repository.getModule(arg);
           if (!module) return { output: [`module not found: ${arg}`] };
@@ -160,6 +197,7 @@ export class ArcluxShell {
 
       case "doctor": {
         if (!this.repository) return { output: ["no repo — analyze <path> first"] };
+        await this.refreshFromWatcher();
         const result = runDoctor(this.repository);
         const byCheck = new Map<string, number>();
         for (const f of result.findings) byCheck.set(f.checkId, (byCheck.get(f.checkId) ?? 0) + 1);
@@ -173,6 +211,7 @@ export class ArcluxShell {
 
       case "search": {
         if (!this.repository) return { output: ["no repo — analyze <path> first"] };
+        await this.refreshFromWatcher();
         if (!arg) return { output: ["usage: search <query>"] };
         const index = buildSearchIndex(this.repository);
         const results = search(index, arg, { limit: 20 });
@@ -227,6 +266,24 @@ export class ArcluxShell {
         };
       }
 
+      case "watch": {
+        if (!this.repository) return { output: ["no repo — analyze <path> first"] };
+        const action = arg.toLowerCase();
+        if (action === "on") {
+          if (this.watcher) return { output: ["watch already on"] };
+          this.watcher = watchRepository(this.rootPath);
+          await this.refreshFromWatcher();
+          return { output: ["watch on — file edits are picked up on the next query"] };
+        }
+        if (action === "off") {
+          if (!this.watcher) return { output: ["watch already off"] };
+          await this.watcher.close();
+          this.watcher = null;
+          return { output: ["watch off"] };
+        }
+        return { output: [this.watcher ? "watch is on" : "watch is off", 'usage: watch on|off'] };
+      }
+
       default: {
         // A bare path (no command prefix) means "analyze this repo" —
         // the prompt-first experience: `arclux~$ flask/`.
@@ -253,6 +310,7 @@ export class ArcluxShell {
       "  graph [file]      graph summary or a file's neighbors",
       "  doctor            run all detectors",
       "  search <query>    fuzzy search over paths/exports",
+      "  watch on|off      re-analyze automatically when files change",
       "  plugins           list user-space plugins",
       "  run <plugin>      run a plugin",
       "  system            workspace/system snapshot",
