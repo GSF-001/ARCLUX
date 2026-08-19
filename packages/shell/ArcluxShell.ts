@@ -44,6 +44,9 @@ import { buildSearchIndex } from "../search/SearchIndex";
 import { search } from "../search/SearchEngine";
 import { buildDependencyGraph } from "../graph/buildDependencyGraph";
 import { watchRepository, type RepositoryWatcher } from "../watcher/watchRepository";
+import { SourceBoundaryPolicy } from "../boundaries/SourceBoundaryPolicy";
+import { AnalysisBoundary } from "../boundaries/AnalysisBoundary";
+import { EvidenceBoundary } from "../boundaries/EvidenceBoundary";
 import { loadPlugins, type ArcluxPluginContext, type LoadedPlugin } from "./plugins";
 import { loadDetectors, type LoadedDetector } from "./detectors";
 import { RepositoryQuery } from "./query";
@@ -112,16 +115,24 @@ export class ArcluxShell {
     await this.dispose();
     const expanded = rootPath === "~" ? homedir() : rootPath.startsWith("~/") ? join(homedir(), rootPath.slice(2)) : rootPath;
     const resolved = resolve(expanded);
+    const boundary = new SourceBoundaryPolicy().check(expanded);
     const result: AnalyzeRepositoryResult = await analyzeRepository({ localPath: resolved });
     this.applyResult(result);
     this.rootPath = resolved;
     this.session.openWorkspace(resolved);
+    const analysisBoundary = new AnalysisBoundary().checkScan({
+      filesScanned: result.scanSummary.filesScanned,
+      filesParsed: result.scanSummary.filesParsed,
+      moduleCount: result.moduleCount,
+    });
     return {
       output: [
         `Repository: ${result.meta.name}`,
         `Modules: ${result.moduleCount}`,
         `Graph: ${result.graph.nodes.length} nodes, ${result.graph.edges.length} edges`,
         `Scan: ${result.scanSummary.filesScanned} files, ${result.scanSummary.filesParsed} parsed, ${result.scanSummary.filesSkippedNoParser} skipped (no parser)`,
+        ...boundary.map((v) => `Boundary: ${v.reason}`),
+        ...analysisBoundary.map((v) => `Boundary: ${v.reason}`),
       ],
     };
   }
@@ -207,14 +218,16 @@ export class ArcluxShell {
         await this.refreshFromWatcher();
         await this.ensureDetectors();
         const result = runDoctor(this.repository, { extraDetectors: this.detectors });
+        const boundary = new EvidenceBoundary({ maxFindingsPerCheck: 20 });
+        const findings = boundary.cap(result.findings.map((f) => ({ ...f, message: boundary.redact(f.message) })));
         const byCheck = new Map<string, number>();
-        for (const f of result.findings) byCheck.set(f.checkId, (byCheck.get(f.checkId) ?? 0) + 1);
+        for (const f of findings) byCheck.set(f.checkId, (byCheck.get(f.checkId) ?? 0) + 1);
         const total = this.detectors.length;
         return {
           output: [
             `${result.errorCount} error(s), ${result.warningCount} warning(s), ${result.infoCount} info`,
             `detectors: 19 built-in${total > 0 ? ` + ${total} user (${this.detectors.map((d) => d.checkId).join(", ")})` : ""}`,
-            ...[...byCheck.entries()].map(([id, count]) => `  ${id}: ${count}`),
+            ...[...byCheck.entries()].map(([id, count]) => `  ${id}: ${count}${findings.filter((f) => f.checkId === id).length < result.findings.filter((f) => f.checkId === id).length ? " (capped)" : ""}`),
           ],
         };
       }

@@ -1,6 +1,7 @@
 import { RemoteRepository } from "../remote/RemoteRepository";
 import type { RemoteSource } from "../remote/RemoteSource";
 import { createRemoteSource } from "../remote/RemoteSource";
+import { RemoteAccessPolicy } from "../boundaries/RemoteAccessPolicy";
 import { createRepositoryAcquirer } from "../acquisition/RepositoryAcquirer";
 import { createSnapshotFromFiles } from "../acquisition/SourceSnapshot";
 import { createRemoteImpactReport } from "./RemoteImpactReport";
@@ -13,6 +14,12 @@ import { createRemoteAnalysisSession, updateRemoteAnalysisSession } from "./Remo
 export async function analyzeRemoteSource(source: RemoteSource): Promise<RemoteAnalysisResult> {
   const startedAt = new Date().toISOString();
   try {
+    // SSRF guard before anything else: a remote URL must pass the access
+    // policy (protocol/host allowlists + private-network/metadata block)
+    // or the analysis is refused outright.
+    if (source.url) {
+      RemoteAccessPolicy.default().assert(source.url);
+    }
     const acquisition = source.localPath
       ? await createRepositoryAcquirer(source.localPath).acquire()
       : undefined;
