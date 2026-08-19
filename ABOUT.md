@@ -37,7 +37,7 @@ Remote sources work too: `arclux analyze https://github.com/org/repo` clones, an
 
 ## What ARCLUX understands
 
-- **Languages parsed today:** TypeScript/TSX, JavaScript, Python, Go, Java (TypeScript Compiler API + web-tree-sitter)
+- **Languages parsed today:** TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C#
 - **Frameworks with convention rules:** Next.js, NestJS, Express, Vite, Electron, React, Laravel
 - **Detectors:** 19 built-in (circular dependency, dead code, orphan files, unused exports, large modules, shared modules, ambiguous symbol resolution, secrets/unsafe patterns, and more)
 - **Graphs:** dependency (imports/exports/folders) and call graph (which function calls which, across files)
@@ -54,9 +54,8 @@ Each stage is an independent package (`parser`, `graph`, `impact`, `detectors`, 
 
 ## What ARCLUX does NOT do yet (honest)
 
-- Persistence/cache layer (`packages/db`) is still a stub — no saved analysis history across runs yet
-- True per-file incremental re-indexing is still coarse (a change re-analyzes, but not file-by-file)
-- Only 5 languages parsed so far; Ruby/PHP/Rust/C# parsers don't exist yet (PHP route detection is file-pattern based)
+- Analysis history is persisted per-run (JSON-record store wired into the daemon), but there's no query layer over it yet — `packages/db` has schema + stores, higher-level queries aren't built
+- Per-file incremental re-indexing: the incremental engine is built, but `buildIndex` still does a full rebuild per change — per-file wiring is deferred
 - Installation is from source only — not yet published to npm
 
 ## Where to go next

@@ -43,7 +43,7 @@ content, searchable and organized
 
 ## Status: alpha
 
-Under active development. Core pipeline (parse/index/graph/impact), 19 detectors, 14 framework convention rules, CLI + web dashboard + always-on daemon + VS Code extension are solid and verified against real repos (vscode, react, vite, laravel). A few source parsers and the persistence/cache layers are still stubs.
+Under active development. Core pipeline (parse/index/graph/impact), 19 detectors, 14 framework convention rules, CLI + web dashboard + always-on daemon + VS Code extension + JSON-record persistence are solid and verified against real repos (vscode, react, vite, laravel). Higher-level db queries and per-file incremental re-indexing are still in progress.
 
 For the current, detailed breakdown -- see [progres/status-core.md](progres/status-core.md), [status-web.md](progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
 
