@@ -76,6 +76,12 @@ describe("RemoteAccessPolicy", () => {
     expect(policy.check("ssh://git@github.com/foo/bar.git")).toEqual([]);
   });
 
+  it("allows any public https host, not just github", () => {
+    expect(policy.check("https://gitlab.com/group/repo.git")).toEqual([]);
+    expect(policy.check("https://bitbucket.org/user/repo.git")).toEqual([]);
+    expect(policy.check("https://example.com/archive.tar.gz")).toEqual([]);
+  });
+
   it("blocks private networks (SSRF guard)", () => {
     expect(policy.check("http://127.0.0.1:3000/repo.git")).toHaveLength(1);
     expect(policy.check("http://10.0.0.5/repo.git")).toHaveLength(1);
