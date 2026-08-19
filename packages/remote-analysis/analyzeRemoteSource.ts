@@ -3,6 +3,7 @@ import type { RemoteSource } from "../remote/RemoteSource";
 import { createRemoteSource } from "../remote/RemoteSource";
 import { RemoteAccessPolicy } from "../boundaries/RemoteAccessPolicy";
 import { createRepositoryAcquirer } from "../acquisition/RepositoryAcquirer";
+import { adaptSource } from "../adapters";
 import { createSnapshotFromFiles } from "../acquisition/SourceSnapshot";
 import { createRemoteImpactReport } from "./RemoteImpactReport";
 import { createSourceHealthReport } from "./SourceHealthReport";
@@ -63,7 +64,7 @@ export async function analyzeRemoteRequest(request: RemoteAnalysisRequest): Prom
     return createRemoteAnalysisResult(undefined, { ok: false, error: "A remote analysis source is required." });
   }
 
-  const source = typeof request.source === "string" ? createRemoteSource(request.source) : request.source;
+  const source = typeof request.source === "string" ? adaptSource(request.source, { id: request.id ?? undefined }) : request.source;
   let session = createRemoteAnalysisSession(source);
   session = updateRemoteAnalysisSession(session, { status: "running" });
   const result = await analyzeRemoteSource(source);
