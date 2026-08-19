@@ -44,11 +44,12 @@ import { buildSearchIndex } from "../search/SearchIndex";
 import { search } from "../search/SearchEngine";
 import { buildDependencyGraph } from "../graph/buildDependencyGraph";
 import { watchRepository, type RepositoryWatcher } from "../watcher/watchRepository";
-import { Kernel } from "../kernel/Kernel";
-import { SystemManager } from "../system/SystemManager";
+import { loadPlugins, type ArcluxPluginContext, type LoadedPlugin } from "./plugins";
+import { loadDetectors, type LoadedDetector } from "./detectors";
+import { RepositoryQuery } from "./query";
+import { ShellSession } from "./session";
 import type { Repository } from "../repository/Repository";
 import type { DependencyGraph, RepositoryMeta } from "../shared/types";
-import { loadPlugins, type ArcluxPluginContext, type LoadedPlugin } from "./plugins";
 
 export interface ShellCommandResult {
   /** Lines to print to the terminal. */
@@ -63,9 +64,13 @@ export class ArcluxShell {
   private meta: RepositoryMeta | null = null;
   private rootPath = "";
   private plugins: LoadedPlugin[] = [];
+  private detectors: LoadedDetector[] = [];
   private watcher: RepositoryWatcher | null = null;
+  private readonly session: ShellSession;
 
-  constructor(private readonly pluginsDir?: string) {}
+  constructor(private readonly pluginsDir?: string, private readonly detectorsDir?: string) {
+    this.session = new ShellSession();
+  }
 
   /** The current repo's display name for the prompt (e.g. "flask"). */
   get promptLabel(): string {
@@ -83,6 +88,7 @@ export class ArcluxShell {
       await this.watcher.close();
       this.watcher = null;
     }
+    this.session.close();
   }
 
   private applyResult(result: AnalyzeRepositoryResult): void {
@@ -109,6 +115,7 @@ export class ArcluxShell {
     const result: AnalyzeRepositoryResult = await analyzeRepository({ localPath: resolved });
     this.applyResult(result);
     this.rootPath = resolved;
+    this.session.openWorkspace(resolved);
     return {
       output: [
         `Repository: ${result.meta.name}`,
@@ -198,12 +205,15 @@ export class ArcluxShell {
       case "doctor": {
         if (!this.repository) return { output: ["no repo — analyze <path> first"] };
         await this.refreshFromWatcher();
-        const result = runDoctor(this.repository);
+        await this.ensureDetectors();
+        const result = runDoctor(this.repository, { extraDetectors: this.detectors });
         const byCheck = new Map<string, number>();
         for (const f of result.findings) byCheck.set(f.checkId, (byCheck.get(f.checkId) ?? 0) + 1);
+        const total = this.detectors.length;
         return {
           output: [
             `${result.errorCount} error(s), ${result.warningCount} warning(s), ${result.infoCount} info`,
+            `detectors: 19 built-in${total > 0 ? ` + ${total} user (${this.detectors.map((d) => d.checkId).join(", ")})` : ""}`,
             ...[...byCheck.entries()].map(([id, count]) => `  ${id}: ${count}`),
           ],
         };
@@ -241,6 +251,9 @@ export class ArcluxShell {
           graph: this.graph,
           meta: this.meta,
           rootPath: this.rootPath,
+          args: pluginArgs,
+          query: new RepositoryQuery(this.repository!),
+          session: this.session.snapshot(),
           log: (message) => lines.push(message),
         };
         try {
@@ -251,17 +264,43 @@ export class ArcluxShell {
         return { output: lines.length > 0 ? lines : [`${plugin.name} ran with no output`] };
       }
 
+      case "processes": {
+        const processes = this.session.processes();
+        if (processes.length === 0) return { output: ["no processes in this workspace"] };
+        return {
+          output: processes.map((p) => `  [${p.status}] ${p.id} — ${p.command} ${p.args.join(" ")}`),
+        };
+      }
+
+      case "services": {
+        const services = this.session.services();
+        if (services.length === 0) return { output: ["no services in this workspace"] };
+        return {
+          output: services.map((s) => `  ${s.name} (process: ${s.processId}, registered ${s.registeredAt})`),
+        };
+      }
+
       case "system": {
-        const kernel = new Kernel();
-        const manager = new SystemManager({ kernel });
-        const state = manager.snapshot();
+        if (!this.session.activeWorkspace) return { output: ["no repo — analyze <path> first"] };
+        const snapshot = this.session.snapshot();
+        const env = snapshot.environment;
+        const workspace = snapshot.workspace;
         return {
           output: [
-            `workspaces: ${state.workspaces.length}`,
-            `processes: ${state.processes.length}`,
-            `services: ${state.services.length}`,
-            `jobs: ${state.jobs.length}`,
-            `health: ${state.health.overall}`,
+            `environment:`,
+            `  platform: ${env.platform}`,
+            `  arch: ${env.arch}`,
+            `  node: ${env.node}`,
+            `  cwd: ${env.cwd}`,
+            `  pid: ${env.pid}`,
+            `  shell: ${env.shell || "(none)"}`,
+            `  home: ${env.home}`,
+            `workspace:`,
+            `  root: ${workspace?.state.rootPath ?? "-"}`,
+            `  repositoryRoot: ${workspace?.state.repositoryRoot ?? "-"}`,
+            `  status: ${workspace?.state.status ?? "-"}`,
+            `processes: ${workspace?.processes.length ?? 0}`,
+            `services: ${workspace?.services.length ?? 0}`,
           ],
         };
       }
@@ -300,6 +339,11 @@ export class ArcluxShell {
     this.plugins = await loadPlugins({ dir: this.pluginsDir });
   }
 
+  private async ensureDetectors(): Promise<void> {
+    if (this.detectors.length > 0) return;
+    this.detectors = await loadDetectors({ dir: this.detectorsDir });
+  }
+
   private helpText(): string[] {
     return [
       "  <path>            analyze a repository (bare path)",
@@ -308,12 +352,14 @@ export class ArcluxShell {
       "  deps <file>       what <file> imports",
       "  consumers <file>  who imports <file>",
       "  graph [file]      graph summary or a file's neighbors",
-      "  doctor            run all detectors",
+      "  doctor            run all detectors (built-in + user)",
       "  search <query>    fuzzy search over paths/exports",
       "  watch on|off      re-analyze automatically when files change",
       "  plugins           list user-space plugins",
-      "  run <plugin>      run a plugin",
-      "  system            workspace/system snapshot",
+      "  run <plugin> [args...]  run a plugin",
+      "  processes         processes in this workspace",
+      "  services          services in this workspace",
+      "  system            environment + workspace snapshot",
       "  help / exit",
     ];
   }

@@ -34,6 +34,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Repository } from "../repository/Repository";
 import type { DependencyGraph, RepositoryMeta } from "../shared/types";
+import type { RepositoryQuery } from "./query";
+import type { SessionSnapshot } from "./session";
 
 /** What a plugin receives when run. This is the stable "user-space API". */
 export interface ArcluxPluginContext {
@@ -45,6 +47,12 @@ export interface ArcluxPluginContext {
   meta: RepositoryMeta | null;
   /** Absolute path of the session's current root, or "" if none. */
   rootPath: string;
+  /** Command-line style arguments passed after the plugin name. */
+  args: string[];
+  /** Universal structural query surface over the current repo. */
+  query: RepositoryQuery;
+  /** The live session: environment + workspace + processes + services. */
+  session: SessionSnapshot;
   /** Write a line to the session output. */
   log(message: string): void;
 }
