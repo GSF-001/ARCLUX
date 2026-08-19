@@ -31,6 +31,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 content, searchable and organized
 
 -----
+- [`ABOUT.md`](ABOUT.md) — what ARCLUX is and what it actually does — **start here if you're new**
 - [`QUICKSTART.md`](QUICKSTART.md) — start here, fast-path workflow cheat sheet
 - [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
