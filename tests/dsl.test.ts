@@ -190,3 +190,18 @@ for o in orphans { print(o.filePath + "=" + o.classification) }
     expect(stringify({ x: 1 })).toBe('{ x: 1 }');
   });
 });
+describe("bindings — new language parsers auto-discovered", () => {
+  it("extensions() grows with newly registered parsers", async () => {
+    const exts = registeredExtensions();
+    expect(exts).toContain(".php");
+    expect(exts).toContain(".rb");
+    expect(exts).toContain(".rs");
+    expect(exts).toContain(".cpp");
+    expect(exts).toContain(".cs");
+  });
+
+  it("registry exposes 12 languages (19 extensions)", async () => {
+    const exts = registeredExtensions();
+    expect(exts.length).toBeGreaterThanOrEqual(19);
+  });
+});
