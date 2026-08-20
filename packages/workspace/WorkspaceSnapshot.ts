@@ -12,28 +12,35 @@ import type { ProcessEntry } from "../shared/types";
 import type { ServiceHandle } from "../kernel/ServiceRegistry";
 import type { WorkspaceState } from "./WorkspaceState";
 
-// An immutable point-in-time snapshot of a workspace (issue #349). Mirrors
-// the ProcSnapshot philosophy (packages/kernel/introspection/ProcSnapshot.ts):
-// consumers (CLI, dashboard, restore) read this instead of live mutable
-// state, so a restore can rebuild a session from a known-good capture.
+export interface WorkspaceEnvironment {
+  platform: NodeJS.Platform;
+  arch: string;
+  node: string;
+  cwd: string;
+  pid: number;
+  shell: string | null;
+  home: string | null;
+  pathAvailable: boolean;
+}
 
 export interface WorkspaceSnapshot {
   takenAt: number;
   state: WorkspaceState;
-  /** Shallow copies of every process registered in the session's kernel. */
+  environment: WorkspaceEnvironment;
   processes: ProcessEntry[];
-  /** Shallow copies of every service registered in the session's kernel. */
   services: ServiceHandle[];
 }
 
 export function snapshotFromParts(
   state: WorkspaceState,
   processes: ProcessEntry[],
-  services: ServiceHandle[]
+  services: ServiceHandle[],
+  environment: WorkspaceEnvironment
 ): WorkspaceSnapshot {
   return {
     takenAt: Date.now(),
     state: { ...state },
+    environment: { ...environment },
     processes: processes.map((entry) => ({ ...entry })),
     services: services.map((handle) => ({ ...handle })),
   };

@@ -134,6 +134,23 @@ no longer appear as unused-export/orphan findings. 8 regression tests
 added to tests/core-detectors.test.ts; doctor.ts's note about the
 "entry files aren't fully filtered out yet" caveat removed.
 
+ feat/parsers-528
+## 2026-08-20 — 5 new language parsers wired (7 → 12 languages)
+
+**Status:** Done
+
+parsePhp/parseRuby/parseRust/parseCpp/parseCSharp implemented and registered in ensureParsersRegistered (pipeline.ts). Previously 8-line stubs — the wasm grammars were already in node_modules (tree-sitter-wasms has 37 grammars), only the extraction code was missing.
+
+- Shared loader added: packages/parser/core/treeSitterLoader.ts — single wasm-path lookup + per-grammar cache (replaces the copy-pasted findWasmPath pattern from parsePython.ts, same no-require.resolve() rule).
+- PHP: use statements (incl. group use), function/class/interface/trait/enum exports. parsePhp.ts was previously deferred pending issue #53 (parsePhpRoutes) — that issue is CLOSED, so the general parser is now safe to write.
+- Ruby: require/require_relative/load, class/module/method exports.
+- Rust: use declarations, pub-only exports (private items excluded).
+- C++: #include (angle + quoted), class/struct/enum exports.
+- C#: using directives, class/interface/struct/enum/record + public methods only.
+- DSL impact: extensions() grew 9 → 19 automatically (registry-driven auto-discovery proof), no DSL changes needed.
+
+6 new tests in tests/new-parsers.test.ts + 2 in tests/dsl.test.ts → suite 675→683, typecheck clean.
+
 ## 2026-08-20 — Orphan code got classification + integration suggestions (19 → 20 detectors)
 
 **Status:** Done
@@ -151,3 +168,4 @@ Two additions, verified end-to-end on ~/flask (25 orphan findings):
    - Wired into runDoctor as `orphanIntegration` (warning severity; `info` for dead files). Shell now reports "20 built-in" (updated shell.test.ts + tests/README.md).
 
 Real-repo result on ~/flask: 25 orphans → 7 ambiguous / 11 dead / 7 unwired; 5 with integration suggestions; best suggestion `views.py → src/flask/app.py` (high 0.69 via 11 siblings). 12 new tests in tests/orphan-integration.test.ts → suite 641→653, typecheck clean.
+ARCLUX.main

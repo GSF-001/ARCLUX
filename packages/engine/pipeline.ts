@@ -20,6 +20,11 @@ import { parseJsx } from "../parser/javascript/parseJsx";
 import { parseCommonJs } from "../parser/javascript/parseCommonJs";
 import { parseGo } from "../parser/go/parseGo";
 import { parseJava } from "../parser/java/parseJava";
+import { parsePhp } from "../parser/php/parsePhp";
+import { parseRuby } from "../parser/ruby/parseRuby";
+import { parseRust } from "../parser/rust/parseRust";
+import { parseCpp } from "../parser/cpp/parseCpp";
+import { parseCSharp } from "../parser/csharp/parseCSharp";
 import { manifestRegistry } from "../parser/core/ManifestRegistry";
 import { scanFiles } from "../parser/core/scanFiles";
 import { computeRepositoryFingerprint, getCachedRepository, setCachedRepository } from "../cache/repositoryCache";
@@ -51,6 +56,11 @@ export function ensureParsersRegistered() {
   parserRegistry.register(parseCommonJs);
   parserRegistry.register(parseGo);
   parserRegistry.register(parseJava);
+  parserRegistry.register(parsePhp);
+  parserRegistry.register(parseRuby);
+  parserRegistry.register(parseRust);
+  parserRegistry.register(parseCpp);
+  parserRegistry.register(parseCSharp);
 
   manifestRegistry.register(parsePackageJson);
   manifestRegistry.register(parseGoMod);

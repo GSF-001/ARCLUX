@@ -12,7 +12,7 @@ import { Kernel } from "../kernel/Kernel";
 import { ProcessStatus } from "../shared/types";
 import type { ProcessSpec } from "../runtime/ProcessSpec";
 import type { ServiceHandle } from "../kernel/ServiceRegistry";
-import { snapshotFromParts, type WorkspaceSnapshot } from "./WorkspaceSnapshot";
+import { snapshotFromParts, type WorkspaceEnvironment, type WorkspaceSnapshot } from "./WorkspaceSnapshot";
 import type { WorkspaceState, WorkspaceStatus } from "./WorkspaceState";
 
 // One active workspace session (issue #349): owns a Kernel (process table,
@@ -70,7 +70,23 @@ export class WorkspaceSession {
 
   /** Immutable point-in-time read of processes + services + state. */
   snapshot(): WorkspaceSnapshot {
-    return snapshotFromParts(this.state, this.kernel.processTable.list(), this.kernel.serviceRegistry.list());
+    const environment: WorkspaceEnvironment = {
+      platform: process.platform,
+      arch: process.arch,
+      node: process.version,
+      cwd: process.cwd(),
+      pid: process.pid,
+      shell: process.env.SHELL ?? null,
+      home: process.env.HOME ?? null,
+      pathAvailable: Boolean(process.env.PATH),
+    };
+
+    return snapshotFromParts(
+      this.state,
+      this.kernel.processTable.list(),
+      this.kernel.serviceRegistry.list(),
+      environment
+    );
   }
 
   /** Closes the session: marks state closed and shuts down the kernel. */
