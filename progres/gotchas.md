@@ -164,3 +164,15 @@ Previous gotcha entry (this session) incorrectly assumed Docusaurus was the live
 ## 2026-08-16 — three.js SpriteMaterial sizeAttenuation:false: scale is NOT pixels — giant screen-covering quad
 
 Tried to give the 3D hub badges a constant screen size with `SpriteMaterial({ sizeAttenuation: false })` and `sprite.scale.set(88, 22, 1)`. Result: the entire 3D view went white/gray at every zoom level (circles/links still faintly visible). Root cause: the sprite vertex shader does `scale *= -mvPosition.z` when sizeAttenuation is off, so the scale is multiplied by CAMERA DEPTH — an "88px" badge becomes a quad ~19,000 CSS px tall covering the whole viewport (screen px = scale * viewportHeight / (2*tan(fov/2))). `sizeAttenuation:false` is meant for near-pixel-sized sprites (values ~0.01-1), NOT arbitrary pixel scales. Fix: keep sizeAttenuation:true (world-space, perspective-correct) and size the sprite relative to the node (20x5 for a sphere r=4). Lesson: don't trust "sizeAttenuation:false = pixels" from memory — read the shader (`node_modules/three/src/renderers/shaders/ShaderLib/sprite.glsl.js`) before using. KI-055.
+
+## 2026-08-20 — Restored machine: stale node_modules + carried-over working-tree changes (NOT ours)
+
+Machine state after restore broke tooling in ways that LOOK like code bugs but aren't:
+
+1. **Vitest 4's rolldown has no native Termux binary** — the bundler checks `process.platform === "android"` but Termux reports `"linux"`, so it falls back to wasm: `@rolldown/binding-wasm32-wasi` + emnapi runtime must be present, otherwise vitest fails with "rolldown-binding.wasi.cjs missing". Fix that worked: `pnpm install --force` (rebuilt the tree from the intact store at ~/.local/share/pnpm/store). Escape hatches if it recurs: `NAPI_RS_NATIVE_LIBRARY_PATH` / `NAPI_RS_FORCE_WASI`.
+
+2. **pnpm store/node_modules version mismatch** — `pnpm add -Dw` failed because node_modules was installed by a different pnpm major than the one on PATH. Same fix: `pnpm install --force`.
+
+3. **Global `tsx` broken** (missing esbuild binary) — always use `./node_modules/.bin/tsx` from repo root, never the global one.
+
+4. **Carried-over working-tree changes are NOT ours** — after restore, `git status` showed: 3 modified files in packages/environment, 2 in packages/workspace, untracked `packages/environment/ArcluxEnvironment.ts` + `.arclux-test`, and 12 DELETED files under scripts/. None of these came from our session work — they were left by a previous session/machine state. Do NOT commit or "clean up" them without asking the repo owner first. Workflow used every time: `git stash -u -- <my files>` → branch from `origin/ARCLUX.main` → pop → stage ONLY my files.
