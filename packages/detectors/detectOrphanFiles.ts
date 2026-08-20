@@ -125,7 +125,8 @@ export function sharedNamePattern(filePath: string): string | null {
   return null;
 }
 
-function siblingModules(module: ModuleInfo, repository: Repository): ModuleInfo[] {
+/** Modules in the same folder as `module` (excluding the module itself). */
+export function siblingModules(module: ModuleInfo, repository: Repository): ModuleInfo[] {
   const folder = module.file.relativePath.includes("/")
     ? module.file.relativePath.slice(0, module.file.relativePath.lastIndexOf("/"))
     : "";

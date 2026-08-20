@@ -32,6 +32,7 @@ import type { ModuleInfo } from "../shared/types";
 import {
   detectOrphanFiles,
   sharedNamePattern,
+  siblingModules,
   type OrphanClassification,
 } from "./detectOrphanFiles";
 
@@ -102,18 +103,6 @@ export function detectOrphanIntegration(repository: Repository): OrphanIntegrati
 // ─────────────────────────────────────────────────────────────
 // Suggestion engine
 // ─────────────────────────────────────────────────────────────
-
-function siblingModules(module: ModuleInfo, repository: Repository): ModuleInfo[] {
-  const folder = module.file.relativePath.includes("/")
-    ? module.file.relativePath.slice(0, module.file.relativePath.lastIndexOf("/"))
-    : "";
-  return repository.getAllModules().filter((m) => {
-    if (m.id === module.id) return false;
-    const other = m.file.relativePath;
-    if (folder === "") return !other.includes("/");
-    return other.startsWith(`${folder}/`) && !other.slice(folder.length + 1).includes("/");
-  });
-}
 
 function suggestImporters(module: ModuleInfo, repository: Repository): IntegrationSuggestion[] {
   const filePath = module.file.relativePath;
