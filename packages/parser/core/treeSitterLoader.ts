@@ -59,9 +59,15 @@ export function nodeLine(node: TSNode): number {
   return node.startPosition.row + 1;
 }
 
+// Vendored wasm overrides live in packages/parser/wasms/. The npm
+// tree-sitter-wasms package ships stale builds for some grammars (e.g.
+// elm at ABI 12, incompatible with web-tree-sitter 13–15) — vendored
+// files take precedence so we're not hostage to the npm package version.
 function findWasmPath(grammarFile: string): string {
   let dir = process.cwd();
   for (let i = 0; i < 10; i++) {
+    const vendored = path.join(dir, "packages", "parser", "wasms", grammarFile);
+    if (existsSync(vendored)) return vendored;
     const candidate = path.join(
       dir,
       "node_modules",
@@ -75,7 +81,7 @@ function findWasmPath(grammarFile: string): string {
     dir = parent;
   }
   throw new Error(
-    `Could not find tree-sitter-wasms/out/${grammarFile} by walking up from ${process.cwd()}`
+    `Could not find ${grammarFile} (packages/parser/wasms or tree-sitter-wasms/out) by walking up from ${process.cwd()}`
   );
 }
 

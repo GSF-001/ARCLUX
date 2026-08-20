@@ -44,6 +44,9 @@ const EXTENSION_TO_LANGUAGE: Record<string, SupportedLanguage> = {
   ".swift": "swift",
   ".vue": "vue",
   ".zig": "zig",
+  ".elm": "elm",
+  ".res": "rescript",
+  ".resi": "rescript",
 };
 
 export function detectLanguage(extension: string): SupportedLanguage {

@@ -38,6 +38,8 @@ import { parseSolidity } from "../parser/solidity/parseSolidity";
 import { parseSwift } from "../parser/swift/parseSwift";
 import { parseVue } from "../parser/vue/parseVue";
 import { parseZig } from "../parser/zig/parseZig";
+import { parseElm } from "../parser/elm/parseElm";
+import { parseRescript } from "../parser/rescript/parseRescript";
 import { manifestRegistry } from "../parser/core/ManifestRegistry";
 import { scanFiles } from "../parser/core/scanFiles";
 import { computeRepositoryFingerprint, getCachedRepository, setCachedRepository } from "../cache/repositoryCache";
@@ -87,6 +89,8 @@ export function ensureParsersRegistered() {
   parserRegistry.register(parseSwift);
   parserRegistry.register(parseVue);
   parserRegistry.register(parseZig);
+  parserRegistry.register(parseElm);
+  parserRegistry.register(parseRescript);
 
   manifestRegistry.register(parsePackageJson);
   manifestRegistry.register(parseGoMod);
