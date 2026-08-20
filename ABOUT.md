@@ -1,46 +1,88 @@
 # ABOUT ARCLUX
 
-**ARCLUX is an open-source codebase analysis tool.** Point it at any repository and it reads the code, builds a map of how everything connects, and answers questions like *"what breaks if I change this file?"* — in seconds, without you reading 800 files first.
+**ARCLUX is an open-source platform that reads code the way an operating system reads hardware — and turns it into a living map of the repository.** Point it at any codebase and it parses the source, computes how everything connects, and answers questions like *"what breaks if I change this file?"* or *"this file is never imported — where was it supposed to be wired?"* — in seconds, without you reading 800 files first.
 
-This file explains what ARCLUX is **for**, and what it concretely **does**. Everything here is real and working — verified against repos like vscode, react, vite, laravel, and django.
+ARCLUX is built in two layers:
+
+- **The intelligence layer** — the flagship capability: static analysis, dependency/call graphs, impact tracing, 20 automated code-health detectors, 14 framework convention rules, and a security pipeline. This is what works end-to-end today and is verified against real repos (vscode, react, vite, laravel, django, flask).
+- **The platform layer** — the runtime underneath: a kernel with a signal bus, process manager, job scheduler, service manager, storage, networking, notifications, and orchestration. This is the foundation ARCLUX grows on — codebase intelligence is the first application of the platform, not the last.
+
+Everything in this file is real and working. No marketing promises — every claim is backed by code and verified runs.
 
 ---
 
-## What problem does it solve?
+## The map
 
-When you join a codebase (or revisit your own after a week), the hardest questions are structural:
+```
+                      ┌─────────────────────────────────────────────┐
+                      │            ARCLUX PLATFORM                 │
+                      │                                             │
+   INTELLIGENCE       │  kernel ── signal bus (every subsystem      │
+   LAYER              │  talks through this)                        │
+   ───────────        │  runtime ── process manager                 │
+   parser (10 langs)  │  scheduler ── job queue                     │
+   graph / call graph │  services ── service lifecycle              │
+   impact analysis    │  storage ── artifacts, cache, recovery      │
+   20 detectors       │  networking ── connections, ports, endpoints│
+   14 convention rules│  notifications ── event fan-out to channels │
+   security pipeline  │  orchestration ── PlatformOrchestrator      │
+   provenance         │                                             │
+                      └─────────────────────────────────────────────┘
+        │                         │
+        │  consumed through       │  consumed through
+        ▼                         ▼
+   ┌──────────────┐        ┌──────────────────────────────────┐
+   │  CLI + shell │        │  daemon (HTTP+SSE bridge)         │
+   │  web app     │        │  VS Code extension                │
+   │  security CLI│        │  any tool that can read HTTP/SSE  │
+   └──────────────┘        └──────────────────────────────────┘
+```
 
-- "Which files import this file? Who else would break?"
-- "Where is this function called from?"
-- "Is this code still used, or is it dead?"
-- "Is this repo following its own framework conventions?"
-
-ARCLUX answers these from static analysis. No build step, no running the app, no "trust me, it works" — it parses the source and computes the answers.
-
-## What you can do with it (concrete)
+## The intelligence layer — what you can do with it
 
 | Command | What it gives you |
 |---|---|
-| `arclux analyze <repo>` | Full index: modules, imports, exports, dependency graph |
+| `arclux analyze <repo>` | Full index: modules, imports, exports, dependency graph, call graph |
 | `arclux graph <repo>` | Interactive dependency graph (SVG + d3-force, 3D view in web) |
 | `arclux impact <file>` | "If I change this file, 1,319 files are affected" — real result from analyzing django |
-| `arclux doctor <repo>` | 19 automated checks: circular deps, dead code, orphan files, duplicate modules, layer violations, and more |
+| `arclux doctor <repo>` | 20 automated checks: circular deps, dead code, orphan files (with where-to-integrate suggestions), duplicate modules, layer violations, and more |
 | `arclux verify <repo>` | 14 framework convention rules (Next.js, NestJS, Express, Vite, Electron, React, Laravel) |
+| `arclux security <repo>` | Secrets, unsafe patterns, sensitive data flow, trust boundaries, attack surface, dependency risk |
 | `arclux search <query>` | Full-text + symbol search across the codebase |
 | `arclux diff <a> <b>` | What changed between two states, structurally |
 | `arclux diagnose <repo>` | Deep-dive diagnostics for problem hunting |
 | `arclux shell` | Interactive REPL — analyze once, then ask impact/deps/doctor/graph/search instantly, with `watch on` for live re-analysis |
-| `arclux daemon` | Always-on background watcher with a local HTTP+SSE bridge (`/analysis`, `/events`) |
-| Web dashboard | Next.js UI: workspace, explorer, overview, graph focus view — open `apps/web`, run `pnpm run dev` |
+| `arclux daemon` | Always-on background watcher with a local HTTP+SSE bridge (`/analysis`, `/impact`, `/events`) |
+| VS Code extension | Live status bar, Problems-panel diagnostics, and `ARCLUX: Trace Impact` right from the editor |
+| Web dashboard | Next.js UI: workspace, explorer, overview, graph focus view — `apps/web`, `pnpm run dev` |
 
-Remote sources work too: `arclux analyze https://github.com/org/repo` clones, analyzes, and cleans up. The SSRF guard makes sure the server only ever reaches public hosts — private networks and cloud metadata endpoints are refused.
+### The 20 detectors
+
+Automated code-health checks, each an independent small file that is trivial to extend:
+
+- `circularDependency` — import cycles, with the full cycle path
+- `unusedExports` / `unusedFiles` — code that nothing consumes
+- `orphanFiles` — files nothing imports, **classified**: *dead* (leftover, delete it) vs *unwired* (should be connected) vs *ambiguous*
+- `orphanIntegration` — for unwired files, **where** they should be imported: the folder's barrel index, or the shared importer of same-kind siblings (confidence + score + evidence, derived from real patterns — never guessed)
+- `largeModules` / `duplicateModules` / `sharedModules` / `indexFiles` — structural smell detection
+- `layerViolation` — imports that cross architecture layers
+- `deadCode` / `ambiguousSymbolResolution` / `missingExports`
+- `componentConvention` / `featureStructure` / `repositoryPattern` / `routeConvention` / `storyConvention` / `testConvention` / `entryPoints`
+
+### Remote sources & security boundaries
+
+`arclux analyze https://github.com/org/repo` clones, analyzes, and cleans up. Source adapters route any input — GitHub, GitLab (https/ssh/SCP-style), archive files, local paths (`~` expanded) — through the right boundary check:
+
+- **SSRF guard** — remote URLs are refused before anything else if they point at private networks, loopback, link-local, or cloud metadata endpoints (169.254.169.254). Public hosts — GitHub, GitLab, Bitbucket, any web server — are always allowed.
+- **Source boundary** — local paths are checked against allowed/denied roots with symlink containment.
+- **Evidence boundary** — doctor/security output is redacted (tokens, keys, passwords, AWS credentials, private keys, connection strings) and per-check capped.
+- **Analysis boundary** — hard caps on files/bytes/modules so no single run can exhaust the host.
 
 ## What ARCLUX understands
 
-- **Languages parsed today:** TypeScript/TSX, JavaScript, Python, Go, Java (TypeScript Compiler API + web-tree-sitter)
+- **Languages parsed today:** TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C# — via TypeScript Compiler API + web-tree-sitter
 - **Frameworks with convention rules:** Next.js, NestJS, Express, Vite, Electron, React, Laravel
-- **Detectors:** 19 built-in (circular dependency, dead code, orphan files, unused exports, large modules, shared modules, ambiguous symbol resolution, secrets/unsafe patterns, and more)
-- **Graphs:** dependency (imports/exports/folders) and call graph (which function calls which, across files)
+- **Graphs:** dependency (imports/exports/folders) and call graph (which function calls which, across files) + folder graph
 
 ## How it works (the 10-second version)
 
@@ -48,15 +90,31 @@ Remote sources work too: `arclux analyze https://github.com/org/repo` clones, an
 repository → parser → graph → detectors → engine → report
                        → rules (framework conventions)
                        → impact (consumer/dependent tracing)
+                       → security pipeline
 ```
 
-Each stage is an independent package (`parser`, `graph`, `impact`, `detectors`, `rules`, `engine`). Add a new parser, detector, or rule without touching the rest.
+Each stage is an independent package (`parser`, `graph`, `impact`, `detectors`, `rules`, `engine`, `security`). Add a new parser, detector, or rule without touching the rest. The single entry point is `analyzeRepository` in the engine pipeline — nothing calls individual steps from outside.
+
+## The platform layer
+
+Beneath the intelligence layer sits a real runtime, not scaffolding:
+
+- **kernel** — a signal bus every subsystem emits and subscribes through (`Kernel`)
+- **runtime** — `ProcessManager` spawns and supervises child processes (`RuntimeManager`)
+- **scheduler** — `JobScheduler` + `JobQueue` for async work
+- **services** — `ServiceManager` manages service lifecycle and dependencies
+- **storage** — `ArtifactStore`, `CacheManager`, `RecoveryManager` (crash-safe writes), `SnapshotManager`
+- **networking** — `ConnectionManager`, `PortManager`, `ServiceEndpoint` discovery files
+- **notifications** — `NotificationManager` fans events out to channels
+- **orchestration** — `PlatformOrchestrator` assembles it all
+
+The daemon, watcher, incremental indexer, shell session, and workspace layers sit on top of these. Packages like `observation`, `web-intake`, and `package-manager` mark the direction the platform is heading — not yet wired, but the seams are already there.
 
 ## What ARCLUX does NOT do yet (honest)
 
-- Persistence/cache layer (`packages/db`) is still a stub — no saved analysis history across runs yet
-- True per-file incremental re-indexing is still coarse (a change re-analyzes, but not file-by-file)
-- Only 5 languages parsed so far; Ruby/PHP/Rust/C# parsers don't exist yet (PHP route detection is file-pattern based)
+- Analysis history is persisted per-run (JSON-record store wired into the daemon), but there's no query layer over it yet — `packages/db` has schema + stores, higher-level queries aren't built
+- Per-file incremental re-indexing: the incremental engine is built, but `buildIndex` still does a full rebuild per change — per-file wiring is deferred
+- The platform's runtime layers (scheduler/services/storage/observation/web-intake) are built but not all wired to consumers
 - Installation is from source only — not yet published to npm
 
 ## Where to go next
