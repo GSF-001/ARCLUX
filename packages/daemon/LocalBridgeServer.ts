@@ -32,7 +32,8 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 
 /**
  * Starts an HTTP server exposing:
- *   GET  /analysis     -- current analysis (moduleCount, meta), same data as `arclux analyze`
+ *   GET  /analysis     -- current analysis (moduleCount, meta, graph, scan), same data as `arclux analyze`
+ *   GET  /impact?file= -- impact analysis for one file: consumers + transitive affected set
  *   GET  /diagnostics   -- last diagnostics run (see packages/diagnostics/DiagnosticEngine.ts)
  *   GET  /events        -- SSE stream: emits "analysis" and "diagnostics" events as they happen
  * Listens on `port` (see packages/networking/PortManager.ts for how the
@@ -66,9 +67,33 @@ export function startLocalBridgeServer(daemon: ArcluxDaemon, port: number): Prom
     if (url === "/analysis") {
       try {
         const result = await daemon.getAnalysis();
-        sendJson(res, 200, { moduleCount: result.moduleCount, meta: result.meta });
+        sendJson(res, 200, {
+          moduleCount: result.moduleCount,
+          meta: result.meta,
+          graph: { nodes: result.graph.nodes.length, edges: result.graph.edges.length },
+          scan: {
+            filesScanned: result.scanSummary.filesScanned,
+            filesParsed: result.scanSummary.filesParsed,
+          },
+        });
       } catch (err) {
         sendJson(res, 500, { error: err instanceof Error ? err.message : String(err) });
+      }
+      return;
+    }
+
+    if (url.startsWith("/impact")) {
+      try {
+        const query = new URL(url, "http://127.0.0.1").searchParams;
+        const file = query.get("file");
+        if (!file) {
+          sendJson(res, 400, { ok: false, error: "missing ?file=<relative path> query parameter" });
+          return;
+        }
+        const result = await daemon.getImpact(file);
+        sendJson(res, result.ok ? 200 : 404, result);
+      } catch (err) {
+        sendJson(res, 500, { ok: false, error: err instanceof Error ? err.message : String(err) });
       }
       return;
     }
