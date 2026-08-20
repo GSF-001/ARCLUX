@@ -226,7 +226,7 @@ export class ArcluxShell {
         return {
           output: [
             `${result.errorCount} error(s), ${result.warningCount} warning(s), ${result.infoCount} info`,
-            `detectors: 19 built-in${total > 0 ? ` + ${total} user (${this.detectors.map((d) => d.checkId).join(", ")})` : ""}`,
+            `detectors: 20 built-in${total > 0 ? ` + ${total} user (${this.detectors.map((d) => d.checkId).join(", ")})` : ""}`,
             ...[...byCheck.entries()].map(([id, count]) => `  ${id}: ${count}${findings.filter((f) => f.checkId === id).length < result.findings.filter((f) => f.checkId === id).length ? " (capped)" : ""}`),
           ],
         };

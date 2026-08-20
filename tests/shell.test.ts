@@ -114,7 +114,7 @@ describe("ArcluxShell", () => {
     await shell.handleCommand(repo);
     const result = await shell.handleCommand("doctor");
     const out = result.output.join("\n");
-    expect(out).toContain("19 built-in + 1 user (noUtilsImports)");
+    expect(out).toContain("20 built-in + 1 user (noUtilsImports)");
     expect(out).toContain("noUtilsImports: 1");
   });
 

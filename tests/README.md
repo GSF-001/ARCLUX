@@ -72,6 +72,7 @@ previously had only manual verifications.
 | Detector | Covered in |
 |---|---|
 | detectCircularDependency, detectUnusedExports, detectOrphanFiles | core-detectors.test.ts |
+| detectOrphanFiles (classification), detectOrphanIntegration | orphan-integration.test.ts |
 | detectAmbiguousSymbolResolution | detector.test.ts |
 | detectComponentConvention, detectFeatureStructure, detectMissingExports, detectRepositoryPattern, detectRouteConvention, detectStoryConvention, detectTestConvention, detectUnusedFiles | detectors-wired.test.ts |
 | detectDeadCode, detectDuplicateModules, detectEntryPoints, detectIndexFiles, detectLargeModules, detectLayerViolation, detectSharedModules | guard-inventory.test.ts |

@@ -21,6 +21,7 @@ import type { Repository } from "../repository/Repository";
 import { detectCircularDependency } from "../detectors/detectCircularDependency";
 import { detectUnusedExports } from "../detectors/detectUnusedExports";
 import { detectOrphanFiles } from "../detectors/detectOrphanFiles";
+import { detectOrphanIntegration } from "../detectors/detectOrphanIntegration";
 import { detectLargeModules } from "../detectors/detectLargeModules";
 import { detectDuplicateModules } from "../detectors/detectDuplicateModules";
 import { detectSharedModules } from "../detectors/detectSharedModules";
@@ -139,6 +140,19 @@ export function runDoctor(repository: Repository, options: RunDoctorOptions = {}
         severity: "error",
         filePath: f.filePath,
         message: f.message,
+      });
+    }
+  }, findings);
+  safeRun("orphanIntegration", "warning", () => {
+    for (const f of detectOrphanIntegration(repository)) {
+      const top = f.suggestedImporters[0];
+      findings.push({
+        checkId: "orphanIntegration",
+        severity: f.classification === "dead" ? "info" : "warning",
+        filePath: f.filePath,
+        message: top
+          ? `${f.message} Try importing from ${top.filePath} (${top.confidence} confidence).`
+          : f.message,
       });
     }
   }, findings);
