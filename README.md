@@ -51,7 +51,7 @@ For the current, detailed breakdown -- see [progres/status-core.md](progres/stat
 
 - Builds a dependency graph (imports, exports, folders) + call graph (which functions call which, across files) from static analysis
 - Traces impact - what is affected if you change file X
-- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (19 detectors — run them all with `arclux doctor`)
+- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more ( 20 detectors — run them all with `arclux doctor`)
 - Enforces framework conventions (14 rules: Next.js, NestJS, Express, Vite, Electron, React, Laravel — `arclux verify` gates on them)
 - Parses TypeScript, JavaScript, Python, Go, and Java today; more languages planned
 
