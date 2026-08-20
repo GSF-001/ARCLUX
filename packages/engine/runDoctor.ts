@@ -47,6 +47,12 @@ export interface DoctorFinding {
   /** Best-effort location: filePath, featurePath, or cycle string. */
   filePath?: string;
   message: string;
+  /**
+   * Detector-specific structured data preserved from the underlying
+   * finding (e.g. orphan classification). Lets consumers (CLI, DSL, web)
+   * read whatever the detector reports without re-running it.
+   */
+  detail?: Record<string, unknown>;
 }
 
 export interface RunDoctorResult {
@@ -140,6 +146,10 @@ export function runDoctor(repository: Repository, options: RunDoctorOptions = {}
         severity: "error",
         filePath: f.filePath,
         message: f.message,
+        detail: {
+          classification: f.classification,
+          evidence: f.evidence,
+        },
       });
     }
   }, findings);
@@ -153,6 +163,15 @@ export function runDoctor(repository: Repository, options: RunDoctorOptions = {}
         message: top
           ? `${f.message} Try importing from ${top.filePath} (${top.confidence} confidence).`
           : f.message,
+        detail: {
+          classification: f.classification,
+          suggestedImporters: f.suggestedImporters.map((s) => ({
+            filePath: s.filePath,
+            confidence: s.confidence,
+            score: s.score,
+            reason: s.reason,
+          })),
+        },
       });
     }
   }, findings);
