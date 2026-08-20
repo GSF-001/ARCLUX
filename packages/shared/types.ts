@@ -27,6 +27,19 @@ export type SupportedLanguage =
   | "ruby"
   | "rust"
   | "cpp"
+  | "bash"
+  | "c"
+  | "dart"
+  | "elixir"
+  | "kotlin"
+  | "lua"
+  | "objc"
+  | "ocaml"
+  | "scala"
+  | "solidity"
+  | "swift"
+  | "vue"
+  | "zig"
   | "unknown";
 
 export interface FileInfo {

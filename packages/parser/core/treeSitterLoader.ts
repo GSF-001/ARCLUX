@@ -47,6 +47,13 @@ export interface TreeSitterRuntime {
 
 const runtimeCache = new Map<string, Promise<TreeSitterRuntime>>();
 
+// web-tree-sitter is NOT safe under concurrent Language.load() calls —
+// parallel loads race on the shared wasm instance and produce
+// "Incompatible language version 0" errors (seen with 21 parsers being
+// registered at once from pipeline.ts). All loads go through this
+// chain so exactly one load runs at a time.
+let loadChain: Promise<unknown> = Promise.resolve();
+
 /** 1-indexed source line for a node. */
 export function nodeLine(node: TSNode): number {
   return node.startPosition.row + 1;
@@ -79,17 +86,16 @@ function findWasmPath(grammarFile: string): string {
  */
 export function getTreeSitterRuntime(grammarFile: string): Promise<TreeSitterRuntime> {
   if (!runtimeCache.has(grammarFile)) {
-    runtimeCache.set(
-      grammarFile,
-      (async () => {
-        await Parser.init();
-        const parser = new Parser();
-        const wasmPath = findWasmPath(grammarFile);
-        const language = await Language.load(wasmPath);
-        parser.setLanguage(language);
-        return { parser, language };
-      })()
-    );
+    const load = loadChain.then(async () => {
+      await Parser.init();
+      const parser = new Parser();
+      const wasmPath = findWasmPath(grammarFile);
+      const language = await Language.load(wasmPath);
+      parser.setLanguage(language);
+      return { parser, language };
+    });
+    loadChain = load.catch(() => undefined);
+    runtimeCache.set(grammarFile, load);
   }
   return runtimeCache.get(grammarFile)!;
 }
