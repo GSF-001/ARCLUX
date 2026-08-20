@@ -169,3 +169,17 @@ Two additions, verified end-to-end on ~/flask (25 orphan findings):
 
 Real-repo result on ~/flask: 25 orphans → 7 ambiguous / 11 dead / 7 unwired; 5 with integration suggestions; best suggestion `views.py → src/flask/app.py` (high 0.69 via 11 siblings). 12 new tests in tests/orphan-integration.test.ts → suite 641→653, typecheck clean.
 ARCLUX.main
+
+## 08-20 — 13 parser baru (12 → 25 bahasa, 38 extension)
+- Batch #529: bash, c, dart, elixir, kotlin, lua, objc, ocaml, scala, solidity,
+  swift, vue, zig — semua lewat `makeTreeSitterParser()` factory config-driven
+  (packages/parser/core/makeTreeSitterParser.ts), tiap bahasa ~40 baris config
+  bukan copy-paste machinery. 13 test di tests/new-parsers-529.test.ts.
+- vue parser beda: ekstrak `<script>` → parse ulang pakai TS Compiler API
+  (extractImportsJs/extractExportsJs) + export default objek literal.
+- BUG REAL ketemu: web-tree-sitter TIDAK aman buat Language.load() konkuren —
+  21 parser di-register bareng = race "Incompatible language version 0".
+  Fixed di treeSitterLoader.ts: semua load lewat chain serial (loadChain).
+  GOTCHA: jangan pernah load grammar wasm paralel.
+- SupportedLanguage + LanguageDetector diperluas (12 → 25 bahasa).
+- Suite: 696/696. Typecheck clean.
