@@ -9,13 +9,30 @@
 // Original ARCLUX logic, not adapted from any external source.
 
 import type { Repository } from "../repository/Repository";
+import type { ModuleInfo } from "../shared/types";
 import { detectEntryPoints } from "./detectEntryPoints";
 import { isTestFilePath } from "./testFiles";
 import { getEntryModuleIds } from "../indexer/resolveRoutes";
 
+export type OrphanClassification = "dead" | "unwired" | "ambiguous";
+
 export interface OrphanFileFinding {
   filePath: string;
   message: string;
+  /**
+   * Why this file is an orphan:
+   * - "dead" — leftover code: nothing in its folder is imported by anyone,
+   *   the name looks like a backup/scratch file, and/or it exports nothing.
+   *   The honest advice is deletion, not integration.
+   * - "unwired" — it SHOULD be wired somewhere: sibling files in the same
+   *   folder (or with a shared naming pattern) ARE imported, this one just
+   *   never got connected. See detectOrphanIntegration.ts for where.
+   * - "ambiguous" — mixed or weak signals; neither delete nor integrate
+   *   with confidence.
+   */
+  classification: OrphanClassification;
+  /** Human-readable evidence backing the classification. */
+  evidence: string[];
 }
 
 /**
@@ -28,17 +45,165 @@ export interface OrphanFileFinding {
  * set comes from indexer/resolveRoutes.ts (App Router convention) plus
  * detectEntryPoints.ts (known entry-point conventions), mirroring what
  * detectUnusedExports.ts does.
+ *
+ * Each orphan is classified by looking at REAL structural signals in the
+ * repository (see classifyOrphan): are siblings in the same folder
+ * imported anywhere? Is there a barrel index.ts that skips this file?
+ * Does the name look like backup/scratch? Does the file export anything?
  */
 export function detectOrphanFiles(repository: Repository): OrphanFileFinding[] {
   const entryModuleIds = new Set<string>();
   for (const id of getEntryModuleIds(repository.getAllModules())) entryModuleIds.add(id);
   for (const finding of detectEntryPoints(repository)) entryModuleIds.add(finding.filePath);
 
-  return repository
+  const orphans = repository
     .findModulesWithNoImporters()
-    .filter((module) => !entryModuleIds.has(module.id) && !isTestFilePath(module.id))
-    .map((module) => ({
-      filePath: module.file.relativePath,
-      message: `"${module.file.relativePath}" is never imported by any other file in the repository.`,
-    }));
+    .filter((module) => !entryModuleIds.has(module.id) && !isTestFilePath(module.id));
+
+  return orphans.map((module) => {
+    const { classification, evidence } = classifyOrphan(module, repository);
+    const filePath = module.file.relativePath;
+    const message =
+      classification === "unwired"
+        ? `"${filePath}" is never imported, but sibling files in the same folder are — it looks unwired, not dead.`
+        : classification === "dead"
+          ? `"${filePath}" is never imported and shows dead-code signals — likely safe to delete.`
+          : `"${filePath}" is never imported (ambiguous — no strong integration or deletion signal).`;
+    return { filePath, message, classification, evidence };
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Classification signals
+// ─────────────────────────────────────────────────────────────
+
+const BACKUP_NAME = /\.(?:bak|old|orig|tmp|copy|backup)$/i;
+const SCRATCH_NAME = /(?:scratch|archive|-old|-copy|_draft|_tmp|-wip)/i;
+const STORY_NAME = /\.(?:stories|story)\./i;
+
+/** Shared structural suffixes (e.g. userService.ts / paymentService.ts). */
+const KNOWN_SUFFIXES = [
+  "Service",
+  "Controller",
+  "Repository",
+  "Store",
+  "Api",
+  "Adapter",
+  "Provider",
+  "Helper",
+  "Util",
+  "Utils",
+  "Page",
+  "Screen",
+  "Model",
+  "Component",
+  "Hook",
+  "Factory",
+  "Manager",
+  "Loader",
+  "Cache",
+  "Router",
+];
+
+/** Shared structural prefixes (e.g. useAuth.ts / useTheme.ts). */
+const KNOWN_PREFIXES = ["use", "with", "is", "get", "create", "fetch", "to", "parse", "build"];
+
+function baseName(path: string): string {
+  const parts = path.split("/");
+  return parts[parts.length - 1].replace(/\.\w+$/, "");
+}
+
+/** Returns the shared structural pattern ("Service", "use…"), or null. */
+export function sharedNamePattern(filePath: string): string | null {
+  const base = baseName(filePath);
+  for (const suffix of KNOWN_SUFFIXES) {
+    if (base.endsWith(suffix) && base.length > suffix.length) return suffix;
+  }
+  for (const prefix of KNOWN_PREFIXES) {
+    if (base.startsWith(prefix) && base.length > prefix.length) return `${prefix}…`;
+  }
+  return null;
+}
+
+/** Modules in the same folder as `module` (excluding the module itself). */
+export function siblingModules(module: ModuleInfo, repository: Repository): ModuleInfo[] {
+  const folder = module.file.relativePath.includes("/")
+    ? module.file.relativePath.slice(0, module.file.relativePath.lastIndexOf("/"))
+    : "";
+  return repository.getAllModules().filter((m) => {
+    if (m.id === module.id) return false;
+    const other = m.file.relativePath;
+    if (folder === "") return !other.includes("/");
+    return other.startsWith(`${folder}/`) && !other.slice(folder.length + 1).includes("/");
+  });
+}
+
+/**
+ * Classifies one orphan from real repository signals, by the DOMINANT
+ * structural fact (in priority order):
+ *
+ *   1. backup/scratch name        → dead (a file named old-backup.ts is
+ *      leftover no matter what its neighbors do)
+ *   2. siblings in the folder ARE imported elsewhere → unwired (the file
+ *      sits inside wired code and is the only one not connected; a UI
+ *      component with no exports is still unwired, not dead — it should
+ *      have been exported)
+ *   3. nothing in the folder is imported AND the file exports nothing  → dead
+ *   4. anything else (has exports, no wired neighbors)                → ambiguous
+ *
+ * Story files are always ambiguous (standalone by design — story tooling
+ * loads them directly, so "no importer" is expected).
+ */
+export function classifyOrphan(
+  module: ModuleInfo,
+  repository: Repository
+): { classification: OrphanClassification; evidence: string[] } {
+  const evidence: string[] = [];
+  const filePath = module.file.relativePath;
+
+  if (STORY_NAME.test(filePath)) {
+    return {
+      classification: "ambiguous",
+      evidence: ["story file — loaded by story tooling, not by source imports (standalone by design)"],
+    };
+  }
+
+  const siblings = siblingModules(module, repository);
+  const importedSiblings = siblings.filter((s) => s.importedBy.length > 0);
+  const myPattern = sharedNamePattern(filePath);
+  const barrelIndex = siblings.find((s) => /(^|\/)index\.\w+$/.test(s.file.relativePath));
+
+  let classification: OrphanClassification;
+
+  if (BACKUP_NAME.test(filePath) || SCRATCH_NAME.test(filePath)) {
+    classification = "dead";
+    evidence.push("name looks like a backup/scratch file");
+  } else if (importedSiblings.length > 0) {
+    classification = "unwired";
+    evidence.push(
+      `${importedSiblings.length} sibling file(s) in this folder are imported by other files, this one is not`
+    );
+    if (myPattern) {
+      const patternSiblings = importedSiblings.filter((s) => sharedNamePattern(s.file.relativePath) === myPattern);
+      if (patternSiblings.length > 0) {
+        evidence.push(
+          `${patternSiblings.length} file(s) sharing the "${myPattern}" pattern in this folder are imported`
+        );
+      }
+    }
+    if (barrelIndex && barrelIndex.importedBy.length > 0) {
+      const indexImports = barrelIndex.imports.filter((id) => importedSiblings.some((s) => s.id === id));
+      if (indexImports.length > 0) {
+        evidence.push(`barrel ${barrelIndex.file.relativePath} imports ${indexImports.length} sibling(s) but not this file`);
+      }
+    }
+  } else if (module.exports.length === 0) {
+    classification = "dead";
+    evidence.push("no sibling in this folder is imported anywhere and the file exports nothing");
+  } else {
+    classification = "ambiguous";
+    evidence.push("file exports symbols but no sibling in this folder is imported anywhere — no strong signal either way");
+  }
+
+  return { classification, evidence };
 }
