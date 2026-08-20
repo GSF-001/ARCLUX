@@ -112,3 +112,22 @@ describe("new language parsers (PR #529 batch)", () => {
     expect(r.exports.map((e) => e.name)).toEqual(["main"]);
   });
 });
+describe("elm + rescript parsers (second batch)", () => {
+  it("elm: import_clause imports + value/type exports (vendored wasm)", async () => {
+    const r = await parseOne(".elm", fixture("elm-basic", "Main.elm"));
+    expect(r.imports.map((i) => i.source)).toEqual(["Html", "Dict"]);
+    expect(r.exports.map((e) => e.name)).toEqual(
+      expect.arrayContaining(["main", "Msg", "Model"])
+    );
+  });
+
+  it("rescript: open/include/require imports + let/module exports", async () => {
+    const r = await parseOne(".res", fixture("rescript-basic", "App.res"));
+    expect(r.imports.map((i) => i.source)).toEqual(
+      expect.arrayContaining(["Belt.Array", "Helpers", "./foo"])
+    );
+    expect(r.exports.map((e) => e.name)).toEqual(
+      expect.arrayContaining(["x", "M"])
+    );
+  });
+});

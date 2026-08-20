@@ -40,6 +40,8 @@ export type SupportedLanguage =
   | "swift"
   | "vue"
   | "zig"
+  | "elm"
+  | "rescript"
   | "unknown";
 
 export interface FileInfo {
