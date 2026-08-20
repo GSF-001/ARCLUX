@@ -467,3 +467,23 @@ ARCLUX.main
 **Status:** Done
 
 ThreatCrush scan (run 31964856937 comment) found 27: (1) insecure-temp-file x9 — /tmp paths in in-memory test fixtures (never written) — FIXED in source per repo convention: rootPath 'in-memory' + os.tmpdir() for validation paths (remote.test.ts, architecture-security.test.ts, security-analysis.test.ts); (2) js-dynamic-code-execution x4 in UnsafePatternDetector regex patterns — patterns are detection data, never executed — documented in-file (guard: check execution path, not string presence, AGENT_DIARY 2026-08-13); (3) remaining 14 (test-content strings eval/innerHTML + intentional fake secrets in fixtures/tests) are deliberate positive controls for the security detectors — cannot remove without breaking tests; ThreatCrush 0.11.0 has NO ignore mechanism (verified in package source); documented as expected noise.
+
+## 2026-08-18 — AcquisitionPolicy allowedHosts empty skipped host check (SSRF risk)
+
+**Status:** Done
+
+assertSourceAllowed() in packages/acquisition/AcquisitionPolicy.ts only checked allowedHosts when the array was non-empty, so the default empty allowedHosts silently allowed remote acquisition from ANY host instead of denying all. SSRF-class risk. Fixed by removing the length > 0 short-circuit so empty allowedHosts now correctly denies all remote hosts by default.
+
+## 2026-08-20 — Orphan integration: 3 real bugs found only via real-repo verification (~/flask)
+
+**Status:** All fixed + regression-tested.
+
+Unit tests passed but running the new orphanIntegration detector against ~/flask exposed three genuine bugs — this is why unit tests alone are not enough:
+
+1. **Self-suggestion bug** — `views.py` suggested `views.py` as its own integration target (file suggested as the importer of itself). Cause: the sibling-importer aggregation loop included the orphan module itself in its own candidate list. Fix: explicit `candidate.id !== module.id` exclusion.
+
+2. **score > 1 bug** — a suggestion reported score 2.375 (impossible — score is a fraction). Cause: `importedBy` edges collected per-sibling without dedup; siblings importing the same module twice (two import statements in one file) inflated the numerator. Fix: dedupe via a `Set` before counting.
+
+3. **Classification tie bug** — a story-pattern file with no exports but imported siblings came out `ambiguous` instead of `unwired` (dead-signal vs unwired-signal tied in the old scoring). Cause: scoring a binary decision instead of applying priority. Fix: priority-ordered decision (story → ambiguous; backup/scratch name → dead; imported siblings → unwired; no imports+no exports → dead; else ambiguous). Same story also exposed the barrel index (`__init__.py`) being counted as an "imported sibling", polluting the denominator — barrels are now excluded from sibling aggregation.
+
+Lesson recorded: after any detector change, verify on a real repo, not just unit tests — assertion-shaped tests missed all three.

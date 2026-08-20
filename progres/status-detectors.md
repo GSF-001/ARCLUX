@@ -133,3 +133,21 @@ modules entirely. Next.js page.tsx/route.ts files and apps/cli/index.ts
 no longer appear as unused-export/orphan findings. 8 regression tests
 added to tests/core-detectors.test.ts; doctor.ts's note about the
 "entry files aren't fully filtered out yet" caveat removed.
+
+## 2026-08-20 — Orphan code got classification + integration suggestions (19 → 20 detectors)
+
+**Status:** Done
+
+Two additions, verified end-to-end on ~/flask (25 orphan findings):
+
+1. **Orphan classification** (detectOrphanFiles.ts, additive — nothing removed):
+   - New `OrphanClassification`: `dead` (leftover — delete it) / `unwired` (should be connected) / `ambiguous`.
+   - `classifyOrphan()` decision priority (fixed after a tie bug, see bugs.md): story-pattern name → `ambiguous`; backup/scratch name (`BACKUP_NAME`/`SCRATCH_NAME` regexes) → `dead`; has sibling modules that are imported → `unwired`; no exports + no imported siblings → `dead`; else `ambiguous`.
+   - Each finding now carries `classification` + `evidence[]` (exact sibling importers etc.). `sharedNamePattern` exported + shared by both detectors.
+
+2. **detectOrphanIntegration.ts** (detector #20, checkId `orphanIntegration`):
+   - For unwired/ambiguous files, suggests WHERE they should be imported: the folder's barrel index (if any), or the shared importer of same-kind siblings (pattern-group weighting, confidence bump when sibling kind matches).
+   - Suggestion shape: `{filePath, confidence, score, reason, viaSiblings}` — score = fraction of imported siblings, capped at 1; duplicate importedBy edges deduped; self-suggestion excluded.
+   - Wired into runDoctor as `orphanIntegration` (warning severity; `info` for dead files). Shell now reports "20 built-in" (updated shell.test.ts + tests/README.md).
+
+Real-repo result on ~/flask: 25 orphans → 7 ambiguous / 11 dead / 7 unwired; 5 with integration suggestions; best suggestion `views.py → src/flask/app.py` (high 0.69 via 11 siblings). 12 new tests in tests/orphan-integration.test.ts → suite 641→653, typecheck clean.
