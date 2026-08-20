@@ -133,3 +133,19 @@ modules entirely. Next.js page.tsx/route.ts files and apps/cli/index.ts
 no longer appear as unused-export/orphan findings. 8 regression tests
 added to tests/core-detectors.test.ts; doctor.ts's note about the
 "entry files aren't fully filtered out yet" caveat removed.
+
+## 2026-08-20 — 5 new language parsers wired (7 → 12 languages)
+
+**Status:** Done
+
+parsePhp/parseRuby/parseRust/parseCpp/parseCSharp implemented and registered in ensureParsersRegistered (pipeline.ts). Previously 8-line stubs — the wasm grammars were already in node_modules (tree-sitter-wasms has 37 grammars), only the extraction code was missing.
+
+- Shared loader added: packages/parser/core/treeSitterLoader.ts — single wasm-path lookup + per-grammar cache (replaces the copy-pasted findWasmPath pattern from parsePython.ts, same no-require.resolve() rule).
+- PHP: use statements (incl. group use), function/class/interface/trait/enum exports. parsePhp.ts was previously deferred pending issue #53 (parsePhpRoutes) — that issue is CLOSED, so the general parser is now safe to write.
+- Ruby: require/require_relative/load, class/module/method exports.
+- Rust: use declarations, pub-only exports (private items excluded).
+- C++: #include (angle + quoted), class/struct/enum exports.
+- C#: using directives, class/interface/struct/enum/record + public methods only.
+- DSL impact: extensions() grew 9 → 19 automatically (registry-driven auto-discovery proof), no DSL changes needed.
+
+6 new tests in tests/new-parsers.test.ts + 2 in tests/dsl.test.ts → suite 675→683, typecheck clean.
