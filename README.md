@@ -31,7 +31,7 @@ Dependency graph, impact analysis, and structural convention checking for your c
 content, searchable and organized
 
 -----
-- [`ABOUT.md`](ABOUT.md) — what ARCLUX is and what it actually does — **start here if you're new**
+- [`ABOUT.md`](ABOUT.md) — the ARCLUX map: what it is, the intelligence layer, the platform underneath — **start here if you're new**
 - [`QUICKSTART.md`](QUICKSTART.md) — start here, fast-path workflow cheat sheet
 - [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
@@ -43,7 +43,7 @@ content, searchable and organized
 
 ## Status: alpha
 
-Under active development. Core pipeline (parse/index/graph/impact), 19 detectors, 14 framework convention rules, CLI + web dashboard + always-on daemon + VS Code extension are solid and verified against real repos (vscode, react, vite, laravel). A few source parsers and the persistence/cache layers are still stubs.
+Under active development. Core pipeline (parse/index/graph/impact), 20 detectors, 14 framework convention rules, CLI + web dashboard + always-on daemon + VS Code extension are solid and verified against real repos (vscode, react, vite, laravel). A few source parsers and the persistence/cache layers are still stubs.
 
 For the current, detailed breakdown -- see [progres/status-core.md](progres/status-core.md), [status-web.md](progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
 

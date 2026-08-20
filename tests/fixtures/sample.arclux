@@ -1,0 +1,4 @@
+# sample ARCLUX script used by the DSL tests
+print("hello from arclux script")
+let x = 21
+print(x * 2)
