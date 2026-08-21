@@ -39,8 +39,9 @@ repoUrl), detectors (20 detector file, semua wired ke apps/cli/doctor.ts;
 unusedExports/orphanFiles sudah entry-point-aware issue #4), rules (14:
 nextjs/nestjs/express/vite/electron/react/laravel), search (SearchEngine/
 SearchIndex/SearchFilters + /api/search — issue #9), impact (8/8
-selesai), repository, db (0%), cache (3/5 wired: fileCache/repositoryCache/
-graphCache; CacheProvider+memoryCache stub), incremental/watcher (built,
+selesai), repository, db (client + schema v1 + 3 store CRUD lengkap,
+dipakai daemon), cache (CacheProvider+memoryCache+3 content cache,
+semua wired), incremental/watcher (built,
 watchRepository wraps pipeline API, belum ada consumer), dsl (lexer/ast/
 parser/runtime/bindings/script — `arclux script <file.arclux>`, registry-driven
 auto-discovery: extensions()/checkids() tumbuh sendiri saat parser/detector
@@ -95,19 +96,26 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
    kalau pindah ke npm/yarn.
 
 ## Prioritas aktif sekarang
-1. `packages/db/*` — 0%, belum ada persistence layer sama sekali
-2. `packages/cache/CacheProvider.ts` + `memoryCache.ts` — 2/5 masih stub
-   (3 content-hash cache udah wired; CacheProvider/memoryCache belum jelas
-   masih dibutuhin atau nggak)
-3. True per-file incremental — `packages/incremental` + `watcher` built
-   dan verified standalone, tapi `buildIndex` masih full rebuild tiap
-   kali (keputusan #6: coarse watchRepository dulu, per-file deferred)
-4. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
+1. True per-file incremental — `packages/incremental` (Cell/Database/Query,
+   reactive) + `watcher` built dan verified standalone, tapi `buildIndex`
+   masih full rebuild tiap kali; `watchRepository` udah dipakai daemon
+   via DaemonRepositoryWatcher (coarse dulu, per-file deferred — keputusan #6)
+2. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
    GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
-5. (closed 08-14) Web page commit history/contributors — done:
-   /api/history + /[org]/[repo]/activity (lihat status-web.md)
-6. Docs sync — README/ABOUT/CONTEXT/docs-site harus ikut perubahan
-   parser (27 bahasa), DSL, dan fitur baru tiap PR besar
+3. Docs sync — README/ABOUT/CONTEXT/docs-site harus ikut perubahan
+   parser (27 bahasa), DSL, dan fitur baru tiap PR besar (sync besar
+   terakhir 08-21, PR #532)
+4. 5 packages masih header-only stub: observation, services,
+   package-manager, ui, web-intake — arah platform, belum ada konsumen
+
+## Yang udah wired (jangan dikira stub lagi — audit 08-21)
+- `packages/db` — client + schema v1 + 3 store (RepoStore/AnalysisStore/
+  IssueStore, CRUD lengkap), DIPAKAI daemon (`saveRepo`/`saveAnalysis`
+  per re-analysis, apps/cli/daemon.ts:21-22)
+- `packages/cache` — CacheProvider (getCacheStats/clearAllCaches) +
+  MemoryCache class implementasi beneran; fileCache/repositoryCache/
+  graphCache wired di pipeline
+- `packages/watcher` — watchRepository/changeQueue, dipakai daemon
 
 ## Kalau butuh detail lebih dalam
 `cat PROGRES.md progres/PROGRES-status-*.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`

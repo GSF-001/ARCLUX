@@ -49,7 +49,7 @@ not just "here's a file with that name in it."
 ## Phase 2 — Architecture Health Score
 **Status: Not Started**
 
-19 detectors already exist. Right now they produce a flat list:
+20 detectors already exist. Right now they produce a flat list:
 "17 problems found." That's a report, not a diagnosis.
 
 Turn detector findings into a health view:
