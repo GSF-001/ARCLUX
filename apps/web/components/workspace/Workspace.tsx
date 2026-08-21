@@ -14,6 +14,8 @@ import { WorkspaceCommand } from "@/components/workspace/WorkspaceCommand"
 import { FilesPanel } from "@/components/workspace/panels/FilesPanel"
 import { ImpactPanel } from "@/components/workspace/panels/ImpactPanel"
 import { IssuesPanel } from "@/components/workspace/panels/IssuesPanel"
+import { SecurityPanel } from "@/components/workspace/panels/SecurityPanel"
+import { VerifyPanel } from "@/components/workspace/panels/VerifyPanel"
 import { SplitPane } from "@/components/layout/SplitPane"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -78,12 +80,20 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
               <TabsList className="mx-4 mt-2 w-fit">
                 <TabsTrigger value="impact">Impact</TabsTrigger>
                 <TabsTrigger value="issues">Issues</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+                <TabsTrigger value="verify">Verify</TabsTrigger>
               </TabsList>
               <TabsContent value="impact" className="flex-1 overflow-auto">
                 <ImpactPanel repoUrl={repoUrl} moduleId={selectedModuleId} branch={activeBranch} />
               </TabsContent>
               <TabsContent value="issues" className="flex-1 overflow-auto">
                 <IssuesPanel repoUrl={repoUrl} branch={activeBranch} />
+              </TabsContent>
+              <TabsContent value="security" className="flex-1 overflow-auto">
+                <SecurityPanel repoUrl={repoUrl} branch={activeBranch} />
+              </TabsContent>
+              <TabsContent value="verify" className="flex-1 overflow-auto">
+                <VerifyPanel repoUrl={repoUrl} branch={activeBranch} />
               </TabsContent>
             </Tabs>
           }
