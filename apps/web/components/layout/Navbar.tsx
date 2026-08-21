@@ -61,6 +61,12 @@ export function Navbar({ org, repo, onMenuClick, menuActive = false, scrolled = 
         <Link href="/" className="px-2 text-sm font-semibold tracking-tight shrink-0">
           Arclux
         </Link>
+        <Link
+          href="/script"
+          className="rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Script
+        </Link>
         {breadcrumbs && breadcrumbs.length > 0 && (
           <>
             <span className="text-muted-foreground/40">/</span>
