@@ -20,12 +20,13 @@ Everything in this file is real and working. No marketing promises — every cla
    INTELLIGENCE       │  kernel ── signal bus (every subsystem      │
    LAYER              │  talks through this)                        │
    ───────────        │  runtime ── process manager                 │
-   parser (10 langs)  │  scheduler ── job queue                     │
+   parser (27 langs)  │  scheduler ── job queue                     │
    graph / call graph │  services ── service lifecycle              │
    impact analysis    │  storage ── artifacts, cache, recovery      │
    20 detectors       │  networking ── connections, ports, endpoints│
    14 convention rules│  notifications ── event fan-out to channels │
    security pipeline  │  orchestration ── PlatformOrchestrator      │
+   scripting DSL      │                                             │
    provenance         │                                             │
                       └─────────────────────────────────────────────┘
         │                         │
@@ -49,6 +50,7 @@ Everything in this file is real and working. No marketing promises — every cla
 | `arclux verify <repo>` | 14 framework convention rules (Next.js, NestJS, Express, Vite, Electron, React, Laravel) |
 | `arclux security <repo>` | Secrets, unsafe patterns, sensitive data flow, trust boundaries, attack surface, dependency risk |
 | `arclux search <query>` | Full-text + symbol search across the codebase |
+| `arclux script <file.arclux>` | Run the ARCLUX scripting DSL — chain analyze → doctor → impact → security in one readable script |
 | `arclux diff <a> <b>` | What changed between two states, structurally |
 | `arclux diagnose <repo>` | Deep-dive diagnostics for problem hunting |
 | `arclux shell` | Interactive REPL — analyze once, then ask impact/deps/doctor/graph/search instantly, with `watch on` for live re-analysis |
@@ -80,9 +82,33 @@ Automated code-health checks, each an independent small file that is trivial to 
 
 ## What ARCLUX understands
 
-- **Languages parsed today:** TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C# — via TypeScript Compiler API + web-tree-sitter
+- **Languages parsed today:** TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C#, Bash, C, Dart, Elixir, Kotlin, Lua, Objective-C, OCaml, Scala, Solidity, Swift, Vue, Zig, Elm, ReScript — via TypeScript Compiler API + web-tree-sitter (25 grammar-backed, 2 compiler-API-backed, plus manifest parsers for package.json, go.mod, Cargo.toml, Gemfile, composer.json, csproj, gradle, pom.xml, requirements.txt)
 - **Frameworks with convention rules:** Next.js, NestJS, Express, Vite, Electron, React, Laravel
 - **Graphs:** dependency (imports/exports/folders) and call graph (which function calls which, across files) + folder graph
+
+## The ARCLUX DSL — scripting the analysis
+
+`arclux script <file.arclux>` runs a tiny scripting language purpose-built for
+codebase intelligence. Scripts read like instructions, not API calls:
+
+```arclux
+# analyze the repo, then answer questions about it
+repo = analyze("~/flask")
+
+# what's affected if I change app.py?
+impact(repo, "app.py")
+
+# which files does nothing import, and where should they go?
+check(repo, "orphanFiles")
+```
+
+Every capability the engine exposes is bound into the DSL — analyze, doctor,
+check, graph, callgraph, impact, search, security, diff, archdiff, plus helpers
+(len, sum, filter, sort, exists, keys, values, env, cwd, extensions, checkids).
+The language grows automatically: registering a new parser or detector expands
+`extensions()` / `checkids()` with zero DSL changes (verified live — the 5 new
+parsers from PR #528 grew the binding surface from 9 to 19 extensions on their
+own). More in [`docs-site/docs/how-to-use.md`](docs-site/docs/how-to-use.md).
 
 ## How it works (the 10-second version)
 
@@ -115,6 +141,7 @@ The daemon, watcher, incremental indexer, shell session, and workspace layers si
 - Analysis history is persisted per-run (JSON-record store wired into the daemon), but there's no query layer over it yet — `packages/db` has schema + stores, higher-level queries aren't built
 - Per-file incremental re-indexing: the incremental engine is built, but `buildIndex` still does a full rebuild per change — per-file wiring is deferred
 - The platform's runtime layers (scheduler/services/storage/observation/web-intake) are built but not all wired to consumers
+- Some exotic tree-sitter grammars shipped in `tree-sitter-wasms` are stale (elm was ABI 12 — vendored fix; ReScript's wasm predates its modern `import` syntax) — see `packages/parser/wasms/`
 - Installation is from source only — not yet published to npm
 
 ## Where to go next

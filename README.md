@@ -43,7 +43,7 @@ content, searchable and organized
 
 ## Status: alpha
 
-Under active development. Core pipeline (parse/index/graph/impact), 20 detectors, 14 framework convention rules, CLI + web dashboard + always-on daemon + VS Code extension are solid and verified against real repos (vscode, react, vite, laravel). A few source parsers and the persistence/cache layers are still stubs.
+Under active development. Core pipeline (parse/index/graph/impact), 20 detectors, 14 framework convention rules, scripting DSL, CLI + web dashboard + always-on daemon + VS Code extension are solid and verified against real repos (vscode, react, vite, laravel, flask). The persistence/cache layers are still stubs.
 
 For the current, detailed breakdown -- see [progres/status-core.md](progres/status-core.md), [status-web.md](progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
 
@@ -51,9 +51,10 @@ For the current, detailed breakdown -- see [progres/status-core.md](progres/stat
 
 - Builds a dependency graph (imports, exports, folders) + call graph (which functions call which, across files) from static analysis
 - Traces impact - what is affected if you change file X
-- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more ( 20 detectors — run them all with `arclux doctor`)
+- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (20 detectors — run them all with `arclux doctor`)
 - Enforces framework conventions (14 rules: Next.js, NestJS, Express, Vite, Electron, React, Laravel — `arclux verify` gates on them)
-- Parses TypeScript, JavaScript, Python, Go, and Java today; more languages planned
+- Runs scripted analysis — `arclux script file.arclux` executes the ARCLUX DSL (analyze, impact, doctor, security, graph from plain-text scripts)
+- Parses 27 languages: TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C#, Bash, C, Dart, Elixir, Kotlin, Lua, Objective-C, OCaml, Scala, Solidity, Swift, Vue, Zig, Elm, ReScript, plus manifest formats (package.json, go.mod, Cargo.toml, Gemfile, composer.json, csproj, gradle, pom.xml, requirements.txt)
 
 ## Install (from source)
 
@@ -78,6 +79,9 @@ Run CLI commands via: `npx tsx apps/cli/index.ts <command>`
     npx tsx apps/cli/index.ts diff <from> <to> [path]
     npx tsx apps/cli/index.ts diagnose [path]
     npx tsx apps/cli/index.ts verify [path]
+    npx tsx apps/cli/index.ts security [path]
+    npx tsx apps/cli/index.ts search <query> [path]
+    npx tsx apps/cli/index.ts script <file.arclux>
     npx tsx apps/cli/index.ts config [path]
 
 Web dashboard:

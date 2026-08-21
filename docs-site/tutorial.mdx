@@ -38,9 +38,12 @@ ARCLUX is a deterministic structural-truth engine: every fact it reports
 is traceable to a real import statement, export declaration, or resolved
 path. No AI, no guessing.
 
-Supported languages today: TypeScript, JavaScript, Python, Go, Java
-(plus manifest parsers for package.json, go.mod, Cargo.toml, Gemfile,
-composer.json, .csproj, Gradle/POM, requirements.txt).
+Supported languages today: TypeScript, JavaScript, Python, Go, Java,
+PHP, Ruby, Rust, C++, C#, Bash, C, Dart, Elixir, Kotlin, Lua,
+Objective-C, OCaml, Scala, Solidity, Swift, Vue, Zig, Elm, ReScript
+(25 via web-tree-sitter, 2 via TypeScript Compiler API) plus manifest
+parsers for package.json, go.mod, Cargo.toml, Gemfile, composer.json,
+.csproj, Gradle/POM, requirements.txt.
 
 ## Part 2 — Install & setup
 
@@ -173,7 +176,7 @@ Real output for `src/flask/app.py`:
 the web side, the full affected-files tree. Use it before any refactor:
 change the file, know exactly who breaks.
 
-## Part 6 — Doctor: 19 detectors
+## Part 6 — Doctor: 20 detectors
 
 `doctor` runs the full detector suite and normalizes every finding to
 `checkId + severity + message`:
@@ -198,7 +201,7 @@ Real output (excerpt):
 │    src/flask/__init__.py → src/flask/app.py → src/flask/ctx.py → src/flask/__init__.py
 ```
 
-The 19 detectors (all crash-isolated — a detector that throws becomes an
+The 20 detectors (all crash-isolated — a detector that throws becomes an
 error finding, it never kills the run):
 
 | Severity | Detectors |
