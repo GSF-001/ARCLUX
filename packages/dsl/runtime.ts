@@ -12,7 +12,7 @@
 // engine registries. That's what makes the language grow with ARCLUX:
 // register a new parser or detector and the next script run picks it up.
 
-import type { Node } from "./ast";
+import type { Node, ProgramNode } from "./ast";
 
 export type ArcluxValue =
   | number
@@ -20,7 +20,7 @@ export type ArcluxValue =
   | boolean
   | null
   | ArcluxValue[]
-  | Record<string, ArcluxValue>
+  | { [key: string]: ArcluxValue }
   | ArcluxNativeFn
   | ArcluxScriptFn;
 
@@ -59,7 +59,7 @@ export interface RuntimeOptions {
 }
 
 export function runScript(
-  program: Node,
+  program: ProgramNode,
   bindings: Record<string, ArcluxNativeFn>,
   options: RuntimeOptions = {}
 ): Promise<void> {
@@ -89,7 +89,7 @@ class Interpreter {
     }
   }
 
-  async run(program: Node): Promise<void> {
+  async run(program: ProgramNode): Promise<void> {
     try {
       await this.executeBlock(program.body);
     } catch (err) {
@@ -288,20 +288,21 @@ class Interpreter {
   private async call(callee: ArcluxValue, args: ArcluxValue[]): Promise<ArcluxValue> {
     if (typeof callee === "object" && callee !== null && "kind" in callee) {
       if (callee.kind === "native") {
-        return callee.fn(args, this.context);
+        return (callee as ArcluxNativeFn).fn(args, this.context);
       }
       if (callee.kind === "script") {
-        if (args.length !== callee.params.length) {
+        const fn = callee as ArcluxScriptFn;
+        if (args.length !== fn.params.length) {
           throw new RuntimeError(
-            `Function ${callee.name} expects ${callee.params.length} args, got ${args.length}`
+            `Function ${fn.name} expects ${fn.params.length} args, got ${args.length}`
           );
         }
         this.pushScope();
-        for (let i = 0; i < callee.params.length; i++) {
-          this.scopes[this.scopes.length - 1].set(callee.params[i], args[i]);
+        for (let i = 0; i < fn.params.length; i++) {
+          this.scopes[this.scopes.length - 1].set(fn.params[i], args[i]);
         }
         try {
-          await this.executeBlock(callee.body);
+          await this.executeBlock(fn.body);
           return null;
         } catch (err) {
           if (err instanceof ControlSignal && err.signal === "return") {
