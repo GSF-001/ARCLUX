@@ -1,0 +1,82 @@
+# Changelog
+
+All notable changes to ARCLUX are documented here. Format based on
+[Keep a Changelog](https://keepachangelog.com/); versioning follows
+[SemVer](https://semver.org/) (pre-1.0: minor bump = significant features).
+
+## [0.2.0] — 2026-08-21
+
+~1,020 commits since `v0.1.0-alpha`. Still alpha — expect breaking changes.
+
+### Added
+
+**ARCLUX DSL — scripting language**
+- `arclux script <file.arclux>`: lexer/parser/runtime/bindings for a
+  purpose-built scripting language over the engine (`packages/dsl`)
+- Built-ins: analyze, doctor, check, graph, callgraph, impact, search,
+  security, diff, archdiff + helpers (len, sum, filter, sort, exists,
+  keys, values, env, cwd, extensions, checkids)
+- Registry-driven: `extensions()` / `checkids()` grow automatically when
+  new parsers/detectors register — no DSL code changes needed
+
+**Language support: 5 → 27 languages**
+- New via shared tree-sitter loader + config-driven factory
+  (`makeTreeSitterParser`): PHP, Ruby, Rust, C++, C#, Bash, C, Dart,
+  Elixir, Kotlin, Lua, Objective-C, OCaml, Scala, Solidity, Swift, Vue,
+  Zig, Elm, ReScript
+- Manifest parsers: package.json, go.mod, Cargo.toml, Gemfile,
+  composer.json, csproj, gradle, pom.xml, requirements.txt
+- Vendored elm wasm (`packages/parser/wasms/`) — npm build is ABI-stale;
+  loader checks vendored dir first
+- Fixed web-tree-sitter race: concurrent `Language.load()` calls now
+  serialized in the shared loader
+
+**Analysis & intelligence**
+- 20 architecture detectors (up from 18), including orphan-file
+  classification (dead/unwired/ambiguous) and orphan-integration
+  suggestions with confidence + evidence
+- Security pipeline: secrets, unsafe patterns, sensitive-data flow,
+  trust boundaries, attack surface, dependency risk
+- Full-text + symbol search engine (`packages/search`, `/api/search`)
+- Call graph across files; folder graph; export/import graphs
+- Impact analysis: direct consumers + affected-files tree
+
+**Platform & delivery**
+- Always-on daemon with HTTP+SSE bridge (`/analysis`, `/impact`,
+  `/events`), persisted re-analysis history via `packages/db`
+  (RepoStore/AnalysisStore/IssueStore)
+- VS Code extension: status bar, Problems-panel diagnostics, trace impact
+- Interactive shell REPL (`arclux shell`) with watch mode
+- Source adapters: GitHub/GitLab URLs, archives, local paths — with SSRF
+  guards (private-network/metadata endpoints refused) and source/evidence/
+  analysis boundaries
+- Persistence layer wired: schema v1 + three stores used by the daemon
+- Caching layer: file/repository/graph content-hash caches +
+  CacheProvider stats/clear + MemoryCache
+
+**Web dashboard**
+- Workspace, explorer, overview pages; graph focus view with history nav
+  and expand-on-demand; activity page (commit history/contributors)
+
+### Changed
+- Documentation fully synced to current reality (README, ABOUT, CONTEXT,
+  docs-site Docusaurus + Mintlify, CITATION.cff)
+- Repo description/topics updated on GitHub
+
+### Fixed
+- `scripts/` accidentally deleted from main (PR #528 stash-pop side
+  effect) — restored, including both docs generators and log-progress.sh
+- web-tree-sitter concurrent grammar-load race ("Incompatible language
+  version 0")
+
+### Known limitations (honest)
+- Per-file incremental re-index built but not wired into `buildIndex`
+  (daemon uses coarse full rebuilds)
+- 5 platform packages remain header-only stubs: observation, services,
+  package-manager, ui, web-intake
+- Not published to npm — install from source
+
+## [0.1.0-alpha] — 2026-08-07
+
+Initial public baseline: TypeScript/JavaScript/Python/Go/Java parsing,
+dependency graph, impact analysis, 18 detectors, CLI + early web UI.
