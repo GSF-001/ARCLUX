@@ -19,12 +19,33 @@ npx tsx apps/cli/index.ts doctor [path]
 npx tsx apps/cli/index.ts diagnose [path]
 npx tsx apps/cli/index.ts diff <from> <to> [path]
 npx tsx apps/cli/index.ts verify [path]
+npx tsx apps/cli/index.ts security [path]
+npx tsx apps/cli/index.ts search <query> [path]
+npx tsx apps/cli/index.ts script <file.arclux>
 npx tsx apps/cli/index.ts config [path]
 ```
 
+`analyze` also accepts a remote repo URL (`arclux analyze https://github.com/org/repo`) -- it clones, analyzes, and cleans up, with SSRF/private-network guards on the URL before anything else.
+
 diagnose output includes clickable file paths (OSC 8 hyperlinks) in terminals that support it (Termux, iTerm2, VS Code integrated terminal) -- tap/click to open the file directly.
 
-## 2. Always-on daemon
+## 2. DSL scripting (`arclux script`)
+
+Scripts chain every engine capability in one readable file:
+
+```arclux
+repo = analyze("~/flask")
+impact(repo, "app.py")
+check(repo, "orphanFiles")
+```
+
+Built-ins: analyze, doctor, check, graph, callgraph, impact, search,
+security, diff, archdiff + helpers (len, sum, filter, sort, exists, keys,
+values, env, cwd, extensions, checkids). `extensions()` and `checkids()`
+grow automatically as new parsers/detectors are registered -- the DSL is
+registry-driven, it never needs a code change to know a new language.
+
+## 3. Always-on daemon
 
 Instead of re-running commands by hand, start ARCLUX as a background process that watches your repo and re-analyzes on every save:
 
@@ -45,7 +66,7 @@ curl http://127.0.0.1:&lt;port&gt;/events
 
 Find the port from ~/.arclux/endpoints/&lt;daemonId&gt;.json, written automatically when the daemon starts.
 
-## 3. Web dashboard
+## 4. Web dashboard
 
 ```bash
 cd apps/web
@@ -60,7 +81,7 @@ Open localhost:3000/&lt;org&gt;/&lt;repo&gt; for a given GitHub URL. From the Ov
 
 The Graph page renders the full dependency graph; selecting a node opens a focus panel showing what it needs and what it affects.
 
-## 4. VS Code extension
+## 5. VS Code extension
 
 Connects to a running daemon and surfaces diagnostics in VS Code's Problems panel + a status bar module count.
 
@@ -69,7 +90,7 @@ cd apps/vscode-extension
 pnpm install && pnpm build
 ```
 
-Then load it via VS Code's Extension Development Host. Requires a daemon already running for the workspace folder (daemon --detach from step 2).
+Then load it via VS Code's Extension Development Host. Requires a daemon already running for the workspace folder (daemon --detach from step 3).
 
 ## Where to go next
 

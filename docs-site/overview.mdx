@@ -51,11 +51,14 @@ Parsing TypeScript/TSX pakai TypeScript Compiler API, parsing Python pakai
   <Card title="Impact analysis" icon="radar">
     Change one file, trace everything downstream before you ship
   </Card>
-  <Card title="18 structural detectors" icon="magnifying-glass">
+  <Card title="20 structural detectors" icon="magnifying-glass">
     Circular deps, dead code, orphan files, layer violations, and more
   </Card>
   <Card title="Framework conventions" icon="ruler">
-    Enforces conventions, starting with Next.js -- more frameworks planned
+    Enforces conventions across Next.js, NestJS, Express, Vite, Electron, React, Laravel
+  </Card>
+  <Card title="Scripting DSL" icon="terminal">
+    arclux script -- chain analyze, impact, doctor, security in plain-text scripts
   </Card>
 </CardGroup>
 
@@ -65,10 +68,10 @@ This project is under active development with a small team. Expect breaking chan
 
 <CardGroup cols={2}>
   <Card title="Solid today" icon="check">
-    Core pipeline, TS/Python parsing, all 18 detectors, full impact analysis -- verified against `vscode`, `react`, `vite`
+    Core pipeline, 27 languages, all 20 detectors, impact analysis, DSL, search, security -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`
   </Card>
   <Card title="Not there yet" icon="hourglass-half">
-    Real search, Go/Java relationship parsing, most dashboard panels
+    Persistence layer (packages/db), per-file incremental re-indexing, npm publishing
   </Card>
 </CardGroup>
 

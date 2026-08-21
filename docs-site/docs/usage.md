@@ -11,8 +11,8 @@ Read this first. Full details live in TOOLING.md, scripts/README.md, and CONTRIB
 
 ## Standard workflow
 
-git checkout main
-git pull origin main
+git checkout ARCLUX.main
+git pull origin ARCLUX.main
 git checkout -b type/short-description
 
 git add file
@@ -22,12 +22,12 @@ git push origin type/short-description
 
 gh pr create --repo GSF-001/ARCLUX --title "title" --body "description"
 
-git diff main..type/short-description --stat
+git diff ARCLUX.main..type/short-description --stat
 
 gh pr merge NUMBER --repo GSF-001/ARCLUX --merge --delete-branch
 
-git checkout main
-git pull origin main
+git checkout ARCLUX.main
+git pull origin ARCLUX.main
 
 Branch types: feat, fix, docs, chore, test, split, update
 main is protected — direct push will be rejected, always go through a PR.
@@ -74,6 +74,9 @@ progres/collaborators.md — who owns what right now
     npx tsx apps/cli/index.ts diff &lt;from> &lt;to> [path]
     npx tsx apps/cli/index.ts diagnose [path]
     npx tsx apps/cli/index.ts verify [path]
+    npx tsx apps/cli/index.ts security [path]
+    npx tsx apps/cli/index.ts search &lt;query> [path]
+    npx tsx apps/cli/index.ts script &lt;file.arclux>
     npx tsx apps/cli/index.ts config [path]
 
 Web dashboard:

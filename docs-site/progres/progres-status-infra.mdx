@@ -491,3 +491,72 @@ ARCLUX.main
 **Status:** Done
 
 New CLI command apps/cli/security.ts: runs secrets + unsafe patterns + data-flow + trust boundary + cross-boundary detectors and the attack-surface map, prints summary or --json/--sarif report; exit 1 on critical/high findings (--no-fail to override). Wired into apps/cli/index.ts. Verified on playground/nextjs-demo (0 findings, 4 reachable/2 unreachable = experiment match) and tests/fixtures/security-leaks (findings + valid SARIF).
+
+## 2026-08-18 — Shell: interactive session (PR #514)
+
+**Status:** Done
+
+`arclux shell` interactive REPL (apps/cli/shell.ts + packages/shell/ArcluxShell.ts + plugins.ts). node:repl with custom eval + promise chain for piped stdin (`echo "analyze ~/flask" | arclux shell`). Commands: analyze/impact/deps/consumers/graph/doctor/search/plugins/run/watch/system/processes/services/exit/help. `~` expanded to $HOME (Termux has no /tmp). Analyzed repo stays in memory so impact/doctor/search/graph are O(1)-ish. Merged into ARCLUX.main.
+
+## 2026-08-18 — Shell: watch on/off (PR #515)
+
+**Status:** Done
+
+`watch on|off` in the shell wraps watchRepository + chokidar with `ignoreInitial: true`. Prompt changes to `flask*>`. Known race: initial scan emits watch events during the first analyze — chokidar's ready event ordering; mitigate with a debounce window. Verified standalone via tests + manual run on ~/flask.
+
+## 2026-08-18 — Shell: platform layer (PR #516)
+
+**Status:** Done
+
+User-space detectors (`~/.arclux/detectors/*.ts` → runDoctor extraDetectors, 19 built-in + N user), ShellSession (workspace + environment + processes + services, session.ts), RepositoryQuery (query.ts), plugin args (ctx.args). Doctor report shows built-in vs user detector counts. Merged into ARCLUX.main.
+
+## 2026-08-19 — Boundaries package (PR #517)
+
+**Status:** Done
+
+Filled the boundaries stub package (was 9-line placeholder) with 4 real policies + index.ts:
+
+- **SourceBoundaryPolicy** — classify (local / remote-git / unknown), allowedRoots/denyRoots, symlink containment (only when the textual path is inside an allowed root — avoids double-reporting). Roots realpath'd in constructor because Termux `/tmp` is a symlink.
+- **RemoteAccessPolicy** — SSRF guard: blocks 10/8, 127/8, 169.254.x.x metadata, 172.16/12, 192.168/16, 0/8, ≥224, IPv6 loopback/link-local/ULA. Protocol + host allowlists, maxUrlLength 2048. IPv6 brackets stripped before isIP() — URL.hostname keeps `[::1]` brackets.
+- **AnalysisBoundary** — hard caps: maxFiles 100k / maxBytes 2GiB / maxModules 100k; denied path segments node_modules/.git/vendor + extra.
+- **EvidenceBoundary** — redact() secrets (api key, token/secret/password with `["'\s:=]+` separator, bearer, gh[pousr]_, AKIA, private keys, connection strings) + cap() per-check limits + message length trim.
+- index.ts exports all four; zero new runtime deps.
+
+Wired into real consumers (no dead code):
+- `analyzeRemoteSource` (packages/remote-analysis/analyzeRemoteSource.ts) — SSRF assert on `source.url` before anything else.
+- Shell `analyze` — appends `Boundary:` violation lines from SourceBoundaryPolicy + AnalysisBoundary.
+- Shell `doctor` — EvidenceBoundary(&#123;maxFindingsPerCheck: 20&#125;) redact+cap with `(capped)` marker.
+
+Verified end-to-end on ~/flask: analyze clean (0 violations, permissive defaults), doctor shows `circularDependency: 20 (capped)`, SSRF guard blocks `http://169.254.169.254/latest/meta-data/` and `http://[::1]/x.git` while `https://github.com/...` passes. 16 new tests in tests/boundaries.test.ts → suite 625→641.
+
+Gotchas learned: SCP-style `git@github.com:foo/bar.git` is NOT a URL (use ssh://); "token is sk_..." regex never matches (is is a word, not a value — use `token=sk_...`); private-key pattern needs the `-----` fence; `/etc` on Termux is a symlink (use a second tmpdir in tests).
+
+Infra note: vitest 4's rolldown bundler has no native Termux binary — needs `@rolldown/binding-wasm32-wasi` + emnapi runtime. On this machine: `pnpm install --force` restored the working tree; NAPI_RS_NATIVE_LIBRARY_PATH / NAPI_RS_FORCE_WASI are the escape hatches.
+
+## 2026-08-20 — Source adapters: packages/adapters filled (PR #520)
+
+**Status:** Done
+
+Four stub files replaced with real routing logic + index.ts:
+- `LocalSourceAdapter` — local path/`file://` (with `~` → $HOME expansion), realpath + exists checks.
+- `GitHubSourceAdapter` / `GitLabSourceAdapter` — https, ssh://, and SCP-style (`git@host:org/repo.git` → ssh://) forms; gitlab covers gitlab.com + self-hosted.
+- `ArchiveSourceAdapter` — .zip/.tar.gz/.tgz files (streams + checksum validation; no zip-slip: extracts under a created root).
+- `RemoteHostAdapter` — fallback for ANY public host that speaks git, with port/path parsing — mirrors the confirmed intent that arclux must work with all public https hosts, not just github.
+- index.ts: `createSourceAdapter()` (explicit type or scheme sniffing) + `adaptSource()` (returns AdapterResult, null for unsupported).
+
+Wired into real consumers: `analyzeRemoteRequest` (analyzeRemoteSource.ts) uses `adaptSource()` before URL acquisition; `apps/cli/security.ts` uses `createSourceAdapter`. Verified 8 routing cases (github https/ssh/scp, gitlab variants, archive, local, remote fallback) + SSRF metadata still blocked. No scaffold markers left.
+
+## 2026-08-20 — Daemon /impact endpoint + hardened VS Code extension (PR #522)
+
+**Status:** Done
+
+- Daemon: new `GET /impact?file=` (ArcluxDaemon.getImpact → calculateAffectedFiles; 404 + "did you mean" suggestions on miss) + `/analysis` enriched with graph nodes/edges + scan info. HTTP bridge verified live against ~/flask: 83 modules; `flask/app.py` → 6 direct / 21 affected; missing file → 404 + suggestions.
+- daemonClient.ts rewritten: fetchAnalysis, fetchImpact, watchEndpointsDir (auto-detect daemon via discovery file), SSE with reconnect backoff 1s→30s.
+- extension.ts rewritten: auto-connect on endpoint-dir discovery, 30s status poll, `arclux.impact` command with quick-pick jump-to-file, `arclux.menu`/`refresh`/`connect`, workspace-folder-change reconnect, 3-severity diagnostics, full deactivate cleanup. package.json: commands + menus.
+- Extension `pnpm build` clean.
+
+## 2026-08-20 — Docs: ABOUT.md rewritten as the full ARCLUX map (PR #524)
+
+**Status:** Done
+
+ABOUT.md is no longer a feature list — it's a map: two-layer positioning (intelligence layer = flagship: parser/graph/impact/20 detectors/14 rules/security; platform layer = kernel/runtime/scheduler/services/storage/networking/notifications/orchestration), ASCII diagram, current-reality tables (10 languages, 20 detectors, security boundaries, remote adapters), honest not-done list. README link updated to "the ARCLUX map — start here". Follow-up to PR #519 which had corrected stale claims (db IS implemented, 10 parsers, cache 5/5) after user review.

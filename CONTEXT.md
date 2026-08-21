@@ -24,20 +24,27 @@ Dashboard.
   bukan 0 baris, jadi "kosong" = ≤9 baris bukan `==0`
 
 ## Arsitektur ringkas
-packages/git, parser (per-bahasa: ts/py/js/go/java + manifest parsers,
-PHP route-file parser parsePhpRoutes), indexer (buildIndex,
+packages/git, parser (27 bahasa: TS/JS via Compiler API, sisanya web-tree-sitter
+— bash/c/dart/elixir/elm/kotlin/lua/objc/ocaml/rescript/scala/solidity/swift/vue/
+zig + ts/py/js/go/java/php/ruby/rust/cpp/csharp; shared loader di
+core/treeSitterLoader.ts + factory config-driven makeTreeSitterParser.ts;
+wasm elm di-vendor di packages/parser/wasms/ karena versi npm outdated ABI 12;
+manifest parsers: package.json/go.mod/Cargo.toml/Gemfile/composer/csproj/gradle/
+pom/requirements; PHP route-file parser parsePhpRoutes), indexer (buildIndex,
 resolveRoutes/Exports/Components/Hooks/Providers — getEntryModuleIds dipakai
 detector entry-point filter), graph (buildDependencyGraph/ImportGraph/
 ExportGraph/FolderGraph/CallGraph — call graph selesai issue #50), engine
 (pipeline.ts = satu-satunya entry point analyzeRepository, localPath ATAU
-repoUrl), detectors (19 file, semua wired ke apps/cli/doctor.ts;
+repoUrl), detectors (20 detector file, semua wired ke apps/cli/doctor.ts;
 unusedExports/orphanFiles sudah entry-point-aware issue #4), rules (14:
 nextjs/nestjs/express/vite/electron/react/laravel), search (SearchEngine/
 SearchIndex/SearchFilters + /api/search — issue #9), impact (8/8
 selesai), repository, db (0%), cache (3/5 wired: fileCache/repositoryCache/
 graphCache; CacheProvider+memoryCache stub), incremental/watcher (built,
-watchRepository wraps pipeline API, belum ada consumer), shared/types.ts
-(kamus tipe wajib dipakai semua package).
+watchRepository wraps pipeline API, belum ada consumer), dsl (lexer/ast/
+parser/runtime/bindings/script — `arclux script <file.arclux>`, registry-driven
+auto-discovery: extensions()/checkids() tumbuh sendiri saat parser/detector
+baru di-register), shared/types.ts (kamus tipe wajib dipakai semua package).
 apps/web/components: graph/ (GraphCanvas, GraphProvider, GraphFocusView),
 explorer/, workspace/, overview/, vendor-ui/ (shadcn+aceternity+magic-ui);
 hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
@@ -48,10 +55,10 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
   individual dari luar engine/)
 - Parser TS/Python/JS/Go/Java + manifest parsers (semua di-wire ke
   parserRegistry/manifestRegistry di pipeline.ts)
-- 19 detector file, GraphCanvas/GraphProvider/GraphFocusView (history nav
+- 20 detector file, GraphCanvas/GraphProvider/GraphFocusView (history nav
   + expand-on-demand udah di-fix & diverifikasi browser)
 - Call graph (buildCallGraph), search engine (packages/search), 14 rules
-  (termasuk laravel/requireController), 3 web hooks baru
+  (termasuk laravel/requireController), 3 web hooks baru, DSL lengkap
 
 ## GOTCHA KRITIS — baca ini sebelum debug apapun
 1. **`nodeRequire.resolve()` TIDAK BISA DIPERCAYA di runtime webpack
@@ -99,6 +106,8 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
    GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
 5. (closed 08-14) Web page commit history/contributors — done:
    /api/history + /[org]/[repo]/activity (lihat status-web.md)
+6. Docs sync — README/ABOUT/CONTEXT/docs-site harus ikut perubahan
+   parser (27 bahasa), DSL, dan fitur baru tiap PR besar
 
 ## Kalau butuh detail lebih dalam
 `cat PROGRES.md progres/PROGRES-status-*.md progres/bugs.md progres/decisions.md progres/gotchas.md progres/collaborators.md`

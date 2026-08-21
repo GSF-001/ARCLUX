@@ -6,39 +6,28 @@ sidebar_position: 5
 
 ## 1. `packages/db/*` — 0%
 
-Belum ada persistence layer sama sekali.
+Belum ada persistence layer sama sekali — schema & store ada, query layer
+belum dibangun.
 
-## 2. `packages/cache/*` — 0%, ada design conflict
+## 2. `packages/cache/CacheProvider.ts` + `memoryCache.ts` — 2/5 masih stub
 
-Strategi `MetadataStrategy` (berbasis git-diff) butuh clone repo yang
-persisten. Masalahnya, `pipeline.ts` selalu menghapus clone setelah
-selesai lewat `cleanupRepository` di blok `finally`.
+3 content-hash cache udah wired (fileCache/repositoryCache/graphCache);
+CacheProvider + memoryCache belum jelas masih dibutuhin atau nggak.
 
-Dua opsi yang lagi dipertimbangkan:
+## 3. True per-file incremental
 
-- **Opsi A** — ubah lifecycle clone jadi persisten
-- **Opsi B** — pakai `ContentStrategy` (file-hash) dulu sebagai
-  jembatan sementara
+`packages/incremental` + `watcher` built dan verified standalone, tapi
+`buildIndex` masih full rebuild tiap kali (keputusan #6: coarse
+`watchRepository` dulu, per-file deferred).
 
-Belum diputuskan mana yang jalan duluan.
-
-## 3. Relative import Python 2+ level belum ketest
-
-Pattern seperti `from ..utils import X` kemungkinan belum ke-resolve
-dengan benar di `resolvePath.ts`.
-
-## 4. Zero test coverage untuk `parsePython.ts`
-
-Parser Go dan Rust sudah punya test, Python belum.
-
-## 5. Silent `catch {}` di `scanFiles.ts`
-
-Ada 3 blok `catch {}` diam-diam yang bisa drop file tanpa warning —
-kelas bug yang sama dengan masalah wasm: data hilang tanpa ada sinyal
-ke pengguna.
-
-## 6. Migrasi ke `fetchJson()` belum tuntas di `apps/web`
+## 4. Migrasi ke `fetchJson()` belum tuntas di `apps/web`
 
 Beberapa komponen (`ImpactSummary`, `GlobalSearch`) masih pakai inline
 `fetch()` langsung, belum consume helper `fetchJson()` dari
 `lib/api.ts` / `graph.ts`.
+
+## 5. Docs sync berjalan terus
+
+README/ABOUT/CONTEXT/docs-site harus ikut perubahan parser (27 bahasa),
+DSL, dan fitur baru tiap PR besar — sesi 08-20 menyinkronkan semuanya ke
+keadaan "25+2 bahasa, 20 detector, DSL lengkap".

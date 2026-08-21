@@ -415,7 +415,7 @@ export function buildCallGraph(repository: Repository): CallGraph {
 
 ## Detector Pattern
 
-All 19+ detectors follow same pattern:
+All 20 detectors follow same pattern:
 
 ```typescript
 export function detect<Issue>(repository: Repository): Finding[] {
