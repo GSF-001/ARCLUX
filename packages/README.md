@@ -25,7 +25,9 @@ directly outside of `engine/`.
   produces these shapes.
 - **`parser`** — turns source files into a shared `ParsedFile` shape
   (imports/exports/warnings). One sub-folder per language
-  (`typescript/`, `python/`, `go/`, `java/`, ...), each implementing the
+  (`typescript/`, `python/`, 27 languages today — bash/c/dart/elixir/elm/
+kotlin/lua/objc/ocaml/rescript/ruby/rust/scala/solidity/swift/vue/zig
+included — via the shared tree-sitter loader or TS Compiler API), each implementing the
   `LanguageParser` interface so `engine/pipeline.ts` never has to know
   which language it's dealing with. Also contains manifest parsers
   (`go.mod`, `Cargo.toml`, `package.json`, ...) via the separate
@@ -43,7 +45,7 @@ directly outside of `engine/`.
   (path + file name + export names) and `applyFilters()`; consumed by
   `/api/search`. Framework-agnostic (no React — the React-facing hooks
   live in `apps/web`).
-- **`detectors`** — 19 independent checks that each take a `Repository`
+- **`detectors`** — 20 independent checks that each take a `Repository`
   and return findings: circular dependencies, dead code, unused exports,
   duplicate modules, orphan files, convention violations, and more.
   Entry points (App Router files, CLI entry) are filtered out of the
@@ -61,11 +63,25 @@ directly outside of `engine/`.
   incrementally re-index on file changes instead of doing a full rebuild.
 - **`incremental`** — the incremental re-index logic itself, consumed
   by `watcher`.
-- **`cache`**, **`db`**, **`ui`** — caching layer (file/repository/graph
-  content-hash caches, wired into buildIndex/pipeline), persistence, and
-  shared graph-rendering helpers used by `apps/web` (the color helper
-  lives in `apps/web/theme/graphColors.ts`; `packages/ui/*` is mostly
-  unstarted — see `progres/status-backlog.md`).
+- **`cache`**, **`db`** — caching layer (file/repository/graph
+  content-hash caches wired into buildIndex/pipeline, plus
+  `CacheProvider` stats/clear + `MemoryCache`) and persistence
+  (`client` + `schema v1` + `RepoStore`/`AnalysisStore`/`IssueStore`,
+  used by the daemon to persist every re-analysis).
+- **`dsl`** — the ARCLUX scripting language (`arclux script file.arclux`):
+  lexer/parser/runtime/bindings. Registry-driven — `extensions()` and
+  `checkids()` grow automatically when new parsers/detectors register.
+- **`security`, `security-analysis`** — secrets detection, unsafe
+  patterns, sensitive-data flow, trust boundaries, attack surface,
+  dependency risk.
+- **`daemon`, `watcher`, `incremental`** — always-on background analysis:
+  `watchRepository` feeds `DaemonRepositoryWatcher`, which re-analyzes on
+  change and persists via `db`. The HTTP+SSE bridge serves `/analysis`,
+  `/impact`, `/events`.
+- **`shell`** — interactive REPL (`arclux shell`): analyze once, then ask
+  impact/deps/doctor/graph/search with live watch mode.
+- **`ui`** — shared graph-rendering helpers (mostly unstarted — see
+  `progres/status-backlog.md`).
 - **`shared`** — types, `ArcluxError`, and small utilities
   (`hashContent`, `toPosixPath`, `createLogger`, etc.) every other
   package imports from. Read `shared/types.ts` first when exploring this
