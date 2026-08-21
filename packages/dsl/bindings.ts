@@ -236,7 +236,7 @@ export async function buildBindings(): Promise<Record<string, ArcluxNativeFn>> {
     const query = str(args, 1, "query");
     const index = buildSearchIndex(repo);
     const results = runSearch(index, query, { limit: 25 });
-    return results.map((r) => ({ id: r.id, score: r.score, label: r.label }));
+    return results.map((r) => ({ id: r.moduleId, path: r.filePath, score: r.score }));
   });
 
   b.security = native("security", async (args) => {
@@ -253,18 +253,23 @@ export async function buildBindings(): Promise<Record<string, ArcluxNativeFn>> {
     return changed.map((c) => ({
       path: c.path,
       status: c.status,
-      additions: c.additions,
-      deletions: c.deletions,
     }));
   });
 
   b.archdiff = native("archdiff", async (args) => {
     const repo = await resolveRepo(args, 0, "repo");
-    const result = computeArchitecturalDiff(repo, repo);
+    const repoPath = str(args, 1, "repoPath");
+    const refA = str(args, 2, "refA");
+    const refB = str(args, 3, "refB");
+    const result = computeArchitecturalDiff(repo, repoPath, refA, refB);
+    const byStatus: Record<string, number> = {};
+    for (const f of result.changedFiles) {
+      byStatus[f.status] = (byStatus[f.status] ?? 0) + 1;
+    }
     return {
-      addedModules: result.addedModules.length,
-      removedModules: result.removedModules.length,
-      changedModules: result.changedModules.length,
+      changedFiles: result.changedFiles.length,
+      affectedFiles: result.affectedFiles.length,
+      byStatus,
     };
   });
 
@@ -423,7 +428,7 @@ export async function buildBindings(): Promise<Record<string, ArcluxNativeFn>> {
 
   b.extensions = native("extensions", () => registeredExtensions());
 
-  b.checkids = native("checkids", () => DOCTOR_CHECK_IDS);
+  b.checkids = native("checkids", () => [...DOCTOR_CHECK_IDS]);
 
   return b;
 }

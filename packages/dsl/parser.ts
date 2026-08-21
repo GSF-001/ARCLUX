@@ -31,7 +31,7 @@
 //   object     := "{" (IDENT ":" expr)* "}"
 
 import { lex, type Token } from "./lexer";
-import type { Node } from "./ast";
+import type { Node , ProgramNode } from "./ast";
 
 export class ParseError extends Error {
   constructor(
@@ -44,7 +44,7 @@ export class ParseError extends Error {
   }
 }
 
-export function parse(source: string): Node {
+export function parse(source: string): ProgramNode {
   const tokens = lex(source);
   const parser = new Parser(tokens);
   const program = parser.parseProgram();
@@ -80,7 +80,7 @@ class Parser {
     return this.peek().kind === "keyword" && this.peek().value === value;
   }
 
-  parseProgram(): Node {
+  parseProgram(): ProgramNode {
     const body: Node[] = [];
     while (this.peek().kind !== "eof") {
       body.push(this.parseStatement());
