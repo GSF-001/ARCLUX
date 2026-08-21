@@ -32,7 +32,7 @@ import { registerShellCommand } from "./shell";
 import { registerScriptCommand } from "./script";
 
 const program = new Command();
-program.name("arclux").description("Repository intelligence CLI").version("0.1.0");
+program.name("arclux").description("Repository intelligence CLI").version("0.2.0");
 
 registerAnalyzeCommand(program);
 registerGraphCommand(program);
