@@ -60,7 +60,12 @@ export function assertSourceAllowed(source: string, policy: AcquisitionPolicy): 
   if (!["http:", "https:", "ssh:", "git:", "ftp:"].includes(url.protocol)) {
     throw new Error(`Remote protocol is not allowed: ${url.protocol}`);
   }
-  if (policy.allowedHosts.length > 0 && !policy.allowedHosts.includes(url.hostname)) {
+  // allowedHosts empty by default = deny-all for remote hosts, NOT
+  // unrestricted. Callers MUST explicitly populate allowedHosts before
+  // any remote acquisition is permitted. (Third fix of this exact
+  // regression — see progres/bugs.md; this file has reverted twice.
+  // If you're touching this file, do NOT remove this check.)
+  if (!policy.allowedHosts.includes(url.hostname)) {
     throw new Error(`Remote host is not allowed: ${url.hostname}`);
   }
 }
