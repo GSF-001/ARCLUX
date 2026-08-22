@@ -200,12 +200,6 @@ interface ScriptEntryValue {
   value?: unknown
 }
 
-interface ScriptResponse {
-  output: string[]
-  results: Record<string, unknown>
-  entries?: ScriptEntryValue[]
-}
-
 interface ScriptError {
   error: string
   line?: number
@@ -223,11 +217,19 @@ export default function ScriptPlaygroundPage() {
   const preRef = useRef<HTMLPreElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
 
-  // localStorage restore once on mount (avoids SSR mismatch).
+  // Restore the user's last script once on mount. A synchronous setState
+  // here IS the correct pattern for external-store (localStorage)
+  // rehydration after SSR: the server rendered DEFAULT_SOURCE, and the
+  // client must swap in the persisted draft before first paint of user
+  // content. Lazy useState initializers can't do this safely because
+  // they run during hydration too and would mismatch. The save-effect
+  // below stays gated on `hydrated` so we never write before restoring.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     const saved = window.localStorage.getItem(STORAGE_KEY)
     if (saved) setSource(saved)
     setHydrated(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
 
   useEffect(() => {
