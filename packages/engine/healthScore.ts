@@ -39,7 +39,12 @@ const SEVERITY_WEIGHT: Record<DoctorFinding["severity"], number> = {
   info: 0.5,
 };
 
-const CATEGORY_CHECKS: { id: string; label: string; checkIds: string[] }[] = [
+/**
+ * Doctor checks grouped into the four health categories. Exported so
+ * consumers (e.g. /api/audit chapters) group findings identically to
+ * how they're scored — one source of truth for the grouping.
+ */
+export const DOCTOR_CATEGORIES: { id: string; label: string; checkIds: string[] }[] = [
   {
     id: "structuralIntegrity",
     label: "Structural integrity",
@@ -61,6 +66,8 @@ const CATEGORY_CHECKS: { id: string; label: string; checkIds: string[] }[] = [
     checkIds: ["componentConvention", "featureStructure", "repositoryPattern", "routeConvention", "storyConvention", "testConvention"],
   },
 ];
+
+const CATEGORY_CHECKS = DOCTOR_CATEGORIES;
 
 function scoreFor(findings: DoctorFinding[], moduleCount: number): number {
   if (findings.length === 0) return 100;
