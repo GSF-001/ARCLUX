@@ -40,11 +40,19 @@ interface AuditChapter {
   items: AuditItem[]
 }
 
+interface AuditCategory {
+  id: string
+  label: string
+  score: number
+  findingCount: number
+}
+
 interface AuditResponse {
   repoUrl: string
   moduleCount: number
   findingTotal: number
   overallHealth: number
+  categories: AuditCategory[]
   attackSurface: { entryPoints: number; reachableModules: number; unreachableModules: number }
   chapters: AuditChapter[]
 }

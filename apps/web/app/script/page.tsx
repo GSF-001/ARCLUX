@@ -288,7 +288,7 @@ export default function ScriptPlaygroundPage() {
   }, [])
 
   const executeTemplateAction = useCallback(
-    async (action: "run" | "clear" | "reset" | "help") => {
+    async (action: "run" | "clear" | "reset" | "help" | "audit") => {
       if (action === "clear") {
         setBlocks([])
         return

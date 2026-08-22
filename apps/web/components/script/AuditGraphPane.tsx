@@ -67,10 +67,11 @@ function AuditGraphInner({ target }: { target: AuditFocusTarget | null }) {
   // Camera flight whenever the walkthrough target changes.
   useEffect(() => {
     if (!target || !graph) return
-    const primaryPath = target.cycleFiles[0] ?? target.filePath
-    if (!primaryPath) return
-    const nodeId = filePathToId.get(primaryPath)
-    if (!nodeId) return
+    const primaryPath: string | undefined =
+      target.cycleFiles.length > 0 ? target.cycleFiles[0] : target.filePath ?? undefined
+    if (typeof primaryPath !== "string") return
+    const nodeId: string | undefined = filePathToId.get(primaryPath)
+    if (typeof nodeId !== "string") return
 
     selectNode(nodeId)
 
