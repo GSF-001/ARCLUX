@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { FileDetails, type DiagnosticMarker } from "./FileDetails";
 import { DependencyList } from "./DependencyList";
 import { ImpactSummary } from "./ImpactSummary";
+import { GraphProvider } from "../graph/GraphProvider";
 
 type ExplorerTab = "file" | "dependencies" | "impact";
 
@@ -99,6 +100,7 @@ export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) 
   );
 
   return (
+    <GraphProvider repoUrl={repoUrl} branch={branch}>
     <div className="flex h-full flex-col bg-background">
       <div className="flex items-center justify-between bg-muted/20 px-4 py-2">
         <p className="truncate font-mono text-xs text-muted-foreground">{moduleId}</p>
@@ -140,5 +142,6 @@ export function Explorer({ repoUrl, moduleId, branch, onClose }: ExplorerProps) 
         )}
       </div>
     </div>
+    </GraphProvider>
   );
 }
