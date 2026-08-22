@@ -5,41 +5,35 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Card grid layout style (badge + large mono numbers + bordered cards)
-// inspired by archgraph.dev's "16 languages, one graph" section — visual
-// pattern only, not their copy or their numbers. ARCLUX genuinely
-// supports 2 languages right now (TypeScript via the TS Compiler API,
-// Python via web-tree-sitter); this deliberately does NOT pad the count
-// or claim coverage that doesn't exist. Update this list only when a new
-// packages/parser/<language>/ implementation is actually done and
-// verified — see PROGRES.md for what's still 0%.
 
-const languages = [
+// Language coverage section. Counts come from packages/parser/ — every
+// grammar-backed language goes through the shared tree-sitter loader or
+// the TS Compiler API and emits the same import/export contract.
+// Keep this list in sync with parserRegistry (27 languages, 0.2.0).
+
+const compilerApiLanguages = [
   {
-    name: "TypeScript",
+    name: "TypeScript / TSX",
     indexer: "TypeScript Compiler API",
     status: "Full support: imports, exports, re-exports",
   },
   {
-    name: "Python",
-    indexer: "web-tree-sitter",
-    status: "Full support: imports, exports (heuristic)",
+    name: "JavaScript",
+    indexer: "TypeScript Compiler API",
+    status: "Full support: JS/JSX/CJS/MJS, CommonJS exports",
   },
 ]
 
-const plannedLanguages = [
-  "Go",
-  "Java",
-  "Rust",
-  "C#",
-  "PHP",
-  "Ruby",
-  "C++",
-  "JavaScript",
+const treeSitterLanguages = [
+  "Python", "Go", "Java", "PHP", "Ruby", "Rust", "C++", "C#", "Bash",
+  "C", "Dart", "Elixir", "Kotlin", "Lua", "Objective-C", "OCaml",
+  "Scala", "Solidity", "Swift", "Vue", "Zig", "Elm", "ReScript",
 ]
 
+const plannedLanguages = ["More grammars from tree-sitter-wasms", "Manifest-only refinements"]
+
 export function LanguageCoverage() {
+  const total = compilerApiLanguages.length + treeSitterLanguages.length
   return (
     <section className="border-t px-6 py-24">
       <div className="mx-auto max-w-5xl">
@@ -47,7 +41,7 @@ export function LanguageCoverage() {
           Coverage
         </div>
         <h2 className="mb-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-          2 languages today, one graph shape.
+          {total} languages today, one graph shape.
         </h2>
         <p className="mb-10 max-w-xl text-muted-foreground">
           Every language parser emits the same import/export contract, so
@@ -56,7 +50,7 @@ export function LanguageCoverage() {
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {languages.map((lang) => (
+          {compilerApiLanguages.map((lang) => (
             <div key={lang.name} className="rounded-lg border p-5">
               <div className="mb-3 flex items-center justify-between">
                 <span className="font-medium">{lang.name}</span>
@@ -71,11 +65,35 @@ export function LanguageCoverage() {
               </div>
             </div>
           ))}
+
+          <div className="rounded-lg border p-5 sm:col-span-2">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="font-medium">{treeSitterLanguages.length} languages via web-tree-sitter</span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-xs text-emerald-500">
+                active
+              </span>
+            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Shared tree-sitter loader + config-driven parser factory — one
+              wasm per grammar, cached per process, vendored overrides where
+              the npm builds are stale.
+            </p>
+            <div className="flex flex-wrap gap-1.5 border-t pt-3">
+              {treeSitterLanguages.map((lang) => (
+                <span
+                  key={lang}
+                  className="rounded-full bg-emerald-500/5 px-2.5 py-1 font-mono text-xs text-emerald-600"
+                >
+                  {lang}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="mt-6 rounded-lg border border-dashed p-5">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Planned, not yet implemented</span>
+            <span className="text-sm text-muted-foreground">Next up</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {plannedLanguages.map((lang) => (
