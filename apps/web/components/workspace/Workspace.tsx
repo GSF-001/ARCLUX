@@ -16,6 +16,8 @@ import { ImpactPanel } from "@/components/workspace/panels/ImpactPanel"
 import { IssuesPanel } from "@/components/workspace/panels/IssuesPanel"
 import { SecurityPanel } from "@/components/workspace/panels/SecurityPanel"
 import { VerifyPanel } from "@/components/workspace/panels/VerifyPanel"
+import { HealthPanel } from "@/components/workspace/panels/HealthPanel"
+import { CallsPanel } from "@/components/workspace/panels/CallsPanel"
 import { SplitPane } from "@/components/layout/SplitPane"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -82,6 +84,8 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
                 <TabsTrigger value="issues">Issues</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
                 <TabsTrigger value="verify">Verify</TabsTrigger>
+                <TabsTrigger value="health">Health</TabsTrigger>
+                <TabsTrigger value="calls">Calls</TabsTrigger>
               </TabsList>
               <TabsContent value="impact" className="flex-1 overflow-auto">
                 <ImpactPanel repoUrl={repoUrl} moduleId={selectedModuleId} branch={activeBranch} />
@@ -94,6 +98,12 @@ export function Workspace({ org, repo, repoUrl, branch }: WorkspaceProps) {
               </TabsContent>
               <TabsContent value="verify" className="flex-1 overflow-auto">
                 <VerifyPanel repoUrl={repoUrl} branch={activeBranch} />
+              </TabsContent>
+              <TabsContent value="health" className="flex-1 overflow-auto">
+                <HealthPanel repoUrl={repoUrl} branch={activeBranch} />
+              </TabsContent>
+              <TabsContent value="calls" className="flex-1 overflow-auto">
+                <CallsPanel repoUrl={repoUrl} branch={activeBranch} moduleId={selectedModuleId} />
               </TabsContent>
             </Tabs>
           }
