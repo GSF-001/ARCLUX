@@ -123,7 +123,6 @@ const IMPACT_HALO_MEDIUM = "#FFB224";
 // Below this fan-in count a node is NOT a hub and renders no count badge
 // (keeps low-connectivity nodes visually quiet -- the task requirement:
 // badges only on high-impact hubs, count >= 5).
-const HUB_BADGE_MIN_COUNT = 5;
 
 // Badge only renders above this zoom. Unlike the halo/label gates this is
 // NOT a readability gate — the badge group is counter-scaled (1/zoomScale)
@@ -131,19 +130,14 @@ const HUB_BADGE_MIN_COUNT = 5;
 // 3D sprite's world scaling, but without the perspective shrink). The gate
 // only prevents badge-on-badge overlap in the most zoomed-out overviews of
 // dense graphs.
-const MIN_ZOOM_FOR_BADGE = 0.35;
 
 // Count badge geometry (SVG user units). The badge is a CIRCLE centered ON
 // the node (the number sits in the middle of the node circle — user
 // request) whose radius grows with the digit count; the tier color fills
 // the disc and the node type color stays as a thin ring. Sized for
 // readability at zoom >= MIN_ZOOM_FOR_BADGE.
-const BADGE_FONT_SIZE = 8.5;
 // Neutral disc for the 5..19 tier -- hubs, but not alarming.
-const BADGE_FILL_BASE = "#3D444D";
-const BADGE_TEXT_LIGHT = "#FFFFFF";
 // Dark text on the orange disc for contrast (orange + white fails WCAG).
-const BADGE_TEXT_DARK = "#1A1A1A";
 
 // Below this zoom, node icons are too small to read and just cost a
 // render -- skip them. Part of a lightweight LOD (level-of-detail)
@@ -218,7 +212,7 @@ function GraphNodeComponent({
         strokeOpacity={isSelected ? 1 : 0.4}
         opacity={isDimmed ? 0.3 : isSelected || isHovered ? 1 : 0.85}
       />
-      {zoomScale >= MIN_ZOOM_FOR_ICON && importCount < HUB_BADGE_MIN_COUNT && (
+      {zoomScale >= MIN_ZOOM_FOR_ICON && (
         <path
           d={getNodeIconPath(effectiveType, node.label)}
           fill="none"
@@ -230,51 +224,6 @@ function GraphNodeComponent({
           className="pointer-events-none"
         />
       )}
-      {/* Hub count badge: only for high-impact nodes (importCount >= 5),
-          rendered as a small pill at the node's top-right corner. Same
-          zoom gate as the impact halo so overviews stay clean. Red/orange
-          pills mirror the 3D canvas's importance tiers (massive = red,
-          medium = orange, 5..19 = neutral gray). Sits inside the group so
-          isDimmed opacity applies to it too. */}
-      {zoomScale >= MIN_ZOOM_FOR_BADGE && importCount >= HUB_BADGE_MIN_COUNT && (() => {
-        const digits = String(importCount).length;
-        // CIRCLE badge CENTERED ON THE NODE: the number sits in the middle
-        // of the node circle ("not to the side, but in the center of the
-        // circle", user request). Radius grows with the digit count
-        // (monospace digits at BADGE_FONT_SIZE are ~5.2px wide + padding);
-        // tier color fills the disc, node type color stays as a thin ring so
-        // the legend identity survives. Counter-scaled (scale 1/zoomScale,
-        // anchored at the node center) so it keeps a constant readable
-        // screen size at any zoom.
-        const badgeRadius = (digits * 5.2) / 2 + 4.5;
-        const badgeFill =
-          importCount > IMPACT_HIGH_THRESHOLD
-            ? IMPACT_HALO_HIGH
-            : importCount >= IMPACT_MEDIUM_THRESHOLD
-              ? IMPACT_HALO_MEDIUM
-              : BADGE_FILL_BASE;
-        const textFill =
-          importCount >= IMPACT_MEDIUM_THRESHOLD && importCount <= IMPACT_HIGH_THRESHOLD
-            ? BADGE_TEXT_DARK
-            : BADGE_TEXT_LIGHT;
-        return (
-          <g className="pointer-events-none select-none" transform={`scale(${1 / zoomScale})`}>
-            <circle r={badgeRadius} fill={badgeFill} stroke={color} strokeWidth={1} strokeOpacity={0.8} />
-            <text
-              x={0}
-              y={BADGE_FONT_SIZE / 2 - 0.6}
-              fontSize={BADGE_FONT_SIZE}
-              fontFamily="monospace"
-              fontWeight={600}
-              fill={textFill}
-              textAnchor="middle"
-              className="select-none"
-            >
-              {importCount}
-            </text>
-          </g>
-        );
-      })()}
       {/* Invisible hit target. Must be LAST so it sits on top: SVG hits
           register against the topmost shape, and the visible dot/icon/
           label all keep pointer-events-none — so the whole hitRadius disk
