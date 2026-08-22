@@ -8,7 +8,8 @@
 
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AuditGraphPane, type AuditFocusTarget } from "@/components/script/AuditGraphPane"
 
 interface SecurityFindingItem {
   id?: string
@@ -116,6 +117,8 @@ export function AuditPanel() {
   const [data, setData] = useState<AuditResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [elapsedMs, setElapsedMs] = useState<number | null>(null)
+  /** Flat cursor over all chapter items; -1 = nothing focused yet. */
+  const [cursor, setCursor] = useState(-1)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -142,6 +145,7 @@ export function AuditPanel() {
     setPhase("booting")
     setBootVisible(0)
     setRevealedChapters(0)
+    setCursor(-1)
     setData(null)
     setError(null)
     setElapsedMs(null)
@@ -202,6 +206,47 @@ export function AuditPanel() {
     `✓ ${data.moduleCount} modul · ${data.findingTotal} temuan · health ${data.overallHealth} · surface ${data.attackSurface.entryPoints} entry/${data.attackSurface.reachableModules} reachable` +
       (elapsedMs !== null ? ` · ${ (elapsedMs / 1000).toFixed(1) }s` : "")
 
+  const flatItems = useMemo(() => {
+    if (!data) return []
+    return data.chapters.flatMap((ch, ci) =>
+      ch.items.map((it, ii) => ({ chapterIndex: ci, item: it as AuditItem, itemIndex: ii }))
+    )
+  }, [data])
+
+  const activeItem = cursor >= 0 && cursor < flatItems.length ? flatItems[cursor] : null
+
+  const focusTarget: AuditFocusTarget | null = useMemo(() => {
+    if (!activeItem) return null
+    const it = activeItem.item
+    const filePath =
+      it.location?.filePath ?? it.filePath ?? null
+    const cycleFiles =
+      it.checkId === "circularDependency" && it.message.includes("\u2192")
+        ? it.message.split("\u2192").map((p) => p.trim()).filter(Boolean)
+        : []
+    return { filePath, cycleFiles }
+  }, [activeItem])
+
+  const goNext = useCallback(() => {
+    setCursor((c) => Math.min(c + 1, flatItems.length - 1))
+  }, [flatItems.length])
+  const goPrev = useCallback(() => {
+    setCursor((c) => Math.max(c - 1, 0))
+  }, [])
+
+  // Keyboard arrows drive the walkthrough while results are on screen.
+  useEffect(() => {
+    if (phase !== "done" || !data || flatItems.length === 0) return
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return
+      if (e.key === "ArrowRight") goNext()
+      else if (e.key === "ArrowLeft") goPrev()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [phase, data, flatItems.length, goNext, goPrev])
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* audit input row */}
@@ -226,7 +271,8 @@ export function AuditPanel() {
         </button>
       </div>
 
-      {/* theater + chapters */}
+      {/* theater + chapters (left) | 3D fly-cam (right, large screens) */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-auto p-3 font-mono text-xs leading-relaxed">
         {phase === "idle" && (
           <p className="text-neutral-600">
@@ -316,6 +362,36 @@ export function AuditPanel() {
               <div className="text-emerald-400">✓ Bersih — tidak ada temuan di semua kategori.</div>
             )}
           </>
+        )}
+      </div>
+
+        {/* walkthrough navigator + 3D pane (lg+) */}
+        {phase === "done" && data && flatItems.length > 0 && (
+          <div className="hidden w-[42%] shrink-0 flex-col border-l border-neutral-800 lg:flex">
+            <AuditGraphPane repoUrl={repoInput.trim()} target={focusTarget} />
+            <div className="flex shrink-0 items-center gap-2 border-t border-neutral-800 px-3 py-2">
+              <button
+                onClick={goPrev}
+                disabled={cursor <= 0}
+                className="rounded border border-neutral-700 px-2 py-0.5 font-mono text-[11px] text-neutral-300 hover:border-blue-500 disabled:opacity-30"
+              >
+                ‹ prev
+              </button>
+              <span className="font-mono text-[11px] tabular-nums text-neutral-500">
+                {cursor + 1} / {flatItems.length}
+              </span>
+              <button
+                onClick={goNext}
+                disabled={cursor >= flatItems.length - 1}
+                className="rounded border border-neutral-700 px-2 py-0.5 font-mono text-[11px] text-neutral-300 hover:border-blue-500 disabled:opacity-30"
+              >
+                next ›
+              </button>
+              <span className="ml-auto hidden font-mono text-[10px] text-neutral-600 xl:inline">
+                ←/→ navigate
+              </span>
+            </div>
+          </div>
         )}
       </div>
     </div>
