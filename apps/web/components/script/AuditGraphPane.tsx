@@ -59,7 +59,8 @@ function AuditGraphInner({ target }: { target: AuditFocusTarget | null }) {
   const filePathToId = useMemo(() => {
     const map = new Map<string, string>()
     for (const n of graph?.nodes ?? []) {
-      map.set(n.filePath, n.id)
+      // filePath is optional on GraphNode (absent for external-package)
+      if (typeof n.filePath === "string") map.set(n.filePath, n.id)
     }
     return map
   }, [graph])
