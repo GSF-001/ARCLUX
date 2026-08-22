@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await runScriptSource(body.source, {
+      captureValues: true,
       runtime: body.maxIterations ? { maxIterations: body.maxIterations } : undefined,
     });
 
@@ -53,14 +54,21 @@ export async function POST(request: NextRequest) {
       {
         output: result.output,
         results: result.results,
+        entries: result.entries ?? [],
       },
       { status: 200 }
     );
   } catch (err) {
     // Script-level errors (parse errors, runtime errors, unknown
-    // bindings) are user-facing — return the message, not a 500.
+    // bindings) are user-facing — return the message plus source
+    // location when the error carries one (ParseError does).
     const message = err instanceof Error ? err.message : String(err);
+    const line = (err as { line?: number }).line;
+    const column = (err as { column?: number }).column;
     console.error("Error in /api/script:", message);
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json(
+      { error: message, line: typeof line === "number" ? line : undefined, column: typeof column === "number" ? column : undefined },
+      { status: 400 }
+    );
   }
 }
