@@ -9,6 +9,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AuditPanel } from "@/components/script/AuditPanel"
 
 // ── DSL surface (mirrors packages/dsl/lexer.ts + bindings.ts) ──────────
 
@@ -56,7 +57,7 @@ interface SlashCommand {
   /** Editor content this command loads (template commands). */
   template?: string
   /** Special actions handled imperatively. */
-  action?: "run" | "clear" | "reset" | "help"
+  action?: "run" | "clear" | "reset" | "help" | "audit"
 }
 
 const REPO_URL = '"https://github.com/left-pad/left-pad"'
@@ -135,6 +136,7 @@ for s in sizes {
 }
 print("total: " + tostr(sum(sizes)))`,
   },
+  { cmd: "/audit", description: "Switch to audit mode — full repo scan theater", action: "audit" },
   { cmd: "/run", description: "Execute the current script", action: "run" },
   { cmd: "/clear", description: "Clear the transcript", action: "clear" },
   { cmd: "/reset", description: "Restore the starter script", action: "reset" },
@@ -226,6 +228,7 @@ export default function ScriptPlaygroundPage() {
   const [isRunning, setIsRunning] = useState(false)
   const [prompt, setPrompt] = useState("")
   const [paletteIndex, setPaletteIndex] = useState(0)
+  const [mode, setMode] = useState<"script" | "audit">("script")
 
   const nextBlockId = useRef(1)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -297,6 +300,10 @@ export default function ScriptPlaygroundPage() {
       }
       if (action === "help") {
         appendHelpBlock()
+        return
+      }
+      if (action === "audit") {
+        setMode("audit")
         return
       }
       await run()
@@ -437,16 +444,45 @@ export default function ScriptPlaygroundPage() {
             <span className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
             <span className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
           </span>
-          <span className="ml-2 font-mono text-xs text-neutral-400">arclux — script playground</span>
-          <button
-            onClick={() => void run()}
-            disabled={isRunning || source.trim().length === 0}
-            className="ml-auto rounded border border-neutral-700 px-2.5 py-0.5 font-mono text-[11px] text-neutral-300 hover:border-blue-500 hover:text-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {isRunning ? "running…" : "⏎ run"}
-          </button>
+          <span className="ml-2 font-mono text-xs text-neutral-400">arclux</span>
+          <span className="flex items-center gap-0.5 rounded border border-neutral-800 p-0.5">
+            <button
+              onClick={() => setMode("script")}
+              aria-pressed={mode === "script"}
+              className={`rounded px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                mode === "script" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              › script
+            </button>
+            <button
+              onClick={() => setMode("audit")}
+              aria-pressed={mode === "audit"}
+              className={`rounded px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                mode === "audit" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              ▸ audit
+            </button>
+          </span>
+          {mode === "script" && (
+            <button
+              onClick={() => void run()}
+              disabled={isRunning || source.trim().length === 0}
+              className="ml-auto rounded border border-neutral-700 px-2.5 py-0.5 font-mono text-[11px] text-neutral-300 hover:border-blue-500 hover:text-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {isRunning ? "running…" : "⏎ run"}
+            </button>
+          )}
         </div>
 
+        {/* audit mode replaces editor/transcript/prompt entirely */}
+        {mode === "audit" ? (
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <AuditPanel />
+          </div>
+        ) : (
+        <>
         {/* editor */}
         <div className="flex min-h-[140px] flex-1 overflow-hidden border-b border-neutral-800">
           <div
@@ -603,6 +639,9 @@ export default function ScriptPlaygroundPage() {
             />
           </div>
         </div>
+
+        </>
+        )}
 
         {/* status bar */}
         <div className="flex shrink-0 items-center justify-between border-t border-neutral-800 bg-black/60 px-4 py-1.5 font-mono text-[10px] text-neutral-600">
