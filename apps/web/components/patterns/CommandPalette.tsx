@@ -14,11 +14,11 @@
 
 "use client"
 
-import { useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { useRouter, usePathname } from "next/navigation"
 import { Command } from "cmdk"
 import { motion } from "motion/react"
-import { SquareTerminal, Settings } from "lucide-react"
+import { Loader2, SquareTerminal, Settings } from "lucide-react"
 import { cn } from "@/lib/cn"
 import { useCommandPalette } from "@/hooks/useCommandPalette"
 import { GLOBAL_ITEMS, NAV_GROUPS } from "@/lib/navigation"
@@ -31,15 +31,37 @@ export interface CommandPaletteProps {
 export function CommandPalette({ org, repo }: CommandPaletteProps) {
   const { open, setOpen } = useCommandPalette()
   const router = useRouter()
+  const pathname = usePathname()
+  // Stay open with a spinner on the chosen row until the route actually
+  // changes — slow first-compile navigations never read as dead clicks.
+  const [navigating, setNavigating] = useState<string | null>(null)
   const base = `/${org}/${repo}`
 
   const navigate = useCallback(
     (href: string) => {
+      // Keep the palette open with a row spinner while the route settles;
+      // the effect below closes it the moment the path matches.
+      setNavigating(href)
       router.push(href)
-      setOpen(false)
     },
-    [router, setOpen]
+    [router]
   )
+
+  useEffect(() => {
+    // Closing on route arrival is an external-system response (the
+    // router completed); synchronous here is intentional and safe.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (open && navigating && pathname === navigating) {
+      setOpen(false)
+      setNavigating(null)
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [open, navigating, pathname, setOpen])
+
+  const RowSpinner = ({ href }: { href: string }) =>
+    navigating === href ? (
+      <Loader2 className="ml-auto h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
+    ) : null
 
   if (!open) return null
 
@@ -101,6 +123,7 @@ export function CommandPalette({ org, repo }: CommandPaletteProps) {
                           </span>
                         )}
                       </span>
+                      <RowSpinner href={href} />
                     </Command.Item>
                   )
                 })}
@@ -130,6 +153,7 @@ export function CommandPalette({ org, repo }: CommandPaletteProps) {
                       <span className="block truncate text-xs text-muted-foreground">{description}</span>
                     )}
                   </span>
+                  <RowSpinner href={suffix} />
                 </Command.Item>
               ))}
             </Command.Group>
