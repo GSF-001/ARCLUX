@@ -10,7 +10,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Network, Search, Settings, PanelsTopLeft, Activity, X } from "lucide-react"
+import { LayoutDashboard, Network, Search, Settings, PanelsTopLeft, Activity, ClipboardCheck, X } from "lucide-react"
 import { cn } from "@/lib/cn"
 
 interface SidebarProps {
@@ -44,6 +44,7 @@ export function Sidebar({ org, repo, collapsed = false, overlay = false, onClose
     { label: "Graph", href: `${base}/graph`, icon: Network },
     { label: "Search", href: `${base}/search`, icon: Search },
     { label: "Activity", href: `${base}/activity`, icon: Activity },
+    { label: "Audit", href: `${base}/audit`, icon: ClipboardCheck },
     { label: "Workspace", href: `${base}/workspace`, icon: PanelsTopLeft },
     { label: "Settings", href: `${base}/settings`, icon: Settings },
   ]
