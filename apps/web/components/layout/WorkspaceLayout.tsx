@@ -12,6 +12,7 @@ import { useState } from "react"
 import { Navbar } from "@/components/layout/Navbar"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { BottomNav } from "@/components/layout/BottomNav"
+import { CommandPalette } from "@/components/patterns/CommandPalette"
 import type { BreadcrumbItem } from "@/components/layout/Breadcrumbs"
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { cn } from "@/lib/cn"
@@ -62,6 +63,7 @@ export function WorkspaceLayout({ org, repo, breadcrumbs, children }: WorkspaceL
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
+      <CommandPalette org={org} repo={repo} />
       <Navbar
         org={org}
         repo={repo}

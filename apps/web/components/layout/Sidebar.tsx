@@ -10,88 +10,110 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Network, Search, Settings, PanelsTopLeft, Activity, ClipboardCheck, X } from "lucide-react"
+import { motion } from "motion/react"
+import { X } from "lucide-react"
 import { cn } from "@/lib/cn"
+import { NAV_GROUPS, GLOBAL_ITEMS } from "@/lib/navigation"
 
 interface SidebarProps {
   org: string
   repo: string
-  /** Desktop inline mode: collapsed to a bare icon rail (w-16). */
   collapsed?: boolean
-  /** Tablet overlay mode: rendered in a fixed drawer, shows a close button. */
   overlay?: boolean
-  /** Called when the user asks to close the overlay drawer. */
   onClose?: () => void
 }
 
 /**
- * Navigation sidebar, rendered by WorkspaceLayout in one of two modes:
- * - Desktop (inline, `hidden lg:block` wrapper): `w-64`, collapsible to a
- *   `w-16` icon rail. Width animates via `transition-all duration-300`.
- * - Tablet (overlay): WorkspaceLayout wraps this in a `fixed` drawer with
- *   a backdrop; `overlay` adds the close button. Not rendered on mobile —
- *   BottomNav owns navigation there.
+ * Desktop/tablet navigation rail. Renders from lib/navigation.ts — the
+ * single nav registry shared with BottomNav and CommandPalette.
  *
- * Premium styling: no `border-r` — separation from the content column comes
- * from the sidebar background token (`bg-sidebar`) plus a soft shadow.
+ * Eye-candy contract: glass surface, group micro-labels, and a sliding
+ * active pill (motion layoutId) so selection glides between items
+ * instead of teleporting.
  */
 export function Sidebar({ org, repo, collapsed = false, overlay = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const base = `/${org}/${repo}`
 
-  const links = [
-    { label: "Overview", href: base, icon: LayoutDashboard },
-    { label: "Graph", href: `${base}/graph`, icon: Network },
-    { label: "Search", href: `${base}/search`, icon: Search },
-    { label: "Activity", href: `${base}/activity`, icon: Activity },
-    { label: "Audit", href: `${base}/audit`, icon: ClipboardCheck },
-    { label: "Workspace", href: `${base}/workspace`, icon: PanelsTopLeft },
-    { label: "Settings", href: `${base}/settings`, icon: Settings },
-  ]
+  const renderGroup = (groupId: string, label: string, items: typeof NAV_GROUPS[number]["items"]) => (
+    <div key={groupId} className="px-2">
+      {!collapsed && (
+        <p className="mb-1 px-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/50">
+          {label}
+        </p>
+      )}
+      <ul className="space-y-0.5">
+        {items.map(({ label: itemLabel, suffix, icon: Icon, description }) => {
+          const href = `${base}${suffix}`
+          const isActive = pathname === href
+          return (
+            <li key={href} className="relative">
+              {isActive && (
+                <motion.span
+                  layoutId="sidebar-active-pill"
+                  className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/15 via-primary/10 to-transparent ring-1 ring-inset ring-primary/30"
+                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                />
+              )}
+              <Link
+                href={href}
+                title={collapsed ? itemLabel : description ?? itemLabel}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "group relative flex items-center gap-2.5 rounded-md py-2 text-sm font-medium transition-colors duration-150",
+                  collapsed ? "justify-center px-0" : "px-2",
+                  isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {/* left glow hairline on active */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 h-5 w-[2.5px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_2px] shadow-primary/40" />
+                )}
+                <Icon
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
+                    isActive && "text-primary drop-shadow-[0_0_6px_rgba(0,112,243,0.6)]"
+                  )}
+                />
+                {!collapsed && <span className="truncate">{itemLabel}</span>}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 
   return (
     <aside
       className={cn(
-        "flex h-full flex-col gap-1 overflow-hidden p-3 text-sidebar-foreground select-none transition-all duration-300",
-        collapsed ? "w-16" : "w-64",
+        "flex h-full flex-col gap-1 overflow-y-auto overflow-x-hidden p-2 text-sidebar-foreground select-none transition-all duration-300 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        collapsed ? "w-16" : "w-60",
         overlay ? "glass-overlay" : "glass-panel"
       )}
     >
       {overlay && (
-        <div className="mb-2 flex items-center justify-between px-2">
-          <span className="text-sm font-semibold">Navigation</span>
+        <div className="mb-1 flex items-center justify-between px-2 pt-1">
+          <span className="text-sm font-semibold">Navigasi</span>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close navigation"
+            aria-label="Tutup navigasi"
             className="rounded-md p-2 transition-transform hover:bg-accent active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
-      {links.map(({ label, href, icon: Icon }) => {
-        const isActive = pathname === href
 
-        return (
-          <Link
-            key={href}
-            href={href}
-            title={collapsed ? label : undefined}
-            aria-current={isActive ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.98]",
-              collapsed && "justify-center px-0",
-              isActive
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {!collapsed && <span className="truncate">{label}</span>}
-          </Link>
-        )
-      })}
+      {NAV_GROUPS.map((g) => renderGroup(g.id, g.label, g.items))}
+      {renderGroup("global", "Global", GLOBAL_ITEMS)}
+
+      {!collapsed && (
+        <p className="mt-auto px-3 pb-2 font-mono text-[10px] text-muted-foreground/40">
+          arclux · v0.2.0
+        </p>
+      )}
     </aside>
   )
 }
