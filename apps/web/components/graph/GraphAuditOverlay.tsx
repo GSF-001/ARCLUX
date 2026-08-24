@@ -8,7 +8,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { RadioTower, X } from "lucide-react"
 import { useGraphContext } from "./GraphProvider"
@@ -19,6 +19,10 @@ interface GraphAuditOverlayProps {
   repoUrl: string
   branch?: string
   fgRef: React.MutableRefObject<ForceGraphMethods | undefined>
+  /** Current dimension — halos only exist in 3D, so clicking from 2D
+   *  switches the canvas first (user never has to hunt the toggle). */
+  is3D: boolean
+  onEnable3D: () => void
 }
 
 interface AuditChapterItem {
@@ -55,17 +59,33 @@ const SEV_BADGE: Record<string, string> = {
  * Core files untouched: this is pure composition around GraphViewport's
  * existing fgRef + /api/audit output.
  */
-export function GraphAuditOverlay({ repoUrl, branch, fgRef }: GraphAuditOverlayProps) {
+export function GraphAuditOverlay({ repoUrl, branch, fgRef, is3D, onEnable3D }: GraphAuditOverlayProps) {
   const { graph } = useGraphContext()
   const [mode, setMode] = useState<"idle" | "scanning" | "done">("idle")
   const [summary, setSummary] = useState<AuditResponseShape | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const overlay = useGraphAuditOverlay(fgRef)
+
+  // filePath → id from the provider graph (full node data — the scene's
+  // node objects don't carry filePath, see hook docs).
+  const filePathToId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const n of graph?.nodes ?? []) {
+      if (n.filePath) map.set(n.filePath, n.id)
+    }
+    return map
+  }, [graph])
+
+  const overlay = useGraphAuditOverlay(fgRef, filePathToId)
 
   const graphReady = graph !== null
 
   async function runAudit() {
     if (!graphReady || mode === "scanning") return
+    if (!is3D) {
+      onEnable3D()
+      // Give the 3D canvas a beat to mount before halos start landing.
+      await new Promise((r) => setTimeout(r, 350))
+    }
     setMode("scanning")
     setError(null)
     setSummary(null)

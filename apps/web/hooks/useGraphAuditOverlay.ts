@@ -67,7 +67,11 @@ export interface UseGraphAuditOverlayReturn {
 }
 
 export function useGraphAuditOverlay(
-  fgRef: React.MutableRefObject<ForceGraphMethods | undefined>
+  fgRef: React.MutableRefObject<ForceGraphMethods | undefined>,
+  /** filePath → nodeId, built from GraphProvider's graph (NOT the scene —
+   *  GraphCanvas3D's node objects don't carry filePath, so building this
+   *  map from graphData() never matched anything: the original bug). */
+  filePathToId: Map<string, string>
 ): UseGraphAuditOverlayReturn {
   const [findings, setFindings] = useState<AuditOverlayFinding[]>([])
   const [isScanning, setIsScanning] = useState(false)
@@ -191,7 +195,7 @@ export function useGraphAuditOverlay(
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       rafRef.current = null
     }
-  }, [findings, isScanning, fgRef])
+  }, [findings, isScanning, fgRef, filePathToId])
 
   const clear = useCallback(() => stop(false), [stop])
 
