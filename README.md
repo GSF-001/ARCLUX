@@ -1,5 +1,5 @@
-# ARCLUX 🦖
-- OPEN SOURCE
+![alt text](https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/assets/Banner-preview.png) 
+## OPEN SOURCE
 
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
 
