@@ -97,7 +97,13 @@ export function GraphViewport({ repoUrl, branch }: GraphViewportProps) {
           <div style={{ position: "relative", width: "100%", height: "100%" }}>
             {is3D ? <GraphCanvas3D fgRef={fgRef} /> : <GraphCanvas />}
           </div>
-          {is3D && <GraphAuditOverlay repoUrl={repoUrl} branch={branch} fgRef={fgRef} />}
+          <GraphAuditOverlay
+            repoUrl={repoUrl}
+            branch={branch}
+            fgRef={fgRef}
+            is3D={is3D}
+            onEnable3D={() => setIs3D(true)}
+          />
           <GraphMenu is3D={is3D} onToggle3D={() => setIs3D((v) => !v)} fgRef={fgRef} />
           <GraphSearch />
           <GraphFocusView />
