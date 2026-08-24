@@ -46,7 +46,14 @@ watchRepository wraps pipeline API, belum ada consumer), dsl (lexer/ast/
 parser/runtime/bindings/script — `arclux script <file.arclux>`, registry-driven
 auto-discovery: extensions()/checkids() tumbuh sendiri saat parser/detector
 baru di-register), shared/types.ts (kamus tipe wajib dipakai semua package).
-apps/web/components: graph/ (GraphCanvas, GraphProvider, GraphFocusView),
+apps/web punya: /api/audit+security+verify+script+health+callgraph
+(parity routes), halaman /[org]/[repo]/audit (AuditWorkspace: STREAM ×
+FOCUS × GRAPH), /script = playground TUI opencode-style (slash palette,
+highlight, JSON tree), nav registry lib/navigation.ts → sidebar+bottom
+bar+Ctrl+K palette satu sumber, useGraphAuditOverlay (halo severity di
+graph 3D via fgRef, zero core diff), JetBrains Mono, ViewModeToggle.
+apps/web/components: graph/ (GraphCanvas, GraphProvider, GraphFocusView,
+GraphAuditOverlay),
 explorer/, workspace/, overview/, vendor-ui/ (shadcn+aceternity+magic-ui);
 hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
 (issue #147).

@@ -51,12 +51,13 @@ Everything in this file is real and working. No marketing promises — every cla
 | `arclux security <repo>` | Secrets, unsafe patterns, sensitive data flow, trust boundaries, attack surface, dependency risk |
 | `arclux search <query>` | Full-text + symbol search across the codebase |
 | `arclux script <file.arclux>` | Run the ARCLUX scripting DSL — chain analyze → doctor → impact → security in one readable script |
+| Web audit | `/{org}/{repo}/audit` — findings theater (STREAM × FOCUS × GRAPH), plus **live severity halos on the 3D graph** while the audit replays |
 | `arclux diff <a> <b>` | What changed between two states, structurally |
 | `arclux diagnose <repo>` | Deep-dive diagnostics for problem hunting |
 | `arclux shell` | Interactive REPL — analyze once, then ask impact/deps/doctor/graph/search instantly, with `watch on` for live re-analysis |
 | `arclux daemon` | Always-on background watcher with a local HTTP+SSE bridge (`/analysis`, `/impact`, `/events`) |
 | VS Code extension | Live status bar, Problems-panel diagnostics, and `ARCLUX: Trace Impact` right from the editor |
-| Web dashboard | Next.js UI: workspace, explorer, overview, graph focus view — `apps/web`, `pnpm run dev` |
+| Web dashboard | Next.js UI: workspace (Impact/Issues/Security/Verify/Health/Calls), explorer, audit theater, opencode-style script playground, Ctrl+K command palette — `apps/web`, `pnpm run dev` |
 
 ### The 20 detectors
 
@@ -108,7 +109,10 @@ check, graph, callgraph, impact, search, security, diff, archdiff, plus helpers
 The language grows automatically: registering a new parser or detector expands
 `extensions()` / `checkids()` with zero DSL changes (verified live — the 5 new
 parsers from PR #528 grew the binding surface from 9 to 19 extensions on their
-own). More in [`docs-site/docs/how-to-use.md`](docs-site/docs/how-to-use.md).
+own). The browser playground at `/script` runs the same DSL server-side —
+including an **audit mode** that streams doctor + security + attack-surface
+findings as a terminal theater and replays them as breathing halos on the
+3D dependency graph.
 
 ## How it works (the 10-second version)
 

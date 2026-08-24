@@ -560,3 +560,15 @@ Wired into real consumers: `analyzeRemoteRequest` (analyzeRemoteSource.ts) uses 
 **Status:** Done
 
 ABOUT.md is no longer a feature list — it's a map: two-layer positioning (intelligence layer = flagship: parser/graph/impact/20 detectors/14 rules/security; platform layer = kernel/runtime/scheduler/services/storage/networking/notifications/orchestration), ASCII diagram, current-reality tables (10 languages, 20 detectors, security boundaries, remote adapters), honest not-done list. README link updated to "the ARCLUX map — start here". Follow-up to PR #519 which had corrected stale claims (db IS implemented, 10 parsers, cache 5/5) after user review.
+
+## 2026-08-23 — v0.2.0 released + web feature wave (docs sync #559)
+- v0.2.0-alpha tag + GitHub Release (08-21): 4x package.json, CITATION
+  refreshed, CHANGELOG.md created. Repo description/topics updated.
+- Post-release web wave (8 PR merged): CLI-web parity routes, audit
+  feature (theater + graph halos), nav registry + Ctrl+K, playground
+  TUI, pending indicators, JetBrains Mono, view-mode toggle.
+- scripts/ restored (deleted by accident in #528 stash-pop).
+- Machine gotcha (NEW): two AI sessions sharing one working dir =
+  branch switches eat each other's uncommitted work. Second session
+  now works in a separate clone (/root/arclux-pg) — port 3000
+  conflicts were dev servers from BOTH sessions.

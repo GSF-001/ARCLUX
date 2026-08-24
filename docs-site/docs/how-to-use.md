@@ -97,3 +97,18 @@ Then load it via VS Code's Extension Development Host. Requires a daemon already
 - architecture.md -- core vs extension-point package boundaries
 - status.md -- what's solid vs still a stub
 - gotchas.md -- environment traps worth knowing before debugging
+
+## 5. Audit — the findings theater
+
+Run the full analysis (doctor + security + attack surface) as one guided
+experience:
+
+- `/{org}/{repo}/audit` — standalone page, repo prefilled from the URL
+- or the `▸ audit` tab inside `/script`
+
+The terminal streams the scan (systemd-style boot, real numbers), then
+chapters reveal one finding at a time in the FOCUS panel with a file
+preview overlay. On the graph page, **run audit on graph** replays every
+finding as a breathing severity halo on the 3D nodes — critical red,
+high orange, medium yellow.
+
