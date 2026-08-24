@@ -65,7 +65,7 @@ interface StreamLine {
 }
 
 const TONE_CLASS: Record<Tone, string> = {
-  dim: "text-neutral-600",
+  dim: "text-neutral-500",
   accent: "text-cyan-400",
   ok: "text-emerald-400",
   warn: "text-yellow-400",
@@ -79,11 +79,19 @@ function sevTone(sev: string): Tone {
 }
 
 const BOOT_LINES: StreamLine[] = [
-  { text: 'init.parsers[27]        → ok', tone: "accent" },
-  { text: 'init.detectors[20]      → ok', tone: "accent" },
-  { text: 'load.rules[14]          → ok', tone: "accent" },
-  { text: 'clone(repo)             …', tone: "dim" },
+  { text: "init.parsers [27]        [ OK ]", tone: "ok" },
+  { text: "init.detectors [20]      [ OK ]", tone: "ok" },
+  { text: "load.rules [14]          [ OK ]", tone: "ok" },
+  { text: "clone(repository)        [ WAIT ]", tone: "dim" },
 ]
+
+/** Turns a line's text into prompt-style segments: "$ cmd" prefix + rest.
+ *  Only command-looking lines (boot + rule(...) scans) get the prompt. */
+function withPrompt(text: string, tone: Tone): { prompt: boolean; body: string } {
+  // Boot lines + scan lines start with a word( — treat as commands.
+  const isCommand = /^[a-z][a-zA-Z]*[.([]/.test(text)
+  return { prompt: isCommand && tone !== "dim" ? true : isCommand, body: text }
+}
 
 /** Build the scan script from REAL audit output. Capped so a 2k-finding
  * repo streams fast instead of rendering forever — the FOCUS panel holds
@@ -184,7 +192,7 @@ function FilePreviewOverlay({
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
       <div className="flex h-full max-h-[85%] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-emerald-900/50 bg-neutral-950">
-        <div className="flex shrink-0 items-center gap-2 border-b border-neutral-800 px-3 py-2">
+        <div className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2">
           <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-500">file</span>
           <code className="truncate font-mono text-xs text-neutral-300">{target.path}</code>
           {target.line !== undefined && (
@@ -222,6 +230,34 @@ function FilePreviewOverlay({
           )}
         </pre>
       </div>
+    </div>
+  )
+}
+
+// ── Prompt-style stream row: "$ cmd … output" ──────────────────────────
+
+function StreamRow({ line }: { line: StreamLine }) {
+  const { prompt, body } = withPrompt(line.text, line.tone)
+  // [ OK ] / [ WAIT ] / [critical] style tokens get terminal-status colors
+  const parts = body.split(/(\[ (?:OK|WAIT|critical|error|high|warning|medium|low|info) \])/g)
+  return (
+    <div className={`flex gap-2 ${TONE_CLASS[line.tone]}`}>
+      {prompt && <span className="select-none text-emerald-600/80">$</span>}
+      <span className="min-w-0 flex-1">
+        {parts.map((p, i) =>
+          p === "[ OK ]" ? (
+            <span key={i} className="font-bold text-emerald-400">{p}</span>
+          ) : p === "[ WAIT ]" ? (
+            <span key={i} className="text-yellow-500">{p}</span>
+          ) : /^\[ (critical|error) \]$/.test(p) ? (
+            <span key={i} className="text-red-400">{p}</span>
+          ) : /^\[ (high|warning) \]$/.test(p) ? (
+            <span key={i} className="text-orange-400">{p}</span>
+          ) : (
+            <span key={i}>{p}</span>
+          )
+        )}
+      </span>
     </div>
   )
 }
@@ -410,7 +446,7 @@ export function AuditWorkspace({ initialRepoUrl, branch }: AuditWorkspaceProps) 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       {/* input row */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-neutral-800 px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2">
         <span className="font-mono text-xs text-violet-400">audit ▸</span>
         <input
           value={repoInput}
@@ -442,7 +478,7 @@ export function AuditWorkspace({ initialRepoUrl, branch }: AuditWorkspaceProps) 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* STREAM */}
         <div className="flex w-full shrink-0 flex-col md:w-[42%]">
-          <div className="flex items-center justify-between border-b border-neutral-800/70 px-3 py-1.5">
+          <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-600">
               stream
             </span>
@@ -464,19 +500,15 @@ export function AuditWorkspace({ initialRepoUrl, branch }: AuditWorkspaceProps) 
 
             {phase === "booting" &&
               BOOT_LINES.slice(0, bootVisible).map((l, i) => (
-                <div key={`b${i}`} className={TONE_CLASS[l.tone]}>
-                  {l.text}
-                </div>
+                <StreamRow key={`b${i}`} line={l} />
               ))}
 
             {streamLines.map((l, i) => (
-              <div key={i} className={TONE_CLASS[l.tone]}>
-                {l.text}
-              </div>
+              <StreamRow key={i} line={l} />
             ))}
 
             {(phase === "booting" || phase === "streaming") && (
-              <span className="inline-block h-3.5 w-2 animate-pulse bg-emerald-500 align-middle" />
+              <span className="terminal-cursor inline-block h-3.5 w-2 bg-emerald-500 align-middle" aria-hidden />
             )}
 
             {phase === "done" && error && (
@@ -499,8 +531,8 @@ export function AuditWorkspace({ initialRepoUrl, branch }: AuditWorkspaceProps) 
         </div>
 
         {/* FOCUS */}
-        <div className="hidden min-w-0 flex-1 flex-col border-l border-neutral-800/70 md:flex">
-          <div className="flex items-center justify-between border-b border-neutral-800/70 px-3 py-1.5">
+        <div className="hidden min-w-0 flex-1 flex-col pl-2 md:flex">
+          <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">
               focus
             </span>
@@ -608,8 +640,8 @@ export function AuditWorkspace({ initialRepoUrl, branch }: AuditWorkspaceProps) 
 
         {/* GRAPH (xl+) */}
         {data && active && (
-          <div className="hidden min-h-0 w-[26%] shrink-0 border-l border-neutral-800/70 xl:flex xl:flex-col">
-            <div className="border-b border-neutral-800/70 px-3 py-1.5">
+          <div className="hidden min-h-0 w-[26%] shrink-0 pl-2 xl:flex xl:flex-col">
+            <div className="px-3 pt-2 pb-1.5">
               <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">
                 graph
               </span>
@@ -631,7 +663,7 @@ export function AuditWorkspace({ initialRepoUrl, branch }: AuditWorkspaceProps) 
       )}
 
       {/* audit status strip */}
-      <div className="flex shrink-0 items-center justify-between border-t border-neutral-800 bg-black/60 px-3 py-1.5 font-mono text-[10px]">
+      <div className="flex shrink-0 items-center justify-between border-t border-neutral-900/80 bg-black/40 px-3 py-1.5 font-mono text-[10px]">
         {counts ? (
           <span className="flex gap-3">
             <span className="text-red-500">THREATS {counts.threats}</span>

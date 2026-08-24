@@ -11,6 +11,7 @@
 import Link from "next/link"
 import { Moon, Sun, PanelLeft, Settings } from "lucide-react"
 import { useTheme } from "@/hooks/useTheme"
+import { ViewModeToggle } from "@/components/layout/ViewModeToggle"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/cn"
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs"
@@ -83,6 +84,7 @@ export function Navbar({ org, repo, onMenuClick, menuActive = false, scrolled = 
         >
           <Settings className="h-5 w-5" />
         </Link>
+        <ViewModeToggle />
         <Button
           variant="ghost"
           size="icon"

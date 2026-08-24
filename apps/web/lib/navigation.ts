@@ -41,20 +41,20 @@ export interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: "analisis",
-    label: "Analisis",
+    label: "Explore",
     items: [
-      { label: "Graph", suffix: "/graph", icon: Network, description: "Peta dependensi interaktif" },
-      { label: "Search", suffix: "/search", icon: Search, description: "Cari simbol & file" },
-      { label: "Audit", suffix: "/audit", icon: ClipboardCheck, description: "Teater temuan & security" },
+      { label: "Graph", suffix: "/graph", icon: Network, description: "Interactive dependency map" },
+      { label: "Search", suffix: "/search", icon: Search, description: "Find symbols & files" },
+      { label: "Audit", suffix: "/audit", icon: ClipboardCheck, description: "Finding theater: security & health" },
     ],
   },
   {
     id: "repositori",
-    label: "Repositori",
+    label: "Inspect",
     items: [
-      { label: "Overview", suffix: "", icon: LayoutDashboard, description: "Ringkasan repositori" },
-      { label: "Activity", suffix: "/activity", icon: Activity, description: "Riwayat commit & kontributor" },
-      { label: "Workspace", suffix: "/workspace", icon: PanelsTopLeft, description: "Panel file · impact · issues" },
+      { label: "Overview", suffix: "", icon: LayoutDashboard, description: "Repository summary" },
+      { label: "Activity", suffix: "/activity", icon: Activity, description: "Commits & contributors" },
+      { label: "Workspace", suffix: "/workspace", icon: PanelsTopLeft, description: "Files · impact · issues panels" },
     ],
   },
 ]
@@ -65,7 +65,7 @@ export const GLOBAL_ITEMS: NavItem[] = [
     label: "Script Playground",
     suffix: "/script",
     icon: SquareTerminal,
-    description: "Terminal DSL ala opencode",
+    description: "opencode-style DSL terminal",
   },
-  { label: "Settings", suffix: "/settings", icon: Settings, description: "Preferensi tampilan" },
+  { label: "Settings", suffix: "/settings", icon: Settings, description: "Display preferences" },
 ]
