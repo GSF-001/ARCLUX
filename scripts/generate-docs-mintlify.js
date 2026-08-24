@@ -215,6 +215,35 @@ const context = readIfExists('CONTEXT.md');
   }
 }
 
+// ── Codebase Map kategorisasi tematik ────────────────────────────────────
+// Struktur URL: /map/{category}/{name} — bersih, gak ada dobel "map-".
+// Kategori = cara ABOUT.md membagi sistem: intelligence (mesin analisis),
+// platform (runtime di bawahnya), apps (pintu masuk user).
+const MAP_CATEGORIES = {
+  intelligence: [
+    'parser', 'indexer', 'graph', 'detectors', 'rules', 'impact',
+    'search', 'security-analysis', 'security', 'dsl', 'diff',
+    'semantic-diff', 'correlation', 'diagnostics', 'language',
+    'remote-analysis', 'provenance', 'acquisition', 'adapters',
+    'remote',
+  ],
+  platform: [
+    'kernel', 'runtime', 'scheduler', 'services', 'storage',
+    'networking', 'notifications', 'orchestration', 'daemon', 'db',
+    'cache', 'incremental', 'watcher', 'system', 'terminal', 'editor',
+    'shell', 'workspace', 'environment', 'package-manager',
+    'observation', 'web-intake', 'change', 'platform',
+  ],
+  // sisanya (shared, git, repository, boundaries) → intelligence fallback
+};
+
+function mapCategoryFor(pkgName) {
+  for (const [cat, list] of Object.entries(MAP_CATEGORIES)) {
+    if (list.includes(pkgName)) return cat;
+  }
+  return 'intelligence';
+}
+
 // Codebase Map — 1 halaman per package/app, dari package.json + export list
 {
   function scanExports(dir) {
@@ -306,16 +335,18 @@ const context = readIfExists('CONTEXT.md');
       } else {
         body += `_Tidak ada file entry point (index.ts/js) ditemukan._\n`;
       }
-      const slug = `map-${groupDir}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      // Apps → kategori 'apps'; packages → tematik intelligence/platform.
+      const category = groupDir === 'apps' ? 'apps' : mapCategoryFor(name);
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const filename = `${slug}.mdx`;
-      writeDoc(filename, name, description || `Ringkasan ${groupDir}/${name}`, body, 'map');
-      pageNames.push(filename.replace('.mdx', ''));
+      writeDoc(filename, name, description || `Ringkasan ${groupDir}/${name}`, body, `map/${category}`);
+      pageNames.push(`map/${category}/${slug}`);
     });
     return pageNames;
   }
 
   const mapPages = [...scanGroup('packages', 'packages'), ...scanGroup('apps', 'apps')];
-  if (mapPages.length) console.log(`  info codebase map pages: ${mapPages.join(', ')} -- tambahkan ke docs.json nav`);
+  if (mapPages.length) console.log(`  info codebase map pages (${mapPages.length}): ${mapPages.slice(0, 6).join(', ')} …`);
 }
 
 // Tooling & Config Guide
@@ -410,7 +441,7 @@ const context = readIfExists('CONTEXT.md');
     '  <Card title="Status & Progress" icon="chart-line" href="/status">',
     "    What's solid, what's a stub, and what's actively being worked on",
     '  </Card>',
-    '  <Card title="Codebase Map" icon="folder-tree" href="/map/map-apps-cli">',
+    '  <Card title="Codebase Map" icon="folder-tree" href="/map/apps/cli">',
     '    Browse every package and app in the monorepo',
     '  </Card>',
     '</CardGroup>',
