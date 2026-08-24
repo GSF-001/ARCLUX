@@ -815,3 +815,50 @@ User: "in 3D too" (follow-up to the 2D centered badge). The sprite badge moved f
 **Status:** Done (tsc 0 apps/web, eslint 0, next build 0)
 
 After moving the badge sprite to the node center (0,0,0) the numbers became completely invisible: a sprite is a flat quad at the sphere-center depth, while the sphere's FRONT surface is closer to the camera — the sprite fails the depth test and is hidden by its own sphere (transparent pass renders after opaque but depthTest stays on). Fixed by removing the sprite entirely: for hubs (count >= 5) the number is drawn ON the sphere — a square, fully opaque canvas texture (tier fill + type-color ring + digit dead-center) becomes the sphere's map (MeshBasicMaterial); the hub core is scaled x1.3 for readability. This is the true "number in the center of the node circle" in 3D, with no occlusion artifacts. getBadgeTexture/sprite cache removed, replaced by getSphereBadgeTexture(count, ringColor) cached by count|color. Guard: a flat sprite at the sphere center is invisible (depth test) — numbers belong on the sphere's own texture; a sphere material with a transparent map would erase its edges — fill fully. (KI-061)
+
+## 2026-08-22 — Web parity wave 1: security/verify/script routes + panels
+- /api/security, /api/verify, /api/script (HTTP counterparts of CLI
+  commands; doctor pattern). /api/security uses result.securityAnalysis
+  (in-pipeline snapshot) + mapAttackSurface.
+- Workspace tabs: Security + Verify + Health + Calls (HealthPanel =
+  computeHealthScore aggregation, roadmap Phase 2; CallsPanel = list
+  view over buildCallGraph, GraphCanvas untouched).
+- /script DSL playground v1 (examples dropdown, JSON tree output,
+  localStorage). Landing LanguageCoverage fix: "2 languages" → 25+2.
+
+## 2026-08-22 — Script playground v2: opencode-style terminal
+- Full terminal window: titlebar tabs (script/audit), syntax highlight
+  (zero-dep tokenizer overlay), slash-command palette (11 commands,
+  arrow/tab/enter nav), transcript blocks with per-run echo+ms,
+  ctrl+enter run, Tab indent, localStorage persist.
+
+## 2026-08-22 — AUDIT feature (3 PR: #545 base, #546 theater, #557+#558 graph)
+- /api/audit: composition only — runDoctor + securityAnalysis +
+  mapAttackSurface, grouped into chapters, DOCTOR_CATEGORIES exported
+  from healthScore.ts (single source of grouping truth).
+- AuditWorkspace (used by playground mode AND /[org]/[repo]/audit):
+  STREAM × FOCUS × GRAPH. Boot systemd-style "[ OK ]", scan script
+  built from REAL findings, 55ms reveal, progress rail.
+- FOCUS panel: one finding at a time (never a dump), severity banner,
+  verbatim messages, file preview overlay via /api/file (raw.github).
+- AuditGraphPane: isolated GraphProvider+GraphCanvas3D instance, camera
+  flights via CameraControls pattern (GraphMenu), cycle path HUD.
+- Graph audit theater (#557): useGraphAuditOverlay drives severity
+  halos from OUTSIDE via fgRef (node.__threeObj) — zero core changes;
+  GraphAuditOverlay chip replays findings 60ms apart.
+- BUG FIXED (#558): halos never appeared — GraphCanvas3D node objects
+  carry no filePath, so scene-built path map was always empty. Map now
+  built from GraphProvider graph. Chip renders in 2D too; clicking
+  auto-enables 3D.
+
+## 2026-08-23 — Nav registry + pending indicators + premium terminal
+- lib/navigation.ts: single source of truth; Sidebar (glass groups,
+  motion layoutId sliding pill), BottomNav 4 fixed + spring More-sheet,
+  CommandPalette upgraded + mounted globally (Ctrl+K / '/' everywhere).
+- useLinkStatus pending spinners on every nav surface; palette keeps
+  open with row spinner until pathname matches.
+- Terminal premium: prompt "$" prefixes, systemd [ OK ] tokens,
+  cursor blink steps(1), CRT scanlines, seamless block, JetBrains Mono
+  via next/font (--font-mono stack).
+- ViewModeToggle (auto/desktop/mobile, localStorage persist).
+- Registry labels English (Explore/Inspect).

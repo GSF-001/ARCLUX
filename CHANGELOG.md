@@ -4,6 +4,48 @@ All notable changes to ARCLUX are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning follows
 [SemVer](https://semver.org/) (pre-1.0: minor bump = significant features).
 
+## [0.2.1] — 2026-08-23
+
+Web experience wave — the engine is unchanged, the surface caught up.
+
+### Added
+
+**Audit — the flagship feature**
+- `POST /api/audit`: composition of runDoctor + securityAnalysis +
+  attack surface, grouped into narrative chapters (severity-first)
+- `/[org]/[repo]/audit` standalone page + audit mode inside the script
+  playground: STREAM (systemd-style boot, 55ms scan reveal built from
+  real findings) × FOCUS (one finding at a time, file preview overlay)
+  × GRAPH (camera flies per finding, cycle-path HUD)
+- **Live audit on the 3D graph**: severity halos breathe on flagged
+  nodes as findings replay — driven from outside the renderer (zero
+  core changes); auto-switches 2D→3D on launch
+
+**Web/CLI parity routes**: `/api/security`, `/api/verify`, `/api/script`
+- Workspace tabs: Security · Verify · Health (Phase 2 scoring) · Calls
+
+**Script playground v2 — opencode-style terminal**
+- Slash-command palette (11 commands), syntax-highlighted editor,
+  JSON-tree output, transcript with per-run echo + ms, Ctrl+Enter
+
+**Navigation system**
+- `lib/navigation.ts` registry — sidebar, mobile bottom bar + More
+  sheet, and the Ctrl+K command palette all render from one source
+- Pending spinners on every nav surface (useLinkStatus) — slow
+  navigations never read as dead clicks
+- View-mode toggle (auto/desktop/mobile) persisted per user
+
+**Terminal craft**: JetBrains Mono, `$` prompt prefixes, systemd
+`[ OK ]` status tokens, steps(1) cursor blink, CRT scanlines
+
+### Fixed
+- Audit halos never appeared (filePath missing from scene node
+  objects — map now built from provider graph) 
+- `packages/dsl` first real typecheck surfaced 13 latent errors; 3
+  bindings were silently broken (search/diff/archdiff read fields
+  that don't exist)
+- Landing page claimed "2 languages" (actual: 27)
+
 ## [0.2.0] — 2026-08-21
 
 ~1,020 commits since `v0.1.0-alpha`. Still alpha — expect breaking changes.
