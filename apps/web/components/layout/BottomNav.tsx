@@ -8,13 +8,13 @@
 
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { LayoutDashboard, MoreHorizontal, Network, ClipboardCheck } from "lucide-react"
 import { cn } from "@/lib/cn"
 import { GLOBAL_ITEMS, NAV_GROUPS } from "@/lib/navigation"
+import { NavLink, PendingSwap } from "@/components/layout/NavLink"
 
 interface BottomNavProps {
   org: string
@@ -56,7 +56,7 @@ export function BottomNav({ org, repo }: BottomNavProps) {
             const href = `${base}${suffix}`
             const isActive = pathname === href
             return (
-              <Link
+              <NavLink
                 key={href}
                 href={href}
                 aria-current={isActive ? "page" : undefined}
@@ -69,9 +69,13 @@ export function BottomNav({ org, repo }: BottomNavProps) {
                     transition={{ type: "spring", stiffness: 500, damping: 40 }}
                   />
                 )}
-                <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
+                <PendingSwap
+                  icon={Icon}
+                  spinClassName="h-5 w-5"
+                  className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")}
+                />
                 <span className={isActive ? "text-foreground" : "text-muted-foreground"}>{label}</span>
-              </Link>
+              </NavLink>
             )
           })}
           <button
@@ -119,13 +123,13 @@ export function BottomNav({ org, repo }: BottomNavProps) {
                       const href = `${base}${suffix}`
                       return (
                         <li key={href}>
-                          <Link
+                          <NavLink
                             href={href}
                             onClick={() => setMoreOpen(false)}
-                            className="flex items-center gap-3 rounded-xl border border-transparent bg-card/40 p-3 transition-colors hover:border-primary/30 hover:bg-accent/60"
+                            className="flex items-center gap-3 rounded-xl border border-transparent bg-card/40 p-3 opacity-80 transition-opacity hover:opacity-100 hover:border-primary/30 hover:bg-accent/60"
                           >
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                              <Icon className="h-4.5 w-4.5" />
+                              <PendingSwap icon={Icon} className="h-4.5 w-4.5" />
                             </span>
                             <span className="min-w-0">
                               <span className="block text-sm font-medium">{label}</span>
@@ -135,7 +139,7 @@ export function BottomNav({ org, repo }: BottomNavProps) {
                                 </span>
                               )}
                             </span>
-                          </Link>
+                          </NavLink>
                         </li>
                       )
                     })}
@@ -149,13 +153,13 @@ export function BottomNav({ org, repo }: BottomNavProps) {
                 <ul className="space-y-1">
                   {GLOBAL_ITEMS.map(({ label, suffix, icon: Icon, description }) => (
                     <li key={suffix}>
-                      <Link
+                      <NavLink
                         href={suffix}
                         onClick={() => setMoreOpen(false)}
-                        className="flex items-center gap-3 rounded-xl border border-transparent bg-card/40 p-3 transition-colors hover:border-primary/30 hover:bg-accent/60"
+                        className="flex items-center gap-3 rounded-xl border border-transparent bg-card/40 p-3 opacity-80 transition-opacity hover:opacity-100 hover:border-primary/30 hover:bg-accent/60"
                       >
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Icon className="h-4.5 w-4.5" />
+                          <PendingSwap icon={Icon} className="h-4.5 w-4.5" />
                         </span>
                         <span className="min-w-0">
                           <span className="block text-sm font-medium">{label}</span>
@@ -163,7 +167,7 @@ export function BottomNav({ org, repo }: BottomNavProps) {
                             <span className="block truncate text-xs text-muted-foreground">{description}</span>
                           )}
                         </span>
-                      </Link>
+                      </NavLink>
                     </li>
                   ))}
                 </ul>

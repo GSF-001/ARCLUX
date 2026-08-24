@@ -8,12 +8,12 @@
 
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "motion/react"
 import { X } from "lucide-react"
 import { cn } from "@/lib/cn"
 import { NAV_GROUPS, GLOBAL_ITEMS } from "@/lib/navigation"
+import { NavLink, PendingSwap } from "@/components/layout/NavLink"
 
 interface SidebarProps {
   org: string
@@ -55,7 +55,7 @@ export function Sidebar({ org, repo, collapsed = false, overlay = false, onClose
                   transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 />
               )}
-              <Link
+              <NavLink
                 href={href}
                 title={collapsed ? itemLabel : description ?? itemLabel}
                 aria-current={isActive ? "page" : undefined}
@@ -69,14 +69,15 @@ export function Sidebar({ org, repo, collapsed = false, overlay = false, onClose
                 {isActive && (
                   <span className="absolute left-0 top-1/2 h-5 w-[2.5px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_2px] shadow-primary/40" />
                 )}
-                <Icon
+                <PendingSwap
+                  icon={Icon}
                   className={cn(
                     "h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
                     isActive && "text-primary drop-shadow-[0_0_6px_rgba(0,112,243,0.6)]"
                   )}
                 />
                 {!collapsed && <span className="truncate">{itemLabel}</span>}
-              </Link>
+              </NavLink>
             </li>
           )
         })}
