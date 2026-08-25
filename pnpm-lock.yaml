@@ -60,16 +60,13 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      web-tree-sitter:
+        specifier: 0.25.0
+        version: 0.25.0
     devDependencies:
-      '@types/node':
-        specifier: ^20
-        version: 20.19.43
-      tsx:
-        specifier: ^4
-        version: 4.23.1
-      typescript:
-        specifier: ^5
-        version: 5.9.3
+      esbuild:
+        specifier: ^0.28.0
+        version: 0.28.1
 
   apps/vscode-extension:
     devDependencies:
