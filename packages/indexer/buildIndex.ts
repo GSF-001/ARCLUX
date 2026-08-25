@@ -14,6 +14,10 @@ import { resolveSameScopeDependencies, type ScopedFile } from "./resolveSameScop
 import { Repository } from "../repository/Repository";
 import { readFileSync } from "node:fs";
 import { getCachedParsedFile, setCachedParsedFile } from "../cache/fileCache";
+import {
+  getDiskCachedParsedFile,
+  setDiskCachedParsedFile,
+} from "../cache/diskCache";
 import { ArcluxError } from "../shared/errors";
 import type { RepositoryMeta, ModuleInfo, ParsedFile, ResolvedImport, ResolvedCall } from "../shared/types";
 
@@ -74,9 +78,19 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
       });
     }
 
-    const cached = getCachedParsedFile(file.relativePath, content);
-    const parsed = cached ?? (await parser.parse(file, content));
-    if (!cached) setCachedParsedFile(file.relativePath, content, parsed);
+    // Cache tiers: in-memory first (same process), then disk
+    // (cross-process — daemon / future MCP server / repeat CLI runs).
+    // Both are keyed by content hash, so a miss is always safe to
+    // fall through to the real parser.
+    const memCached = getCachedParsedFile(file.relativePath, content);
+    const parsed =
+      memCached ??
+      getDiskCachedParsedFile(content) ??
+      (await parser.parse(file, content));
+    if (!memCached) {
+      setCachedParsedFile(file.relativePath, content, parsed);
+      setDiskCachedParsedFile(content, parsed);
+    }
 
     parsedByPath.set(file.relativePath, parsed);
     contentByPath.set(file.relativePath, content);
