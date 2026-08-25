@@ -1,20 +1,43 @@
 {
-  "name": "cli",
+  "name": "arclux",
   "version": "0.2.0",
-  "private": true,
+  "description": "Codebase intelligence platform — 27-language parser, dependency & call graphs, 20 architecture detectors, impact tracing, security pipeline, and the ARCLUX scripting DSL.",
+  "license": "Apache-2.0",
   "type": "module",
-  "scripts": {
-    "dev": "tsx watch index.ts",
-    "build": "tsc -p .",
-    "lint": "eslint ."
+  "private": false,
+  "bin": {
+    "arclux": "./dist/arclux.mjs"
   },
-  "devDependencies": {
-    "@types/node": "^20",
-    "tsx": "^4",
-    "typescript": "^5"
+  "files": [
+    "dist/",
+    "wasms/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "static-analysis",
+    "dependency-graph",
+    "code-intelligence",
+    "tree-sitter",
+    "impact-analysis",
+    "developer-tools"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GSF-001/ARCLUX.git"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-cli.mjs",
+    "prepublishOnly": "node ../../scripts/build-cli.mjs"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "web-tree-sitter": "0.25.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
   }
 }
