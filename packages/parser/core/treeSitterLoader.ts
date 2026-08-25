@@ -63,25 +63,44 @@ export function nodeLine(node: TSNode): number {
 // tree-sitter-wasms package ships stale builds for some grammars (e.g.
 // elm at ABI 12, incompatible with web-tree-sitter 13–15) — vendored
 // files take precedence so we're not hostage to the npm package version.
+//
+// Search order (first hit wins):
+//   1. walk up from cwd — dev in the monorepo, or a user project that
+//      happens to have tree-sitter-wasms installed
+//   2. walk up from THIS file's location — the published `arclux` npm
+//      package ships the wasms next to the bundle (dist/../wasms), so
+//      `npx arclux` works from anywhere without the user installing
+//      grammar packages (gotcha #1: never trust require.resolve here —
+//      webpack/tsx rewrite it; import.meta.url survives bundling).
 function findWasmPath(grammarFile: string): string {
-  let dir = process.cwd();
-  for (let i = 0; i < 10; i++) {
-    const vendored = path.join(dir, "packages", "parser", "wasms", grammarFile);
-    if (existsSync(vendored)) return vendored;
-    const candidate = path.join(
-      dir,
-      "node_modules",
-      "tree-sitter-wasms",
-      "out",
-      grammarFile
-    );
-    if (existsSync(candidate)) return candidate;
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
+  const searchRoots: string[] = [process.cwd()];
+  try {
+    // Bundlers keep import.meta.url pointing at the emitted file; tsx
+    // keeps it pointing at the source. Both walk up fine.
+    const here = path.dirname(new URL(import.meta.url).pathname);
+    if (here && !searchRoots.includes(here)) searchRoots.push(here);
+  } catch {
+    /* import.meta unavailable — cwd search only */
+  }
+
+  for (const root of searchRoots) {
+    let dir = root;
+    for (let i = 0; i < 10; i++) {
+      // Published layout: <pkg>/dist/arclux.mjs + <pkg>/wasms/<grammar>
+      const shipped = path.join(dir, "wasms", grammarFile);
+      if (existsSync(shipped)) return shipped;
+      // Monorepo layout (dev + tsx): vendored overrides
+      const vendored = path.join(dir, "packages", "parser", "wasms", grammarFile);
+      if (existsSync(vendored)) return vendored;
+      const candidate = path.join(dir, "node_modules", "tree-sitter-wasms", "out", grammarFile);
+      if (existsSync(candidate)) return candidate;
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
   }
   throw new Error(
-    `Could not find ${grammarFile} (packages/parser/wasms or tree-sitter-wasms/out) by walking up from ${process.cwd()}`
+    `Could not find ${grammarFile} (wasms/, packages/parser/wasms, or tree-sitter-wasms/out) — searched from ${process.cwd()} and the package location`
   );
 }
 

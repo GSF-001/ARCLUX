@@ -10,7 +10,8 @@
     "lint": "pnpm --filter web lint",
     "test": "vitest run",
     "check:diary": "npx tsx scripts/check-diary.ts",
-    "typecheck": "tsc --noEmit -p apps/web/tsconfig.json"
+    "typecheck": "tsc --noEmit -p apps/web/tsconfig.json",
+    "build:cli": "node scripts/build-cli.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.20",

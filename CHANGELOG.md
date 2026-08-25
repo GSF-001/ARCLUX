@@ -6,6 +6,12 @@ All notable changes to ARCLUX are documented here. Format based on
 
 ## [0.2.1] — 2026-08-23
 
+### Added
+- **Published to npm as `arclux`** — `npx arclux analyze .` from anywhere.
+  One-file esbuild bundle (self-contained, wasms shipped alongside) +
+  treeSitterLoader resolves grammars from the package location when not
+  in a dev checkout.
+
 Web experience wave — the engine is unchanged, the surface caught up.
 
 ### Added
