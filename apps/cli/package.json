@@ -1,7 +1,7 @@
 {
   "name": "arclux",
   "version": "0.2.0",
-  "description": "Codebase intelligence platform — 27-language parser, dependency & call graphs, 20 architecture detectors, impact tracing, security pipeline, and the ARCLUX scripting DSL.",
+  "description": "Codebase intelligence platform \u2014 27-language parser, dependency & call graphs, 20 architecture detectors, impact tracing, security pipeline, and the ARCLUX scripting DSL.",
   "license": "Apache-2.0",
   "type": "module",
   "private": false,
@@ -35,7 +35,8 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "commander": "^15.0.0",
-    "web-tree-sitter": "0.25.0"
+    "web-tree-sitter": "0.25.0",
+    "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.0"

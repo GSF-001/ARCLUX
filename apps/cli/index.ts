@@ -30,6 +30,7 @@ import { registerLanguageCommand } from "./language";
 import { registerSecurityCommand } from "./security";
 import { registerShellCommand } from "./shell";
 import { registerScriptCommand } from "./script";
+import { registerMcpCommand } from "./commands/mcp";
 
 const program = new Command();
 program.name("arclux").description("Repository intelligence CLI").version("0.2.0");
@@ -56,5 +57,6 @@ registerLanguageCommand(program);
 registerSecurityCommand(program);
 registerShellCommand(program);
 registerScriptCommand(program);
+registerMcpCommand(program);
 
 program.parse();
