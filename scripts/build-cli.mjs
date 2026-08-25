@@ -52,6 +52,7 @@ const external = [
   "commander",
   "@clack/prompts",
   "web-tree-sitter",
+  "@modelcontextprotocol/sdk",
   // Node builtins are always external.
   "node:*",
   "fs",
