@@ -58,18 +58,18 @@ import { openFile, listDependencyTargets, listDirectConsumerTargets } from "../.
 import { runScriptSource } from "../../dsl/script.ts";
 
 // ── parser ────────────────────────────────────────────────────────────────
-import { detectLanguage, isSupportedExtension, getExtensionsForLanguage } from "../../parser/core/LanguageDetector.ts";
-import { parserRegistry } from "../../parser/core/ParserRegistry.ts";
+// NOTE: tree-sitter parsers (Python, Go, Java, etc.) depend on WASM loading
+// via web-tree-sitter. We do NOT import them at top level because the MCP
+// server needs to start fast without blocking on WASM initialization.
+// Only the TS/JS compiler API parser is imported here (pure JS, no WASM).
+// For tree-sitter languages, use `analyze` → `file_info` instead.
+import { detectLanguage, isSupportedExtension } from "../../parser/core/LanguageDetector.ts";
 
 // ── indexer ───────────────────────────────────────────────────────────────
 import { resolveRoutes } from "../../indexer/resolveRoutes.ts";
 import { resolveComponents } from "../../indexer/resolveComponents.ts";
 import { resolveHooks } from "../../indexer/resolveHooks.ts";
 import { resolveProviders } from "../../indexer/resolveProviders.ts";
-import { buildIndex } from "../../indexer/buildIndex.ts";
-
-// ── rules ─────────────────────────────────────────────────────────────────
-import { runRules, type Rule, type RuleViolation } from "../../rules/RuleEngine.ts";
 
 // ── daemon ────────────────────────────────────────────────────────────────
 import { getDaemonStatus, getDaemonHealth } from "../../daemon/DaemonProcess.ts";
@@ -81,7 +81,13 @@ import { listAnalysesForRepo, getAnalysis } from "../../db/repositories/Analysis
 // ── cache ─────────────────────────────────────────────────────────────────
 import { getCacheStats, clearAllCaches } from "../../cache/CacheProvider.ts";
 
-// ── detectors (import ALL for registry-driven detect tool) ─────────────────
+// ──────────────────────────────────────────────────────────────────────────
+// DETECTORS — registry-driven.
+// To add a new detector: 1) create packages/detectors/detectXxx.ts
+//                         2) add ONE import line below
+//                         3) add ONE entry to DETECTOR_MAP (key = CLI name)
+// It auto-appears in the `detect` tool's description and tool list.
+// ──────────────────────────────────────────────────────────────────────────
 import { detectCircularDependency } from "../../detectors/detectCircularDependency.ts";
 import { detectUnusedExports } from "../../detectors/detectUnusedExports.ts";
 import { detectOrphanFiles } from "../../detectors/detectOrphanFiles.ts";
@@ -103,34 +109,82 @@ import { detectTestConvention } from "../../detectors/detectTestConvention.ts";
 import { detectUnusedFiles } from "../../detectors/detectUnusedFiles.ts";
 import { detectEntryPoints } from "../../detectors/detectEntryPoints.ts";
 
-// ──────────────────────────────────────────────────────────────────────────
-// Registry-driven detector map — auto-discovers all detectors
-// ──────────────────────────────────────────────────────────────────────────
 const DETECTOR_MAP: Record<string, (repo: any) => any[]> = {
-  circular:               detectCircularDependency,
-  unused_exports:         detectUnusedExports,
-  orphan_files:           detectOrphanFiles,
-  orphan_integration:     detectOrphanIntegration,
-  large_modules:          detectLargeModules,
-  duplicate_modules:      detectDuplicateModules,
-  shared_modules:         detectSharedModules,
-  index_files:            detectIndexFiles,
-  layer_violation:        detectLayerViolation,
-  dead_code:              detectDeadCode,
-  ambiguous_symbols:      detectAmbiguousSymbolResolution,
-  component_convention:   detectComponentConvention,
-  feature_structure:      detectFeatureStructure,
-  missing_exports:        detectMissingExports,
-  repository_pattern:     detectRepositoryPattern,
-  route_convention:       detectRouteConvention,
-  story_convention:       detectStoryConvention,
-  test_convention:        detectTestConvention,
-  unused_files:           detectUnusedFiles,
-  entry_points:           detectEntryPoints,
+  circular:             detectCircularDependency,
+  unused_exports:       detectUnusedExports,
+  orphan_files:         detectOrphanFiles,
+  orphan_integration:   detectOrphanIntegration,
+  large_modules:        detectLargeModules,
+  duplicate_modules:    detectDuplicateModules,
+  shared_modules:       detectSharedModules,
+  index_files:          detectIndexFiles,
+  layer_violation:      detectLayerViolation,
+  dead_code:            detectDeadCode,
+  ambiguous_symbols:    detectAmbiguousSymbolResolution,
+  component_convention: detectComponentConvention,
+  feature_structure:    detectFeatureStructure,
+  missing_exports:      detectMissingExports,
+  repository_pattern:   detectRepositoryPattern,
+  route_convention:     detectRouteConvention,
+  story_convention:     detectStoryConvention,
+  test_convention:      detectTestConvention,
+  unused_files:         detectUnusedFiles,
+  entry_points:         detectEntryPoints,
 };
 
-// Auto-build detector list description for the `detect` tool
 const DETECTOR_NAMES = Object.keys(DETECTOR_MAP);
+
+// ──────────────────────────────────────────────────────────────────────────
+// RULES — registry-driven.
+// Same pattern: add import + add to ALL_RULES below.
+// runRules() filters by detectedFrameworks automatically.
+// ──────────────────────────────────────────────────────────────────────────
+import { runRules, type Rule } from "../../rules/RuleEngine.ts";
+import { requirePage } from "../../rules/nextjs/requirePage.ts";
+import { requireRoute } from "../../rules/nextjs/requireRoute.ts";
+import { requireIndexUpdate } from "../../rules/nextjs/requireIndexUpdate.ts";
+import { requireLayoutUpdate } from "../../rules/nextjs/requireLayoutUpdate.ts";
+import { requireMetadata } from "../../rules/nextjs/requireMetadata.ts";
+import { requireControllerBinding } from "../../rules/nestjs/requireControllerBinding.ts";
+import { requireModuleRegistration } from "../../rules/nestjs/requireModuleRegistration.ts";
+import { requireRouteRegistration } from "../../rules/express/requireRouteRegistration.ts";
+import { requireEntryConfig } from "../../rules/vite/requireEntryConfig.ts";
+import { requireMainProcessBinding } from "../../rules/electron/requireMainProcessBinding.ts";
+import { requirePreloadExposure } from "../../rules/electron/requirePreloadExposure.ts";
+import { requireComponentExport } from "../../rules/react/requireComponentExport.ts";
+import { requireHookRules } from "../../rules/react/requireHookRules.ts";
+import { requireController } from "../../rules/laravel/requireController.ts";
+
+const ALL_RULES: Rule[] = [
+  requirePage,
+  requireRoute,
+  requireIndexUpdate,
+  requireLayoutUpdate,
+  requireMetadata,
+  requireControllerBinding,
+  requireModuleRegistration,
+  requireRouteRegistration,
+  requireEntryConfig,
+  requireMainProcessBinding,
+  requirePreloadExposure,
+  requireComponentExport,
+  requireHookRules,
+  requireController,
+];
+
+const RULE_FRAMEWORKS = [...new Set(ALL_RULES.map((r) => r.appliesToFramework))];
+
+// ──────────────────────────────────────────────────────────────────────────
+// Parser extensions (auto-detected from LanguageDetector).
+// parse_file uses this to validate and route to the correct parser.
+// ──────────────────────────────────────────────────────────────────────────
+const TS_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs", ".cjs", ".cts"];
+const TREE_SITTER_EXTENSIONS = [
+  ".py", ".go", ".java", ".php", ".rb", ".rs", ".cpp", ".c", ".h", ".hpp",
+  ".cs", ".sh", ".bash", ".dart", ".ex", ".exs", ".kt", ".lua", ".m",
+  ".ml", ".mli", ".scala", ".sol", ".swift", ".vue", ".zig",
+];
+const ALL_EXTENSIONS = [...TS_EXTENSIONS, ...TREE_SITTER_EXTENSIONS];
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -170,7 +224,8 @@ function getAllModules(repository: any) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Tool definitions (30 tools)
+// Tool definitions — descriptions are built from registries above,
+// so they auto-update when you add new detectors/rules/parsers.
 // ──────────────────────────────────────────────────────────────────────────
 const TOOLS = [
   // ── Core analysis ─────────────────────────────────────────────────
@@ -188,7 +243,7 @@ const TOOLS = [
   },
   {
     name: "doctor",
-    description: "Run all 20 architecture detectors. Returns findings with checkId, severity, filePath, message.",
+    description: "Run all " + DETECTOR_NAMES.length + " architecture detectors. Returns findings with checkId, severity, filePath, message.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -212,7 +267,7 @@ const TOOLS = [
   },
   {
     name: "verify",
-    description: "Run 10 core detectors + 14 framework rules, return PASS/FAIL verdict.",
+    description: "Run " + DETECTOR_NAMES.length + " detectors + " + ALL_RULES.length + " framework rules (" + RULE_FRAMEWORKS.join("/") + "), return PASS/FAIL verdict.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -453,21 +508,21 @@ const TOOLS = [
   // ── Parser ────────────────────────────────────────────────────────
   {
     name: "parse_file",
-    description: "Parse a single file and return its symbols (exports, imports, calls). Auto-detects language.",
+    description: "Parse a single TS/JS file → exports, imports, calls via Compiler API. For tree-sitter languages (Python/Go/Java/etc), use analyze → file_info instead.",
     inputSchema: {
       type: "object" as const,
       properties: {
-        repoUrl:   { type: "string" },
-        localPath: { type: "string" },
-        branch:    { type: "string" },
-        filePath:  { type: "string", description: "Relative file path" },
+        localPath: { type: "string", description: "Absolute path to repo root (for reading file from disk)" },
+        filePath:  { type: "string", description: "Relative file path within repo" },
+        content:   { type: "string", description: "File content (optional — if omitted, reads from disk)" },
+        extension: { type: "string", description: "Override extension for detection (e.g. '.ts')" },
       },
       required: ["filePath"],
     },
   },
   {
     name: "detect_language",
-    description: "Detect programming language from file extension. Returns language name and whether ARCLUX supports it.",
+    description: "Detect programming language from file extension. Supports 27 languages (TS/JS via Compiler API, Python/Go/Java/etc via tree-sitter).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -530,14 +585,14 @@ const TOOLS = [
   // ── Rules ─────────────────────────────────────────────────────────
   {
     name: "run_rules",
-    description: "Run framework-specific rules (nextjs/nestjs/express/vite/electron/react/laravel). Returns violations.",
+    description: "Run " + ALL_RULES.length + " framework rules (" + RULE_FRAMEWORKS.join("/") + "). Filtered by detected frameworks. Returns violations.",
     inputSchema: {
       type: "object" as const,
       properties: {
-        repoUrl:   { type: "string" },
-        localPath: { type: "string" },
-        branch:    { type: "string" },
-        frameworks: { type: "array", items: { type: "string" }, description: "Filter by framework (e.g. [\"nextjs\"]). Empty = all detected." },
+        repoUrl:    { type: "string" },
+        localPath:  { type: "string" },
+        branch:     { type: "string" },
+        frameworks: { type: "array", items: { type: "string" }, description: "Filter by framework (e.g. [\"nextjs\"]). Empty = auto-detect." },
       },
     },
   },
@@ -699,7 +754,7 @@ async function handleTool(name: string, args: Record<string, unknown>) {
       let total = 0;
       for (const n of targets) {
         const fn = DETECTOR_MAP[n];
-        if (!fn) { results[n] = { error: "Unknown: " + n }; continue; }
+        if (!fn) { results[n] = { error: "Unknown: " + n + ". Available: " + DETECTOR_NAMES.join(", ") }; continue; }
         const findings = fn(r.repository);
         results[n] = { count: findings.length, findings };
         total += findings.length;
@@ -745,23 +800,98 @@ async function handleTool(name: string, args: Record<string, unknown>) {
       });
     }
 
-    // ── Parser ─────────────────────────────────────────────────────
+    // ── Parser (standalone — TS/JS via Compiler API, tree-sitter via analyze) ──
     case "parse_file": {
-      const r = await doAnalyze(args);
-      const mod = resolveFile(args.filePath as string, r.repository);
-      return json({
-        moduleId: mod.id, filePath: mod.file.relativePath,
-        language: mod.file.language,
-        exports: mod.exports.map((e: any) => ({ name: e.name, kind: e.kind, line: e.line })),
-        imports: mod.imports.map((i: any) => ({ source: i.source, names: i.names, line: i.line })),
-        calls: mod.calls.map((c: any) => ({ name: c.name, line: c.line })),
+      const filePath = args.filePath as string;
+      const ext = (args.extension as string) ?? undefined;
+      const content = args.content as string | undefined;
+
+      const dotExt = ext ?? ("." + filePath.split(".").pop());
+      const language = detectLanguage(dotExt);
+
+      // Tree-sitter languages (Python, Go, Java, etc.) need WASM runtime.
+      // Direct standalone parsing isn't available in MCP mode — use
+      // `analyze` + `file_info` for these. The error message tells the agent.
+      if (TREE_SITTER_EXTENSIONS.includes(dotExt.toLowerCase())) {
+        throw new Error(
+          dotExt + " (" + language + ") requires WASM runtime. Use: "
+          + 'analyze {repoUrl/localPath} → file_info {filePath: "' + filePath + '"}'
+        );
+      }
+
+      // TS/JS files — use the TypeScript Compiler API (no WASM needed).
+      let fileContent = content;
+      if (!fileContent) {
+        const fs = await import("node:fs/promises");
+        const basePath = args.localPath as string;
+        if (!basePath) throw new Error("localPath required when content is omitted");
+        const fullPath = basePath.startsWith("/") ? basePath + "/" + filePath : basePath + "/" + filePath;
+        fileContent = await fs.readFile(fullPath, "utf-8");
+      }
+
+      const ts = await import("typescript");
+      const sourceFile = ts.createSourceFile(filePath, fileContent!, ts.ScriptTarget.Latest, true);
+
+      const exports: any[] = [];
+      const imports: any[] = [];
+      const calls: any[] = [];
+
+      ts.forEachChild(sourceFile, function visit(node) {
+        // Exports
+        if (ts.isExportAssignment(node)) {
+          exports.push({ name: "default", kind: "default", line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        } else if (ts.isFunctionDeclaration(node) && node.name) {
+          const hasExport = node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
+          if (hasExport) exports.push({ name: node.name.text, kind: "function", line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        } else if (ts.isVariableStatement(node) && node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword)) {
+          for (const decl of node.declarationList.declarations) {
+            if (ts.isIdentifier(decl.name)) exports.push({ name: decl.name.text, kind: "variable", line: sourceFile.getLineAndCharacterOfPosition(decl.getStart()).line + 1 });
+          }
+        } else if (ts.isClassDeclaration(node) && node.name) {
+          const hasExport = node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
+          if (hasExport) exports.push({ name: node.name.text, kind: "class", line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        } else if (ts.isInterfaceDeclaration(node)) {
+          const hasExport = node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
+          if (hasExport) exports.push({ name: node.name.text, kind: "interface", line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        } else if (ts.isTypeAliasDeclaration(node)) {
+          const hasExport = node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
+          if (hasExport) exports.push({ name: node.name.text, kind: "type", line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        } else if (ts.isEnumDeclaration(node)) {
+          const hasExport = node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
+          if (hasExport) exports.push({ name: node.name.text, kind: "enum", line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        }
+
+        // Imports
+        if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+          const names: string[] = [];
+          if (node.importClause?.name) names.push(node.importClause.name.text);
+          if (node.importClause?.namedBindings) {
+            if (ts.isNamedImports(node.importClause.namedBindings)) {
+              for (const el of node.importClause.namedBindings.elements) names.push(el.name.text);
+            } else if (ts.isNamespaceImport(node.importClause.namedBindings)) {
+              names.push("* as " + node.importClause.namedBindings.name.text);
+            }
+          }
+          imports.push({ source: node.moduleSpecifier.text, names, line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        }
+
+        // Function calls
+        if (ts.isCallExpression(node) && node.expression) {
+          const name = ts.isIdentifier(node.expression) ? node.expression.text
+            : ts.isPropertyAccessExpression(node.expression) ? node.expression.name.text : undefined;
+          if (name) calls.push({ name, line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1 });
+        }
+
+        ts.forEachChild(node, visit);
       });
+
+      return json({ filePath, language: language ?? dotExt, exports, imports, calls });
     }
     case "detect_language": {
       const ext = (args.extension as string) ?? "";
       const dot = ext.startsWith(".") ? ext : "." + ext;
       const lang = detectLanguage(dot);
-      return json({ extension: dot, language: lang, supported: isSupportedExtension(dot) });
+      return json({ extension: dot, language: lang, supported: isSupportedExtension(dot), category: TS_EXTENSIONS.includes(dot.toLowerCase()) ? "compiler-api" : TREE_SITTER_EXTENSIONS.includes(dot.toLowerCase()) ? "tree-sitter" : "unknown" });
     }
 
     // ── Indexer ────────────────────────────────────────────────────
@@ -786,12 +916,12 @@ async function handleTool(name: string, args: Record<string, unknown>) {
       return json(resolveProviders(modules));
     }
 
-    // ── Rules ──────────────────────────────────────────────────────
+    // ── Rules (FIXED: was passing [] before, now passes ALL_RULES) ──
     case "run_rules": {
       const r = await doAnalyze(args);
       const frameworks = (args.frameworks as string[]) ?? r.meta.frameworks ?? [];
-      const violations = runRules(r.repository, [], frameworks);
-      return json({ frameworks, violations, count: violations.length });
+      const violations = runRules(r.repository, ALL_RULES, frameworks);
+      return json({ frameworks, violations, count: violations.length, rulesLoaded: ALL_RULES.length });
     }
 
     // ── Daemon ─────────────────────────────────────────────────────
@@ -846,5 +976,5 @@ export async function startMcpServer(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("ARCLUX MCP server running on stdio - " + TOOLS.length + " tools ready");
+  console.error("ARCLUX MCP server running on stdio - " + TOOLS.length + " tools, " + DETECTOR_NAMES.length + " detectors, " + ALL_RULES.length + " rules");
 }
