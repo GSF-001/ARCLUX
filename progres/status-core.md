@@ -830,3 +830,9 @@ New CLI command 'arclux exec <cmd> [args...]' (apps/cli/commands/exec.ts) runs c
 **Status:** Done
 
 New packages/incremental with Cell/Database/Query classes for per-file cache invalidation. File content hashing via xxhash, disk persistence, TTL expiry. Built and verified standalone but buildIndex still does full rebuild — watchRepository wraps pipeline API coarsely. Per-file incremental is deferred (decision #6).
+
+## 2026-08-26 — MCP server + npm publish milestone
+
+**Status:** In Progress
+
+MCP server (32 tools) and npm publish package are both built and ready. MCP server: 32 registry-driven tools, all auto-evolving. npm package: arclux@0.2.0, single 10.2MB bundle via esbuild, ships dist/ + wasms/ tree-sitter grammars. One command: npx arclux analyze . or npx arclux mcp. Blocked on npm login — machine needs npm adduser or NPM_TOKEN.
