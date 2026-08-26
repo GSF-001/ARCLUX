@@ -176,3 +176,15 @@ Machine state after restore broke tooling in ways that LOOK like code bugs but a
 3. **Global `tsx` broken** (missing esbuild binary) — always use `./node_modules/.bin/tsx` from repo root, never the global one.
 
 4. **Carried-over working-tree changes are NOT ours** — after restore, `git status` showed: 3 modified files in packages/environment, 2 in packages/workspace, untracked `packages/environment/ArcluxEnvironment.ts` + `.arclux-test`, and 12 DELETED files under scripts/. None of these came from our session work — they were left by a previous session/machine state. Do NOT commit or "clean up" them without asking the repo owner first. Workflow used every time: `git stash -u -- <my files>` → branch from `origin/ARCLUX.main` → pop → stage ONLY my files.
+
+## 2026-08-26 — MCP server: tree-sitter WASM loading blocks startup
+
+**Status:** Done
+
+Importing tree-sitter parsers (Python/Go/Java/etc) at module top level triggers nodeRequire('web-tree-sitter') via treeSitterLoader.ts, which blocks on WASM init. MCP server hangs silently on startup. Fix: do NOT import tree-sitter parsers at top level in MCP server — only import the LanguageDetector (pure TS). For parse_file tool, use TS Compiler API directly for TS/JS files; tree-sitter languages fall back to analyze + file_info.
+
+## 2026-08-26 — Git worktree reference became stale after worktree switch
+
+**Status:** Done
+
+When arclux-pg was originally cloned as a standalone git repo (not a git worktree), git worktree list in ~/arclux showed it as a worktree with branch feat/audit-panel. After checking out ARCLUX.main in arclux-pg, the worktree reference was stale and git branch -D feat/audit-panel failed with 'used by worktree at /root/arclux-pg'. Fix: manually delete .git/worktrees/arclux-pg/ directory, then git worktree prune, then branch -D succeeds. Lesson: standalone clones (with their own .git/) can be misidentified as worktrees if the gitdir reference exists.

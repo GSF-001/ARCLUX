@@ -592,3 +592,9 @@ Adding a new rule: 1 import + 1 entry in ALL_RULES → auto-wired to run_rules.
 **Status:** Done
 
 Single-file CLI bundle (apps/cli/dist/arclux.mjs, ~10MB) via esbuild. Package name 'arclux' confirmed free on npm. ships dist/ + wasms/ (tree-sitter grammars). bin: arclux. engines: node>=20. prepublishOnly runs build-cli.mjs. Verified: pnpm install works, arclux --version outputs 0.2.0.
+
+## 2026-08-26 — Branch cleanup: 150+ stale local branches deleted
+
+**Status:** Done
+
+Both ~/arclux and /root/arclux-pg had 150+ stale local branches (docs/*, feat/*, fix/*, chore/* from old PRs). Cleaned up: deleted all branches except ARCLUX.main from both repos. Had to handle a stale git worktree reference (arclux-pg was misidentified as a worktree of feat/audit-panel). After cleanup: 1 branch each, clean state. Also pulled 70 missing commits from origin/ARCLUX.main, resolved merge conflicts (untracked files from old branches blocking merge). Progres gotchas/decisions updated with all session findings.
