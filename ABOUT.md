@@ -146,7 +146,6 @@ The daemon, watcher, incremental indexer, shell session, and workspace layers si
 - Per-file incremental re-indexing: the incremental engine is built, but `buildIndex` still does a full rebuild per change — per-file wiring is deferred
 - The platform's runtime layers (scheduler/services/storage/observation/web-intake) are built but not all wired to consumers
 - Some exotic tree-sitter grammars shipped in `tree-sitter-wasms` are stale (elm was ABI 12 — vendored fix; ReScript's wasm predates its modern `import` syntax) — see `packages/parser/wasms/`
-- Installation is from source only — not yet published to npm
 
 ## Where to go next
 

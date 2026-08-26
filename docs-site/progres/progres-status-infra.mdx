@@ -572,3 +572,36 @@ ABOUT.md is no longer a feature list — it's a map: two-layer positioning (inte
   branch switches eat each other's uncommitted work. Second session
   now works in a separate clone (/root/arclux-pg) — port 3000
   conflicts were dev servers from BOTH sessions.
+
+## 2026-08-26 — MCP server: 32 tools, registry-driven auto-evolution (PRs #563-#566)
+
+**Status:** Done
+
+Built ARCLUX MCP server from scratch across 4 PRs:
+- #563: Initial rewrite — 21 tools covering full engine (analyze/doctor/health/verify/diagnose, 4 graph tools, 3 impact tools, security, search, detect, diff, branches, history, file_info, dsl, config)
+- #564: CLI integration — 'arclux mcp' subcommand, esbuild bundle, @modelcontextprotocol/sdk wired
+- #565: Expanded to 30 tools — parse_file, detect_language, resolve_routes/components/hooks/providers, run_rules, daemon_status, db_repos/db_analyses, semantic_diff
+- #566: Auto-evolution fixes — runRules was BROKEN (passed [] never ran rules), parse_file standalone via Compiler API, dynamic tool descriptions from registries
+
+Key gotchas:
+- web-tree-sitter WASM loading blocks MCP server startup if parsers imported at top level — tree-sitter parsers MUST be lazy-loaded
+- MCP protocol requires initialize → notifications/initialized → tools/list (not just initialize)
+- nodeRequire.resolve() can't be trusted in webpack bundles — use process.cwd() walkup
+- esbuild externals must include @modelcontextprotocol/sdk or it gets bundled incorrectly
+- pnpm workspace.yaml must include packages/* or workspace deps fail to resolve
+
+Final state: 32 tools, 20 detectors, 14 rules, 25 parsers — all registry-driven.
+Adding a new detector: 1 import + 1 map entry → auto-appears in tool description.
+Adding a new rule: 1 import + 1 entry in ALL_RULES → auto-wired to run_rules.
+
+## 2026-08-26 — npm publish-ready: arclux on npm (PR #561)
+
+**Status:** Done
+
+Single-file CLI bundle (apps/cli/dist/arclux.mjs, ~10MB) via esbuild. Package name 'arclux' confirmed free on npm. ships dist/ + wasms/ (tree-sitter grammars). bin: arclux. engines: node>=20. prepublishOnly runs build-cli.mjs. Verified: pnpm install works, arclux --version outputs 0.2.0.
+
+## 2026-08-26 — Branch cleanup: 150+ stale local branches deleted
+
+**Status:** Done
+
+Both ~/arclux and /root/arclux-pg had 150+ stale local branches (docs/*, feat/*, fix/*, chore/* from old PRs). Cleaned up: deleted all branches except ARCLUX.main from both repos. Had to handle a stale git worktree reference (arclux-pg was misidentified as a worktree of feat/audit-panel). After cleanup: 1 branch each, clean state. Also pulled 70 missing commits from origin/ARCLUX.main, resolved merge conflicts (untracked files from old branches blocking merge). Progres gotchas/decisions updated with all session findings.

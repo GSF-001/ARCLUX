@@ -73,23 +73,24 @@ compilation, no grammar installs. Node 20+.
     pnpm install
     pnpm build:cli             # bundles apps/cli/dist/arclux.mjs + wasms/
 
-Run CLI commands via: `npx tsx apps/cli/index.ts <command>` (source)
-or `node apps/cli/dist/arclux.mjs <command>` (bundled, as published).
+Run CLI commands via: `arclux <command>` (installed) or `node apps/cli/dist/arclux.mjs <command>` (bundled).
 
 ## Usage
 
-    npx tsx apps/cli/index.ts analyze [path]
-    npx tsx apps/cli/index.ts graph [path]
-    npx tsx apps/cli/index.ts graph [path] -o out.json
-    npx tsx apps/cli/index.ts impact <file> [path]
-    npx tsx apps/cli/index.ts doctor [path]
-    npx tsx apps/cli/index.ts diff <from> <to> [path]
-    npx tsx apps/cli/index.ts diagnose [path]
-    npx tsx apps/cli/index.ts verify [path]
-    npx tsx apps/cli/index.ts security [path]
-    npx tsx apps/cli/index.ts search <query> [path]
-    npx tsx apps/cli/index.ts script <file.arclux>
-    npx tsx apps/cli/index.ts config [path]
+    arclux analyze [path]
+    arclux graph [path]
+    arclux graph [path] -o out.json
+    arclux impact <file> [path]
+    arclux doctor [path]
+    arclux diff <from> <to> [path]
+    arclux diagnose [path]
+    arclux verify [path]
+    arclux security [path]
+    arclux search <query> [path]
+    arclux script <file.arclux>
+    arclux config [path]
+    arclux shell
+    arclux mcp
 
 Web dashboard:
 
@@ -101,9 +102,9 @@ Web dashboard:
 ARCLUX can run as a long-running background process that watches your repo and re-analyzes on every file change:
 
 ```bash
-npx tsx apps/cli/index.ts daemon --detach
-npx tsx apps/cli/index.ts daemon --status
-npx tsx apps/cli/index.ts daemon --stop
+arclux daemon --detach
+arclux daemon --status
+arclux daemon --stop
 ```
 
 The daemon exposes a local HTTP+SSE bridge (GET /analysis, GET /events) so any editor/terminal can connect -- see packages/daemon/.

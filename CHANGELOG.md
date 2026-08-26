@@ -4,6 +4,13 @@ All notable changes to ARCLUX are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning follows
 [SemVer](https://semver.org/) (pre-1.0: minor bump = significant features).
 
+## [0.2.1] — 2026-08-26
+
+### Added
+- **MCP server (32 tools)** — `arclux mcp` starts the Model Context
+  Protocol server; registry-driven auto-evolution (new detectors/rules
+  appear automatically in tool descriptions).
+
 ## [0.2.1] — 2026-08-23
 
 ### Added
@@ -122,7 +129,6 @@ Web experience wave — the engine is unchanged, the surface caught up.
   (daemon uses coarse full rebuilds)
 - 5 platform packages remain header-only stubs: observation, services,
   package-manager, ui, web-intake
-- Not published to npm — install from source
 
 ## [0.1.0-alpha] — 2026-08-07
 

@@ -972,3 +972,9 @@ ARCLUX.main
 **Status:** Done
 
 Approved plan (docs/SECURITY_ANALYSIS_PLAN.md) implements security/remote/provenance/correlation as NEW top-level packages consuming Repository + DependencyGraph via analyzeRepository() only — per ARCHITECTURE_MAP.md boundary. Key constraints discovered: (1) Repository carries no file content (buildIndex discards it) -> content-based detectors take SourceProvider as extension input; (2) detectEntryPoints is convention-only -> AttackSurfaceMapper unions convention+structural+explicit entries (experiment-validated); (3) RawCall carries no arguments -> sensitive-data-flow is module-level heuristic, documented limitation; (4) SARIF export is a minimal valid 2.1.0 subset (codeFlows/taxonomies deferred).
+
+## 2026-08-26 — npm publish: release before update issues/docs
+
+**Status:** In Progress
+
+Publish to npm first, then update all issues and progres docs. User wants the npm package to be 'as cool and efficient as possible' — fast install, one-command MCP, minimal barrier to try. All session bugs/decisions/gotchas get logged to progres/ before closing.

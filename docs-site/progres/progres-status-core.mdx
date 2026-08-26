@@ -831,3 +831,15 @@ DaemonRepositoryWatcher now routes every analysis trigger through packages/sched
 **Status:** Done
 
 New CLI command 'arclux exec &lt;cmd> [args...]' (apps/cli/commands/exec.ts) runs commands through packages/terminal's TerminalManager -- sandbox capability checks + session recording (issue #351 layer). TerminalManager was built and tested (tests/terminal.test.ts, 15 cases) but had zero production consumers; this wires it to the CLI. Also confirmed packages/acquisition IS wired (remote-analysis/analyzeRemoteSource.ts imports createRepositoryAcquirer -- wired via relative path so earlier consumer greps missed it); the remaining stub packages (boundaries/adapters/observation/web-intake/package-manager) are intentionally kept -- they are planned work, not dead code. Full suite 580/580, typecheck clean.
+
+## 2026-08-26 — Per-file incremental cache (PR #562)
+
+**Status:** Done
+
+New packages/incremental with Cell/Database/Query classes for per-file cache invalidation. File content hashing via xxhash, disk persistence, TTL expiry. Built and verified standalone but buildIndex still does full rebuild — watchRepository wraps pipeline API coarsely. Per-file incremental is deferred (decision #6).
+
+## 2026-08-26 — MCP server + npm publish milestone
+
+**Status:** In Progress
+
+MCP server (32 tools) and npm publish package are both built and ready. MCP server: 32 registry-driven tools, all auto-evolving. npm package: arclux@0.2.0, single 10.2MB bundle via esbuild, ships dist/ + wasms/ tree-sitter grammars. One command: npx arclux analyze . or npx arclux mcp. Blocked on npm login — machine needs npm adduser or NPM_TOKEN.
