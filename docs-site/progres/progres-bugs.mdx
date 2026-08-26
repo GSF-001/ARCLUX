@@ -494,3 +494,9 @@ Unit tests passed but running the new orphanIntegration detector against ~/flask
 3. **Classification tie bug** — a story-pattern file with no exports but imported siblings came out `ambiguous` instead of `unwired` (dead-signal vs unwired-signal tied in the old scoring). Cause: scoring a binary decision instead of applying priority. Fix: priority-ordered decision (story → ambiguous; backup/scratch name → dead; imported siblings → unwired; no imports+no exports → dead; else ambiguous). Same story also exposed the barrel index (`__init__.py`) being counted as an "imported sibling", polluting the denominator — barrels are now excluded from sibling aggregation.
 
 Lesson recorded: after any detector change, verify on a real repo, not just unit tests — assertion-shaped tests missed all three.
+
+## 2026-08-26 — npm login required before publish
+
+**Status:** Blocked
+
+apps/cli/package.json is ready (name: arclux, version: 0.2.0, private: false, bin: arclux, files: dist/ + wasms/), esbuild bundle built successfully (apps/cli/dist/arclux.mjs, 10.2MB). But npm whoami fails with ENEEDAUTH — the machine is not logged in to npm. Requires npm adduser or setting NPM_TOKEN in ~/.npmrc before publish can proceed.

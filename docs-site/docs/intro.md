@@ -63,18 +63,20 @@ For the current, detailed breakdown -- see [progres/status-core.md](https://gith
 - Runs scripted analysis — `arclux script file.arclux` executes the ARCLUX DSL (analyze, impact, doctor, security, graph from plain-text scripts)
 - Parses 27 languages: TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C#, Bash, C, Dart, Elixir, Kotlin, Lua, Objective-C, OCaml, Scala, Solidity, Swift, Vue, Zig, Elm, ReScript, plus manifest formats (package.json, go.mod, Cargo.toml, Gemfile, composer.json, csproj, gradle, pom.xml, requirements.txt)
 
-## Install (from source)
+## Install
 
-> [!NOTE]
-> Installation via npm is deprecated. Use one of the recommended methods below.
+```bash
+npx arclux analyze .          # zero setup
+npm i -g arclux               # install globally
+```
 
-Not yet published to npm. Clone and build locally:
+### From source (development)
 
     git clone https://github.com/GSF-001/ARCLUX.git
     cd ARCLUX
     pnpm install
 
-Run CLI commands via: `npx tsx apps/cli/index.ts &lt;command>`
+Run CLI commands via: `arclux <command>` (installed) or `node apps/cli/dist/arclux.mjs <command>` (bundled).
 
 
 

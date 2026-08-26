@@ -18,26 +18,37 @@ This guide covers running ARCLUX locally in your terminal. The web dashboard (St
 </Note>
 
 <Steps>
-  <Step title="Clone the repo">
-    ARCLUX isn't published to npm yet, so you build it locally.
+  <Step title="Quick install (npm)">
+    The fastest way to try ARCLUX — no clone needed:
+
+    ```bash
+    npx arclux analyze .
+    ```
+  </Step>
+
+  <Step title="Install globally (optional)">
+    ```bash
+    npm i -g arclux
+    arclux analyze .
+    ```
+  </Step>
+
+  <Step title="From source (development)">
+    Clone the repo if you want to contribute or modify:
 
     ```bash
     git clone https://github.com/GSF-001/ARCLUX.git
     cd ARCLUX
-    ```
-  </Step>
-
-  <Step title="Install dependencies">
-    ```bash
     pnpm install
     ```
-  </Step>
 
   <Step title="Run your first analysis">
     Point the CLI at any local path:
 
     ```bash
-    npx tsx apps/cli/index.ts analyze [path]
+    arclux analyze [path]
+    # or
+    npx arclux analyze [path]
     ```
 
     This parses the target codebase, builds the dependency graph, and runs all 20 structural detectors (circular dependencies, dead code, orphan files, layer violations, and more) across 27 languages.

@@ -1,6 +1,6 @@
 # Contributing to ARCLUX
 
-ARCLUX is alpha software (`v0.1.0-alpha`). The core pipeline, all 19
+ARCLUX is alpha software (`v0.2.0`). The core pipeline, all 20
 detectors, full impact analysis, the search engine, 14 framework rules,
 and the CLI are working and verified.
 Other-language parsers, the search engine, and several UI areas are still
@@ -10,7 +10,16 @@ every milestone and is more accurate than this file for "is X done yet."
 
 Expect breaking changes before 1.0.
 
-## Setup
+## Install
+
+### via npm (recommended)
+
+```bash
+npx arclux analyze .
+npx arclux mcp
+```
+
+### from source
 
 ```bash
 git clone https://github.com/GSF-001/ARCLUX.git
@@ -18,18 +27,18 @@ cd ARCLUX
 pnpm install
 ```
 
-Requires Node 20+. This is a pnpm workspaces monorepo (managed with
-Turborepo) — most day-to-day work happens inside a specific `apps/*` or
-`packages/*` directory, using that directory's own `package.json` scripts.
+Requires Node 20+. This is a pnpm workspaces monorepo — most day-to-day
+work happens inside a specific `apps/*` or `packages/*` directory, using
+that directory's own `package.json` scripts.
 
 ## Structure
 
 ```
-apps/cli        command-line interface (analyze, doctor, graph, config, impact)
+apps/cli        command-line interface (analyze, doctor, graph, config, impact, mcp, shell)
 apps/web        Next.js dashboard
 packages/       parser, graph, impact, detectors, rules, engine,
                 indexer, search, watcher, git, db, cache, incremental,
-                repository, shared
+                repository, shared, mcp
 playground/     fixture repos (python-demo, nextjs-demo, react-demo, etc.)
                 used for manual verification — see "Testing your changes"
 scripts/        testPlayground.ts — runs the pipeline + all detectors
@@ -55,7 +64,7 @@ anything that ships.
 - **`tsc --noEmit` passing is not "verified."** Every detector and pipeline
   change in this repo has been tested against a real fixture in
   `playground/`, either via `npx tsx scripts/testPlayground.ts <fixture>`
-  or `npx tsx apps/cli/index.ts doctor <path>`. A PR that only shows a
+  or `arclux doctor <path>`. A PR that only shows a
   clean typecheck for logic changes will likely get asked to add that.
 - Keep PRs scoped to one package or one concern.
 - Update `PROGRES.md` if your change completes something that was

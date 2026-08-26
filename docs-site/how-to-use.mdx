@@ -10,17 +10,19 @@ Everything ARCLUX can do today, from a one-off CLI check to always-on background
 Point any command at a local repo path (defaults to .):
 
 ```bash
-npx tsx apps/cli/index.ts analyze [path]
-npx tsx apps/cli/index.ts graph [path]
-npx tsx apps/cli/index.ts impact <file> [path]
-npx tsx apps/cli/index.ts doctor [path]
-npx tsx apps/cli/index.ts diagnose [path]
-npx tsx apps/cli/index.ts diff <from> <to> [path]
-npx tsx apps/cli/index.ts verify [path]
-npx tsx apps/cli/index.ts security [path]
-npx tsx apps/cli/index.ts search <query> [path]
-npx tsx apps/cli/index.ts script <file.arclux>
-npx tsx apps/cli/index.ts config [path]
+arclux analyze [path]
+arclux graph [path]
+arclux impact <file> [path]
+arclux doctor [path]
+arclux diagnose [path]
+arclux diff <from> <to> [path]
+arclux verify [path]
+arclux security [path]
+arclux search <query> [path]
+arclux script <file.arclux>
+arclux config [path]
+arclux shell
+arclux mcp
 ```
 
 diagnose output includes clickable file paths (OSC 8 hyperlinks) in terminals that support it (Termux, iTerm2, VS Code integrated terminal) -- tap/click to open the file directly.
@@ -46,9 +48,9 @@ Built-ins: analyze, doctor, check, graph, callgraph, impact, search, security, d
 Instead of re-running commands by hand, start ARCLUX as a background process that watches your repo and re-analyzes on every save:
 
 ```bash
-npx tsx apps/cli/index.ts daemon --detach
-npx tsx apps/cli/index.ts daemon --status
-npx tsx apps/cli/index.ts daemon --stop
+arclux daemon --detach
+arclux daemon --status
+arclux daemon --stop
 ```
 
 Run without --detach to see live output in the foreground instead.
