@@ -24,6 +24,10 @@
 3. **Serangan tidak merusak code asli.** Damage hanya menyentuh layer
    `.arclux/` / world-state; repo project aman. **"Repair = commit"**
    (bukan tombol).
+4. **Combat: visual boleh cinematic, hasil harus deterministic + tervalidasi.**
+   Client boleh menggambar perang; client tidak boleh menentukan kebenarannya.
+   *"Users create the machines. ARCLUX defines the physics. The server verifies
+   reality."*
 
 **Struktur 3 lapis:**
 ```
@@ -166,6 +170,118 @@ anti-abuse (K1-C).
   validation, publish) — tanpa write access ke core. Fondasi ada di
   `packages/shell/plugins.ts` + `detectors.ts` (user-space).
 
+### Layer I — Combat & World Validator (Anti-Cheat)
+
+Desain combat dua lapis yang dipisahkan tegas:
+
+> **Visual boleh cinematic. Hasil harus deterministic + tervalidasi.**
+> *"Users create the machines. ARCLUX defines the physics. The server
+> verifies reality."*
+
+**Prinsip inti:** client boleh **menggambar** perang, client **tidak boleh
+menentukan** kebenaran perang.
+
+```
+REPOSITORY ──▶ ARCLUX ANALYSIS ──▶ VESSEL STATE ──▶ WORLD SERVER
+                                                       │
+                                              ┌────────┴────────┐
+                                              ↓                 ↓
+                                           CLIENT A          CLIENT B
+                                              │                 │
+                                              ▼                 ▼
+                                          3D RENDER        3D RENDER
+```
+
+**I.1 — Visual serangan (client-side, cinematic)**
+- Target lock: kapal mengidentifikasi target (distance, velocity, heading,
+  available weapons); UI menampilkan bracket/marker; kamera zoom cinematic
+  ringan namun gameplay tetap taktikal.
+- Senjata punya **archetype visual**, bukan instruksi visual mentah dari user.
+  User memberi *capability* (`component` → mis. `weapon.plasma`); ARCLUX
+  menerjemahkannya:
+  ```
+  Weapoon capability ──▶ ARCLUX combat renderer
+          ├── Projectile
+          ├── Beam
+          ├── Missile
+          ├── Drone
+          └── Area effect
+  ```
+- Impact visual: shield flash, sparks, directional explosion, armor
+  fragments, electrical effects, smoke, disabled subsystem, debris.
+  Animasi **hanya merepresentasikan** hasil simulation, bukan sumbernya.
+
+**I.2 — Damage berdasarkan subsystem**
+Bukan sekadar HP = 73%, tapi per-subsystem:
+```
+VESSEL
+├── Engine       82%
+├── Navigation   91%
+├── Weapons      64%
+├── Defense      48%
+└── Reactor      77%
+```
+Serangan tertentu menurunkan subsystem spesifik → visual kapal berubah
+(mis. Defense 48% → shield flicker) → dapat ditelusuri ke component/modul
+via model impact yang sudah ada.
+
+**I.3 — Catastrophic damage**
+State turun 100% → … → 0% → `VESSEL DESTROYED` → berubah menjadi wreckage;
+world-state menyimpan event (lihat Section 3b). Repo project asli tidak
+dihancurkan — yang berubah hanya layer `.arclux/` / world-state.
+
+**I.4 — World Validator (server = referee)**
+Server/middleware memvalidasi setiap request sebelum event sah:
+```
+CLIENT A attack request
+   │
+   ▼
+WORLD VALIDATOR
+   ├── attacker valid?
+   ├── weapon exists?
+   ├── component authorized?
+   ├── license valid?
+   ├── vessel state valid?
+   ├── cooldown valid?
+   ├── range valid?
+   ├── target valid?
+   ├── damage ≤ ruleset?
+   └── state/version valid?
+        │
+        ▼
+   DAMAGE EVENT ──▶ CLIENT A render + CLIENT B render
+```
+Server tidak merender 3D — ia hanya menentukan "event ini sah". Client
+menggambar hasilnya.
+
+**I.5 — Vessel state fingerprint/version**
+```
+Repository (Commit: a83f91)
+   ──▶ Analysis #1842
+   ──▶ Vessel State
+   ──▶ State Hash
+```
+Jika user mengubah client (mis. `armor = infinity`), state lokal tidak cocok
+dengan validated state → ditolak.
+
+**I.6 — Component authorization**
+Validator memastikan component benar-benar milik/terizinkan: license valid,
+terpasang, capability sesuai, tidak expired/revoked, vessel state mengenal
+component tersebut. Mencegah: *"copy component legendary punya orang ke
+.arclux/ gue"*.
+
+**I.7 — Damage ceiling / ruleset**
+User bebas membuat weapon kompleks, tapi hasil simulation terjepit aturan:
+```
+raw capability ──▶ simulation ──▶ rules ──▶ MAX 10,000
+```
+Kreativitas user berada di dalam "physics ARCLUX" (damage ceiling).
+
+**I.8 — Replay / event log**
+Pertempuran penting direkam (battle ID, aksi, impact, subsystem, damage,
+state awal/akhir, event hash). Dasar sengketa ("dia cheat!"), preventasi
+cheat, dan fondasi Hall of Fame / history (Section 3b).
+
 ---
 
 ## 3. Roadmap Milestone
@@ -189,16 +305,97 @@ kapal, fleet/community, hall-of-fame, global server.
 - Component rusak → capability turun; repair = commit
 - Catastrophic damage threshold → rebuild via commit
 - Multi-repo connect + war 2 kapal (tak merusak repo asli)
+- Combat renderer (visual cinematic) + World Validator (anti-cheat) — Layer I
+- Vessel state fingerprint, component authorization, damage ceiling, replay log
 
 ### Milestone 3 — "Universe Persisten"
 - Persistent world-state (server sync, identity, events)
 - Transfer component antar kapal + provenance transfer
-- Hall of Fame / history
+- Wreckage Archive + Hall of Fame (museum sejarah) — lihat Section 3b
 
 ### Milestone 4 — "Ecosystem & Economy"
 - Extension Registry + publish + discovery
 - Community/fleet/station/territory
 - Economic loop penuh
+
+---
+
+## 3b. Wreckage & Hall of Fame — Museum Sejarah
+
+Kapal yang hancur tidak "respawn lalu hilang". Ia meninggalkan **puing
+sejarah** yang permanen dan menjadi aset dunia — bukan sekadar log database.
+
+```
+🚀 VESSEL
+   ↓
+⚔️ BATTLE
+   ↓
+💥 CATASTROPHIC DAMAGE
+   ↓
+🚀❌ VESSEL DESTROYED
+   ↓
+🧩 WRECKAGE
+   ↓
+ARCLUX RECOVERY SYSTEM
+   ↓
+🏛️ HALL OF FAME
+```
+
+**Wreckage Archive** — setiap puing jadi historical artifact dengan entri
+permanen (ID, identitas, event, status, komponen recover):
+
+```
+╔══════════════════════════✇══╗
+║   ARCLUX WRECKAGE #042       ║
+╠══════════════════════════════╣
+║ Vessel: Project Aurora       ║
+║ Community: Nova Fleet        ║
+║ Last Battle: Event #182      ║
+║ Status: Destroyed            ║
+║ Components Recovered: 17     ║
+╚══════════════════════════════╝
+```
+
+**Puing membawa provenance** — bagian terkuat dari konsep ini. ARCLUX
+menyimpan jejak hidup sebuah component:
+
+```
+Component X
+   ↓
+Created by Developer A
+   ↓
+Installed on Vessel A
+   ↓
+Transferred to Fleet B
+   ↓
+Destroyed in Battle #72
+   ↓
+Recovered
+   ↓
+Hall of Fame / Wreckage Archive
+```
+
+Ini mengubah **history menjadi aset dunia**, bukan sekadar log database.
+Provenance (`packages/provenance`) + `packages/db` (`AnalysisRecord` /
+snapshot) adalah bahan mentahnya.
+
+**Hall of Fame = museum sejarah ARCLUX**, bukan leaderboard:
+- 🏆 legendary vessels
+- ⚔️ major battles
+- 🧩 recovered components
+- 🚀 retired vessels
+- 🏛️ wreckage
+- 📜 historic events
+- 👥 legendary communities
+
+Pemain baru bisa datang dan melihat sejarah: *"Kapal ini pernah terlibat
+perang terbesar tahun lalu."*
+
+**Filosofi yang konsisten:** ARCLUX tidak perlu membuat semua cerita.
+Developer & komunitas menciptakan kejadian → ARCLUX menyimpan &
+memvisualisasikan sejarahnya. Semakin lama universe hidup, semakin banyak
+sejarah yang terbentuk — itulah yang membuat ARCLUX terasa seperti **dunia**,
+bukan sekadar game yang punya map.
 
 ---
 
@@ -219,6 +416,9 @@ kapal, fleet/community, hall-of-fame, global server.
 | World Model / VesselModel | ❌ BELUM | abstraksi baru |
 | License validation | ❌ BELUM | bikin baru |
 | Damage/simulation engine | ❌ BELUM | bikin baru |
+| Combat renderer (visual cinematic) | ❌ BELUM | archetype visual, client-side render |
+| World Validator (anti-cheat) | ❌ BELUM | referee; state fingerprint, authorization, damage ceiling, replay |
+| Wreckage Archive / Hall of Fame | ❌ BELUM | museum sejarah; pakai provenance + db |
 | Global server | ❌ BELUM | baru di M3+ |
 | True per-file incremental | 🟡 | built, belum di-wire ke `buildIndex` |
 
@@ -233,3 +433,9 @@ kapal, fleet/community, hall-of-fame, global server.
 3. **"Perang" perlu attack surface yang adil** — tuning supaya tak mudah 1-hit-KO.
 4. **Skala visi besar:** M1 harus dikunci supaya arsitektur tak melenceng saat
    ke M2-M4.
+5. **Anti-cheat combat:** arsitektur "server sebagai referee, client hanya
+   render" mengharuskan world-state yang terpusat & ter-version (fingerprint,
+   replay log) — ini menambah kebutuhan server validation yang lebih kuat
+   dibandingkan M1 single-repo.
+6. **Latency & determinism:** karena hasil ditentukan server, perlu desain
+   input-queue + event replay agar dua client melihat kejadian konsisten.
