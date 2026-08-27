@@ -54,6 +54,34 @@ export { runRules } from "../../packages/rules/RuleEngine";
 export { runDiagnostics } from "../../packages/diagnostics/DiagnosticEngine";
 export { getFixSuggestions } from "../../packages/diagnostics/FixSuggestion";
 
+// ── universe (vessel world model) ─────────────────────────────────────────
+export {
+  deriveBaseStats,
+  mergeManifest,
+  buildVesselModel,
+} from "../../packages/universe/stats";
+export {
+  connectRepository,
+} from "../../packages/universe/connect";
+export {
+  checkComponent,
+  validateVesselComponents,
+  OVERRIDE_CAP_OFFSET,
+} from "../../packages/universe/license";
+export {
+  validateManifest,
+  capOverride,
+} from "../../packages/universe/schema";
+export type {
+  VesselModel,
+  SystemState,
+  ComponentBinding,
+  SubsystemId,
+  ArcluxManifest,
+  LicenseTier,
+  VesselStatDerivation,
+} from "../../packages/universe/types";
+
 // ── types ─────────────────────────────────────────────────────────────────
 export type {
   AnalyzeRepositoryResult,
