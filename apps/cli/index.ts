@@ -33,7 +33,7 @@ import { registerScriptCommand } from "./script";
 import { registerMcpCommand } from "./commands/mcp";
 
 const program = new Command();
-program.name("arclux").description("Repository intelligence CLI").version("0.2.0");
+program.name("arclux").description("Repository intelligence CLI").version("0.2.1");
 
 registerAnalyzeCommand(program);
 registerGraphCommand(program);
