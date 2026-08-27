@@ -3,7 +3,9 @@
 > Repository adalah sumber kebenaran. ARCLUX adalah universe yang \
 > memvisualisasikan, mensimulasikan, dan memberi kehidupan pada repository.
 
-**Blueprint strategis — dibaca dengan izin** · Lihat [BLUEPRINT_LICENSE.md](BLUEPRINT_LICENSE.md) sebelum menggunakan. Draf iterasi 1.
+**Blueprint strategis — dibaca dengan izin** · Lihat
+[docs/blueprint/BLUEPRINT_LICENSE.md](docs/blueprint/BLUEPRINT_LICENSE.md)
+sebelum menggunakan. Draf iterasi 1.
 
 ---
 
@@ -42,6 +44,23 @@ ARCLUX CORE (code intelligence — SUDAH ADA / OP)
 
 ---
 
+## 📚 Indeks Blueprint
+
+Blueprint penuh dipecah ke `docs/blueprint/` (multi-file, biar navigable
+seiring visi yang kian besar). Urutan baca yang disarankan:
+
+| # | Dokumen | Isi |
+|---|---|---|
+| 00 | **BLUEPRINT.md** (file ini) | Kompas strategis, keputusan arsitektur, roadmap milestone, tabel aset, risiko |
+| 01 | [docs/blueprint/01-spatial-ux.md](docs/blueprint/01-spatial-ux.md) | Spatial Universe & Navigation UX (zoom ladder, camera, semantic nav, combat camera, wreckage viz) |
+| 02 | [docs/blueprint/02-station-infrastructure.md](docs/blueprint/02-station-infrastructure.md) | Station & Infrastructure System (facilities, safe zone, permissions, evolution, economy) |
+| 03 | [docs/blueprint/03-combat.md](docs/blueprint/03-combat.md) | Combat & World Validator / Layer I (anti-cheat, damage ceiling, fingerprint) |
+| 04 | [docs/blueprint/04-wreckage-history.md](docs/blueprint/04-wreckage-history.md) | Wreckage & Hall of Fame (museum sejarah, provenance sebagai aset) |
+| 05 | [docs/blueprint/05-vessel-design-dashboard.md](docs/blueprint/05-vessel-design-dashboard.md) | Vessel Design, Visual Governance & 3D Design Dashboard (creative freedom, visual policy, validation, authoring) |
+| – | [docs/blueprint/BLUEPRINT_LICENSE.md](docs/blueprint/BLUEPRINT_LICENSE.md) | Lisensi source-available (bukan Apache; read-only) |
+
+---
+
 ## 1. Keputusan Arsitektur
 
 Rekomendasi yang perlu dikunci sebelum eksekusi:
@@ -52,10 +71,13 @@ Rekomendasi yang perlu dikunci sebelum eksekusi:
 | K2 | Skala pondasi | **Single-repo → 1 kapal hidup** dulu; multi-repo/war = milestone lanjutan |
 | K3 | License 3-tier | Masuk pondasi pertama (bikin transfer & kompetisi adil sejak awal) |
 | K4 | Rendering | Pakai `three` + `react-force-graph-3d` yang ada, extend jadi "kapal" |
+| K5 | Struktur blueprint | **Multi-file** di `docs/blueprint/` (indeks ini + spec-spesifik); K2 desain |
 
 ---
 
 ## 2. Arsitektur Teknis
+
+Ringkasan lapisan. Detail desain UX (spatial/stasiun) ada di spec terpisah.
 
 ### Layer A — `.arclux/` manifest (objek K1, K3)
 
@@ -142,6 +164,9 @@ anti-abuse (K1-C).
 - Mapping: sistem kapal → mesh 3D, health → warna/scale/partikel damage.
 - Kualitas adaptif (resolution/FPS/effects/render distance) — render di
   client, sim tetap di world-state (FPS tidak menentukan kebenaran sim).
+- **Spatial & navigation UX penuh** (zoom ladder, camera modes, semantic
+  navigation, adaptive HUD, LOD, combat camera) — lihat
+  [docs/blueprint/01-spatial-ux.md](docs/blueprint/01-spatial-ux.md).
 
 ### Layer F — Developer World → Debug
 
@@ -160,7 +185,8 @@ anti-abuse (K1-C).
 - Server/global cuma: identity, sync, persistence, world-events, validation,
   permissions.
 - Persistence pakai `packages/db` + `packages/storage/RecoveryManager`.
-- Community/fleet/station/territory/hall-of-fame = milestone lanjutan.
+- Community/fleet/station/territory/hall-of-fame = milestone lanjutan
+  (lihat [docs/blueprint/02-station-infrastructure.md](docs/blueprint/02-station-infrastructure.md)).
 
 ### Layer H — Business & Ecosystem
 
@@ -172,115 +198,17 @@ anti-abuse (K1-C).
 
 ### Layer I — Combat & World Validator (Anti-Cheat)
 
-Desain combat dua lapis yang dipisahkan tegas:
+Ringkasan — detail penuh di
+[docs/blueprint/03-combat.md](docs/blueprint/03-combat.md).
 
 > **Visual boleh cinematic. Hasil harus deterministic + tervalidasi.**
 > *"Users create the machines. ARCLUX defines the physics. The server
 > verifies reality."*
 
-**Prinsip inti:** client boleh **menggambar** perang, client **tidak boleh
-menentukan** kebenaran perang.
-
-```
-REPOSITORY ──▶ ARCLUX ANALYSIS ──▶ VESSEL STATE ──▶ WORLD SERVER
-                                                       │
-                                              ┌────────┴────────┐
-                                              ↓                 ↓
-                                           CLIENT A          CLIENT B
-                                              │                 │
-                                              ▼                 ▼
-                                          3D RENDER        3D RENDER
-```
-
-**I.1 — Visual serangan (client-side, cinematic)**
-- Target lock: kapal mengidentifikasi target (distance, velocity, heading,
-  available weapons); UI menampilkan bracket/marker; kamera zoom cinematic
-  ringan namun gameplay tetap taktikal.
-- Senjata punya **archetype visual**, bukan instruksi visual mentah dari user.
-  User memberi *capability* (`component` → mis. `weapon.plasma`); ARCLUX
-  menerjemahkannya:
-  ```
-  Weapoon capability ──▶ ARCLUX combat renderer
-          ├── Projectile
-          ├── Beam
-          ├── Missile
-          ├── Drone
-          └── Area effect
-  ```
-- Impact visual: shield flash, sparks, directional explosion, armor
-  fragments, electrical effects, smoke, disabled subsystem, debris.
-  Animasi **hanya merepresentasikan** hasil simulation, bukan sumbernya.
-
-**I.2 — Damage berdasarkan subsystem**
-Bukan sekadar HP = 73%, tapi per-subsystem:
-```
-VESSEL
-├── Engine       82%
-├── Navigation   91%
-├── Weapons      64%
-├── Defense      48%
-└── Reactor      77%
-```
-Serangan tertentu menurunkan subsystem spesifik → visual kapal berubah
-(mis. Defense 48% → shield flicker) → dapat ditelusuri ke component/modul
-via model impact yang sudah ada.
-
-**I.3 — Catastrophic damage**
-State turun 100% → … → 0% → `VESSEL DESTROYED` → berubah menjadi wreckage;
-world-state menyimpan event (lihat Section 3b). Repo project asli tidak
-dihancurkan — yang berubah hanya layer `.arclux/` / world-state.
-
-**I.4 — World Validator (server = referee)**
-Server/middleware memvalidasi setiap request sebelum event sah:
-```
-CLIENT A attack request
-   │
-   ▼
-WORLD VALIDATOR
-   ├── attacker valid?
-   ├── weapon exists?
-   ├── component authorized?
-   ├── license valid?
-   ├── vessel state valid?
-   ├── cooldown valid?
-   ├── range valid?
-   ├── target valid?
-   ├── damage ≤ ruleset?
-   └── state/version valid?
-        │
-        ▼
-   DAMAGE EVENT ──▶ CLIENT A render + CLIENT B render
-```
-Server tidak merender 3D — ia hanya menentukan "event ini sah". Client
-menggambar hasilnya.
-
-**I.5 — Vessel state fingerprint/version**
-```
-Repository (Commit: a83f91)
-   ──▶ Analysis #1842
-   ──▶ Vessel State
-   ──▶ State Hash
-```
-Jika user mengubah client (mis. `armor = infinity`), state lokal tidak cocok
-dengan validated state → ditolak.
-
-**I.6 — Component authorization**
-Validator memastikan component benar-benar milik/terizinkan: license valid,
-terpasang, capability sesuai, tidak expired/revoked, vessel state mengenal
-component tersebut. Mencegah: *"copy component legendary punya orang ke
-.arclux/ gue"*.
-
-**I.7 — Damage ceiling / ruleset**
-User bebas membuat weapon kompleks, tapi hasil simulation terjepit aturan:
-```
-raw capability ──▶ simulation ──▶ rules ──▶ MAX 10,000
-```
-Kreativitas user berada di dalam "physics ARCLUX" (damage ceiling).
-
-**I.8 — Replay / event log**
-Pertempuran penting direkam (battle ID, aksi, impact, subsystem, damage,
-state awal/akhir, event hash). Dasar sengketa ("dia cheat!"), preventasi
-cheat, dan fondasi Hall of Fame / history (Section 3b).
+**I.1–I.8** — visual serangan (archetype, client-render); damage per-subsystem;
+catastrophic → wreckage; World Validator (server = referee, validasi tiap
+request); vessel state fingerprint; component authorization; damage ceiling;
+replay/event log.
 
 ---
 
@@ -298,7 +226,7 @@ cheat, dan fondasi Hall of Fame / history (Section 3b).
 - `arclux connect` + docs
 
 **Out of scope M1:** perang menyeluruh, multi-repo universe, transfer antar
-kapal, fleet/community, hall-of-fame, global server.
+kapal, fleet/community, hall-of-fame, global server, station.
 
 ### Milestone 2 — "War & Damage"
 - Damage simulation + `DamageResolver` + `ImpactDebugger`
@@ -307,95 +235,43 @@ kapal, fleet/community, hall-of-fame, global server.
 - Multi-repo connect + war 2 kapal (tak merusak repo asli)
 - Combat renderer (visual cinematic) + World Validator (anti-cheat) — Layer I
 - Vessel state fingerprint, component authorization, damage ceiling, replay log
+- Awal spatial navigation antar vessel (zoom ladder dasar, kamera follow) —
+  [01-spatial-ux.md](docs/blueprint/01-spatial-ux.md)
 
 ### Milestone 3 — "Universe Persisten"
 - Persistent world-state (server sync, identity, events)
 - Transfer component antar kapal + provenance transfer
-- Wreckage Archive + Hall of Fame (museum sejarah) — lihat Section 3b
+- Wreckage Archive + Hall of Fame (museum sejarah) — lihat
+  [04-wreckage-history.md](docs/blueprint/04-wreckage-history.md)
+- **Station awal** (outpost/hub dasar: dock, engineering, analysis lab,
+  safe zone) — lihat
+  [02-station-infrastructure.md](docs/blueprint/02-station-infrastructure.md)
+- Semantic navigation penuh (show-in-universe ↔ show-in-code)
 
 ### Milestone 4 — "Ecosystem & Economy"
 - Extension Registry + publish + discovery
 - Community/fleet/station/territory
+- Station evolution (outpost → hub → fleet base / landmark), component market,
+  navigation & security center, observatory
 - Economic loop penuh
+- Spatial zones (open/combat/safe/planetary/travel/special) — ruleset per zone
 
 ---
 
 ## 3b. Wreckage & Hall of Fame — Museum Sejarah
 
+Ringkasan — detail penuh di
+[docs/blueprint/04-wreckage-history.md](docs/blueprint/04-wreckage-history.md).
+
 Kapal yang hancur tidak "respawn lalu hilang". Ia meninggalkan **puing
-sejarah** yang permanen dan menjadi aset dunia — bukan sekadar log database.
-
-```
-🚀 VESSEL
-   ↓
-⚔️ BATTLE
-   ↓
-💥 CATASTROPHIC DAMAGE
-   ↓
-🚀❌ VESSEL DESTROYED
-   ↓
-🧩 WRECKAGE
-   ↓
-ARCLUX RECOVERY SYSTEM
-   ↓
-🏛️ HALL OF FAME
-```
-
-**Wreckage Archive** — setiap puing jadi historical artifact dengan entri
-permanen (ID, identitas, event, status, komponen recover):
-
-```
-╔══════════════════════════✇══╗
-║   ARCLUX WRECKAGE #042       ║
-╠══════════════════════════════╣
-║ Vessel: Project Aurora       ║
-║ Community: Nova Fleet        ║
-║ Last Battle: Event #182      ║
-║ Status: Destroyed            ║
-║ Components Recovered: 17     ║
-╚══════════════════════════════╝
-```
-
-**Puing membawa provenance** — bagian terkuat dari konsep ini. ARCLUX
-menyimpan jejak hidup sebuah component:
-
-```
-Component X
-   ↓
-Created by Developer A
-   ↓
-Installed on Vessel A
-   ↓
-Transferred to Fleet B
-   ↓
-Destroyed in Battle #72
-   ↓
-Recovered
-   ↓
-Hall of Fame / Wreckage Archive
-```
-
-Ini mengubah **history menjadi aset dunia**, bukan sekadar log database.
-Provenance (`packages/provenance`) + `packages/db` (`AnalysisRecord` /
-snapshot) adalah bahan mentahnya.
-
-**Hall of Fame = museum sejarah ARCLUX**, bukan leaderboard:
-- 🏆 legendary vessels
-- ⚔️ major battles
-- 🧩 recovered components
-- 🚀 retired vessels
-- 🏛️ wreckage
-- 📜 historic events
-- 👥 legendary communities
-
-Pemain baru bisa datang dan melihat sejarah: *"Kapal ini pernah terlibat
-perang terbesar tahun lalu."*
+sejarah** yang permanen dan menjadi aset dunia. Puing membawa **provenance**
+(jejak hidup sebuah component: dibuat → dipasang → dipindah → hancur →
+recovered → Hall of Fame). Hall of Fame = museum sejarah, bukan leaderboard.
 
 **Filosofi yang konsisten:** ARCLUX tidak perlu membuat semua cerita.
 Developer & komunitas menciptakan kejadian → ARCLUX menyimpan &
-memvisualisasikan sejarahnya. Semakin lama universe hidup, semakin banyak
-sejarah yang terbentuk — itulah yang membuat ARCLUX terasa seperti **dunia**,
-bukan sekadar game yang punya map.
+memvisualisasikan sejarahnya. Itulah yang membuat ARCLUX terasa seperti
+**dunia**, bukan sekadar game yang punya map.
 
 ---
 
@@ -419,6 +295,8 @@ bukan sekadar game yang punya map.
 | Combat renderer (visual cinematic) | ❌ BELUM | archetype visual, client-side render |
 | World Validator (anti-cheat) | ❌ BELUM | referee; state fingerprint, authorization, damage ceiling, replay |
 | Wreckage Archive / Hall of Fame | ❌ BELUM | museum sejarah; pakai provenance + db |
+| Spatial Universe & Navigation UX | ❌ BELUM | zoom ladder, semantic nav, combat camera, adaptive HUD, LOD |
+| Station & Infrastructure | ❌ BELUM | facilities, safe zone, permissions, evolution, economy |
 | Global server | ❌ BELUM | baru di M3+ |
 | True per-file incremental | 🟡 | built, belum di-wire ke `buildIndex` |
 
@@ -439,3 +317,10 @@ bukan sekadar game yang punya map.
    dibandingkan M1 single-repo.
 6. **Latency & determinism:** karena hasil ditentukan server, perlu desain
    input-queue + event replay agar dua client melihat kejadian konsisten.
+7. **Abstraction zoom ladder:** seberapa dalam ladder (Universe → … → Code)
+   bersifat tetap vs adaptif terhadap kedalaman repo sebenarnya
+   (lihat [01-spatial-ux.md](docs/blueprint/01-spatial-ux.md) — Abstraction
+   Zoom System).
+8. **Station scale:** sistem station harus mendukung ribuan station tanpa
+   jadi monolit — ARCLUX membangun rules, bukan membuat station satu-per-satu
+   (lihat [02-station-infrastructure.md](docs/blueprint/02-station-infrastructure.md)).
