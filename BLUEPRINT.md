@@ -56,6 +56,7 @@ seiring visi yang kian besar). Urutan baca yang disarankan:
 | 02 | [docs/blueprint/02-station-infrastructure.md](docs/blueprint/02-station-infrastructure.md) | Station & Infrastructure System (facilities, safe zone, permissions, evolution, economy) |
 | 03 | [docs/blueprint/03-combat.md](docs/blueprint/03-combat.md) | Combat & World Validator / Layer I (anti-cheat, damage ceiling, fingerprint) |
 | 04 | [docs/blueprint/04-wreckage-history.md](docs/blueprint/04-wreckage-history.md) | Wreckage & Hall of Fame (museum sejarah, provenance sebagai aset) |
+| 05 | [docs/blueprint/05-vessel-design-dashboard.md](docs/blueprint/05-vessel-design-dashboard.md) | Vessel Design, Visual Governance & 3D Design Dashboard (creative freedom, visual policy, validation, authoring) |
 | – | [docs/blueprint/BLUEPRINT_LICENSE.md](docs/blueprint/BLUEPRINT_LICENSE.md) | Lisensi source-available (bukan Apache; read-only) |
 
 ---
