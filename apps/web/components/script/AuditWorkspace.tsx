@@ -239,7 +239,8 @@ function FilePreviewOverlay({
 function StreamRow({ line }: { line: StreamLine }) {
   const { prompt, body } = withPrompt(line.text, line.tone)
   // [ OK ] / [ WAIT ] / [critical] style tokens get terminal-status colors
-  const parts = body.split(/(\[ (?:OK|WAIT|critical|error|high|warning|medium|low|info) \])/g)
+  const statusTokens = "\\[ (?:OK|WAIT|critical|error|high|warning|medium|low|info) \\]"
+  const parts = body.split(new RegExp("(" + statusTokens + ")", "g"))
   return (
     <div className={`flex gap-2 ${TONE_CLASS[line.tone]}`}>
       {prompt && <span className="select-none text-emerald-600/80">$</span>}

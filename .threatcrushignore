@@ -13,3 +13,6 @@
 # паттерн со слэшем — привязка к корню репо (см. @threatcrush/scan).
 tests/security-analysis.test.ts
 packages/security-analysis/source/SecretExposureDetector.ts
+packages/security-analysis/source/UnsafePatternDetector.ts
+tests/fixtures/security-leaks/app.ts
+tests/boundaries.test.ts
