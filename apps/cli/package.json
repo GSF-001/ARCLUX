@@ -1,12 +1,19 @@
 {
   "name": "arclux",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Codebase intelligence platform \u2014 27-language parser, dependency & call graphs, 20 architecture detectors, impact tracing, security pipeline, and the ARCLUX scripting DSL.",
   "license": "Apache-2.0",
   "type": "module",
   "private": false,
   "bin": {
     "arclux": "./dist/arclux.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/apps/cli/lib.d.ts",
+      "import": "./dist/arclux-lib.mjs"
+    },
+    "./cli": "./dist/arclux.mjs"
   },
   "files": [
     "dist/",

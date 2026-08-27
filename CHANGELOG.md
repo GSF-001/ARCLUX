@@ -10,6 +10,10 @@ All notable changes to ARCLUX are documented here. Format based on
 - **MCP server (32 tools)** — `arclux mcp` starts the Model Context
   Protocol server; registry-driven auto-evolution (new detectors/rules
   appear automatically in tool descriptions).
+- **Library / SDK exports** — `import { analyzeRepository } from "arclux"`
+  exposes the full analysis engine programmatically (graphs, impact,
+  search, security, rules, diagnostics) with typed `.d.ts` declarations,
+  separate from the CLI bundle.
 
 ## [0.2.1] — 2026-08-23
 
