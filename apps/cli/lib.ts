@@ -60,18 +60,13 @@ export {
   mergeManifest,
   buildVesselModel,
 } from "../../packages/universe/stats";
-export {
-  connectRepository,
-} from "../../packages/universe/connect";
+export { connectRepository } from "../../packages/universe/connect";
 export {
   checkComponent,
   validateVesselComponents,
   OVERRIDE_CAP_OFFSET,
 } from "../../packages/universe/license";
-export {
-  validateManifest,
-  capOverride,
-} from "../../packages/universe/schema";
+export { validateManifest, capOverride } from "../../packages/universe/schema";
 export type {
   VesselModel,
   SystemState,
@@ -81,6 +76,43 @@ export type {
   LicenseTier,
   VesselStatDerivation,
 } from "../../packages/universe/types";
+
+// ── gameserver (authoritative MMO server core) ────────────────────────────
+export { WorldRegion, distanceBetween, regionFromState } from "../../packages/gameserver/world";
+export { validateIntent } from "../../packages/gameserver/validator";
+export { SimulationEngine, computeEntityHash } from "../../packages/gameserver/simulation";
+export {
+  applyCombatIntent,
+  DAMAGE_CEILING,
+} from "../../packages/gameserver/combat";
+export {
+  WorldRegion as WorldRegionType,
+} from "../../packages/gameserver/world";
+export type {
+  GameEntity,
+  VesselEntity,
+  StationEntity,
+  WorldEntity,
+  RegionState,
+  GameEvent,
+  PlayerIntent,
+  Vec3,
+  FactionId,
+  EntityKind,
+} from "../../packages/gameserver/types";
+export type {
+  SimulationOptions,
+  TickResult,
+} from "../../packages/gameserver/simulation";
+export type {
+  ValidationResult,
+  ValidatorDecision,
+  ValidatorContext,
+} from "../../packages/gameserver/validator";
+export type {
+  CombatImpact,
+  CombatLogger,
+} from "../../packages/gameserver/combat";
 
 // ── types ─────────────────────────────────────────────────────────────────
 export type {
