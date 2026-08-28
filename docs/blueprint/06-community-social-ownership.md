@@ -902,6 +902,82 @@ Governance: Community A → granted engineer access → Engineer X
 Sejarah teknikal & sejarah sosial hidup berdampingan — governance tidak pernah
 menghapus provenans teknis.
 
+### 18.5 Kapal = Kode, dan Kerusakan Ikut Menyentuh Kode
+
+Kapal adalah repository (D-007). Ini bukan metafor belaka — **kerusakan kapal
+berdampak ke "kode" kapal**, dan pemain harus *debug*:
+
+```
+KAPAL RUSAK (thermal/collision/combat)
+   ↓
+BASELINE / SUBSYSTEM TERPENGARUH (imun hilang? sistem dasar turun?)
+   ↓
+KAPAL "TIDAK BERFUNGSI" → harus diperbaiki / debug
+   ↓
+REPAIR → berfungsi lagi (lihat 03 damage, 04 recovery)
+```
+
+- Kerusakan (termasuk thermal melt dari 01 §2.6, collision dari 03 I.9) memengaruhi
+  sistem kapal.
+- **ARCLUX Universal Baseline** (05 §7.1) ikut terdampak: mis. kehilangan sebagian
+  baseline → kapal kehilangan kemampuan dasar/angkasa sampai diperbaiki.
+- Repair/recovery mengembalikan fungsi (04 §recovery); provenance tetap mencatat
+  sejarah kerusakan.
+
+### 18.6 Identitas Sosial / Callsign (label faksi & nama)
+
+Setiap vessel/player tampil di HUD/overlay dengan **identitas sosial** agar pemain
+langsung tahu kawan vs lawan:
+
+```
+[KOMUNITAS A]  [GSF-xxxx]  [username]   ← label di overlay (01 §20)
+```
+
+- **Authoritative**: siapa owner/community ditentukan server (06 §18.2, I-1);
+  label cuma representasi client.
+- Nama frame berasal dari vessel identity (§18.1: Repository Identity + Owner +
+  Community) dan repo unik prefix user.
+- Tidak ada "pemenang/loser" — label murni penanda kawan/lawan, bukan sistem skor.
+
+### 18.7 Intel, Kordinat & Mobilisasi Armada (drama EVE-style)
+
+Pemain/kapal dapat **membagikan titik (koordinat/waypoint)** medan atau titik
+kumpul ke aliansi, untuk koordinasi armada pada konflik besar:
+
+```
+PERANG BESAR
+   ↓  kapal berbagi TITIK (koordinat / titik kumpul / waypoint medan)
+   ↓  tersebar ke ALIANSI (beberapa komunitas bersekutu; intel, lihat §3)
+   ↓  kapal sekutu melihat titik di peta (tactical marker, 01 §2)
+   ↓  terima → GERAK terbatas (lihat §18.8) → mobilisasi
+```
+
+- Berbagi posisi ber-label: muncul **nama kapal/nama org** pengirim (18.6) + koordinat.
+- Restriksi intel mengikuti access/trust (§3.2/§3.3); intel bisa bocor (§3.6) →
+  drama tambahan.
+- **Alian/i** = beberapa community yang bersekutu (diplomasi, §8). Bukan konsep
+  "sisi vs sisi dengan hasil menang/kalah" — open world, hasil dari keputusan &
+  gerak.
+
+### 18.8 Mobilisasi Terbatas (2-Teleport) + Portal
+
+Kapal yang menerima titik dapat bergerak ke sana dengan jendela pergerakan
+terbatas — **bukan teleport bebas**, bukan jump gate navigasi (01 §14):
+
+```
+TERIMA TITIK  →  catat TITIK ASAL (anchor)
+   →  TELEPORT #1 (portal)  →  masuk medan perang
+   →  (bertempur / membantu / batal)
+   →  TELEPORT #2 (portal)  →  BALIK ke TITIK ASAL
+```
+
+- **Batas 2 teleport per aktivasi bantuan**: 1 ke titik, 1 balik ke titik asal.
+  Tidak bisa teleport ke tempat lain.
+- **Cooldown panjang** → bukan "mobil gratis"; ada harga keputusan.
+- **Animasi portal** cinematic saat masuk/keluar (feedback EVE-level, lihat UI 01).
+- Bukan teleport antar-map/maintenance; murni **mobilisasi respon konflik** (bukan SOS
+  instan — melainkan koordinat yang dibagikan, §18.7).
+
 ---
 
 ## 19. Definition of Done (V3)

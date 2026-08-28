@@ -144,6 +144,77 @@ bukan kaku di koordinat tetap.
 > Implementasi orbit & event hidup di `packages/gameserver/environs.ts` +
 > `cosmic-event.ts` (lihat progres arsitektur & MMO-IMPLEMENTATION).
 
+### 2.5 Dua Skala Koordinat (jangan dicampur)
+
+Koordinat **tata surya** dan koordinat **kapal/lokal** adalah dua konteks yang
+berbeda dan TIDAK dicampur:
+
+```
+SKALA SYSTEM (kerangka dev)          SKALA LOKAL (buat pemain)
+──────────────────────────────       ──────────────────────────────
+Posisi benda langit (orbit)          Posisi kapal (x,y,z) instruksi
+Skala raksasa (sistem bintang)       Skala medan/combat
+Dipakai untuk mengatur & menghitung  Dipakai untuk pergerakan, jarak,
+benda langit                         combat, interaksi pemain
+kerangka internal (implementasi)     kerangka operasional pemain
+```
+
+- Benda langit ditaruh & dihitung pada skala system (juga jadi landasan gravitasi
+  & termal, §2.6).
+- Kapal bergerak pada skala lokal; server tetap otoritas posisi (D-008).
+- Keduanya hidup dalam satu region (D-015), tapi representasi & skala-nya
+  terpisah, agar tidak rancu antara "orbit sebuah planet" dan "kapal yang di sini".
+
+### 2.6 Fisika Tata Surya (nama ilmiah, bukan istilah buatan)
+
+Tata surya disimulasikan dengan **hukum fisika nyata** agar konsisten & bisa
+diprediksi. Yang digunakan ARCLUX (nomenklatur fisika, supaya pembaca paham arti
+sebenarnya):
+
+```
+NEWTONIAN GRAVITY (gravitasi Newton)
+  massa(m)  →  gaya gravitasi  F = G·m₁·m₂ / r²
+  → memengaruhi benda langit satu sama lain di skala system
+KEPLER ORBITS (hukum Kepler)
+  orbit elips benda langit mengikuti lintasan yang deterministik terhadap waktu
+RADIATION / THERMAL ENERGY (radiasi & energi termal)
+  matahari memancarkan radiasi; energi termal yang diterima kapal ∝ 1/r² (jarak)
+  → suhu benda/materi naik saat mendekat
+MATERIAL LIMIT / MELTING (batas material & pelelehan)
+  tiap material/subsystem punya batas ketahanan suhu (thermal tolerance)
+  → melewatinya = thermal damage / melting (masuk damage lingkungan, lihat
+    [03](03-combat.md) I.9)
+```
+
+Contoh peta konsekuensi (bukan statis `damage=100/sec`):
+
+```
+STAR ACTIVITY
+   ↓
+ENERGY / PLASMA EVENT (solar wind · coronal mass ejection · flare)
+   ↓
+PROPAGATES THROUGH SYSTEM (merambat lewat ruang)
+   ↓
+SHIP DETECTS / IS EXPOSED (kapal bisa melihat datangnya & bereaksi)
+   ↓
+SYSTEMS & MATERIALS AFFECTED (termal → material limit → melt)
+   ↓
+PLAYER MUST REACT (ubah rute · berlindung · atau memanfaatkan kondisi)
+```
+
+> **Kapal imun terhadap gravitasi Newton** (skala system): gravitasi benda langit
+> dipakai untuk posisi/orbit benda langit (skala system, §2.5), TAPI tidak
+> "menarik" kapal di skala lokal. Kapal bergerak bebas/manuver. Sumber imunitas
+> ini dijamin oleh **ARCLUX Universal Baseline** (lihat
+> [05](05-vessel-design-dashboard.md) §7) — bukan state acak. Pemisahan ini dibuat
+> agar kapal tidak terseret orbit (ribet), sementara lingkungan tetap
+> disimulasikan dengan fisika penuh.
+
+> Istilah ilmiah dipakai (gravitasi Newton, hukum Kepler, radiasi termal, solar
+> wind, coronal mass ejection) supaya desain bisa dibaca & diverifikasi dengan
+> benar, bukan nama-nama fantasi. Penerapannya tetap *gameplay-first* dan
+> deterministik per tick (D-008, D-016).
+
 ---
 
 ## 3. Abstraction Zoom System
@@ -495,6 +566,12 @@ System
 User dapat langsung mencari representasi fisik dari software yang sedang
 diinspeksi.
 
+> **Tipe teleport lain — Mobilisasi Konflik (bukan navigasi):** selain jump gate
+> (navigasi antar system) dan semantic jump, ada **teleport mobilisasi** untuk
+> merespon konflik (2-teleport: ke titik + balik titik asal, lihat
+> [06](06-community-social-ownership.md) §18.8). Ia beda kategori: bukan
+> pindah-pindah bebas, punya cooldown panjang, dan menampilkan animasi portal.
+
 ---
 
 ## 15. Stations
@@ -721,6 +798,29 @@ Mencegah interface menjadi overload permanen — pemain tidak belajar ulang HUD
 tiap ganti kapal; ia hanya mempelajari capability baru yang tampil di layout
 universal.
 
+### 20.8 Identitas Sosial di HUD
+
+Overlay menampilkan identitas sosial setiap kapal agar kawan vs lawan langsung
+terbaca (data authoritative server, label = representasi client):
+
+```
+[KOMUNITAS A]  [GSF-xxxx]  [username]
+   ◄ faksi        prefix      pilot
+```
+
+Detail: [06 §18.6](06-community-social-ownership.md). Label tidak menandakan
+pemenang/loser — murni penanda identitas.
+
+### 20.9 Titik & Intel di HUD
+
+Pemain dapat melihat & membagikan **titik (koordinat/waypoint/titik kumpul)** serta
+menerima peringatan konflik (mobilisasi armada). Lihat
+[06 §18.7](06-community-social-ownership.md). Tampil sebagai tactical marker di
+ruang (01 §2) + info panel yang ber-label nama kapal/org pengirim.
+
+Aturan tetap: client mengirim **request**; server menentukan validitas & hasil
+(01 §20.5) — koordinat/pergerakan bukan keputusan client.
+
 ---
 
 ## 21. Camera Modes
@@ -908,6 +1008,41 @@ ARCLUX juga harus bisa bertanya:
 > "Where is this code in my universe?"
 
 Distingsi ini menjadi fondasi identitas visual ARCLUX sendiri.
+
+---
+
+## 28. UI Command-Interface (EVE-level, bukan web dashboard)
+
+> *"The interface should feel like operating an engineering system, not browsing
+> a website."* — prinsip kunci UI ARCLUX.
+
+ARCLUX adalah **game desktop MMO**, bukan aplikasi web. UI diarahkan ke
+**command interface / operational console** yang cinematic & data-dense, terinspirasi
+benchmark EVE Online — bukan "modern dashboard" klasik.
+
+**Bahasa desain yang TEPAT (jangan diterjemahkan sebagai kartu SaaS):**
+- Cinematic Sci-Fi Command Interface
+- Spatial Data Visualization — informasi hidup dalam ruang (bukan kotak kartu)
+- Tactical / Operational HUD — data-dense tanpa berbentuk dashboard card
+- Industrial / Technical visual language — hindari glassmorphism & plastik
+- Layered visualization: environment · system state · graph · telemetry · controls
+- Cinematic depth: lighting, atmospheric effects, motion, depth
+- Adaptive information density (sederhana saat idle, padat saat beroperasi)
+
+```
+ARCLUX INTERFACE ARCHITECTURE
+├── Spatial UI
+├── Data-Dense HUD
+├── Command-Centric Interaction
+├── Layered Visualization
+├── Cinematic Depth
+├── Technical / Industrial Material
+└── Adaptive Information Density
+```
+
+> Benchmark visual = EVE Online (bukan web app). Desktop penuh, data-dense, tanpa
+> batasan "komponen ringan ala mobile". Bukan "poster tempelan" — environment
+> & depth yang memberi sense of scale, hierarchy, dan interaksi.
 
 ---
 

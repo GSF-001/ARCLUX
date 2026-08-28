@@ -189,6 +189,32 @@ dengan
 
 - intentionally inappropriate design.
 
+#### 7.1 ARCLUX Universal Baseline (baseline yang tidak bisa dihapus)
+
+Setiap repository kapal berisi **kode universal ARCLUX** di bagian awal, yang
+**TIDAK BISA DIHAPUS/diubah inti** oleh pemain. Ini yang membuat sebuah repo dapat
+"menjadi kapal" dan "bisa angkasa" — baseline yang menjamin:
+
+- **Imun gravitasi** (01 §2.6): kapal tidak ditarik gravitasi skala system.
+- **Sistem dasar** kapal (identitas, baseline stat, kerangka).
+- **Validasi wajib**: tanpa baseline ini, repo TIDAK diterima sebagai vessel
+  (`connectRepository` D-007 menolak / FLAG).
+
+```
+REPOSITORY (repo pemain)
+├── ARCLUX UNIVERSAL BASELINE   ← kode wajib, tidak bisa dihapus
+│     (imun gravitasi · identitas · sistem dasar · batas)
+└── KONTEN KAPAL                 ← bebas disain user (mesh, component, capability,
+                                   strategi, dll)
+```
+
+Pemisahan ini penting: **konten kapal = kreativitas user** (poin 3 Creative
+Freedom), **baseline = fondasi universal ARCLUX** yang konsisten untuk semua
+pemain, dan menjadi level "penyangga" yang sama. Dalam validasi pipeline, baseline
+divalidasi sebagai bagian "TECHNICAL VALIDATION" — kehilangan/kerusakan baseline
+(dampak kerusakan kapal, lihat 06 §18.5) berarti kapal "hilang kemampuan
+angkasa/dasar".
+
 ---
 
 ## 8. Automated Visual Validation

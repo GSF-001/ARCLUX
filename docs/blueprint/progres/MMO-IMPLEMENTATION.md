@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-28 (PR #582 gameserver core merged; scaffolding relay/game).
+Update terakhir: 2026-08-28 (PR #588 blueprint physics/social/intel — dua skala, fisika tata surya, baseline, aliansi/intel-kordinat, 2-teleport, UI EVE-level).
 
 ---
 
@@ -77,6 +77,10 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 6. Cosmic environs (01 §2.3): `environs.ts` orbit integrator deterministik +
    `SystemBodies[]`; lalu `collision.ts` (03 I.9) & `cosmic-event.ts`
 7. Cosmic render (01 §2/§22): planet/moon fase lunar, belt, meteor, backdrop + HUD
+8. Physics thermal (01 §2.6): `thermics.ts` radiasi ∝1/r² → suhu → melt; solar wind/CME
+9. Universal baseline (05 §7.1): baseline wajib per repo; imun gravitasi + identitas
+10. Intel & mobilisasi (06 §18.6-18.8): label sosial, bagikan titik, 2-teleport + portal
+11. UI command-interface (01 §28): operational console EVE-level (desktop)
 
 ### 2.3 `packages/relay` 🚧 (shard registry + gate handoff + identity lintas shard)
 **Kerangka dibuat, file**: `index.ts`, `registry.ts`, `gate.ts`, `identity.ts`, `types.ts`.
@@ -136,9 +140,21 @@ net), `index.ts`, `package.json`. **Arah**:
       musim berbasis orbit, aurora, puing anomali) → event + replay (03 I.8)
 - [ ] Cosmic render: renderer draw planet/moon (fase lunar), belt, meteor, backdrop
       body + LOD (01 §2/§22); HUD command-interface (01 §20)
+- [ ] Physics thermal: `thermics.ts` radiasi termal ∝1/r² → suhu kapal → material
+      limit/melting → thermal damage (01 §2.6; reuse 03 damage); solar wind/CME event
+- [ ] Universal baseline: ARCLUX baseline wajib per repo (imun gravitasi, identitas,
+      sistem dasar); connectRepository menolak tanpa baseline (05 §7.1, D-019)
+- [ ] Identitas sosial & intel: label faksi+nama di HUD (06 §18.6, 01 §20.8); bagikan
+      titik/waypoint ke aliansi (06 §18.7, 01 §20.9)
+- [ ] Mobilisasi 2-teleport: ke titik + balik titik asal, cooldown, animasi portal
+      (06 §18.8, 01 §14)
+- [ ] UI command-interface EVE-level: operational console, data-dense, desktop-only
+      (01 §28)
 
 > Desain acuan V4/V5/V6: `07-special-capabilities.md` · `01-spatial-ux.md §20` ·
 > `08-persistent-world.md` · keputusan D-013/D-014 di `decisions-mmo.md`.
+> Desain acuan cosmic/physics/social: `01 §2.5/2.6/§14/§20/§28` · `05 §7.1` ·
+> `06 §18.5-18.8` · `03 I.9` · `04` · D-018..D-022.
 >
 > Desain acuan cosmic: `01-spatial-ux.md §2/§22/§24` · `03-combat.md I.9` ·
 > `04-wreckage-history.md` · `arsitektur.md` (environs/collision/cosmic-event).
@@ -173,3 +189,4 @@ net), `index.ts`, `package.json`. **Arah**:
 | 2026-08-28 | — | scaffolding relay + apps/game + kerangka gate/netcode/persistence | in progress |
 | 2026-08-28 | — | blueprint V4 (07), V5 HUD (01 §20), V6 persistent (08) + D-013/D-014 + respawn-open | in progress |
 | 2026-08-28 | — | blueprint cosmic: 01 §2 living environment + fase lunar + 3 lapis body; 03 I.9 collision damage; 04 source wreckage; arsitektur environs/collision/cosmic-event | in progress |
+| 2026-08-28 | — | blueprint physics/social/intel: 01 §2.5 dua skala + §2.6 fisika (Newton/Kepler/thermal/melt/solar-wind); 05 §7.1 baseline; 06 §18.5-18.8 (kapal=kode, label faksi, intel-kordinat, 2-teleport); 01 §14/§20.8-9/§28 UI EVE-level; D-018..022 | in progress |

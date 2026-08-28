@@ -91,11 +91,17 @@ Client TIDAK pernah menjadi otoritas — ia render hasil validated simulation.
    - kerangka tambahan (gate/netcode/persistence) ✅ scaffold
    - **cosmic environment** — `environs.ts` (orbit integrator deterministik per
      tick) + `collision.ts` (tabrakan vs benda COLLIDABLE → damage, reuse I.2/I.7)
-     + `cosmic-event.ts` (generator meteor/badai acak) — desain 01 §2 / 03 I.9
+     + `cosmic-event.ts` (solar wind/CME/meteor acak) — desain 01 §2.6 / 03 I.9
+     + `thermics.ts` (radiasi termal ∝1/r² → suhu → material limit/melt; 01 §2.6)
+   - **universal baseline** — baseline ARCLUX wajib per repo (imun gravitasi,
+     identitas, sistem dasar) — desain 05 §7.1 / D-019
+   - **intel & mobilisasi** — koordinat/waypoint ber-label + aliansi + 2-teleport
+     (portal, cooldown) — desain 06 §18.6-18.8 / D-021-022
 2. **`packages/relay`** — shard registry + gate handoff + identity lintas shard
    - scaffold ✅ (registry/gate/identity)
 3. **`apps/game`** (Electron) — client 3D + net integration + UI universe
    - scaffold ✅ (main/renderer + build script)
+   - **UI command-interface** EVE-level + HUD identitas sosial (01 §20/§28)
 4. **Integrasi penuh** — `arclux connect` → vessel masuk universe, jump gate
    antar region, station/community layer
 
