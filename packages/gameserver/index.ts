@@ -17,3 +17,6 @@ export * from "./world";
 export * from "./validator";
 export * from "./simulation";
 export * from "./combat";
+export * from "./gate";
+export * from "./netcode";
+export * from "./persistence";

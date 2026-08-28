@@ -83,10 +83,17 @@ Client TIDAK pernah menjadi otoritas — ia render hasil validated simulation.
 1. **PR #580** — `packages/universe` fondasi World Model ✅ (sudah merged)
 2. **`packages/gameserver`** — server authoritative + WorldModel + Validator
    (region single dulu), sim loop, netcode input-queue, replay
-3. **`packages/relay`** — shard registry + gate handoff + identity lintas shard
-4. **`apps/game`** (Electron) — client 3D + net integration + UI universe
-5. **Integrasi penuh** — `arclux connect` → vessel masuk universe, jump gate
+   - core (world/validator/sim/combat) ✅ PR #582
+   - kerangka tambahan (gate/netcode/persistence) ✅ scaffold
+2. **`packages/relay`** — shard registry + gate handoff + identity lintas shard
+   - scaffold ✅ (registry/gate/identity)
+3. **`apps/game`** (Electron) — client 3D + net integration + UI universe
+   - scaffold ✅ (main/renderer + build script)
+4. **Integrasi penuh** — `arclux connect` → vessel masuk universe, jump gate
    antar region, station/community layer
+
+> **IMPL.** Urutan kerja & status tiap modul yang hidup di
+> [MMO-IMPLEMENTATION.md](MMO-IMPLEMENTATION.md) — baca itu dulu sebelum ngoding.
 
 ---
 

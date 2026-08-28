@@ -22,6 +22,7 @@ keputusan engine.
 |---|---|
 | [decisions-mmo.md](decisions-mmo.md) | Semua keputusan desain MMO yang diambil (visi, arsitektur, stack, model) |
 | [arsitektur.md](arsitektur.md) | Peta arsitektur MMO (server authoritative, client, shard registry) |
+| [MMO-IMPLEMENTATION.md](MMO-IMPLEMENTATION.md) | **Peta implementasi anti-lupa** (status tiap modul + arah + checklist + TODO). Baca ini DULU sebelum ngoding MMO |
 
 ## Files blueprint terkait
 

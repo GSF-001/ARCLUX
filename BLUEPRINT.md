@@ -58,7 +58,7 @@ seiring visi yang kian besar). Urutan baca yang disarankan:
 | 04 | [docs/blueprint/04-wreckage-history.md](docs/blueprint/04-wreckage-history.md) | Wreckage & Hall of Fame (museum sejarah, provenance sebagai aset) |
 | 05 | [docs/blueprint/05-vessel-design-dashboard.md](docs/blueprint/05-vessel-design-dashboard.md) | Vessel Design, Visual Governance & 3D Design Dashboard (creative freedom, visual policy, validation, authoring) |
 | 06 | [docs/blueprint/06-community-social-ownership.md](docs/blueprint/06-community-social-ownership.md) | Community, Social Connection & Battlefield Ownership (access keys/trust, intelligence, component history, fleet recovery, roles, governance, asset classification, revocation, dynamic safe-zone, community splits, vessel identity, 3D) — extension V2 + V3 |
-| – | [docs/blueprint/progres/](docs/blueprint/progres/) | Progres desain MMO: keputusan ([decisions-mmo.md](docs/blueprint/progres/decisions-mmo.md)) + arsitektur ([arsitektur.md](docs/blueprint/progres/arsitektur.md)) |
+| – | [docs/blueprint/progres/](docs/blueprint/progres/) | Progres desain MMO: keputusan ([decisions-mmo.md](docs/blueprint/progres/decisions-mmo.md)) + arsitektur ([arsitektur.md](docs/blueprint/progres/arsitektur.md)) + peta implementasi ([MMO-IMPLEMENTATION.md](docs/blueprint/progres/MMO-IMPLEMENTATION.md)) |
 | – | [docs/blueprint/BLUEPRINT_LICENSE.md](docs/blueprint/BLUEPRINT_LICENSE.md) | Lisensi source-available (bukan Apache; read-only) |
 
 ---
