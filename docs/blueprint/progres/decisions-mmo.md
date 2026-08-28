@@ -155,9 +155,44 @@ konteks, pilihan, dan alasan — supaya bisa dilacak & tidak bolak-balik.
 
 ---
 
+## D-013 — Persistent world: server restart ≠ world reset
+
+- **Tanggal:** 2026-08-28
+- **Konteks:** proposal Extension V6 (tanpa reset naratif) — apakah restart/
+  maintenance menghapus state dunia.
+- **Keputusan:** **Server restart ≠ world reset.** State dunia tervalidasi
+  dipulihkan setelah restart/maintenance/deployment/crash/migrasi/upgrade
+  kompatibel. Sejarah (wars, provenance, lineage, ownership, community/vessel/
+  governance/recovery/destruction/diplomatic events) tidak dihapus oleh restart.
+  Klien tidak bisa meng-undo perubahan dunia yang sah selama offline.
+- **Alasan:** keluar game ≠ keluar dari dunia; state persisten via
+  `packages/gameserver/persistence.ts` + `packages/provenance` + `packages/db`.
+- **Implementasi:** [08-persistent-world.md](../08-persistent-world.md) +
+  `MMO-IMPLEMENTATION.md`.
+
+---
+
+## D-014 — NO player-initiated world pause
+
+- **Tanggal:** 2026-08-28
+- **Konteks:** istilah tepat bukan "gada stop", melainkan tidak ada pause dunia
+  yang diinisiasi pemain.
+- **Keputusan:** **NO PLAYER-INITIATED WORLD PAUSE.** Pemain tidak bisa
+  menghentikan/men-jeda dunia. Logout tidak menghentikan world; login kembali
+  → lanjut dari state terakhir yang benar-benar terjadi.
+- **Pengecualian:** server tetap butuh maintenance/restart teknis — yang
+  persisten adalah state dunia (D-013), bukan server itu harus hidup selamanya.
+- **Alasan:** konsisten dengan persistent consequence (D-004).
+
+---
+
 ## Keputusan pending / terbuka
 
 - Model gate antar shard: eksplisit (pindah dunia) vs seamless real-time —
   MVP mulai eksplisit, nanti dinaikkan.
 - Detail ekonomi in-universe + payment boundary — layer terpisah, belum detail.
 - Peran fitur "community projects multi-repo" detail mekaniknya — belum final.
+- **Respawn / logout-location policy (D-OPEN):** apakah pemain selalu respawn
+  tepat di lokasi logout, dan ada/tidaknya mekanisme respawn/teleport. Belum
+  diputuskan — sengaja dibiarkan open (lihat 08-persistent-world.md §15). Jump
+  gate/teleport navigasi (01 §14) tetap ada; ini soal kebijakan respawn pemain.
