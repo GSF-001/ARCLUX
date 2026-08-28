@@ -12,7 +12,7 @@
 // simulation engine). The region owns its entities; external code never
 // mutates the map directly.
 
-import type { GameEntity, RegionState, StationEntity, VesselEntity, WorldEntity } from "./types";
+import type { GameEntity, RegionSnapshot, StationEntity, VesselEntity, WorldEntity } from "./types";
 
 export interface SpawnVesselOptions {
   id: string;
@@ -68,10 +68,12 @@ export class WorldRegion {
   }
 
   /** Returns a plain snapshot (for client render / persistence, no live refs). */
-  snapshot(): { regionId: string; tick: number; entities: WorldEntity[] } {
+  snapshot(): RegionSnapshot {
     return {
       regionId: this.regionId,
+      name: this.name,
       tick: this.tick,
+      createdAt: this.createdAt,
       entities: Array.from(this.entities.values()),
     };
   }
@@ -136,11 +138,11 @@ export class WorldRegion {
   }
 }
 
-/** Rebuild a WorldRegion from a persisted RegionState (for recovery). */
-export function regionFromState(state: RegionState): WorldRegion {
+/** Rebuild a WorldRegion from a persisted RegionSnapshot (for recovery). */
+export function regionFromState(state: RegionSnapshot): WorldRegion {
   const region = new WorldRegion(state.regionId, state.name);
   region.tick = state.tick;
-  for (const e of state.entities.values()) {
+  for (const e of state.entities) {
     region["entities"].set(e.id, e);
   }
   return region;
