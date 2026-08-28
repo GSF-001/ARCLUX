@@ -36,6 +36,13 @@ event, status, komponen recover):
 ╚══════════════════════════════╝
 ```
 
+Sumber kehancuran **tidak hanya pertempuran**. Kapal yang menabrak benda
+langit COLLIDABLE (asteroid, meteor, planet — lihat [01-spatial-ux.md]
+(01-spatial-ux.md) §2.2 dan [03-combat.md](03-combat.md) I.9) dan hancur juga
+masuk Wreckage Archive dengan provenance utuh. Entri "Last Event" mencatat
+penyebabnya (battle / environmental / recovery), sehingga sejarah kehancuran
+terjaga selengkap battle regular.
+
 ## Puing membawa provenance
 
 Bagian terkuat dari konsep ini. ARCLUX menyimpan jejak hidup sebuah component:

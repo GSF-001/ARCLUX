@@ -74,6 +74,9 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 4. V4 capability (07): usage_count + component_condition + depletion di
    validator/simulation; batas 2 kapal induk
 5. V5 HUD registry (01 §20.2): expose capabilities[] ke renderer
+6. Cosmic environs (01 §2.3): `environs.ts` orbit integrator deterministik +
+   `SystemBodies[]`; lalu `collision.ts` (03 I.9) & `cosmic-event.ts`
+7. Cosmic render (01 §2/§22): planet/moon fase lunar, belt, meteor, backdrop + HUD
 
 ### 2.3 `packages/relay` 🚧 (shard registry + gate handoff + identity lintas shard)
 **Kerangka dibuat, file**: `index.ts`, `registry.ts`, `gate.ts`, `identity.ts`, `types.ts`.
@@ -125,9 +128,20 @@ net), `index.ts`, `package.json`. **Arah**:
 - [ ] V5 Universal Cockpit: capability registry + HUD discovery (01 §20, renderer)
 - [ ] V6 Persistent world: load→reconstruct region (regionFromState)→resume (08 §13,
       reuse persistence.ts); no player-initiated pause (D-014)
+- [ ] Cosmic environs: `environs.ts` orbit integrator deterministik per tick +
+      `SystemBodies[]` (star/planet/moon/asteroid/backdrop) (01 §2.3, arsitektur)
+- [ ] Cosmic collision: `collision.ts` tabrakan vessel vs body COLLIDABLE → damage
+      subsystem (reuse 03 I.2/I.7/I.9); cukup parah → wreckage (04)
+- [ ] Cosmic event: `cosmic-event.ts` generator acak (meteor shower, badai bintang /
+      musim berbasis orbit, aurora, puing anomali) → event + replay (03 I.8)
+- [ ] Cosmic render: renderer draw planet/moon (fase lunar), belt, meteor, backdrop
+      body + LOD (01 §2/§22); HUD command-interface (01 §20)
 
 > Desain acuan V4/V5/V6: `07-special-capabilities.md` · `01-spatial-ux.md §20` ·
 > `08-persistent-world.md` · keputusan D-013/D-014 di `decisions-mmo.md`.
+>
+> Desain acuan cosmic: `01-spatial-ux.md §2/§22/§24` · `03-combat.md I.9` ·
+> `04-wreckage-history.md` · `arsitektur.md` (environs/collision/cosmic-event).
 >
 > Setiap kali selesai isi satu modul: update §2 status file + checklist §3,
 > lalu commit/PR terpisah.
@@ -158,3 +172,4 @@ net), `index.ts`, `package.json`. **Arah**:
 | 2026-08-28 | #582 | gameserver core (world/validator/sim/combat) | ✅ merged |
 | 2026-08-28 | — | scaffolding relay + apps/game + kerangka gate/netcode/persistence | in progress |
 | 2026-08-28 | — | blueprint V4 (07), V5 HUD (01 §20), V6 persistent (08) + D-013/D-014 + respawn-open | in progress |
+| 2026-08-28 | — | blueprint cosmic: 01 §2 living environment + fase lunar + 3 lapis body; 03 I.9 collision damage; 04 source wreckage; arsitektur environs/collision/cosmic-event | in progress |

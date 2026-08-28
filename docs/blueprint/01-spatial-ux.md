@@ -33,13 +33,15 @@ User berpindah antar perspektif tanpa merasa membuka aplikasi terpisah.
 
 ---
 
-## 2. Spatial Universe
+## 2. Spatial Universe — Living Cosmic Environment
 
 Canvas utama = persistent 3D spatial environment.
 
+> **ARCLUX bukan papan statis.** Universe hidup: tata surya bergerak, orbit
+> nyata, benda langit berinteraksi, dang bang. Suasana dunia terus berubah.
+
 Objek yang mungkin:
-- stars
-- planets
+- stars / planets / moons / asteroids
 - stations
 - jump gates
 - vessels
@@ -47,6 +49,7 @@ Objek yang mungkin:
 - wreckage
 - historical locations
 - tactical markers
+- cosmic events (meteor shower, badai bintang, aurora)
 
 ```
                     ✦
@@ -66,7 +69,80 @@ Objek yang mungkin:
 ```
 
 Visual terinspirasi space simulator skala besar, namun ARCLUX mempertahankan
-identitas visualnya sendiri.
+identitas visualnya sendiri — *cinematic, spatial, data-dense*, bukan dashboard.
+
+### 2.1 Sistem Bintang per Region
+
+**Setiap region = satu sistem bintang** (sinkron arsitektur "shard = region =
+system"); jump gate = pindah ke sistem bintang lain (lihat §14).
+
+```
+REGION (SYSTEM)
+├── ☉ Star (matahari) — sumber cahaya/energi, pusat gravitasi visual
+├── Planet(s)          — orbit elips nyata
+├── Moon(s)            — mengorbit planet besar
+├── Asteroid belt      — orbit, hazard nyata
+└── Cosmic event       — meteor, badai bintang, dsb
+```
+
+### 2.2 Tiga Lapis Objek
+
+Bedakan objek agar render & interaksi benar:
+
+```
+LAYER            CONTOH                        INTERAKSI
+COLLIDABLE       asteroid, meteor, planet      fisik — vessel bisa nabrak → damage
+ATMOSPHERIC      meteor lewat, aurora, debu    drama visual, kejadian acak
+BACKDROP         planet super-jauh             hanya terlihat, tak bisa dijangkau
+```
+
+- **COLLIDABLE** → masuk world validator + damage (lihat [03-combat.md](03-combat.md)),
+  tabrakan cukup parah → wreckage ([04-wreckage-history.md](04-wreckage-history.md)).
+- **BACKDROP** → planet yang tampak sangat jauh, tak bisa digapai — memberi sense of
+  scale ala film, membangun impian eksplorasi tanpa perlu reachable.
+- **ATMOSPHERIC** → drama kosmik yang membuat dunia terasa hidup.
+
+### 2.3 Orbit & Fase Lunar (realisme astronomis)
+
+Tata surya menggunakan **simulasi orbit nyata**: posisi benda langit adalah fungsi
+deterministik dari parameter orbit & tick dunia (bukan state acak).
+
+```
+POSISI_BODY(tick) = f(parameter orbit, tick)     → deterministik, semua lihat sama
+```
+
+Konsekuensi alami dari orbit (tidak perlu state terpisah, ia lahir dari orbit):
+
+```
+FASE_BULAN   = f(posisi bulan, posisi planet, arah matahari)
+PURNAMA      → bulan di sisi berlawanan matahari   (terang penuh)
+SABIT        → bulan dekat arah matahari            (tipis)
+BULAN BARU   → bulan di antara planet & matahari    (gelap)
+```
+
+- **Gerak tata surya & fase bulan** hidup terus (D-013 persistent: posisi valid pada
+  tick itu, tidak reset seenaknya).
+- **Deterministik per tick** menjaga server-authoritative (D-008) — semua klien &
+  replica region menghitung posisi yang sama; anti-cheat tidak terganggu.
+
+### 2.4 Cosmic Events (acak, tidak menempel di satu titik)
+
+Drama kosmik muncul **secara acak & bergerak**, bukan di titik itu-itu saja:
+
+```
+COSMIC EVENT → posisi & waktu acak (seed / state version) → masuk event + replay
+    ├── Meteor shower        (acak, bisa jadi hazard)
+    ├── Badai bintang / flare (periodik relatif terhadap orbit, analog "musim")
+    ├── Aurora / rasi terang  (atmosferik, kosmetik)
+    └── Puing anomali lewat   (bisa diselidiki → gameplay)
+```
+
+Musim analog di bumi: ketika planet berada di fase orbit tertentu (mis. mendekati
+matahari), kondisi sistem berubah ("badai bintang") — periodik nyata berbasis orbit,
+bukan kaku di koordinat tetap.
+
+> Implementasi orbit & event hidup di `packages/gameserver/environs.ts` +
+> `cosmic-event.ts` (lihat progres arsitektur & MMO-IMPLEMENTATION).
 
 ---
 
@@ -690,6 +766,10 @@ DEVELOPER
 
 Kekompleksan rendering bisa berubah tanpa mengubah kebenaran simulation.
 
+Berlaku juga untuk benda langit (§2): pada `FAR`/`MID`, planet & backdrop body
+dirender simplified (mesh/lightness rendah); posisi orbit tetap milik state dunia
+yang sama (§2.3) — detail visual ≠ otoritas posisi.
+
 ---
 
 ## 23. Input Philosophy
@@ -743,6 +823,8 @@ State yang sama menggerakkan:
 - damage analysis
 - history
 - provenance
+- **cosmic environment** (orbit benda langit & fase bulan adalah state dunia yang
+  sama — deterministik per tick seperti combat; lihat §2.3)
 
 ---
 
