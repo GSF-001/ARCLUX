@@ -1,4 +1,4 @@
-# ARCLUX MMO — IMPLEMENTATION MAP 
+# ARCLUX MMO — IMPLEMENTATION MAP (anti-lupa)
 
 > **Ini "otak" scaffolding.** Sebelum ngoding MMO, baca ini dulu: cek status
 > tiap modul, tahu udah dibikin apa, tinggal isi apa, dan mau diarahin ke mana.
@@ -69,7 +69,11 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 **Arah (prioritas isi berikutnya):**
 1. `gate.ts` — handoff vessel antar region (D-006 jalur eksplisit dulu, seamless nanti)
 2. `persistence.ts` — simpan doang bisa langsung pakai prove of `snapshot`
+   (ini juga dasar V6 persistent world: load→reconstruct→resume, 08 §13)
 3. `netcode.ts` — pasang pas `apps/game` klien pertama
+4. V4 capability (07): usage_count + component_condition + depletion di
+   validator/simulation; batas 2 kapal induk
+5. V5 HUD registry (01 §20.2): expose capabilities[] ke renderer
 
 ### 2.3 `packages/relay` 🚧 (shard registry + gate handoff + identity lintas shard)
 **Kerangka dibuat, file**: `index.ts`, `registry.ts`, `gate.ts`, `identity.ts`, `types.ts`.
@@ -112,7 +116,19 @@ net), `index.ts`, `package.json`. **Arah**:
 - [ ] `apps/game`: bootstrap Electron + 3D render vessel dari RegionState
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
 - [ ] dynamic safe-zone / governance state (blueprint 06 §13-16) — modifikasi validator
+- [ ] V4 special capability: batas 2 kapal induk + limited activation 3x + depletion
+      (07 §5/§7-9/§17/§21) — perpanjang validator + simulation
+- [ ] V4 component-based capability: usage/component_condition, event log
+      activate_special_capability (07 §10/§22, reuse 03 I.8 replay)
+- [ ] V4 provenance lineage: component survive ship/destruction (07 §13-15, reuse
+      `packages/provenance`)
+- [ ] V5 Universal Cockpit: capability registry + HUD discovery (01 §20, renderer)
+- [ ] V6 Persistent world: load→reconstruct region (regionFromState)→resume (08 §13,
+      reuse persistence.ts); no player-initiated pause (D-014)
 
+> Desain acuan V4/V5/V6: `07-special-capabilities.md` · `01-spatial-ux.md §20` ·
+> `08-persistent-world.md` · keputusan D-013/D-014 di `decisions-mmo.md`.
+>
 > Setiap kali selesai isi satu modul: update §2 status file + checklist §3,
 > lalu commit/PR terpisah.
 
@@ -141,3 +157,4 @@ net), `index.ts`, `package.json`. **Arah**:
 | 2026-08-28 | #580 | universe World Model foundation | ✅ merged |
 | 2026-08-28 | #582 | gameserver core (world/validator/sim/combat) | ✅ merged |
 | 2026-08-28 | — | scaffolding relay + apps/game + kerangka gate/netcode/persistence | in progress |
+| 2026-08-28 | — | blueprint V4 (07), V5 HUD (01 §20), V6 persistent (08) + D-013/D-014 + respawn-open | in progress |

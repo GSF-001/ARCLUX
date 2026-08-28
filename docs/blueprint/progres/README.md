@@ -32,6 +32,8 @@ keputusan engine.
 - [../04-wreckage-history.md](../04-wreckage-history.md) — Wreckage & Hall of Fame
 - [../05-vessel-design-dashboard.md](../05-vessel-design-dashboard.md) — Vessel Design & 3D Dashboard
 - [../06-community-social-ownership.md](../06-community-social-ownership.md) — Community, Social & Ownership
+- [../07-special-capabilities.md](../07-special-capabilities.md) — Special Capabilities & Player-Defined Technology (V4)
+- [../08-persistent-world.md](../08-persistent-world.md) — Persistent World / Tanpa Reset Naratif (V6)
 
 ## Notes
 

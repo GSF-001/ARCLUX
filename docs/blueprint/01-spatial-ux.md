@@ -533,9 +533,89 @@ Tujuan: sejarah itu sendiri menjadi bagian dari persistent universe.
 
 ---
 
-## 20. Adaptive HUD
+## 20. Universal Cockpit HUD & Adaptive Context
 
-HUD berubah sesuai konteks.
+> **Cockpit tetap universal. Kapal tetap unik.** (Extension V5, varian API-first)
+
+ARCLUX memisahkan **kontrol universal** dari **kemampuan kapal**:
+
+```
+KONTROL UNIVERSAL ≠ KEMAMPUAN KAPAL
+```
+
+Semua kapal memakai bahasa kontrol yang sama; kemampuan tambahan ditentukan
+oleh kapal & komponennya.
+
+### 20.1 Standard Control API
+
+Kontrol dasar direpresentasikan sebagai intent standar:
+
+```
+move · target · scan · dock · activate · navigate · manage
+```
+
+```
+PLAYER → CONTROL → PLAYER INTENT → WORLD VALIDATOR → ACCEPT | REJECT → SIMULATION
+```
+
+Client tidak menentukan apakah tindakan berhasil.
+
+### 20.2 Ship Capability Registry
+
+Setiap kapal mengekspos daftar capability-nya. Client membangun interface dari
+registry ini, bukan hard-code tiap tombol:
+
+```
+GET SHIP STATE → { vessel, capabilities: ["targeting","scan","phase_shift","emergency_repair"] }
+```
+
+Kapal berbeda punya capability berbeda, tapi kontrol dasar tetap sama.
+
+### 20.3 Three-Layer Model
+
+```
+Layer 1 — Control   : apa yang pemain minta (MOVE/ATTACK/SCAN/ACTIVATE)
+Layer 2 — Capability: apa yang kapal mampu (weapon/shield/scanner/custom/special)
+Layer 3 — World Rules: apa yang dunia izinkan (auth/cooldown/range/damage/
+                       component/ownership/safe zone/state version)
+```
+
+```
+PLAYER INTENT → CAPABILITY → WORLD VALIDATOR → SIMULATION → WORLD STATE
+```
+
+### 20.4 Dynamic & Standard Slots
+
+Posisi kontrol dasar konsisten di semua kapal; isi slot berubah per kapal:
+
+```
+VESSEL A: [Laser] [Shield] [Scan]  [Repair]
+VESSEL B: [Missile][ECM]  [Boost]  [Special]
+```
+
+Capability state tampil di slot (pola sama):
+`AVAILABLE · ACTIVE · COOLDOWN · DISABLED · DAMAGED · DEPLETED`
+
+### 20.5 UI Bukan Sumber Kebenaran
+
+Kemunculan tombol ≠ aksi pasti berhasil. Saat tombol `SPECIAL` ditekan:
+
+```
+ACTIVATE_CAPABILITY → VALIDATOR (exists? authorized? cooldown? uses?
+  component condition? ship state? world rules?) → ACCEPT | REJECT
+```
+
+Client mengirim **REQUEST** (bukan "berhasil"); server menentukan hasil.
+
+### 20.6 Capability Terhubung Dunia & Provenance
+
+Capability yang melekat pada komponen mewarisi sistem provenance (V4/07):
+component → capability → vessel → battle → wreckage → recovery → vessel baru.
+Damage pada komponen → degradation/disable capability (lihat §11 subsystem viz di bawah & 07).
+
+### 20.7 Adaptive Context (tetap berlaku)
+
+HUD berubah sesuai konteks — exploration, combat, developer inspection:
 
 **Exploration:**
 ```
@@ -561,7 +641,9 @@ HUD berubah sesuai konteks.
 [CODE]
 ```
 
-Mencegah interface menjadi overload permanen.
+Mencegah interface menjadi overload permanen — pemain tidak belajar ulang HUD
+tiap ganti kapal; ia hanya mempelajari capability baru yang tampil di layout
+universal.
 
 ---
 
