@@ -1,4 +1,4 @@
-# ARCLUX MMO — IMPLEMENTATION MAP (anti-lupa)
+# ARCLUX MMO — IMPLEMENTATION MAP 
 
 > **Ini "otak" scaffolding.** Sebelum ngoding MMO, baca ini dulu: cek status
 > tiap modul, tahu udah dibikin apa, tinggal isi apa, dan mau diarahin ke mana.
