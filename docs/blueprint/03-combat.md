@@ -145,3 +145,32 @@ Pertempuran penting direkam (battle ID, aksi, impact, subsystem, damage,
 state awal/akhir, event hash). Dasar sengketa ("dia cheat!"), preventasi
 cheat, dan fondasi Hall of Fame / history (lihat
 [04-wreckage-history.md](04-wreckage-history.md)).
+
+---
+
+## I.9 — Environmental Collision (nabrak benda langit = damage nyata)
+
+Tidak hanya senjata yang menyebabkan damage. **Kapal yang menabrak benda
+langit COLLIDABLE juga kena dampak nyata** — asteroid, meteor, planet, puing
+anomali. Ini bagian dari dunia yang hidup (lihat
+[01-spatial-ux.md](01-spatial-ux.md) §2.2), bukan sekadar efek visual.
+
+```
+KAPAL ── tabrakan ──> BODY COLLIDABLE (asteroid/meteor/planet)
+        ↓
+   WORLD VALIDATOR  (server hitung posisi & tabrakan; client hanya render)
+        ↓
+   DAMAGE → subsystem vessel (reuse model I.2, I.7 damage ceiling)
+        ↓
+   EVENT + REPLAY (I.8) → cukup parah → WRECKAGE ([04](04-wreckage-history.md))
+```
+
+Prinsip (konsisten I.4 / D-008):
+- **Server authoritative**: server menentukan posisi kapal & benda langit
+  (orbit deterministik, 01 §2.3), lalu mendeteksi tabrakan. Client tidak memutuskan.
+- **Damage model sama** dengan sistem combat (I.2 per-subsystem, I.7 ceiling);
+  bukan sistem damage terpisah. Kode harus di-debug melalui jalur damage yang sama.
+- Tercatat sebagai event + replay (I.8); kerusakan parah yang menghancurkan kapal
+  memicu wreckage (04) & provenance tetap terjaga.
+- **COMMENT**: lingkungan adalah ancaman nyata — pilot harus menghindar; manuver
+  menjadi keputusan taktis, bukan sekadar gerak.

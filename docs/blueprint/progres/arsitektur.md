@@ -31,16 +31,20 @@ shard registry). Berdasarkan keputusan di [decisions-mmo.md](decisions-mmo.md).
 ## Model shard: Region + Gates
 
 ```
-SECTOR A (server 1)                SECTOR B (server 2)
+SECTOR A (server 1, system bintang A)   SECTOR B (server 2, system bintang B)
 ┌───────────────────┐    GATE    ┌───────────────────┐
-│ 🚀   🛰  planet     │  ═══ ORG  │  🛰     🚀  planet │
+│ ☉🪐🌙☄️ 🚀  🛰     │  ═══ ORG  │  ☉🪐 ☄️   🛰 🚀    │
 └───────────────────┘            └───────────────────┘
    (shard A owned)                   (shard B owned)
 ```
 
-- Universe logis dibagi region/sistem. Tiap shard server menangani satu set
-  region.
-- Jump gate menghubungkan antar region (handoff vessel antar server).
+- Universe logis dibagi **region = sistem bintang**. Tiap shard server menangani
+  satu set region.
+- Setiap region membawa **`SystemBodies[]`** (star, planet, moon, asteroid,
+  backdrop) dengan orbit deterministik (lihat
+  [01-spatial-ux.md](../../blueprint/01-spatial-ux.md) §2.3).
+- Jump gate menghubungkan antar region (handoff vessel antar server) = pindah
+  sistem bintang.
 - Tiap fleet/komunitas claim region & host server region-nya.
 
 ---
@@ -85,6 +89,9 @@ Client TIDAK pernah menjadi otoritas — ia render hasil validated simulation.
    (region single dulu), sim loop, netcode input-queue, replay
    - core (world/validator/sim/combat) ✅ PR #582
    - kerangka tambahan (gate/netcode/persistence) ✅ scaffold
+   - **cosmic environment** — `environs.ts` (orbit integrator deterministik per
+     tick) + `collision.ts` (tabrakan vs benda COLLIDABLE → damage, reuse I.2/I.7)
+     + `cosmic-event.ts` (generator meteor/badai acak) — desain 01 §2 / 03 I.9
 2. **`packages/relay`** — shard registry + gate handoff + identity lintas shard
    - scaffold ✅ (registry/gate/identity)
 3. **`apps/game`** (Electron) — client 3D + net integration + UI universe
