@@ -17,7 +17,13 @@ export * from "./world";
 export * from "./validator";
 export * from "./simulation";
 export * from "./combat";
+
+feat/mmo-netcode-network
+
+export * from "./netcode";
 export * from "./gate";
 export * from "./netcode";
 export * from "./persistence";
 export * from "./bridge";
+
+ARCLUX.main
