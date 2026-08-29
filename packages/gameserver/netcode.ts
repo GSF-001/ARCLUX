@@ -6,98 +6,98 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
- feat/mmo-netcode-network
-// netcode.ts — transport jaringan utk runtime terpisah (D-009 self-host, tiap
-// shard = proses/host sendiri). Zero new dependency: pakai node:http built-in
-// lintas proses/host dengan payload JSON.
+// netcode.ts — transport layanan untuk runtime terpisah (D-009): tiap shard =
+// proses/host sendiri. Dua kontrak yang saling melengkapi:
 //
-// Yang disediakan:
-//   - createInProcessTransport(engine) — transport in-process (buat tes cepat /
-//     prototype; sendIntent→engine.enqueue, tick→engine.step, requestSnapshot→snapshot).
-//   - createHttpServerTransport(region, port) — HTTP server per shard:
-//       GET  /snapshot → region.snapshot()
-//       POST /deliver  → materialkan vessel di region ini (handoff dari shard lain)
-//   - createHttpClientTransport(url) — client HTTP ke shard lain:
-//       requestSnapshot(), deliver(...)
+//   createInProcessTransport(opts) — in-process (unit test / prototype):
+//     sendIntent→engine.enqueue, tick→engine.step + pump events, requestSnapshot.
+//   createHttpServerTransport(region, port) — HTTP server per shard:
+//     GET /snapshot, POST /deliver (handoff lintas host).
+//   createHttpClientTransport(url) — HTTP client ke shard lain: requestSnapshot, deliver.
 //
-// Pemisahan: netcode hanya transport (pindah data). Otorisasi/validasi tetep di
-// validator/simulation — server penerima yang authoritative (D-008). Handoff
-// token sudah crash-safe via gate/persistence (liat gate.ts + recoverPendingHandoffs).
+// Prinsip D-008/D-009: netcode HANYA transport (pindah data). Otorisasi & validasi
+// tetap di validator/simulation — server penerima yang authoritative. Handoff token
+// crash-safe di gate.ts/persistence.ts (recoverPendingHandoffs).
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import type { AddressInfo } from "node:net";
-import { WorldRegion } from "./world";
+import type { WorldRegion } from "./world";
 import type { SimulationEngine } from "./simulation";
-import type { PlayerIntent } from "./types";
+import type { GameEvent, PlayerIntent, RegionSnapshot } from "./types";
 
-/** Ringkasan snapshot yang aman di-serialize (RegionSnapshot = world.snapshot). */
-export type RegionSnapshot = ReturnType<WorldRegion["snapshot"]>;
+export type { RegionSnapshot };
 
 /** Payload deliver: handoff vessel dari shard lain → materialkan di region ini. */
 export interface NetworkHandoff {
   vesselId: string;
   owner?: string;
   position?: { x: number; y: number; z: number };
-  /** VesselModel serializable — di materialize jadi VesselEntity oleh region. */
   vessel: import("../universe/types").VesselModel;
 }
 
-/** Kontrak transport yang bisa dipertukarkan (in-process ↔ HTTP). */
+/** Kontrak transport jaringan (client ↔ server lintas host). */
 export interface TransportClient {
   requestSnapshot(): Promise<RegionSnapshot>;
   deliver(h: NetworkHandoff): Promise<{ ok: boolean; reason?: string }>;
 }
 
-/** In-process transport — buat tes cepat / prototype (docs PR #589). */
-export function createInProcessTransport(engine: SimulationEngine): TransportClient {
-  return {
-    async requestSnapshot() {
-      return engine.region.snapshot();
-    },
-    async deliver(h) {
-      if (engine.region.has(h.vesselId)) {
-        return { ok: false, reason: `entity already exists: ${h.vesselId}` };
-      }
-      engine.region.spawnVessel({
-        id: h.vesselId,
-        owner: h.owner,
-        vessel: h.vessel,
-        position: h.position,
-      });
-      return { ok: true };
-    },
+export type NetEvent = GameEvent;
+
+/** Kontrak transport in-process (client ↔ engine, tanpa HTTP). */
+export interface NetcodeTransport {
+  sendIntent(intent: PlayerIntent): void;
+  tick(): void;
+  requestSnapshot(): RegionSnapshot | undefined;
+  onEvent(handler: (ev: NetEvent) => void): void;
+  /** Materialkan vessel dari shard lain (untuk wire ke bridge/relay). */
+  deliver(h: NetworkHandoff): Promise<{ ok: boolean; reason?: string }>;
+}
+
+export interface NetcodeOptions {
+  engine: SimulationEngine;
+}
+
+/** In-process transport: bridge ke SimulationEngine + pump event per tick. */
+export function createInProcessTransport(opts: NetcodeOptions): NetcodeTransport {
+  const handlers: Array<(ev: NetEvent) => void> = [];
+  const sendIntent = (intent: PlayerIntent) => opts.engine.enqueue(intent);
+  const onEvent = (handler: (ev: NetEvent) => void) => handlers.push(handler);
+  const requestSnapshot = (): RegionSnapshot | undefined => opts.engine.region.snapshot();
+  const tick = () => {
+    const result = opts.engine.step();
+    for (const ev of [...result.accepted, ...result.rejected]) for (const h of handlers) h(ev);
   };
+  const deliver = async (h: NetworkHandoff): Promise<{ ok: boolean; reason?: string }> => {
+    if (opts.engine.region.has(h.vesselId)) {
+      return { ok: false, reason: `entity already exists: ${h.vesselId}` };
+    }
+    opts.engine.region.spawnVessel({ id: h.vesselId, owner: h.owner, vessel: h.vessel, position: h.position });
+    return { ok: true };
+  };
+  return { sendIntent, tick, requestSnapshot, onEvent, deliver };
 }
 
 /** HTTP transport client — bicara ke createHttpServerTransport di shard lain. */
 export function createHttpClientTransport(baseUrl: string): TransportClient {
-  const post = (path: string, body: unknown): Promise<any> =>
+  const post = (path: string, body: unknown) =>
     fetch(`${baseUrl}${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }).then((res) => res.json());
-
-  const get = (path: string): Promise<any> =>
-    fetch(`${baseUrl}${path}`).then((res) => res.json());
-
+  const get = (path: string) => fetch(`${baseUrl}${path}`).then((res) => res.json());
   return {
     async requestSnapshot() {
       return get("/snapshot") as Promise<RegionSnapshot>;
     },
     async deliver(h) {
-      const r = await post("/deliver", h);
-      return r as { ok: boolean; reason?: string };
+      return (await post("/deliver", h)) as { ok: boolean; reason?: string };
     },
   };
 }
 
 export interface HttpServerTransport {
-  /** URL absolut (http://127.0.0.1:<port>) utk dipakai client lain. */
   url: string;
-  /** Mulai listen (async). */
   listen(): Promise<void>;
-  /** Tutup server. */
   close(): Promise<void>;
 }
 
@@ -121,11 +121,7 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
-/**
- * HTTP server transport — media shard (proses/host terpisah) menerima handoff &
- * melayani snapshot dari shard/client lain. Server ini hanya otorisasi data;
- * kebenaran sim tetap di SimulationEngine setempat.
- */
+/** HTTP server transport — media shard menerima handoff & melayani snapshot. */
 export function createHttpServerTransport(region: WorldRegion, port: number): HttpServerTransport {
   const server: Server = createServer(async (req, res) => {
     try {
@@ -144,12 +140,7 @@ export function createHttpServerTransport(region: WorldRegion, port: number): Ht
           sendJson(res, 200, { ok: false, reason: `entity already exists: ${h.vesselId}` });
           return;
         }
-        region.spawnVessel({
-          id: h.vesselId,
-          owner: h.owner,
-          vessel: h.vessel,
-          position: h.position,
-        });
+        region.spawnVessel({ id: h.vesselId, owner: h.owner, vessel: h.vessel, position: h.position });
         sendJson(res, 200, { ok: true });
         return;
       }
@@ -160,7 +151,6 @@ export function createHttpServerTransport(region: WorldRegion, port: number): Ht
   });
 
   const url = `http://127.0.0.1:${port}`;
-
   return {
     url,
     listen() {
@@ -176,70 +166,3 @@ export function createHttpServerTransport(region: WorldRegion, port: number): Ht
     },
   };
 }
-
-export { AddressInfo };
-export type { PlayerIntent };
-
-// netcode.ts — transport client ↔ server (D-008 server-authoritative).
-//
-// Alur (mengikuti SimulationEngine yang SUDAH ada):
-//   CLIENT send intent ─▶ transport.sendIntent → engine.enqueue
-//   loop server:        transport.tick() → engine.step() → events → handlers
-//   CLIENT re-sync:     transport.requestSnapshot() → region.snapshot()
-//
-// Client TIDAK menghitung hasil — ia kirim intent, terima events & state,
-// lalu render (invariant I-1: client is not authoritative).
-
-import type { GameEvent, PlayerIntent, RegionSnapshot } from "./types";
-import type { SimulationEngine } from "./simulation";
-
-/** Peta pendengar untuk satu tipe event yang dipancarkan server → client. */
-export type NetEvent = GameEvent;
-
-export interface NetcodeTransport {
-  /** Terima intent dari client (diteruskan ke SimulationEngine.enqueue). */
-  sendIntent(intent: PlayerIntent): void;
-  /** Proses SATU tick server: drain queue, validate, sim, lalu pump events. */
-  tick(): void;
-  /** Client meminta snapshot state region untuk pertama render / re-sync. */
-  requestSnapshot(): RegionSnapshot | undefined;
-  /** Daftarkan handler event (combat, move, gate, governance, dst). */
-  onEvent(handler: (ev: NetEvent) => void): void;
-}
-
-export interface NetcodeOptions {
-  engine: SimulationEngine;
-}
-
-/**
- * In-process transport: bridge langsung ke SimulationEngine + pump event output
- * tiap tick. Berguna buat unit-test & prototype client-in-browser sebelum ada
- * transport jaringan beneran (TODO netcode[channel]).
- */
-export function createInProcessTransport(opts: NetcodeOptions): NetcodeTransport {
-  const handlers: Array<(ev: NetEvent) => void> = [];
-
-  const sendIntent = (intent: PlayerIntent) => {
-    opts.engine.enqueue(intent);
-  };
-
-  const onEvent = (handler: (ev: NetEvent) => void) => {
-    handlers.push(handler);
-  };
-
-  const pumpEvents = (evs: NetEvent[]) => {
-    for (const ev of evs) for (const h of handlers) h(ev);
-  };
-
-  const tick = () => {
-    const result = opts.engine.step();
-    pumpEvents([...result.accepted, ...result.rejected]);
-  };
-
-  const requestSnapshot = (): RegionSnapshot | undefined => {
-    return opts.engine.region.snapshot();
-  };
-
-  return { sendIntent, tick, requestSnapshot, onEvent };
-}
- 
