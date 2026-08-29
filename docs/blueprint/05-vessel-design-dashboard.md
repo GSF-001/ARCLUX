@@ -78,6 +78,38 @@ BASE         MODULAR         ADVANCED         UNIQUE
  🚀     →      🚀⚙️      →     🚀⚙️🛡️     →    🌌🚀⚙️🛡️
 ```
 
+### 3.1 Creative Freedom vs Engineering Reality
+
+Kebebasan desain tetap dijunjung, namun ARCLUX membedakan **creative implementation**
+dengan **arbitrary technical hallucination**.
+
+ARCLUX tidak menolak desain eksperimental. Tetapi setiap komponen harus mampu
+menjelaskan perannya dalam konteks engineering yang realistis:
+
+```
+WHAT IT IS
+WHAT IT DOES
+WHAT IT DEPENDS ON
+WHAT IT AFFECTS
+HOW IT FAILS
+HOW IT INTERACTS WITH THE WORLD
+```
+
+Sistem komponen kapal mengikuti model dunia nyata (cross-ref 01 §2.6 hukum fisika
+& thermal):
+
+- **STRUCTURAL** — hull, integrity, component mounting
+- **PROPULSION** — main propulsion, maneuvering, control interface
+- **POWER** — energy source, distribution, emergency power
+- **THERMAL** — heat generation, heat transfer, thermal limits
+- **NAVIGATION** — orientation & navigation capability
+- **DEFENSE** — protection systems
+- **DAMAGE CONTROL** — response & recovery
+
+Prinsip: desain sesuka hati **diizinkan**, tetapi komponen yang menyimpang dari
+model fisik/mekanis realistis tidak lolos validasi. Kapal adalah engineering,
+bukan asal jadi.
+
 ---
 
 ## 4. ARCLUX Visual Language
@@ -214,6 +246,12 @@ pemain, dan menjadi level "penyangga" yang sama. Dalam validasi pipeline, baseli
 divalidasi sebagai bagian "TECHNICAL VALIDATION" — kehilangan/kerusakan baseline
 (dampak kerusakan kapal, lihat 06 §18.5) berarti kapal "hilang kemampuan
 angkasa/dasar".
+
+Baseline ini tidak hanya memberikan identitas — ia juga membawa **bahasa
+engineering bersama** (Vessel Engineering Quickstart): struktur component yang
+realistis, dependency antar subsystem, dan titik awal canonical blueprint. Dengan
+demikian pemain baru tidak perlu mulai dari repository kosong dan menebak-nebak
+seluruh arsitektur kapal (lihat §21 Canonical Vessel Model).
 
 ---
 
@@ -629,6 +667,36 @@ Client hanya menggambar validated representation.
 Dengan demikian visual client tidak dapat digunakan untuk mengubah
 authoritative state.
 
+### 21.1 Canonical Blueprint ≠ Final Vessel
+
+Canonical vessel model bukan kapal jadi — ia adalah **engineering foundation**.
+Setiap vessel dapat dimulai dari canonical blueprint universal (Vessel Engineering
+Quickstart, cross-ref §7.1 gambaran baseline).
+
+```
+CANONICAL BLUEPRINT
+       │
+  ┌────┼────────┬─────────┐
+  ↓    ↓        ↓         ↓
+RECON HEAVY  CARRIER  EXPERIMENTAL
+```
+
+**SAME FOUNDATION ≠ SAME VESSEL.**  Satu blueprint dapat menghasilkan ribuan
+desain. Engineer bebas:
+
+- mengubah arsitektur & redundancy
+- membuat sistem modular
+- mengembangkan komponen baru
+- membuat konfigurasi khusus
+- mengoptimalkan subsystem
+- menciptakan teknologi komunitas
+
+Selama berada dalam batas: **world rules + technical validation + component
+constraints** (cross-ref §3.1).
+
+Progressive engineering membantu pemain belajar bertahap (Foundation → Systems →
+Architecture → Advanced) tanpa harus menguasai seluruh arsitektur dalam satu hari.
+
 ---
 
 ## 22. Rendering & Performance
@@ -686,6 +754,32 @@ AFTER COMMIT
 
 Developer dapat melihat konsekuensi perubahan sebelum commit.
 
+Setiap evolusi vessel tetap dapat dilacak melalui Git, dan Git History menjadi
+jembatan antar lapisan:
+
+```
+GIT HISTORY
+    ↔
+VESSEL GENERATION HISTORY
+    ↔
+WORLD HISTORY
+```
+
+Contoh garis waktu generasi:
+
+```
+COMMIT #1      Basic vessel
+   ↓
+COMMIT #42     Thermal upgrade
+   ↓
+COMMIT #97     Redundant power system
+   ↓
+COMMIT #183    Battle-damage recovery architecture
+```
+
+Repository adalah catatan evolusi engineering kapal (cross-ref 08 §6 & §16 untuk
+incident/service history pada sisi dunia).
+
 ---
 
 ## 24. Visual History
@@ -736,6 +830,32 @@ Vessel evolution
 ```
 
 Dengan demikian vessel menjadi representasi visual dari living software project.
+
+Evolusi membentuk **engineering loop** yang berkelanjutan:
+
+```
+BLUEPRINT
+   ↓
+IMPLEMENT
+   ↓
+VALIDATE
+   ↓
+ENTER WORLD
+   ↓
+BATTLE / EXPLORATION
+   ↓
+DAMAGE / FAILURE
+   ↓
+LESSON
+   ↓
+REDESIGN
+   ↓
+NEW ARCHITECTURE
+```
+
+Tidak ada "final perfect vessel". Setiap iterasi adalah generasi baru yang
+membawa pelajaran dari generasi sebelumnya (cross-ref 08 §16 Persistent
+Consequence Loop & 04-wreckage-history).
 
 ---
 
