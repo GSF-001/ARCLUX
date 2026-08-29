@@ -106,12 +106,95 @@ VESSEL ALPHA
 
 Kapal punya service/battle history = identitas teknis, bukan hanya statistik.
 
+### 6.1 Incident Model
+
+Kegagalan signifikan bukan sekadar status akhir ("ENGINE HP: 0"). Dunia
+mempertahankan **rantai sebab-akibat** bagaimana kegagalan terjadi (Vessel
+Failure Intelligence):
+
+```
+WORLD EVENT
+   ↓
+ENVIRONMENTAL / COMBAT EXPOSURE
+   ↓
+COMPONENT RESPONSE
+   ↓
+DEPENDENCY FAILURE
+   ↓
+SUBSYSTEM DEGRADATION
+   ↓
+VESSEL CONSEQUENCE
+```
+
+**Incident** = event signifikan yang tercatat dengan metadata:
+
+```
+INCIDENT
+├── Incident ID
+├── World Tick
+├── Region
+├── Vessel
+├── Triggering Event
+├── Involved Components
+├── State Before
+├── State After
+├── Causal Links
+└── Consequences
+```
+
+Contoh:
+
+```
+INCIDENT #8291
+VESSEL:   Capital Vessel Aurora
+TRIGGER:  Solar Event Exposure
+PRIMARY:  Propulsion Degradation
+RELATED:  Thermal System → Power Distribution → Main Propulsion
+RESULT:   Emergency retreat required
+```
+
+### 6.2 Failure Timeline
+
+Engineer dapat melihat kegagalan sebagai urutan peristiwa (bukan cuma status
+akhir):
+
+```
+TICK 18420  Solar event detected
+TICK 18460  Thermal load increased
+TICK 18502  Cooling efficiency degraded
+TICK 18531  Power redistribution triggered
+TICK 18577  Propulsion output reduced
+TICK 18610  Vessel mobility compromised
+```
+
+### 6.3 Guardrail: Causal ≠ Halusinasi
+
+Causal chain HARUS turun dari dependency graph yang benar-benar ada — bukan
+diinfer dari imajinasi. Data tervalidasi dunia ≠ interpretasi engineering.
+ARCLUX membedakan:
+
+```
+AUTHORITATIVE:              ENGINEERING CONTEXT:
+Tick 18492                  "Thermal subsystem was involved
+Component: degraded           in the failure sequence leading
+Thermal load: increased       to propulsion degradation."
+Propulsion: reduced
+```
+
+Authoritative facts dijaga integritasnya. Interpretasi engineering dibangun di
+atas data tersebut, bukan mengubahnya (cross-ref 05 §3.1).
+
 ---
 
 ## 7. Repair Tidak Menghapus Sejarah
 
 `DAMAGED → REPAIR → OPERATIONAL`, namun event damage/repair tetap tersimpan.
 Vessel veteran memiliki sejarah panjang yang dapat diverifikasi.
+
+Repair memperbaiki **state**. History mempertahankan **masa lalu**. Engineer
+dapat melihat bahwa vessel pernah mengalami: component failure, major damage,
+environmental exposure, battle loss, emergency repair. Tidak ada incident yang
+dihapus hanya karena vessel sudah kembali operational.
 
 ---
 
@@ -176,6 +259,10 @@ PERSISTED REGION STATE → LOAD → RECONSTRUCT WORLD REGION → VALIDATE STATE 
 Entity tercatat sebelum restart dapat dipulihkan. (Reuse `regionFromState` /
 `packages/gameserver/persistence.ts`.)
 
+Incident/failure history juga persisten — server restart ≠ world reset (D-013).
+Semua incident yang tervalidasi tetap tersedia setelah restart untuk
+engineering context (Vessel Failure Intelligence).
+
 ---
 
 ## 14. NO PLAYER-INITIATED WORLD PAUSE
@@ -218,6 +305,30 @@ PLAYER ACTION → VALIDATION → SIMULATION → STATE CHANGE → DAMAGE/LOSS/REC
 ```
 
 Dunia tidak kembali ke keadaan awal hanya karena engagement selesai.
+
+### 16.1 Failure Intelligence Loop
+
+Dari consequence loop, **failure history** menghasilkan **engineering context**
+yang membantu generasi vessel berikutnya:
+
+```
+FAILURE / SURVIVAL
+   ↓
+INCIDENT HISTORY
+   ↓
+ENGINEERING INTELLIGENCE
+   ↓
+ENGINEER / COMMUNITY REVIEW
+   ↓
+REDESIGN
+   ↓
+NEXT GENERATION VESSEL
+```
+
+ARCLUX tidak mendesain ulang kapal secara otomatis. ARCLUX mempertahankan
+bukti, hubungan sebab-akibat, dan konteks kegagalan agar engineer dapat
+membuat keputusan berikutnya (cross-ref 06 §18 community technology
+evolution & 05 §25 Design Evolution).
 
 ---
 
