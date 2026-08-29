@@ -8,20 +8,19 @@
 //
 // persistence.ts — save/load region world state (D-009 self-host, per-region).
 //
-// 🚧 SCAFFOLD — kerangka implementasi. Bagian yang jadi ditandai `// IMPL:`.
-//
 // RegionSnapshot (dari world.snapshot / dimuat ulang via regionFromState) adalah
 // bentuk serial yang sudah bisa dipersist & di-recovery. Modul ini menambahkan:
-//   - simpan snapshot ke `packages/db` (RepoStore/AnalysisStore turunan / store
-//     baru untuk RegionSnapshot)
-//   - recovery crash-safe: config per-sim simpan "terakhir sukses" + anti-torn-write
+//   - simpan snapshot ke `packages/db` (collection "regions", JSON-file-per-record,
+//     crash-safe via RecoveryManager.writeTransactional)
+//   - recovery crash-safe: versi data menyimpan "terakhir sukses" (updatedAt)
 //
-// Relations:
-//   - `world.ts` → snapshot()/regionFromState() → persist/load di sini
-//   - `packages/db` → penyimpanan real (belum ada store RegionSnapshot → IMPL)
-//   - `packages/storage/RecoveryManager` → helper crash-safe (reuse)
+// V6 / D-013: server restart ≠ world reset — region dipulihkan dari sini.
 
 import type { RegionSnapshot } from "./types";
+import { putRecord, getRecord, deleteRecord } from "../db/client";
+import type { CollectionName, RegionRecord } from "../db/schema";
+
+const COLLECTION: CollectionName = "regions";
 
 export interface PersistenceStore {
   saveRegion(regionId: string, state: RegionSnapshot): Promise<void>;
@@ -29,16 +28,27 @@ export interface PersistenceStore {
   deleteRegion(regionId: string): Promise<void>;
 }
 
+/** Validasi snapshot minimal sebelum disimpan (huruf anti-torn/garbage write). */
+export function validateRegion(state: RegionSnapshot): boolean {
+  return (
+    !!state &&
+    typeof state.regionId === "string" &&
+    state.regionId.length > 0 &&
+    typeof state.tick === "number" &&
+    Array.isArray(state.entities)
+  );
+}
+
 /**
- * 🚧 In-memory stub — buat ganti dengan `packages/db` store (lihat TODOS).
- * Memungkinkan pipeline persist/load diuji tanpa koneksi DB.
+ * In-memory stub — berguna untuk unit test & prototype sebelum pakai db.
+ * Menyimpan snapshot per region.
  */
 export function createInMemoryPersistence(): PersistenceStore {
   const regions = new Map<string, RegionSnapshot>();
 
   return {
     async saveRegion(regionId, state) {
-      // IMPL: normalize timestamps + validasi before write (lihat TODO(persist)[valid])
+      if (!validateRegion(state)) throw new Error(`invalid RegionSnapshot: ${regionId}`);
       regions.set(regionId, structuredClone(state));
     },
     async loadRegion(regionId) {
@@ -52,32 +62,35 @@ export function createInMemoryPersistence(): PersistenceStore {
 }
 
 /**
- * 🚧 Persist ke paket db. Siap memakai store RegionSnapshot yang perlu dibuat
- * dulu di `packages/db` (lihat TODO(persist)[dbstore]).
+ * Persist ke `packages/db` (collection "regions"). Crash-safe via
+ * RecoveryManager.writeTransactional di balik `putRecord`. Data tersimpan sebagai
+ * RegionRecord{ id, regionId, snapshot, updatedAt }.
  */
 export function createDbPersistence(
-  // IMPL: terima store db (RepoStore-like) — TODO diisi saat store ada
-  _db?: unknown,
+  rootOverride?: string,
 ): PersistenceStore {
-  return {
-    async saveRegion() {
-      throw new Error("db persistence not implemented yet (scaffold)");
-    },
-    async loadRegion() {
-      return null;
-    },
-    async deleteRegion() {
-      // no-op: belum ada store
-    },
+  const saveRegion = async (regionId: string, state: RegionSnapshot): Promise<void> => {
+    if (!validateRegion(state)) throw new Error(`invalid RegionSnapshot: ${regionId}`);
+    const rec: RegionRecord = {
+      id: regionId,
+      regionId: state.regionId,
+      snapshot: structuredClone(state),
+      updatedAt: new Date().toISOString(),
+    };
+    putRecord<RegionRecord>(COLLECTION, rec);
+    void rootOverride; // rootOverride dialihkan ke env ARCLUX_ROOT oleh client db
   };
-}
 
-//
-// §TODOS — tinggal isi satu per satu, update check saat selesai
-//
-// TODO(persist)[dbstore]   buat RegionStore di packages/db (schema RegionState v1)
-// TODO(persist)[dbbe]      implementasikan createDbPersistence di atas store tsb
-// TODO(persist)[valid]     validateRegion(state) sebelum save (pakai universe/schema pattern)
-// TODO(persist)[crash]     RecoveryManager: simpan pointer "last-good" + versioned snapshot
-// TODO(persist)[recovery]  regionFromState() dipakai overload setelah load (sudah ada di world)
-// TODO(persist)[test]      smoke: create region → snapshot → save → load → regionFromState == equal
+  const loadRegion = async (regionId: string): Promise<RegionSnapshot | null> => {
+    const rec = getRecord<RegionRecord>(COLLECTION, regionId);
+    if (!rec || !rec.snapshot) return null;
+    const snap = rec.snapshot as RegionSnapshot;
+    return validateRegion(snap) ? snap : null;
+  };
+
+  const deleteRegion = async (regionId: string): Promise<void> => {
+    deleteRecord(COLLECTION, regionId);
+  };
+
+  return { saveRegion, loadRegion, deleteRegion };
+}
