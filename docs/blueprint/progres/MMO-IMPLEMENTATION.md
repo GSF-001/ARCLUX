@@ -7,7 +7,15 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
+feat/mmo-handoff-crashsafe
 Update terakhir: 2026-08-29 (handoff token crash-safe — vessel gak hilang kalau crash di tengah transit; PR #592).
+
+feat/mmo-netcode-network
+Update terakhir: 2026-08-29 (netcode transport jaringan — runtime terpisah per shard via node:http, handoff lintas host).
+
+Update terakhir: 2026-08-29 (integrasi gate↔relay — gameserver bridge multi-shard, vessel transit lintas shard; PR #591).
+ARCLUX.main
+
 
 ---
 
@@ -63,12 +71,25 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 **Sudah diisi (PR #589):**
 - `gate.ts` ✅ — `createGateRouter(links, deps)` + `transit()`: cek link, radius
   aktivasi, otorisasi community (allowedCommunityIds kosong = publik), lepas
+  feat/mmo-handoff-crashsafe
    vessel dari region lokal, notify target region, emit `gate.transit.*` event.
    + handoff token crash-safe: `persist` deps + save-pending-before-remove,
    delete-after-deliver, `recoverPendingHandoffs()` (PR #592).
+
+  vessel dari region lokal, notify target region, emit `gate.transit.*` event.
+  TODO lanjut: handoff token crash-safe via PersistenceStore + koneksi ke relay.
+  feat/mmo-netcode-network
+- `netcode.ts` ✅ — transport jaringan: `createInProcessTransport(engine)` (in-process,
+  buat tes cepat), `createHttpServerTransport(region, port)` (HTTP server per shard:
+  GET /snapshot + POST /deliver) & `createHttpClientTransport(url)` (client ke shard
+  lain). Runtime terpisah (bukan in-process) — tiap shard = host sendiri via node:http.
+  TODO lanjut: pasang ke `apps/game` + auth/anti-cheat (D-008) di layer HTTP.
+
+   ARCLUX.main
 - `netcode.ts` ✅ — `createInProcessTransport(engine)`: `sendIntent`→engine.enqueue,
   `tick()`→engine.step() + pump accepted/rejected events, `requestSnapshot`→region.snapshot.
   TODO lanjut: transport jaringan beneran (netcode[channel]) + pasang ke `apps/game`.
+ARCLUX.main
 - `persistence.ts` ✅ — `validateRegion`, `createInMemoryPersistence`,
   `createDbPersistence` (pakai `packages/db` collection "regions",
   JSON-file-per-record crash-safe via RecoveryManager). + pending handoff
@@ -77,11 +98,21 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 
 **Arah (prioritas isi berikutnya):**
 1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591,
+2. feat/mmo-netcode-network
+   jalur eksplisit D-006). ~~Runtime terpisah (bukan in-process)~~ — SELESAI via netcode
+   (HTTP server/client, tiap shard = host sendiri).
+2. gameserver: ~~handoff token crash-safe di `gate.ts`~~ — PR #593 (pending handoff
+   persist sblm remove, recovery `recoverPendingHandoffs()`).
+3. `netcode.ts` transport jaringan — ~~beneran~~ ✓ (HTTP cross-shard). TODO lanjut:
+   pasang ke `apps/game` klien pertama (render RegionState → kirim intent → render
+   events, anti-cheat D-008).
+
    jalur eksplisit D-006). Runtime terpisah (bukan in-process) tetap TODO #592.
 2. ~~gameserver: handoff token crash-safe di `gate.ts`~~ — SELESAI via PR #592
    (pending handoff persist sblm remove, recovery `recoverPendingHandoffs()`).
 3. `netcode.ts` transport jaringan beneran + pasang ke `apps/game` klien pertama
    (render RegionState → kirim intent → render events, anti-cheat D-008).
+    ARCLUX.main
 4. V4 capability (07): usage_count + component_condition + depletion di
    validator/simulation; batas 2 kapal induk
 5. V5 HUD registry (01 §20.2): expose capabilities[] ke renderer
@@ -138,10 +169,20 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #589 ✅ gameserver core impl (gate/persistence/netcode) — SUDJAH
 ### PR #590 ✅ relay impl (registry claim bugfix + gate coordinator handoff + identity move) — SUDJAH
 ### PR #591 ✅ integrasi gate↔relay (gameserver bridge multi-shard, vessel transit lintas shard) — SUDJAH
+feat/mmo-handoff-crashsafe
 ### PR #592 ✅ handoff token crash-safe (persistence.ts + gate.ts + bridge.ts) — SUDJAH
+
+ feat/mmo-netcode-network
+### PR #593 ✅ handoff token crash-safe (persistence.ts + gate.ts) — SUDJAH
+### PR #594 ✅ netcode transport jaringan (runtime terpisah via node:http) — SUDJAH
+### PR berikutnya (urutan)
+- [ ] pasang netcode transport ke `apps/game` klien pertama (render RegionState → kirim intent → render events, anti-cheat D-008)
+
+ARCLUX.main
 ### PR berikutnya (urutan)
 - [ ] runtime terpisah (bukan in-process): tiap shard = proses/host sendiri via netcode jaringan (D-009)
 - [ ] netcode transport jaringan beneran pasang ke `apps/game`
+ARCLUX.main
 - [ ] `apps/game`: bootstrap Electron + 3D render vessel dari RegionState
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
 - [ ] dynamic safe-zone / governance state (blueprint 06 §13-16) — modifikasi validator
