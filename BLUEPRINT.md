@@ -52,13 +52,15 @@ seiring visi yang kian besar). Urutan baca yang disarankan:
 | # | Dokumen | Isi |
 |---|---|---|
 | 00 | **BLUEPRINT.md** (file ini) | Kompas strategis, keputusan arsitektur, roadmap milestone, tabel aset, risiko |
-| 01 | [docs/blueprint/01-spatial-ux.md](docs/blueprint/01-spatial-ux.md) | Spatial Universe & Navigation UX (zoom ladder, camera, semantic nav, combat camera, wreckage viz) |
+| 01 | [docs/blueprint/01-spatial-ux.md](docs/blueprint/01-spatial-ux.md) | Spatial Universe & Navigation UX (zoom ladder, camera, semantic nav, combat camera, wreckage viz, Universal Cockpit HUD, dua skala koordinat, fisika tata surya, intel-kordinat, UI command-interface) |
 | 02 | [docs/blueprint/02-station-infrastructure.md](docs/blueprint/02-station-infrastructure.md) | Station & Infrastructure System (facilities, safe zone, permissions, evolution, economy) |
 | 03 | [docs/blueprint/03-combat.md](docs/blueprint/03-combat.md) | Combat & World Validator / Layer I (anti-cheat, damage ceiling, fingerprint) |
 | 04 | [docs/blueprint/04-wreckage-history.md](docs/blueprint/04-wreckage-history.md) | Wreckage & Hall of Fame (museum sejarah, provenance sebagai aset) |
-| 05 | [docs/blueprint/05-vessel-design-dashboard.md](docs/blueprint/05-vessel-design-dashboard.md) | Vessel Design, Visual Governance & 3D Design Dashboard (creative freedom, visual policy, validation, authoring) |
-| 06 | [docs/blueprint/06-community-social-ownership.md](docs/blueprint/06-community-social-ownership.md) | Community, Social Connection & Battlefield Ownership (access keys/trust, intelligence, component history, fleet recovery, roles) |
-| – | [docs/blueprint/progres/](docs/blueprint/progres/) | Progres desain MMO: keputusan ([decisions-mmo.md](docs/blueprint/progres/decisions-mmo.md)) + arsitektur ([arsitektur.md](docs/blueprint/progres/arsitektur.md)) |
+| 05 | [docs/blueprint/05-vessel-design-dashboard.md](docs/blueprint/05-vessel-design-dashboard.md) | Vessel Design, Visual Governance & 3D Design Dashboard (creative freedom, visual policy, validation, authoring, ARCLUX Universal Baseline) |
+| 06 | [docs/blueprint/06-community-social-ownership.md](docs/blueprint/06-community-social-ownership.md) | Community, Social Connection & Battlefield Ownership (access keys/trust, intelligence, component history, fleet recovery, roles, governance, asset classification, revocation, dynamic safe-zone, community splits, vessel identity, 3D, identitas sosial/aliansi/kordinat-intel, mobilisasi 2-teleport) — extension V2 + V3 |
+| 07 | [docs/blueprint/07-special-capabilities.md](docs/blueprint/07-special-capabilities.md) | Special Capabilities & Player-Defined Technology (V4 — 2 capital vessels, limited activation 3x, depletion, tech lineage, component-based capability) |
+| 08 | [docs/blueprint/08-persistent-world.md](docs/blueprint/08-persistent-world.md) | Persistent World / Tanpa Reset Naratif (V6 — server restart ≠ world reset, no player-initiated pause, respawn policy = keputusan ruleset terpisah) |
+| – | [docs/blueprint/progres/](docs/blueprint/progres/) | Progres desain MMO: keputusan ([decisions-mmo.md](docs/blueprint/progres/decisions-mmo.md)) + arsitektur ([arsitektur.md](docs/blueprint/progres/arsitektur.md)) + peta implementasi ([MMO-IMPLEMENTATION.md](docs/blueprint/progres/MMO-IMPLEMENTATION.md)) |
 | – | [docs/blueprint/BLUEPRINT_LICENSE.md](docs/blueprint/BLUEPRINT_LICENSE.md) | Lisensi source-available (bukan Apache; read-only) |
 
 ---

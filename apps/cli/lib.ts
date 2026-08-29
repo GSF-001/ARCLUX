@@ -108,11 +108,42 @@ export type {
   ValidationResult,
   ValidatorDecision,
   ValidatorContext,
-} from "../../packages/gameserver/validator";
-export type {
+} from "../../packages/gameserver/validator";export type {
   CombatImpact,
   CombatLogger,
 } from "../../packages/gameserver/combat";
+export { createGateRouter } from "../../packages/gameserver/gate";
+export { createInProcessTransport } from "../../packages/gameserver/netcode";
+export {
+  createInMemoryPersistence,
+  createDbPersistence,
+} from "../../packages/gameserver/persistence";
+export type {
+  GateLink,
+  GateTransitRequest,
+  GateTransitResult,
+  GateRouter,
+} from "../../packages/gameserver/gate";
+export type {
+  NetcodeTransport,
+  NetcodeOptions,
+  NetEvent,
+} from "../../packages/gameserver/netcode";
+export type {
+  PersistenceStore,
+} from "../../packages/gameserver/persistence";
+
+// ── relay (shard registry + bridge, multi-shard) ──────────────────────────
+export { createRelayRegistry } from "../../packages/relay/registry";
+export { createGateCoordinator } from "../../packages/relay/gate";
+export { createIdentityMap } from "../../packages/relay/identity";
+export type {
+  ShardRecord,
+  ShardStatus,
+  RegionClaim,
+  HandoffRequest,
+  HandoffResult,
+} from "../../packages/relay/types";
 
 // ── types ─────────────────────────────────────────────────────────────────
 export type {

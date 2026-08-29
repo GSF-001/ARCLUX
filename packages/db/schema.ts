@@ -52,4 +52,19 @@ export interface IssueRecord {
   createdAt: string;
 }
 
-export type CollectionName = "repos" | "analyses" | "issues";
+/**
+ * Persistent region world state (gameserver). Holds a serialized RegionSnapshot
+ * for server restart ≠ world reset (V6 / D-013) and cross-shard handoff recovery.
+ * `snapshot` is the opaque RegionSnapshot payload from packages/gameserver.
+ */
+export interface RegionRecord {
+  id: string;
+  /** mirror of snapshot.regionId (kept for indexed/consistent lookups). */
+  regionId: string;
+  /** snapshot payload (gameserver RegionSnapshot) — fully serializable. */
+  snapshot: unknown;
+  /** last successful save timestamp (crash-safe "last-good" pointer). */
+  updatedAt: string;
+}
+
+export type CollectionName = "repos" | "analyses" | "issues" | "regions";

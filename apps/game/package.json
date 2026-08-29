@@ -1,0 +1,20 @@
+{
+  "name": "arclux-game",
+  "version": "0.0.0",
+  "description": "ARCLUX MMO client — Electron + three.js renderer (server-authoritative, D-008).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "private": true,
+  "main": "./dist/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node ../../scripts/build-game.mjs && electron ."
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "esbuild": "^0.28.0"
+  }
+}

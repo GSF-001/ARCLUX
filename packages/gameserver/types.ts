@@ -73,6 +73,19 @@ export interface RegionState {
   createdAt: string;
 }
 
+/**
+ * Plain, serializable snapshot of a region — for client render & persistence
+ * (no live `Map`, no live object refs). This is what `WorldRegion.snapshot()`
+ * returns and what `packages/gameserver/persistence` saves/loads.
+ */
+export interface RegionSnapshot {
+  regionId: string;
+  name: string;
+  tick: number;
+  createdAt: string;
+  entities: WorldEntity[];
+}
+
 /** A validated, immutable event that happened in the world. */
 export interface GameEvent {
   id: string;

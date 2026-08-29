@@ -33,13 +33,15 @@ User berpindah antar perspektif tanpa merasa membuka aplikasi terpisah.
 
 ---
 
-## 2. Spatial Universe
+## 2. Spatial Universe — Living Cosmic Environment
 
 Canvas utama = persistent 3D spatial environment.
 
+> **ARCLUX bukan papan statis.** Universe hidup: tata surya bergerak, orbit
+> nyata, benda langit berinteraksi, dang bang. Suasana dunia terus berubah.
+
 Objek yang mungkin:
-- stars
-- planets
+- stars / planets / moons / asteroids
 - stations
 - jump gates
 - vessels
@@ -47,6 +49,7 @@ Objek yang mungkin:
 - wreckage
 - historical locations
 - tactical markers
+- cosmic events (meteor shower, badai bintang, aurora)
 
 ```
                     ✦
@@ -66,7 +69,151 @@ Objek yang mungkin:
 ```
 
 Visual terinspirasi space simulator skala besar, namun ARCLUX mempertahankan
-identitas visualnya sendiri.
+identitas visualnya sendiri — *cinematic, spatial, data-dense*, bukan dashboard.
+
+### 2.1 Sistem Bintang per Region
+
+**Setiap region = satu sistem bintang** (sinkron arsitektur "shard = region =
+system"); jump gate = pindah ke sistem bintang lain (lihat §14).
+
+```
+REGION (SYSTEM)
+├── ☉ Star (matahari) — sumber cahaya/energi, pusat gravitasi visual
+├── Planet(s)          — orbit elips nyata
+├── Moon(s)            — mengorbit planet besar
+├── Asteroid belt      — orbit, hazard nyata
+└── Cosmic event       — meteor, badai bintang, dsb
+```
+
+### 2.2 Tiga Lapis Objek
+
+Bedakan objek agar render & interaksi benar:
+
+```
+LAYER            CONTOH                        INTERAKSI
+COLLIDABLE       asteroid, meteor, planet      fisik — vessel bisa nabrak → damage
+ATMOSPHERIC      meteor lewat, aurora, debu    drama visual, kejadian acak
+BACKDROP         planet super-jauh             hanya terlihat, tak bisa dijangkau
+```
+
+- **COLLIDABLE** → masuk world validator + damage (lihat [03-combat.md](03-combat.md)),
+  tabrakan cukup parah → wreckage ([04-wreckage-history.md](04-wreckage-history.md)).
+- **BACKDROP** → planet yang tampak sangat jauh, tak bisa digapai — memberi sense of
+  scale ala film, membangun impian eksplorasi tanpa perlu reachable.
+- **ATMOSPHERIC** → drama kosmik yang membuat dunia terasa hidup.
+
+### 2.3 Orbit & Fase Lunar (realisme astronomis)
+
+Tata surya menggunakan **simulasi orbit nyata**: posisi benda langit adalah fungsi
+deterministik dari parameter orbit & tick dunia (bukan state acak).
+
+```
+POSISI_BODY(tick) = f(parameter orbit, tick)     → deterministik, semua lihat sama
+```
+
+Konsekuensi alami dari orbit (tidak perlu state terpisah, ia lahir dari orbit):
+
+```
+FASE_BULAN   = f(posisi bulan, posisi planet, arah matahari)
+PURNAMA      → bulan di sisi berlawanan matahari   (terang penuh)
+SABIT        → bulan dekat arah matahari            (tipis)
+BULAN BARU   → bulan di antara planet & matahari    (gelap)
+```
+
+- **Gerak tata surya & fase bulan** hidup terus (D-013 persistent: posisi valid pada
+  tick itu, tidak reset seenaknya).
+- **Deterministik per tick** menjaga server-authoritative (D-008) — semua klien &
+  replica region menghitung posisi yang sama; anti-cheat tidak terganggu.
+
+### 2.4 Cosmic Events (acak, tidak menempel di satu titik)
+
+Drama kosmik muncul **secara acak & bergerak**, bukan di titik itu-itu saja:
+
+```
+COSMIC EVENT → posisi & waktu acak (seed / state version) → masuk event + replay
+    ├── Meteor shower        (acak, bisa jadi hazard)
+    ├── Badai bintang / flare (periodik relatif terhadap orbit, analog "musim")
+    ├── Aurora / rasi terang  (atmosferik, kosmetik)
+    └── Puing anomali lewat   (bisa diselidiki → gameplay)
+```
+
+Musim analog di bumi: ketika planet berada di fase orbit tertentu (mis. mendekati
+matahari), kondisi sistem berubah ("badai bintang") — periodik nyata berbasis orbit,
+bukan kaku di koordinat tetap.
+
+> Implementasi orbit & event hidup di `packages/gameserver/environs.ts` +
+> `cosmic-event.ts` (lihat progres arsitektur & MMO-IMPLEMENTATION).
+
+### 2.5 Dua Skala Koordinat (jangan dicampur)
+
+Koordinat **tata surya** dan koordinat **kapal/lokal** adalah dua konteks yang
+berbeda dan TIDAK dicampur:
+
+```
+SKALA SYSTEM (kerangka dev)          SKALA LOKAL (buat pemain)
+──────────────────────────────       ──────────────────────────────
+Posisi benda langit (orbit)          Posisi kapal (x,y,z) instruksi
+Skala raksasa (sistem bintang)       Skala medan/combat
+Dipakai untuk mengatur & menghitung  Dipakai untuk pergerakan, jarak,
+benda langit                         combat, interaksi pemain
+kerangka internal (implementasi)     kerangka operasional pemain
+```
+
+- Benda langit ditaruh & dihitung pada skala system (juga jadi landasan gravitasi
+  & termal, §2.6).
+- Kapal bergerak pada skala lokal; server tetap otoritas posisi (D-008).
+- Keduanya hidup dalam satu region (D-015), tapi representasi & skala-nya
+  terpisah, agar tidak rancu antara "orbit sebuah planet" dan "kapal yang di sini".
+
+### 2.6 Fisika Tata Surya (nama ilmiah, bukan istilah buatan)
+
+Tata surya disimulasikan dengan **hukum fisika nyata** agar konsisten & bisa
+diprediksi. Yang digunakan ARCLUX (nomenklatur fisika, supaya pembaca paham arti
+sebenarnya):
+
+```
+NEWTONIAN GRAVITY (gravitasi Newton)
+  massa(m)  →  gaya gravitasi  F = G·m₁·m₂ / r²
+  → memengaruhi benda langit satu sama lain di skala system
+KEPLER ORBITS (hukum Kepler)
+  orbit elips benda langit mengikuti lintasan yang deterministik terhadap waktu
+RADIATION / THERMAL ENERGY (radiasi & energi termal)
+  matahari memancarkan radiasi; energi termal yang diterima kapal ∝ 1/r² (jarak)
+  → suhu benda/materi naik saat mendekat
+MATERIAL LIMIT / MELTING (batas material & pelelehan)
+  tiap material/subsystem punya batas ketahanan suhu (thermal tolerance)
+  → melewatinya = thermal damage / melting (masuk damage lingkungan, lihat
+    [03](03-combat.md) I.9)
+```
+
+Contoh peta konsekuensi (bukan statis `damage=100/sec`):
+
+```
+STAR ACTIVITY
+   ↓
+ENERGY / PLASMA EVENT (solar wind · coronal mass ejection · flare)
+   ↓
+PROPAGATES THROUGH SYSTEM (merambat lewat ruang)
+   ↓
+SHIP DETECTS / IS EXPOSED (kapal bisa melihat datangnya & bereaksi)
+   ↓
+SYSTEMS & MATERIALS AFFECTED (termal → material limit → melt)
+   ↓
+PLAYER MUST REACT (ubah rute · berlindung · atau memanfaatkan kondisi)
+```
+
+> **Kapal imun terhadap gravitasi Newton** (skala system): gravitasi benda langit
+> dipakai untuk posisi/orbit benda langit (skala system, §2.5), TAPI tidak
+> "menarik" kapal di skala lokal. Kapal bergerak bebas/manuver. Sumber imunitas
+> ini dijamin oleh **ARCLUX Universal Baseline** (lihat
+> [05](05-vessel-design-dashboard.md) §7) — bukan state acak. Pemisahan ini dibuat
+> agar kapal tidak terseret orbit (ribet), sementara lingkungan tetap
+> disimulasikan dengan fisika penuh.
+
+> Istilah ilmiah dipakai (gravitasi Newton, hukum Kepler, radiasi termal, solar
+> wind, coronal mass ejection) supaya desain bisa dibaca & diverifikasi dengan
+> benar, bukan nama-nama fantasi. Penerapannya tetap *gameplay-first* dan
+> deterministik per tick (D-008, D-016).
 
 ---
 
@@ -419,6 +566,12 @@ System
 User dapat langsung mencari representasi fisik dari software yang sedang
 diinspeksi.
 
+> **Tipe teleport lain — Mobilisasi Konflik (bukan navigasi):** selain jump gate
+> (navigasi antar system) dan semantic jump, ada **teleport mobilisasi** untuk
+> merespon konflik (2-teleport: ke titik + balik titik asal, lihat
+> [06](06-community-social-ownership.md) §18.8). Ia beda kategori: bukan
+> pindah-pindah bebas, punya cooldown panjang, dan menampilkan animasi portal.
+
 ---
 
 ## 15. Stations
@@ -533,9 +686,89 @@ Tujuan: sejarah itu sendiri menjadi bagian dari persistent universe.
 
 ---
 
-## 20. Adaptive HUD
+## 20. Universal Cockpit HUD & Adaptive Context
 
-HUD berubah sesuai konteks.
+> **Cockpit tetap universal. Kapal tetap unik.** (Extension V5, varian API-first)
+
+ARCLUX memisahkan **kontrol universal** dari **kemampuan kapal**:
+
+```
+KONTROL UNIVERSAL ≠ KEMAMPUAN KAPAL
+```
+
+Semua kapal memakai bahasa kontrol yang sama; kemampuan tambahan ditentukan
+oleh kapal & komponennya.
+
+### 20.1 Standard Control API
+
+Kontrol dasar direpresentasikan sebagai intent standar:
+
+```
+move · target · scan · dock · activate · navigate · manage
+```
+
+```
+PLAYER → CONTROL → PLAYER INTENT → WORLD VALIDATOR → ACCEPT | REJECT → SIMULATION
+```
+
+Client tidak menentukan apakah tindakan berhasil.
+
+### 20.2 Ship Capability Registry
+
+Setiap kapal mengekspos daftar capability-nya. Client membangun interface dari
+registry ini, bukan hard-code tiap tombol:
+
+```
+GET SHIP STATE → { vessel, capabilities: ["targeting","scan","phase_shift","emergency_repair"] }
+```
+
+Kapal berbeda punya capability berbeda, tapi kontrol dasar tetap sama.
+
+### 20.3 Three-Layer Model
+
+```
+Layer 1 — Control   : apa yang pemain minta (MOVE/ATTACK/SCAN/ACTIVATE)
+Layer 2 — Capability: apa yang kapal mampu (weapon/shield/scanner/custom/special)
+Layer 3 — World Rules: apa yang dunia izinkan (auth/cooldown/range/damage/
+                       component/ownership/safe zone/state version)
+```
+
+```
+PLAYER INTENT → CAPABILITY → WORLD VALIDATOR → SIMULATION → WORLD STATE
+```
+
+### 20.4 Dynamic & Standard Slots
+
+Posisi kontrol dasar konsisten di semua kapal; isi slot berubah per kapal:
+
+```
+VESSEL A: [Laser] [Shield] [Scan]  [Repair]
+VESSEL B: [Missile][ECM]  [Boost]  [Special]
+```
+
+Capability state tampil di slot (pola sama):
+`AVAILABLE · ACTIVE · COOLDOWN · DISABLED · DAMAGED · DEPLETED`
+
+### 20.5 UI Bukan Sumber Kebenaran
+
+Kemunculan tombol ≠ aksi pasti berhasil. Saat tombol `SPECIAL` ditekan:
+
+```
+ACTIVATE_CAPABILITY → VALIDATOR (exists? authorized? cooldown? uses?
+  component condition? ship state? world rules?) → ACCEPT | REJECT
+```
+
+Client mengirim **REQUEST** (bukan "berhasil"); server menentukan hasil.
+
+### 20.6 Capability Terhubung Dunia & Provenance
+
+Capability yang melekat pada komponen mewarisi sistem provenance (V4/07):
+component → capability → vessel → battle → wreckage → recovery → vessel baru.
+Damage pada komponen → degradation/disable capability (lihat §11 subsystem viz di bawah & 07).
+
+### 20.7 Adaptive Context (tetap berlaku)
+
+HUD berubah sesuai konteks — exploration, combat, developer inspection:
 
 **Exploration:**
 ```
@@ -561,7 +794,32 @@ HUD berubah sesuai konteks.
 [CODE]
 ```
 
-Mencegah interface menjadi overload permanen.
+Mencegah interface menjadi overload permanen — pemain tidak belajar ulang HUD
+tiap ganti kapal; ia hanya mempelajari capability baru yang tampil di layout
+universal.
+
+### 20.8 Identitas Sosial di HUD
+
+Overlay menampilkan identitas sosial setiap kapal agar kawan vs lawan langsung
+terbaca (data authoritative server, label = representasi client):
+
+```
+[KOMUNITAS A]  [GSF-xxxx]  [username]
+   ◄ faksi        prefix      pilot
+```
+
+Detail: [06 §18.6](06-community-social-ownership.md). Label tidak menandakan
+pemenang/loser — murni penanda identitas.
+
+### 20.9 Titik & Intel di HUD
+
+Pemain dapat melihat & membagikan **titik (koordinat/waypoint/titik kumpul)** serta
+menerima peringatan konflik (mobilisasi armada). Lihat
+[06 §18.7](06-community-social-ownership.md). Tampil sebagai tactical marker di
+ruang (01 §2) + info panel yang ber-label nama kapal/org pengirim.
+
+Aturan tetap: client mengirim **request**; server menentukan validitas & hasil
+(01 §20.5) — koordinat/pergerakan bukan keputusan client.
 
 ---
 
@@ -607,6 +865,10 @@ DEVELOPER
 ```
 
 Kekompleksan rendering bisa berubah tanpa mengubah kebenaran simulation.
+
+Berlaku juga untuk benda langit (§2): pada `FAR`/`MID`, planet & backdrop body
+dirender simplified (mesh/lightness rendah); posisi orbit tetap milik state dunia
+yang sama (§2.3) — detail visual ≠ otoritas posisi.
 
 ---
 
@@ -661,6 +923,8 @@ State yang sama menggerakkan:
 - damage analysis
 - history
 - provenance
+- **cosmic environment** (orbit benda langit & fase bulan adalah state dunia yang
+  sama — deterministik per tick seperti combat; lihat §2.3)
 
 ---
 
@@ -744,6 +1008,41 @@ ARCLUX juga harus bisa bertanya:
 > "Where is this code in my universe?"
 
 Distingsi ini menjadi fondasi identitas visual ARCLUX sendiri.
+
+---
+
+## 28. UI Command-Interface (EVE-level, bukan web dashboard)
+
+> *"The interface should feel like operating an engineering system, not browsing
+> a website."* — prinsip kunci UI ARCLUX.
+
+ARCLUX adalah **game desktop MMO**, bukan aplikasi web. UI diarahkan ke
+**command interface / operational console** yang cinematic & data-dense, terinspirasi
+benchmark EVE Online — bukan "modern dashboard" klasik.
+
+**Bahasa desain yang TEPAT (jangan diterjemahkan sebagai kartu SaaS):**
+- Cinematic Sci-Fi Command Interface
+- Spatial Data Visualization — informasi hidup dalam ruang (bukan kotak kartu)
+- Tactical / Operational HUD — data-dense tanpa berbentuk dashboard card
+- Industrial / Technical visual language — hindari glassmorphism & plastik
+- Layered visualization: environment · system state · graph · telemetry · controls
+- Cinematic depth: lighting, atmospheric effects, motion, depth
+- Adaptive information density (sederhana saat idle, padat saat beroperasi)
+
+```
+ARCLUX INTERFACE ARCHITECTURE
+├── Spatial UI
+├── Data-Dense HUD
+├── Command-Centric Interaction
+├── Layered Visualization
+├── Cinematic Depth
+├── Technical / Industrial Material
+└── Adaptive Information Density
+```
+
+> Benchmark visual = EVE Online (bukan web app). Desktop penuh, data-dense, tanpa
+> batasan "komponen ringan ala mobile". Bukan "poster tempelan" — environment
+> & depth yang memberi sense of scale, hierarchy, dan interaksi.
 
 ---
 
