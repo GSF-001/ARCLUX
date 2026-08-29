@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-29 (relay impl — registry claim bugfix, gate coordinator handoff, identity move; PR #590).
+Update terakhir: 2026-08-29 (integrasi gate↔relay — gameserver bridge multi-shard, vessel transit lintas shard; PR #591).
 
 ---
 
@@ -74,8 +74,8 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
   recovery lintas shard (crash di tengah handoff).
 
 **Arah (prioritas isi berikutnya):**
-1. `packages/relay` — hubungkan `gate.notifyTarget` ke relay registry + identity
-   lintas shard (D-006 handoff jalur eksplisit, 🔜 seamless).
+1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591,
+   jalur eksplisit D-006). Runtime terpisah (bukan in-process) tetap TODO #592.
 2. gameserver: handoff token crash-safe di `gate.ts` (pakai `persistence.ts`,
    biar vessel gak hilang kalau crash di tengah transit).
 3. `netcode.ts` transport jaringan beneran + pasang ke `apps/game` klien pertama
@@ -103,8 +103,11 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
   tujuan. TODO: token cryptograph, in-flight recovery, event record.
 - `identity.ts` — pemetaan player lintas shard + method `move` (update presence
   saat gate handoff). TODO: persist ke db, auth player id.
-**Belum ada konsumen** — `gameserver/gate.notifyTarget` belum nyambung ke relay
-(hanya callback lokal). Sinyal utama: butuh 2+ server / handoff lintas host.
+**Konsumen pertama (PR #591):** `packages/gameserver/bridge.ts` — `createGameBridge`
+menghubungkan jump gate (gameserver) → relay handoff lintas shard: registry/claim
+semua shard, deliver materialkan vessel di region tujuan (token anti-clone),
+update identity.move. Prototype in-process (2 shard, 1 proses). Runtime terpisah
+benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 
 ### 2.4 `apps/game` 🚧 (Electron client 3D)
 **Kerangka dibuat**: `src/main/` (Electron main), `src/renderer/` (3D + input +
@@ -132,8 +135,10 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #582 ✅ gameserver core (world/validator/sim/combat) — SUDJAH
 ### PR #589 ✅ gameserver core impl (gate/persistence/netcode) — SUDJAH
 ### PR #590 ✅ relay impl (registry claim bugfix + gate coordinator handoff + identity move) — SUDJAH
+### PR #591 ✅ integrasi gate↔relay (gameserver bridge multi-shard, vessel transit lintas shard) — SUDJAH
 ### PR berikutnya (urutan)
-- [ ] integrasi: hubungkan `gameserver/gate.notifyTarget` → `relay.gate.requestHandoff` (2 shard nyata)
+- [ ] runtime terpisah (bukan in-process): tiap shard = proses/host sendiri via netcode jaringan (D-009)
+- [ ] handoff token crash-safe (persistence.ts) — vessel gak hilang kalau crash di tengah transit
 - [ ] netcode transport jaringan beneran pasang ke `apps/game`
 - [ ] `apps/game`: bootstrap Electron + 3D render vessel dari RegionState
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
@@ -202,7 +207,8 @@ net), `index.ts`, `package.json`. **Arah**:
 | 2026-08-28 | #580 | universe World Model foundation | ✅ merged |
 | 2026-08-28 | #582 | gameserver core (world/validator/sim/combat) | ✅ merged |
 | 2026-08-28 | #589 | gameserver core impl: gate.ts transit (radius+community), persistence.ts (db regions store), netcode.ts transport (intent/events/snapshot) | ✅ merged |
-| 2026-08-29 | #590 | relay impl: registry claim bugfix + gate coordinator handoff (token anti-clone, idempotency seq, deliver hook) + identity move | in progress |
+| 2026-08-29 | #590 | relay impl: registry claim bugfix + gate coordinator handoff (token anti-clone, idempotency seq, deliver hook) + identity move | ✅ merged |
+| 2026-08-29 | #591 | integrasi gate↔relay: gameserver/bridge.ts multi-shard (vessel transit lintas shard, deliver materialkan vessel, identity.move) | in progress |
 | 2026-08-28 | — | scaffolding relay + apps/game + kerangka gate/netcode/persistence | in progress |
 | 2026-08-28 | — | blueprint V4 (07), V5 HUD (01 §20), V6 persistent (08) + D-013/D-014 + respawn-open | in progress |
 | 2026-08-28 | — | blueprint cosmic: 01 §2 living environment + fase lunar + 3 lapis body; 03 I.9 collision damage; 04 source wreckage; arsitektur environs/collision/cosmic-event | in progress |

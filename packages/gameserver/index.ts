@@ -20,3 +20,4 @@ export * from "./combat";
 export * from "./gate";
 export * from "./netcode";
 export * from "./persistence";
+export * from "./bridge";
