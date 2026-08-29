@@ -48,11 +48,12 @@ export function createRelayRegistry(): RelayRegistry {
   const getShard = (shardId: string) => shards.get(shardId);
 
   const claimRegion = (regionId: string, shardId: string) => {
+    // shard HARUS sudah register dulu sebelum boleh men-claim (anti bentrok &
+    // konsistensi: claim yang tersimpan harus selalu menunjuk shard yang valid).
+    if (!shards.has(shardId)) return false;
     const existing = claims.get(regionId);
     if (existing && existing.shardId !== shardId) return false; // dipegang server lain
     claims.set(regionId, { regionId, shardId, claimedAt: Date.now() });
-    // IMPL: pastikan shard sudah register sebelum claim
-    if (!shards.has(shardId)) return false;
     return true;
   };
   const releaseRegion = (regionId: string, shardId: string) => {

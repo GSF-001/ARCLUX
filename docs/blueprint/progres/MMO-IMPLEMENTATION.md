@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-29 (gameserver core impl — gate.ts handoff + persistence.ts db save/load + netcode.ts transport; PR #589).
+Update terakhir: 2026-08-29 (relay impl — registry claim bugfix, gate coordinator handoff, identity move; PR #590).
 
 ---
 
@@ -25,7 +25,7 @@ Update terakhir: 2026-08-29 (gameserver core impl — gate.ts handoff + persiste
 │     ├─ gate.ts      ✅ Jump gate routing antar region (radius+community)   │
 │     ├─ netcode.ts   ✅ Client<->server transport (intent in, events out)   │
 │     ├─ persistence.ts ✅ Save/load region (db JSON store + RecoveryManager)│
-│  packages/relay     🚧 Shard registry + gate handoff + identity            │
+│  packages/relay     ✅ Shard registry + gate handoff + identity            │
 │  apps/game          🚧 Electron client (3D render + input + net)           │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -91,14 +91,20 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 10. Intel & mobilisasi (06 §18.6-18.8): label sosial, bagikan titik, 2-teleport + portal
 11. UI command-interface (01 §28): operational console EVE-level (desktop)
 
-### 2.3 `packages/relay` 🚧 (shard registry + gate handoff + identity lintas shard)
-**Kerangka dibuat, file**: `index.ts`, `registry.ts`, `gate.ts`, `identity.ts`, `types.ts`.
-**Arah**: 
-- registry: daftar shard server + claim region (mapping region id -> server addr)
-- gate: koordinasi handoff vessel antar region milik server yang beda
-- identity: pemetaan player id lintas shard (global handle -> per-shard entity)
-Semua TODOs dicatet di file masing-masing. Belum ada konsumen — dimulai saat
-butuh 2+ server (multi-shard) atau handoff.
+### 2.3 `packages/relay` ✅ (shard registry + gate handoff + identity lintas shard)
+**File**: `index.ts`, `registry.ts`, `gate.ts`, `identity.ts`, `types.ts`.
+**Sudah diisi (PR #590):**
+- `registry.ts` — daftar shard + claim region (region → server). Fix bug: claim
+  sekarang cek shard ter-register DULU sebelum tersimpan (anti inconsistency).
+  Claim konflik (region dipegang server lain) ditolak.
+- `gate.ts` — `createGateCoordinator`: `requestHandoff` validasi fromShardId,
+  token anti-clone (bukan source code), resolve target via registry, idempotency
+  via seq (dup/stale ditolak → cegah dobel-spawn), dan `deliver` hook ke server
+  tujuan. TODO: token cryptograph, in-flight recovery, event record.
+- `identity.ts` — pemetaan player lintas shard + method `move` (update presence
+  saat gate handoff). TODO: persist ke db, auth player id.
+**Belum ada konsumen** — `gameserver/gate.notifyTarget` belum nyambung ke relay
+(hanya callback lokal). Sinyal utama: butuh 2+ server / handoff lintas host.
 
 ### 2.4 `apps/game` 🚧 (Electron client 3D)
 **Kerangka dibuat**: `src/main/` (Electron main), `src/renderer/` (3D + input +
@@ -125,9 +131,9 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #580 ✅ universe — SUDJAH
 ### PR #582 ✅ gameserver core (world/validator/sim/combat) — SUDJAH
 ### PR #589 ✅ gameserver core impl (gate/persistence/netcode) — SUDJAH
+### PR #590 ✅ relay impl (registry claim bugfix + gate coordinator handoff + identity move) — SUDJAH
 ### PR berikutnya (urutan)
-- [ ] `packages/relay`: registry + gate handoff + identity (hubungkan gate.notifyTarget)
-- [ ] gameserver: handoff token crash-safe di gate.ts (pakai persistence.ts)
+- [ ] integrasi: hubungkan `gameserver/gate.notifyTarget` → `relay.gate.requestHandoff` (2 shard nyata)
 - [ ] netcode transport jaringan beneran pasang ke `apps/game`
 - [ ] `apps/game`: bootstrap Electron + 3D render vessel dari RegionState
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
@@ -195,7 +201,8 @@ net), `index.ts`, `package.json`. **Arah**:
 |---|---|---|---|
 | 2026-08-28 | #580 | universe World Model foundation | ✅ merged |
 | 2026-08-28 | #582 | gameserver core (world/validator/sim/combat) | ✅ merged |
-| 2026-08-28 | #589 | gameserver core impl: gate.ts transit (radius+community), persistence.ts (db regions store), netcode.ts transport (intent/events/snapshot) | in progress |
+| 2026-08-28 | #589 | gameserver core impl: gate.ts transit (radius+community), persistence.ts (db regions store), netcode.ts transport (intent/events/snapshot) | ✅ merged |
+| 2026-08-29 | #590 | relay impl: registry claim bugfix + gate coordinator handoff (token anti-clone, idempotency seq, deliver hook) + identity move | in progress |
 | 2026-08-28 | — | scaffolding relay + apps/game + kerangka gate/netcode/persistence | in progress |
 | 2026-08-28 | — | blueprint V4 (07), V5 HUD (01 §20), V6 persistent (08) + D-013/D-014 + respawn-open | in progress |
 | 2026-08-28 | — | blueprint cosmic: 01 §2 living environment + fase lunar + 3 lapis body; 03 I.9 collision damage; 04 source wreckage; arsitektur environs/collision/cosmic-event | in progress |
