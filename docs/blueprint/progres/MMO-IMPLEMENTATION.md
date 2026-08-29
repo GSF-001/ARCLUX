@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-28 (PR #588 blueprint physics/social/intel — dua skala, fisika tata surya, baseline, aliansi/intel-kordinat, 2-teleport, UI EVE-level).
+Update terakhir: 2026-08-29 (gameserver core impl — gate.ts handoff + persistence.ts db save/load + netcode.ts transport; PR #589).
 
 ---
 
@@ -22,9 +22,9 @@ Update terakhir: 2026-08-28 (PR #588 blueprint physics/social/intel — dua skal
 │                                                                            │
 │  packages/universe  ✅ World Model (VesselModel, System, License)          │
 │  packages/gameserver 🚧 Authoritative server (world/validator/sim/combat)  │
-│     ├─ gate.ts      🚧 Jump gate routing antar region                      │
-│     ├─ netcode.ts   🚧 Client<->server transport (intent queue)            │
-│     ├─ persistence.ts 🚧 Save/load region state (db + RecoveryManager)     │
+│     ├─ gate.ts      ✅ Jump gate routing antar region (radius+community)   │
+│     ├─ netcode.ts   ✅ Client<->server transport (intent in, events out)   │
+│     ├─ persistence.ts ✅ Save/load region (db JSON store + RecoveryManager)│
 │  packages/relay     🚧 Shard registry + gate handoff + identity            │
 │  apps/game          🚧 Electron client (3D render + input + net)           │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -60,17 +60,26 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 - `combat.ts` — applyCombatIntent, damage per subsystem, DAMAGE_CEILING
 - Barrel `index.ts`
 
-**Belum ada — kerangka di file ini (tinggal isi):**
-- `gate.ts` 🚧 — jump gate routing & handoff antar region. TODOs di dalam file.
-- `netcode.ts` 🚧 — transport client↔server (intent in, events out), reuses
-  SimulationEngine.enqueue. TODOs.
-- `persistence.ts` 🚧 — save/load RegionState via `packages/db` + RecoveryManager. TODOs.
+**Sudah diisi (PR #589):**
+- `gate.ts` ✅ — `createGateRouter(links, deps)` + `transit()`: cek link, radius
+  aktivasi, otorisasi community (allowedCommunityIds kosong = publik), lepas
+  vessel dari region lokal, notify target region, emit `gate.transit.*` event.
+  TODO lanjut: handoff token crash-safe via PersistenceStore + koneksi ke relay.
+- `netcode.ts` ✅ — `createInProcessTransport(engine)`: `sendIntent`→engine.enqueue,
+  `tick()`→engine.step() + pump accepted/rejected events, `requestSnapshot`→region.snapshot.
+  TODO lanjut: transport jaringan beneran (netcode[channel]) + pasang ke `apps/game`.
+- `persistence.ts` ✅ — `validateRegion`, `createInMemoryPersistence`,
+  `createDbPersistence` (pakai `packages/db` collection "regions",
+  JSON-file-per-record crash-safe via RecoveryManager). TODO: last-good/partial
+  recovery lintas shard (crash di tengah handoff).
 
 **Arah (prioritas isi berikutnya):**
-1. `gate.ts` — handoff vessel antar region (D-006 jalur eksplisit dulu, seamless nanti)
-2. `persistence.ts` — simpan doang bisa langsung pakai prove of `snapshot`
-   (ini juga dasar V6 persistent world: load→reconstruct→resume, 08 §13)
-3. `netcode.ts` — pasang pas `apps/game` klien pertama
+1. `packages/relay` — hubungkan `gate.notifyTarget` ke relay registry + identity
+   lintas shard (D-006 handoff jalur eksplisit, 🔜 seamless).
+2. gameserver: handoff token crash-safe di `gate.ts` (pakai `persistence.ts`,
+   biar vessel gak hilang kalau crash di tengah transit).
+3. `netcode.ts` transport jaringan beneran + pasang ke `apps/game` klien pertama
+   (render RegionState → kirim intent → render events, anti-cheat D-008).
 4. V4 capability (07): usage_count + component_condition + depletion di
    validator/simulation; batas 2 kapal induk
 5. V5 HUD registry (01 §20.2): expose capabilities[] ke renderer
@@ -115,11 +124,11 @@ net), `index.ts`, `package.json`. **Arah**:
 
 ### PR #580 ✅ universe — SUDJAH
 ### PR #582 ✅ gameserver core (world/validator/sim/combat) — SUDJAH
+### PR #589 ✅ gameserver core impl (gate/persistence/netcode) — SUDJAH
 ### PR berikutnya (urutan)
-- [ ] gameserver: `gate.ts` jump gate routing (handoff eksplisit)
-- [ ] gameserver: `persistence.ts` save/load region (db + RecoveryManager)
-- [ ] gameserver: `netcode.ts` transport intent/events
-- [ ] `packages/relay`: registry + gate handoff + identity
+- [ ] `packages/relay`: registry + gate handoff + identity (hubungkan gate.notifyTarget)
+- [ ] gameserver: handoff token crash-safe di gate.ts (pakai persistence.ts)
+- [ ] netcode transport jaringan beneran pasang ke `apps/game`
 - [ ] `apps/game`: bootstrap Electron + 3D render vessel dari RegionState
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
 - [ ] dynamic safe-zone / governance state (blueprint 06 §13-16) — modifikasi validator
@@ -186,6 +195,7 @@ net), `index.ts`, `package.json`. **Arah**:
 |---|---|---|---|
 | 2026-08-28 | #580 | universe World Model foundation | ✅ merged |
 | 2026-08-28 | #582 | gameserver core (world/validator/sim/combat) | ✅ merged |
+| 2026-08-28 | #589 | gameserver core impl: gate.ts transit (radius+community), persistence.ts (db regions store), netcode.ts transport (intent/events/snapshot) | in progress |
 | 2026-08-28 | — | scaffolding relay + apps/game + kerangka gate/netcode/persistence | in progress |
 | 2026-08-28 | — | blueprint V4 (07), V5 HUD (01 §20), V6 persistent (08) + D-013/D-014 + respawn-open | in progress |
 | 2026-08-28 | — | blueprint cosmic: 01 §2 living environment + fase lunar + 3 lapis body; 03 I.9 collision damage; 04 source wreckage; arsitektur environs/collision/cosmic-event | in progress |
