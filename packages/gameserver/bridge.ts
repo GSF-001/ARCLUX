@@ -27,6 +27,7 @@
 import type { Vec3, VesselEntity } from "./types";
 import { WorldRegion } from "./world";
 import { createGateRouter, type GateLink, type GateRouter } from "./gate";
+import type { PersistenceStore } from "./persistence";
 import {
   createGateCoordinator,
   type GateCoordinator,
@@ -55,6 +56,8 @@ export interface GameBridgeOptions {
   vesselModels: Map<string, VesselModel>;
   /** Semua shard yang ikut bridge (agar deliver bisa spawn di mana saja). */
   shards: GameBridgeShard[];
+  /** Opsional: persistence untuk handoff token crash-safe (diteruskan ke gate). */
+  persistence?: PersistenceStore;
 }
 
 export interface GameBridgeShardRuntime {
@@ -121,6 +124,7 @@ export function createGameBridge(opts: GameBridgeOptions): GameBridge {
 
     const router = createGateRouter(shard.gateLinks, {
       region: shard.region,
+      persist: opts.persistence,
       notifyTarget: (targetRegionId, handoff) => {
         const toShard = coordinator.resolveTarget(targetRegionId);
         if (!toShard || toShard === shard.shardId) return; // target bukan shard ini / belum dikenal

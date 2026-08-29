@@ -67,4 +67,26 @@ export interface RegionRecord {
   updatedAt: string;
 }
 
-export type CollectionName = "repos" | "analyses" | "issues" | "regions";
+/**
+ * Pending jump-gate handoff (gameserver). Persisted BEFORE the vessel is removed
+ * from the origin region and BEFORE the target is notified, so a crash mid-transit
+ * cannot lose the vessel — recovery re-delivers leftover handoffs (crash-safe,
+ * D-009 self-host / D-013 restart≠reset).
+ */
+export interface PendingHandoffRecord {
+  id: string;
+  /** origin region id (the shard that owns the vessel). */
+  fromRegionId: string;
+  /** id region tujuan (milik shard/server lain). */
+  toRegionId: string;
+  /** gate id tempat transit dimulai. */
+  gateId: string;
+  /** handoff payload (gameserver GateTransitResult.handoff) — fully serializable. */
+  handoff: unknown;
+  /** kapan transit di-start (untuk audit/recovery TTL). */
+  startedAt: string;
+  /** updatedAt alias — crash-safe "last-good" pointer. */
+  updatedAt: string;
+}
+
+export type CollectionName = "repos" | "analyses" | "issues" | "regions" | "handoffs";
