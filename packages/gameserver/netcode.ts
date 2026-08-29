@@ -242,4 +242,4 @@ export function createInProcessTransport(opts: NetcodeOptions): NetcodeTransport
 
   return { sendIntent, tick, requestSnapshot, onEvent };
 }
- ARCLUX.main
+ 
