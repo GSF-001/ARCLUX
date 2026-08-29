@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-29 (integrasi gate↔relay — gameserver bridge multi-shard, vessel transit lintas shard; PR #591).
+Update terakhir: 2026-08-29 (handoff token crash-safe — vessel gak hilang kalau crash di tengah transit; PR #592).
 
 ---
 
@@ -63,21 +63,23 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 **Sudah diisi (PR #589):**
 - `gate.ts` ✅ — `createGateRouter(links, deps)` + `transit()`: cek link, radius
   aktivasi, otorisasi community (allowedCommunityIds kosong = publik), lepas
-  vessel dari region lokal, notify target region, emit `gate.transit.*` event.
-  TODO lanjut: handoff token crash-safe via PersistenceStore + koneksi ke relay.
+   vessel dari region lokal, notify target region, emit `gate.transit.*` event.
+   + handoff token crash-safe: `persist` deps + save-pending-before-remove,
+   delete-after-deliver, `recoverPendingHandoffs()` (PR #592).
 - `netcode.ts` ✅ — `createInProcessTransport(engine)`: `sendIntent`→engine.enqueue,
   `tick()`→engine.step() + pump accepted/rejected events, `requestSnapshot`→region.snapshot.
   TODO lanjut: transport jaringan beneran (netcode[channel]) + pasang ke `apps/game`.
 - `persistence.ts` ✅ — `validateRegion`, `createInMemoryPersistence`,
   `createDbPersistence` (pakai `packages/db` collection "regions",
-  JSON-file-per-record crash-safe via RecoveryManager). TODO: last-good/partial
-  recovery lintas shard (crash di tengah handoff).
+  JSON-file-per-record crash-safe via RecoveryManager). + pending handoff
+  store (`savePendingHandoff`/`loadPendingHandoffs`/`deletePendingHandoff`,
+  collection "handoffs", index list utk recovery) (PR #592).
 
 **Arah (prioritas isi berikutnya):**
 1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591,
    jalur eksplisit D-006). Runtime terpisah (bukan in-process) tetap TODO #592.
-2. gameserver: handoff token crash-safe di `gate.ts` (pakai `persistence.ts`,
-   biar vessel gak hilang kalau crash di tengah transit).
+2. ~~gameserver: handoff token crash-safe di `gate.ts`~~ — SELESAI via PR #592
+   (pending handoff persist sblm remove, recovery `recoverPendingHandoffs()`).
 3. `netcode.ts` transport jaringan beneran + pasang ke `apps/game` klien pertama
    (render RegionState → kirim intent → render events, anti-cheat D-008).
 4. V4 capability (07): usage_count + component_condition + depletion di
@@ -136,9 +138,9 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #589 ✅ gameserver core impl (gate/persistence/netcode) — SUDJAH
 ### PR #590 ✅ relay impl (registry claim bugfix + gate coordinator handoff + identity move) — SUDJAH
 ### PR #591 ✅ integrasi gate↔relay (gameserver bridge multi-shard, vessel transit lintas shard) — SUDJAH
+### PR #592 ✅ handoff token crash-safe (persistence.ts + gate.ts + bridge.ts) — SUDJAH
 ### PR berikutnya (urutan)
 - [ ] runtime terpisah (bukan in-process): tiap shard = proses/host sendiri via netcode jaringan (D-009)
-- [ ] handoff token crash-safe (persistence.ts) — vessel gak hilang kalau crash di tengah transit
 - [ ] netcode transport jaringan beneran pasang ke `apps/game`
 - [ ] `apps/game`: bootstrap Electron + 3D render vessel dari RegionState
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community

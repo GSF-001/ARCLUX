@@ -22,6 +22,7 @@
 
 import type { Vec3, VesselEntity } from "./types";
 import { WorldRegion } from "./world";
+import type { PersistenceStore, PendingHandoff } from "./persistence";
 
 /** Jarak euclidean antara dua titik (meter). */
 function vecDist(a: Vec3, b: Vec3): number {
@@ -88,6 +89,8 @@ export interface GateRouterDeps {
   onEvent?: (ev: GateEvent) => void;
   /** Opsional: hub entity/faction lookup untuk otorisasi lanjutan. */
   resolveFaction?: (vesselId: string) => string | undefined;
+  /** Opsional: persistence untuk handoff token crash-safe (kalau ada). */
+  persist?: PersistenceStore;
 }
 
 /** Ambil reference vessel kering (id, posisi) untuk handoff tanpa bawa state hidup. */
@@ -110,6 +113,12 @@ function authorized(link: GateLink, vessel: VesselEntity, faction?: string): boo
 
 export interface GateRouter {
   transit(req: GateTransitRequest): Promise<GateTransitResult>;
+  /**
+   * Recovery crash-safe (D-013 restart ≠ reset): muat semua pending handoff yang
+   * tersisa dari crash dan re-deliver ke region tujuan. Kembalikan jumlah yang
+   * berhasil di-resume.
+   */
+  recoverPendingHandoffs(): Promise<number>;
 }
 
 export function createGateRouter(links: GateLink[], deps: GateRouterDeps): GateRouter {
@@ -176,11 +185,33 @@ export function createGateRouter(links: GateLink[], deps: GateRouterDeps): GateR
 
     const handoff = toHandoff(vessel);
 
+    // Crash-safe: persist pending handoff SEBELUM vessel dilepas dari region asal.
+    // Kalau crash di tengah (after save, before delete), handoff tersisa di disk dan
+    // recovery akan re-deliver vessel ke tujuan — vessel tidak hilang.
+    const pending: PendingHandoff = {
+      vesselId: handoff.vesselId,
+      owner: handoff.owner,
+      position: handoff.position,
+      hubId: handoff.hubId,
+      gateId: req.gateId,
+      fromRegionId: deps.region.regionId,
+      toRegionId: req.targetRegionId,
+      startedAt: new Date().toISOString(),
+    };
+    if (deps.persist) {
+      await deps.persist.savePendingHandoff(pending);
+    }
+
     // lepas vessel dari region lokal (authoritative transfer).
     deps.region.remove(req.vesselId);
 
     // notify region tujuan (via relay/netcode) untuk men-spawn.
     deps.notifyTarget?.(req.targetRegionId, handoff);
+
+    // deliver sukses → hapus pending handoff (tidak lagi in-flight).
+    if (deps.persist) {
+      await deps.persist.deletePendingHandoff(req.vesselId, req.gateId);
+    }
 
     deps.onEvent?.({
       type: "gate.transit.complete",
@@ -195,7 +226,25 @@ export function createGateRouter(links: GateLink[], deps: GateRouterDeps): GateR
     return { ok: true, handoff };
   };
 
-  return { transit };
+  return {
+    transit,
+    async recoverPendingHandoffs() {
+      if (!deps.persist) return 0;
+      const pending = await deps.persist.loadPendingHandoffs();
+      let recovered = 0;
+      for (const h of pending) {
+        deps.notifyTarget?.(h.toRegionId, {
+          vesselId: h.vesselId,
+          owner: h.owner,
+          position: h.position,
+          hubId: h.hubId,
+        });
+        await deps.persist.deletePendingHandoff(h.vesselId, h.gateId);
+        recovered++;
+      }
+      return recovered;
+    },
+  };
 }
 
 //
