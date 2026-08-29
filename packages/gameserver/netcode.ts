@@ -179,7 +179,7 @@ export function createHttpServerTransport(region: WorldRegion, port: number): Ht
 
 export { AddressInfo };
 export type { PlayerIntent };
-=======
+
 // netcode.ts — transport client ↔ server (D-008 server-authoritative).
 //
 // Alur (mengikuti SimulationEngine yang SUDAH ada):
