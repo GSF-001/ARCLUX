@@ -22,6 +22,12 @@ import type { GameEvent, PlayerIntent, Vec3, VesselEntity, WorldEntity } from ".
 import { WorldRegion } from "./world";
 import { validateIntent, type ValidatorContext } from "./validator";
 import { applyCombatIntent } from "./combat";
+import type { EnvironsState } from "./environs";
+import { integrateEnvirons, getBodiesArray } from "./environs";
+import { checkCollisions } from "./collision";
+import { computeThermal } from "./thermics";
+import { canActivate, activateCapability } from "./capability";
+import { assertNotPaused, isInSafeZone } from "./governance";
 
 export interface SimulationOptions {
   /** Region the server owns. */
@@ -30,6 +36,10 @@ export interface SimulationOptions {
   dt?: number;
   /** Validation context (player identity + authorization). */
   authProvider: (playerId: string) => ValidatorContext;
+  /** Cosmic environs (star/planet) — if provided, integrated per tick (D-020). */
+  environs?: EnvironsState;
+  /** Enable thermal/collision checks (default true if environs provided). */
+  enableEnvirons?: boolean;
 }
 
 export interface TickResult {
@@ -47,6 +57,8 @@ export class SimulationEngine {
   readonly region: WorldRegion;
   private readonly dt: number;
   private readonly authProvider: (playerId: string) => ValidatorContext;
+  private readonly environs?: EnvironsState;
+  private readonly enableEnvirons: boolean;
   private pending: PlayerIntent[] = [];
   private eventLog: GameEvent[] = [];
   private eventSeq = 0;
@@ -55,6 +67,8 @@ export class SimulationEngine {
     this.region = opts.region;
     this.dt = opts.dt ?? 0.1; // default 10 ticks/sec
     this.authProvider = opts.authProvider;
+    this.environs = opts.environs;
+    this.enableEnvirons = opts.enableEnvirons ?? !!opts.environs;
   }
 
   /** Enqueue a client intent for the NEXT tick. */
@@ -94,6 +108,15 @@ export class SimulationEngine {
 
     this.integratePhysics();
     this.decrementCooldowns();
+    // Cosmic environs per tick (Newton/Kepler, D-020) — deterministic, authoritative
+    if (this.enableEnvirons && this.environs) {
+      integrateEnvirons(this.environs);
+      const bodies = getBodiesArray(this.environs);
+      const collisions = checkCollisions(this.region, bodies);
+      for (const c of collisions) this.log("collision", "env", { bodyId: c.bodyId, damage: c.damage, destroyed: c.destroyed });
+      const thermals = computeThermal(this.region, bodies.filter((b) => b.kind === "star"));
+      for (const t of thermals) if (t.overheat) this.log("thermal_overheat", "env", { vesselId: t.vesselId, temperature: t.temperature });
+    }
     this.region.advanceTick();
 
     return {
@@ -126,17 +149,34 @@ export class SimulationEngine {
   private applyIntent(intent: PlayerIntent, ctx: ValidatorContext): void {
     const entity = this.region.get(intent.entityId);
     if (!entity) return;
+    // Governance: no player pause, safe-zone check for combat
+    try { assertNotPaused(); } catch { return; }
     switch (intent.type) {
       case "move": {
         const to = intent.payload as unknown as Vec3;
+        // Block move if in safe-zone and trying to leave? — governed by validator, not here
         moveToward(entity, to, this.dt);
         break;
       }
       case "attack": {
         if (entity.kind === "vessel") {
+          // Safe-zone: station protects
+          if (isInSafeZone(this.region, entity.position)) return;
           applyCombatIntent(this.region, entity, intent, (meta) => {
             this.log("combat", intent.playerId, { entityId: entity.id, ...meta });
           });
+        }
+        break;
+      }
+      case "activate_capability": {
+        if (entity.kind === "vessel") {
+          const chk = canActivate(entity.id);
+          if (!chk.ok) {
+            this.log("capability_rejected", intent.playerId, { entityId: entity.id, reason: chk.reason });
+            return;
+          }
+          const res = activateCapability(entity.id);
+          this.log("capability_activated", intent.playerId, { entityId: entity.id, activationsUsed: res.cap?.activationsUsed });
         }
         break;
       }
