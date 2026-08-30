@@ -126,7 +126,7 @@ function json(data) {
 }
 
 async function withClone(repoUrl, branch, fn) {
-  const clone = await cloneRepository({ url: repoUrl, branch });
+  const clone = await cloneRepository({ repoUrl, branch });
   try {
     return await fn(clone.localPath);
   } finally {
@@ -135,10 +135,27 @@ async function withClone(repoUrl, branch, fn) {
 }
 
 function resolveFile(moduleId, repository) {
-  const mod = repository.getModuleById(moduleId)
-    ?? repository.getModuleByPath(moduleId);
-  if (!mod) throw new Error("Module not found: " + moduleId);
-  return mod;
+  let mod = repository.getModule?.(moduleId);
+  if (mod) return mod;
+  const normalized = moduleId.replace(/^\.\//, "").replace(/^\//, "");
+  if (normalized !== moduleId) {
+    mod = repository.getModule?.(normalized);
+    if (mod) return mod;
+  }
+  const all = repository.getAllModules?.() ?? [];
+  mod = all.find((m) => m.id === moduleId || m.file?.relativePath === moduleId || m.file?.relativePath === normalized);
+  if (mod) return mod;
+  throw new Error("Module not found: " + moduleId + " (tried '" + moduleId + "'" + (normalized !== moduleId ? " and '" + normalized + "'" : "") + ")");
+}
+
+function resolveImpactModuleId(repository, raw) {
+  if (!raw) return raw;
+  if (repository.getModule?.(raw)) return raw;
+  const normalized = raw.replace(/^\.\//, "").replace(/^\//, "");
+  if (normalized !== raw && repository.getModule?.(normalized)) return normalized;
+  const all = repository.getAllModules?.() ?? [];
+  const found = all.find((m) => m.id === raw || m.id === normalized || m.file?.relativePath === raw || m.file?.relativePath === normalized);
+  return found ? found.id : raw;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -481,21 +498,30 @@ async function handleTool(name, args) {
 
     case "impact": {
       const r = await doAnalyze(args);
+      const mid = resolveImpactModuleId(r.repository, args.moduleId);
       return json({
-        tree: buildImpactTree(r.repository, args.moduleId),
-        affectedFiles: calculateAffectedFiles(r.repository, args.moduleId),
-        affectedRoutes: calculateAffectedRoutes(r.repository, args.moduleId),
+        requestedModuleId: args.moduleId,
+        resolvedModuleId: mid,
+        tree: buildImpactTree(r.repository, mid),
+        affectedFiles: calculateAffectedFiles(r.repository, mid),
+        affectedRoutes: calculateAffectedRoutes(r.repository, mid),
       });
     }
 
     case "impact_consumers": {
       const r = await doAnalyze(args);
-      return json(traceConsumers(r.repository, args.moduleId));
+      const mid = resolveImpactModuleId(r.repository, args.moduleId);
+      const result = traceConsumers(r.repository, mid);
+      if (result.notFound) return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid, hint: "Module not found" });
+      return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid });
     }
 
     case "impact_dependencies": {
       const r = await doAnalyze(args);
-      return json(traceDependencies(r.repository, args.moduleId));
+      const mid = resolveImpactModuleId(r.repository, args.moduleId);
+      const result = traceDependencies(r.repository, mid);
+      if (result.notFound) return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid, hint: "Module not found" });
+      return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid });
     }
 
     case "security": {
@@ -556,13 +582,18 @@ async function handleTool(name, args) {
     case "file_info": {
       const r = await doAnalyze(args);
       const mod = resolveFile(args.filePath, r.repository);
+      const imports = (mod.resolvedImports ?? []).map((i) => ({ source: i.moduleId, names: i.namedImports, kind: i.kind, line: i.line }));
+      const importView = imports.length ? imports : (mod.imports ?? []).map((id) => ({ source: id, names: [] }));
       return json({
         moduleId: mod.id, filePath: mod.file.relativePath,
-        exports: mod.exports.map(e => ({ name: e.name, kind: e.kind })),
-        imports: mod.imports.map(i => ({ source: i.source, names: i.names })),
-        calls: mod.calls.map(c => c.name),
+        exports: mod.exports.map(e => ({ name: e.name, kind: e.kind, line: e.line })),
+        imports: importView,
+        calls: mod.calls.map(c => ({ calleeName: c.calleeName, moduleId: c.moduleId, line: c.line })),
+        callsLegacy: mod.calls.map(c => c.calleeName),
         dependencies: listDependencyTargets(r.repository, mod.id),
         consumers: listDirectConsumerTargets(r.repository, mod.id),
+        importedBy: mod.importedBy,
+        calledBy: mod.calledBy,
       });
     }
 
