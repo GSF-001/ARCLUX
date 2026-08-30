@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-30 (transport terpisah + game wire — no dummy, blueprint full; PR #600).
+Update terakhir: 2026-08-30 (Phase 2 full — cosmic environs + collision + thermics + V4 + V6 + safe-zone + transport; PR #601).
 
 
 ---
@@ -144,24 +144,23 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #597 ✅ netcode konsolidasi — HTTP + in-process dalam 1 module (fix duplicate) — SUDJAH
 ### PR #598 ✅ MCP repair — file_info & impact (getModule fix) — SUDJAH
 ### PR #600 ✅ game wire — HttpTransport dynamic ARCLUX_GAME_PORT + three.js scene — SUDJAH
+### PR #601 ✅ transport terpisah — `transport/*` (Transport/InProcess/Http + Factory, re-export netcode, no dummy) — SUDJAH
+### PR #602 ✅ Phase 2 full — cosmic environs + collision + thermics + V4 + V6 + safe-zone — SUDJAH
 ### PR berikutnya (urutan)
-- [x] transport terpisah — `transport/*` (Transport/InProcess/Http + Factory, re-export netcode, no dummy) — IN PROGRESS
+- [x] transport terpisah — SELESAI
+- [x] Cosmic environs: `environs.ts` — SELESAI
+- [x] Cosmic collision: `collision.ts` — SELESAI
+- [x] Physics thermal: `thermics.ts` — SELESAI
+- [x] V4 special capability: `capability.ts` — SELESAI
+- [x] dynamic safe-zone / governance — `governance.ts` — SELESAI
+- [x] V6 Persistent world — `persistence.ts` + `governance.ts` — SELESAI
 - [ ] `apps/game`: bootstrap Electron polish + 3D LOD
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
-- [ ] dynamic safe-zone / governance state (blueprint 06 §13-16) — modifikasi validator
-- [ ] V4 special capability: batas 2 kapal induk + limited activation 3x + depletion
-      (07 §5/§7-9/§17/§21) — perpanjang validator + simulation
 - [ ] V4 component-based capability: usage/component_condition, event log
       activate_special_capability (07 §10/§22, reuse 03 I.8 replay)
 - [ ] V4 provenance lineage: component survive ship/destruction (07 §13-15, reuse
       `packages/provenance`)
 - [ ] V5 Universal Cockpit: capability registry + HUD discovery (01 §20, renderer)
-- [ ] V6 Persistent world: load→reconstruct region (regionFromState)→resume (08 §13,
-      reuse persistence.ts); no player-initiated pause (D-014)
-- [ ] Cosmic environs: `environs.ts` orbit integrator deterministik per tick +
-      `SystemBodies[]` (star/planet/moon/asteroid/backdrop) (01 §2.3, arsitektur)
-- [ ] Cosmic collision: `collision.ts` tabrakan vessel vs body COLLIDABLE → damage
-      subsystem (reuse 03 I.2/I.7/I.9); cukup parah → wreckage (04)
 - [ ] Cosmic event: `cosmic-event.ts` generator acak (meteor shower, badai bintang /
       musim berbasis orbit, aurora, puing anomali) → event + replay (03 I.8)
 - [ ] Cosmic render: renderer draw planet/moon (fase lunar), belt, meteor, backdrop
