@@ -7,20 +7,39 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // src/renderer/renderer.ts — bootstrap renderer (three scene) di browser context.
-//
-// 🚧 SCAFFOLD. TODO implementasi di §TODOS.
 
-import { initScene3D } from "./scene3d";
+import { initScene3D, type Scene3D } from "./scene3d";
+import { connectNet, type NetHandle } from "./net";
 
-export function bootstrapRenderer(): void {
-  // TODO(renderer)[scene]  new WebGLRenderer → append ke #app
-  // TODO(renderer)[loop]    requestAnimationFrame + controls (orbit)
-  // TODO(renderer)[net]     konek ke net.ts: kirim intent, terima events, update scene
-  const scene = initScene3D();
-  void scene;
+export interface RendererHandle {
+  scene: Scene3D;
+  net: NetHandle;
+  dispose(): void;
 }
 
-// Panggil di module bootstrap (renderer tidak punya node entry).
+export function bootstrapRenderer(): RendererHandle {
+  const scene = initScene3D();
+  const net = connectNet();
+
+  // Wire snapshot → scene (server-authoritative, D-008)
+  const stop = net.onState((region) => {
+    // RegionSnapshot (from HTTP) is { regionId, tick, entities: [] } — adapt to RegionState shape for scene
+    const adapted: any = {
+      regionId: (region as any).regionId,
+      tick: (region as any).tick,
+      entities: new Map((region as any).entities?.map?.((e: any) => [e.id, e]) ?? []),
+    };
+    scene.renderRegion(adapted);
+  });
+
+  const dispose = () => { stop(); scene.dispose(); };
+
+  // Expose for manual control in devtools
+  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net };
+
+  return { scene, net, dispose };
+}
+
 if (typeof document !== "undefined") {
   bootstrapRenderer();
 }
