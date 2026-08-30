@@ -154,6 +154,11 @@ net), `index.ts`, `package.json`. **Arah**:
 - [x] V4 special capability: `capability.ts` — SELESAI
 - [x] dynamic safe-zone / governance — `governance.ts` — SELESAI
 - [x] V6 Persistent world — `persistence.ts` + `governance.ts` — SELESAI
+- [x] Cosmic event generator: `cosmicEvent.ts` (meteor shower, solar storm, aurora) — SELESAI
+- [x] V5 Universal Cockpit: `cockpit.ts` (capability registry + HUD discovery) — SELESAI
+- [x] Intel/sharing: `intel.ts` (D-021 social identity) — SELESAI
+- [x] 2-teleport mobility: `teleport.ts` (recall + gate transit, D-022) — SELESAI
+- [x] Universal Baseline: `baseline.ts` (D-019 gravity immunity) — SELESAI
 - [ ] `apps/game`: bootstrap Electron polish + 3D LOD
 - [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
 - [ ] V4 component-based capability: usage/component_condition, event log
