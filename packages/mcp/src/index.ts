@@ -204,7 +204,7 @@ function json(data: unknown) {
 }
 
 async function withClone(repoUrl: string, branch: string | undefined, fn: (localPath: string) => Promise<any>) {
-  const clone = await cloneRepository({ url: repoUrl, branch });
+  const clone = await cloneRepository({ repoUrl, branch });
   try {
     return await fn(clone.localPath);
   } finally {
@@ -213,14 +213,34 @@ async function withClone(repoUrl: string, branch: string | undefined, fn: (local
 }
 
 function resolveFile(moduleId: string, repository: any) {
-  const mod = repository.getModuleById(moduleId)
-    ?? repository.getModuleByPath(moduleId);
-  if (!mod) throw new Error("Module not found: " + moduleId);
-  return mod;
+  // Repository API is getModule(id) where id === file.relativePath (POSIX, e.g. "packages/gameserver/netcode.ts")
+  // Support direct id, normalized path, and linear fallback for robustness.
+  let mod = repository.getModule?.(moduleId);
+  if (mod) return mod;
+  const normalized = moduleId.replace(/^\.\//, "").replace(/^\//, "");
+  if (normalized !== moduleId) {
+    mod = repository.getModule?.(normalized);
+    if (mod) return mod;
+  }
+  // Fallback: search by file.relativePath (handles rare id != path cases)
+  const all = repository.getAllModules?.() ?? [];
+  mod = all.find((m: any) => m.id === moduleId || m.file?.relativePath === moduleId || m.file?.relativePath === normalized);
+  if (mod) return mod;
+  throw new Error("Module not found: " + moduleId + " (tried '" + moduleId + "'" + (normalized !== moduleId ? " and '" + normalized + "'" : "") + ")");
 }
 
 function getAllModules(repository: any) {
   return repository.getAllModules ? repository.getAllModules() : [];
+}
+
+function resolveImpactModuleId(repository: any, raw: string): string {
+  if (!raw) return raw;
+  if (repository.getModule?.(raw)) return raw;
+  const normalized = raw.replace(/^\.\//, "").replace(/^\//, "");
+  if (normalized !== raw && repository.getModule?.(normalized)) return normalized;
+  const all = repository.getAllModules?.() ?? [];
+  const found = all.find((m: any) => m.id === raw || m.id === normalized || m.file?.relativePath === raw || m.file?.relativePath === normalized);
+  return found ? found.id : raw;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -713,8 +733,10 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     // ── Impact ─────────────────────────────────────────────────────
     case "impact": {
       const r = await doAnalyze(args);
-      const mid = args.moduleId as string;
+      const mid = resolveImpactModuleId(r.repository, args.moduleId as string);
       return json({
+        requestedModuleId: args.moduleId,
+        resolvedModuleId: mid,
         tree: buildImpactTree(r.repository, mid),
         affectedFiles: calculateAffectedFiles(r.repository, mid),
         affectedRoutes: calculateAffectedRoutes(r.repository, mid),
@@ -722,11 +744,22 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     }
     case "impact_consumers": {
       const r = await doAnalyze(args);
-      return json(traceConsumers(r.repository, args.moduleId as string));
+      const mid = resolveImpactModuleId(r.repository, args.moduleId as string);
+      const result = traceConsumers(r.repository, mid);
+      // Enrich notFound with hint
+      if (result.notFound) {
+        return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid, hint: "Module not found — try file_info or analyze to list available modules" });
+      }
+      return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid });
     }
     case "impact_dependencies": {
       const r = await doAnalyze(args);
-      return json(traceDependencies(r.repository, args.moduleId as string));
+      const mid = resolveImpactModuleId(r.repository, args.moduleId as string);
+      const result = traceDependencies(r.repository, mid);
+      if (result.notFound) {
+        return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid, hint: "Module not found — try file_info or analyze to list available modules" });
+      }
+      return json({ ...result, requestedModuleId: args.moduleId, resolvedModuleId: mid });
     }
 
     // ── Security ───────────────────────────────────────────────────
@@ -790,13 +823,21 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     case "file_info": {
       const r = await doAnalyze(args);
       const mod = resolveFile(args.filePath as string, r.repository);
+      // ModuleInfo.imports is string[] (resolved moduleIds); identifier detail is in resolvedImports
+      const imports = (mod.resolvedImports ?? []).map((i: any) => ({ source: i.moduleId, names: i.namedImports, kind: i.kind, line: i.line }));
+      // Fallback to raw imports if resolvedImports empty (external-only deps)
+      const importView = imports.length ? imports : (mod.imports ?? []).map((id: string) => ({ source: id, names: [] as string[] }));
       return json({
         moduleId: mod.id, filePath: mod.file.relativePath,
-        exports: mod.exports.map((e: any) => ({ name: e.name, kind: e.kind })),
-        imports: mod.imports.map((i: any) => ({ source: i.source, names: i.names })),
-        calls: mod.calls.map((c: any) => c.name),
+        exports: mod.exports.map((e: any) => ({ name: e.name, kind: e.kind, line: e.line })),
+        imports: importView,
+        calls: mod.calls.map((c: any) => ({ calleeName: c.calleeName, moduleId: c.moduleId, line: c.line })),
+        // keep legacy string arrays for backward compat as well
+        callsLegacy: mod.calls.map((c: any) => c.calleeName),
         dependencies: listDependencyTargets(r.repository, mod.id),
         consumers: listDirectConsumerTargets(r.repository, mod.id),
+        importedBy: mod.importedBy,
+        calledBy: mod.calledBy,
       });
     }
 
@@ -919,7 +960,7 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     // ── Rules (FIXED: was passing [] before, now passes ALL_RULES) ──
     case "run_rules": {
       const r = await doAnalyze(args);
-      const frameworks = (args.frameworks as string[]) ?? r.meta.frameworks ?? [];
+      const frameworks = (args.frameworks as string[]) ?? (r.meta as any).frameworks ?? r.meta.detectedFrameworks ?? [];
       const violations = runRules(r.repository, ALL_RULES, frameworks);
       return json({ frameworks, violations, count: violations.length, rulesLoaded: ALL_RULES.length });
     }
