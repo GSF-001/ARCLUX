@@ -145,7 +145,7 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #598 ✅ MCP repair — file_info & impact (getModule fix) — SUDJAH
 ### PR #600 ✅ game wire — HttpTransport dynamic ARCLUX_GAME_PORT + three.js scene — SUDJAH
 ### PR #601 ✅ transport terpisah — `transport/*` (Transport/InProcess/Http + Factory, re-export netcode, no dummy) — SUDJAH
-### PR #602 ✅ Phase 2 full — cosmic environs + collision + thermics + V4 + V6 + safe-zone — SUDJAH
+### PR #602 ✅ Phase 2 full — cosmic environs + collision + thermics + V4 + V6 + safe-zone — SUDAH
 ### PR berikutnya (urutan)
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs: `environs.ts` — SELESAI
