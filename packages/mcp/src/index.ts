@@ -793,6 +793,17 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     case "search": {
       const r = await doAnalyze(args);
       const idx = buildSearchIndex(r.repository);
+      // Empty index is ambiguous — a legit no-match looks identical to a
+      // failed parse. Surface it so consumers don't mistake a broken
+      // parser for "nothing found" (#617).
+      if (idx.entries.length === 0) {
+        return json({
+          hits: [],
+          indexedFiles: 0,
+          totalModules: r.repository.modules.length,
+          notice: "No files were indexed — this is a parse failure (likely WASM/tree-sitter runtime), not a genuine empty result. Run analyze or fix the parser.",
+        });
+      }
       return json(search(idx, args.query as string, { limit: (args.limit as number) ?? 50 }));
     }
 
