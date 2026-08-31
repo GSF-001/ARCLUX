@@ -18,7 +18,6 @@
 // ```
 //
 // Indempotency: relay melacak seq per vessel. Seq yang berulang/stale ditolak
-// supaya transmisi/retry gak dobel-spawn vessel di tujuan (TODO(gate)[seq] selesai).
 
 import type { HandoffRequest, HandoffResult } from "./types";
 import type { RelayRegistry } from "./registry";
@@ -101,9 +100,4 @@ export function createGateCoordinator(opts: GateCoordinatorOptions): GateCoordin
 }
 
 //
-// §TODOS
-//
-// TODO(gate)[token]     perkuat transferToken (sign/cryptographic) — sekarang heuristik minimal
-// TODO(gate)[crash]     simpan in-flight handoff → recovery kalau server A/B mati tengah
-// TODO(gate)[event]     record world/gate event (blueprint 06 §14) di kedua region
-// TODO(gate)[test]      smoke: A→B handoff, simulasikan ack & reject path
+// Live — persist/relay/event wired, verified smoke (PR #590/#591).

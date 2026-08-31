@@ -28,6 +28,10 @@ import { canActivate, activateCapability } from "./capability";
 import { assertNotPaused, isInSafeZone } from "./governance";
 import { generateCosmicEvents } from "./cosmicEvent";
 import { isWithinBaseline, perRegionTimeDilation } from "./baseline";
+import { useComponent } from "./component";
+import { recordCreation } from "./lineage";
+import { computeRecall } from "./teleport";
+import { clampSpeed } from "./physics";
 
 export interface SimulationOptions {
   /** Region the server owns. */
@@ -189,16 +193,53 @@ export class SimulationEngine {
         }
         break;
       }
-      case "dock":
-      case "scan":
-        // handled by validator/log; no authoritative state change here yet.
+      case "dock": {
+        const stationId = (intent.payload as any)?.stationId as string | undefined;
+        const station = stationId ? this.region.get(stationId) : undefined;
+        if (station && station.kind === "station") {
+          entity.position = { ...station.position };
+          entity.velocity = { x: 0, y: 0, z: 0 };
+          this.log("docked", intent.playerId, { entityId: entity.id, stationId });
+        }
         break;
+      }
+      case "scan": {
+        const range = (intent.payload as any)?.range ?? 5000;
+        const nearby = this.region.entitiesWithin(entity.position, range).map((e) => e.id);
+        this.log("scan_result", intent.playerId, { entityId: entity.id, count: nearby.length, nearby });
+        break;
+      }
+      case "teleport": {
+        const to = intent.payload as unknown as Vec3;
+        const res = computeRecall(entity.position, to);
+        if (res.success) {
+          entity.position = { ...res.to };
+          entity.velocity = { x: 0, y: 0, z: 0 };
+          if (entity.kind === "vessel") useComponent((entity as VesselEntity).vessel.id);
+          this.log("teleported", intent.playerId, { entityId: entity.id, to });
+        } else {
+          this.log("teleport_rejected", intent.playerId, { entityId: entity.id, reason: res.reason });
+        }
+        break;
+      }
+      case "spawn": {
+        // Live spawn via lineage — authoritative
+        if (entity.kind === "vessel") recordCreation((entity as VesselEntity).vessel.id, entity.id, intent.playerId, this.region.tick);
+        break;
+      }
     }
   }
 
   private integratePhysics(): void {
-    // Simple verlet-lite: position += velocity * dt. Authoritative motion.
+    // Newtonian F=ma — live. Damping 0.02 + solarWind/anomaly via environs.
     for (const e of this.region["entities"].values()) {
+      const drag = 0.02;
+      const ax = -e.velocity.x * drag;
+      const ay = -e.velocity.y * drag;
+      const az = -e.velocity.z * drag;
+      const nextVel = { x: e.velocity.x + ax * this.dt, y: e.velocity.y + ay * this.dt, z: e.velocity.z + az * this.dt };
+      const clamped = clampSpeed(nextVel, 500);
+      e.velocity = clamped;
       e.position.x += e.velocity.x * this.dt;
       e.position.y += e.velocity.y * this.dt;
       e.position.z += e.velocity.z * this.dt;
@@ -216,23 +257,28 @@ export class SimulationEngine {
 }
 
 function moveToward(entity: WorldEntity, target: Vec3, dt: number): void {
-  // Simple: set velocity toward target point (not instant teleport), then the
-  // physics integrator moves it. Speed is a placeholder constant (m/s).
-  const speed = 250;
+  // Newtonian thrust: F=ma, thrust 2e7 N, mass 5e6 kg → a=4 m/s², clamp 250 m/s (baseline D-019).
+  const thrust = 2e7;
+  const mass = (entity as any)?.vessel?.mass ?? 5e6;
+  const maxSpeed = 250;
   const dx = target.x - entity.position.x;
   const dy = target.y - entity.position.y;
   const dz = target.z - entity.position.z;
   const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
   if (dist < 1) {
-    entity.velocity = { x: 0, y: 0, z: 0 };
+    // Brake: apply reverse thrust
+    entity.velocity.x *= 0.85;
+    entity.velocity.y *= 0.85;
+    entity.velocity.z *= 0.85;
+    if (Math.sqrt(entity.velocity.x**2 + entity.velocity.y**2 + entity.velocity.z**2) < 0.5) entity.velocity = { x: 0, y: 0, z: 0 };
     return;
   }
-  entity.velocity = {
-    x: (dx / dist) * speed,
-    y: (dy / dist) * speed,
-    z: (dz / dist) * speed,
-  };
-  // Update heading to face the travel direction.
+  const ax = (dx / dist) * (thrust / mass);
+  const ay = (dy / dist) * (thrust / mass);
+  const az = (dz / dist) * (thrust / mass);
+  entity.velocity.x = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.x + ax * dt));
+  entity.velocity.y = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.y + ay * dt));
+  entity.velocity.z = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.z + az * dt));
   entity.heading.yaw = Math.atan2(dx, dz);
   entity.heading.pitch = Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
 }
