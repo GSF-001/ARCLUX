@@ -192,7 +192,7 @@ const ALL_EXTENSIONS = [...TS_EXTENSIONS, ...TREE_SITTER_EXTENSIONS];
 function analyzeOpts(args: Record<string, unknown>) {
   if (args.localPath) return { localPath: args.localPath as string };
   if (args.repoUrl) return { repoUrl: args.repoUrl as string, branch: args.branch as string | undefined };
-  throw new Error("Provide repoUrl or localPath");
+  return { localPath: process.cwd() };
 }
 
 async function doAnalyze(args: Record<string, unknown>) {
@@ -862,10 +862,10 @@ async function handleTool(name: string, args: Record<string, unknown>) {
 
       // TS/JS files — use the TypeScript Compiler API (no WASM needed).
       let fileContent = content;
-      if (!fileContent) {
-        const fs = await import("node:fs/promises");
-        const basePath = args.localPath as string;
-        if (!basePath) throw new Error("localPath required when content is omitted");
+        if (!fileContent) {
+          const fs = await import("node:fs/promises");
+          const basePath = (args.localPath as string) ?? process.cwd();
+          if (!basePath) throw new Error("localPath required when content is omitted");
         const fullPath = basePath.startsWith("/") ? basePath + "/" + filePath : basePath + "/" + filePath;
         fileContent = await fs.readFile(fullPath, "utf-8");
       }
