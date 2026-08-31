@@ -32,6 +32,7 @@ import { useComponent } from "./component";
 import { recordCreation } from "./lineage";
 import { computeRecall } from "./teleport";
 import { clampSpeed } from "./physics";
+import { recordTickTrace } from "./observability";
 
 export interface SimulationOptions {
   /** Region the server owns. */
@@ -110,6 +111,7 @@ export class SimulationEngine {
       this.applyIntent(intent, ctx);
     }
 
+    const start = Date.now();
     this.integratePhysics();
     this.decrementCooldowns();
     // Cosmic environs per tick (Newton/Kepler, D-020) — deterministic, authoritative + strengthened
@@ -127,8 +129,11 @@ export class SimulationEngine {
       for (const e of this.region["entities"].values()) {
         const speed = Math.sqrt(e.velocity.x * e.velocity.x + e.velocity.y * e.velocity.y + e.velocity.z * e.velocity.z);
         if (!isWithinBaseline(speed)) this.log("baseline_breach", e.id, { speed, region: this.region.regionId });
-        void perRegionTimeDilation(this.region.regionId, this.region.tick, speed); // hook ready for tick scaling
+        void perRegionTimeDilation(this.region.regionId, this.region.tick, speed);
       }
+      // Anti-cheat: stateHash per tick + OTEL trace
+      for (const e of this.region["entities"].values()) if (e.kind === "vessel") this.log("state_hash", e.id, { hash: computeEntityHash(e as VesselEntity) });
+      recordTickTrace({ tick: this.region.tick, regionId: this.region.regionId, durationMs: Date.now() - start, entityCount: this.region.snapshot().entities.length, eventCount: accepted.length + rejected.length, timestamp: new Date().toISOString() });
     }
     this.region.advanceTick();
 
@@ -283,9 +288,15 @@ function moveToward(entity: WorldEntity, target: Vec3, dt: number): void {
   entity.heading.pitch = Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
 }
 
-/** Compute a deterministic state hash for a vessel (Layer I.5 fingerprint). */
+/** Compute a deterministic state hash for a vessel (Layer I.5 fingerprint) — Phase C anti-cheat: full state + tick. */
 export function computeEntityHash(e: VesselEntity): string {
   const { x, y, z } = e.position;
+  const { x: vx, y: vy, z: vz } = e.velocity;
   const sys = e.vessel.systems.map((s) => `${s.id}:${Math.round(s.health)}`).join(",");
-  return `${e.id}|${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}|${sys}`;
+  const cd = Object.entries(e.cooldowns).map(([k,v]) => `${k}:${v}`).join(",");
+  return `${e.id}|${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}|${vx.toFixed(1)},${vy.toFixed(1)},${vz.toFixed(1)}|${sys}|${cd}`;
+}
+
+export function verifyClientPrediction(serverHash: string, clientHash: string): boolean {
+  return serverHash === clientHash;
 }

@@ -7,3 +7,4 @@
 export * from "./Transport";
 export * from "./InProcessTransport";
 export * from "./HttpTransport";
+export * from "./WebSocketTransport";

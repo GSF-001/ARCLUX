@@ -14,9 +14,10 @@ export interface TickSchedulerOptions {
   onError?: (e: unknown) => void;
 }
 
-export function createTickScheduler(opts: TickSchedulerOptions) {
+export function createTickScheduler(opts: TickSchedulerOptions & { snapshotEvery?: number; onSnapshot?: (tick: number) => void | Promise<void> }) {
   const tickMs = opts.tickMs ?? 100;
   const maxCatchUp = opts.maxCatchUp ?? 5;
+  const every = opts.snapshotEvery ?? 100;
   let tick = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let running = false;
@@ -29,12 +30,12 @@ export function createTickScheduler(opts: TickSchedulerOptions) {
     let catchUp = 0;
     while (elapsed >= tickMs && catchUp < maxCatchUp) {
       tick++;
-      try { await opts.onTick(tick, tickMs / 1000); } catch (e) { opts.onError?.(e); }
+      try { await opts.onTick(tick, tickMs / 1000); if (tick % every === 0) await opts.onSnapshot?.(tick); } catch (e) { opts.onError?.(e); }
       elapsed -= tickMs;
       last += tickMs;
       catchUp++;
     }
-    if (elapsed >= tickMs) last = now; // drop excess if lag too high
+    if (elapsed >= tickMs) last = now;
     timer = setTimeout(loop, Math.max(0, tickMs - (Date.now() - last)));
   };
 
