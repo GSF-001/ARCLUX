@@ -28,6 +28,8 @@ import { checkCollisions } from "./collision";
 import { computeThermal } from "./thermics";
 import { canActivate, activateCapability } from "./capability";
 import { assertNotPaused, isInSafeZone } from "./governance";
+import { generateCosmicEvents } from "./cosmicEvent";
+import { isWithinBaseline, perRegionTimeDilation } from "./baseline";
 
 export interface SimulationOptions {
   /** Region the server owns. */
@@ -108,7 +110,7 @@ export class SimulationEngine {
 
     this.integratePhysics();
     this.decrementCooldowns();
-    // Cosmic environs per tick (Newton/Kepler, D-020) — deterministic, authoritative
+    // Cosmic environs per tick (Newton/Kepler, D-020) — deterministic, authoritative + strengthened
     if (this.enableEnvirons && this.environs) {
       integrateEnvirons(this.environs);
       const bodies = getBodiesArray(this.environs);
@@ -116,6 +118,15 @@ export class SimulationEngine {
       for (const c of collisions) this.log("collision", "env", { bodyId: c.bodyId, damage: c.damage, destroyed: c.destroyed });
       const thermals = computeThermal(this.region, bodies.filter((b) => b.kind === "star"));
       for (const t of thermals) if (t.overheat) this.log("thermal_overheat", "env", { vesselId: t.vesselId, temperature: t.temperature });
+      // Cosmic events: solarWind + anomaly gravity — blueprint 01 §2.5 strengthening
+      const events = generateCosmicEvents(this.environs, this.region.regionId, this.region.tick);
+      for (const ev of events) this.log(`cosmic_${ev.kind}`, "env", { severity: ev.severity, payload: ev.payload });
+      // Baseline per-region time dilation — D-019
+      for (const e of this.region["entities"].values()) {
+        const speed = Math.sqrt(e.velocity.x * e.velocity.x + e.velocity.y * e.velocity.y + e.velocity.z * e.velocity.z);
+        if (!isWithinBaseline(speed)) this.log("baseline_breach", e.id, { speed, region: this.region.regionId });
+        void perRegionTimeDilation(this.region.regionId, this.region.tick, speed); // hook ready for tick scaling
+      }
     }
     this.region.advanceTick();
 

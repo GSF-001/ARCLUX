@@ -32,3 +32,5 @@ export * from "./cockpit";
 export * from "./intel";
 export * from "./teleport";
 export * from "./baseline";
+export * from "./physics";
+export * from "./regionState";
