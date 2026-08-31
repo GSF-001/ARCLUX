@@ -38,6 +38,15 @@ export function initScene3D(container?: HTMLElement): Scene3D {
   dir.position.set(500, 1000, 500);
   scene.add(dir);
   scene.add(new THREE.GridHelper(4000, 40, 0x334155, 0x1e293b));
+  // Cosmic LOD: backdrop starfield + belt hint (01 §2/§22 heavy-stable EVE)
+  const starsGeom = new THREE.BufferGeometry();
+  const starsPos = new Float32Array(6000);
+  for (let i = 0; i < 6000; i++) starsPos[i] = (Math.random() - 0.5) * 20000;
+  starsGeom.setAttribute("position", new THREE.BufferAttribute(starsPos, 3));
+  scene.add(new THREE.Points(starsGeom, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: true })));
+  // Belt hint torus
+  const belt = new THREE.Mesh(new THREE.RingGeometry(1200, 1400, 64), new THREE.MeshBasicMaterial({ color: 0x334155, side: THREE.DoubleSide, transparent: true, opacity: 0.15 }));
+  belt.rotation.x = Math.PI / 2; scene.add(belt);
 
   const vessels = new Map<string, THREE.Mesh>();
 

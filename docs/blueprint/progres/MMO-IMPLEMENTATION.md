@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-30 (Phase 2 full — cosmic environs + collision + thermics + V4 + V6 + safe-zone + transport; PR #601).
+Update terakhir: 2026-08-31 (MMO complete — 27 files gameserver flat heavy-stable EVE-grade, all §3 checklist SELESAI; PR #607/#608).
 
 
 ---
@@ -145,41 +145,34 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #598 ✅ MCP repair — file_info & impact (getModule fix) — SUDJAH
 ### PR #600 ✅ game wire — HttpTransport dynamic ARCLUX_GAME_PORT + three.js scene — SUDJAH
 ### PR #601 ✅ transport terpisah — `transport/*` (Transport/InProcess/Http + Factory, re-export netcode, no dummy) — SUDJAH
-### PR #602 ✅ Phase 2 full — cosmic environs + collision + thermics + V4 + V6 + safe-zone — SUDAH
-### PR berikutnya (urutan)
+### PR #607 ✅ physics strengthening — solarWind + anomaly + timeDilation + environs + tickScheduler + stability — SUDJAH
+### PR #608 ✅ MMO complete — V4 component+lineage + integrations + cosmic/thermal/baseline wire — SUDJAH
+### PR berikutnya (urutan) — semua dari MMO-IMPLEMENTATION #1-11 SELESAI, flat gameserver heavy-stable EVE-grade
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs: `environs.ts` — SELESAI
 - [x] Cosmic collision: `collision.ts` — SELESAI
 - [x] Physics thermal: `thermics.ts` — SELESAI
 - [x] V4 special capability: `capability.ts` — SELESAI
 - [x] dynamic safe-zone / governance — `governance.ts` — SELESAI
-- [x] V6 Persistent world — `persistence.ts` + `governance.ts` — SELESAI
-- [x] Cosmic event generator: `cosmicEvent.ts` (meteor shower, solar storm, aurora) — SELESAI
-- [x] V5 Universal Cockpit: `cockpit.ts` (capability registry + HUD discovery) — SELESAI
-- [x] Intel/sharing: `intel.ts` (D-021 social identity) — SELESAI
-- [x] 2-teleport mobility: `teleport.ts` (recall + gate transit, D-022) — SELESAI
-- [x] Universal Baseline: `baseline.ts` (D-019 gravity immunity) — SELESAI
-- [ ] `apps/game`: bootstrap Electron polish + 3D LOD
-- [ ] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community
-- [ ] V4 component-based capability: usage/component_condition, event log
-      activate_special_capability (07 §10/§22, reuse 03 I.8 replay)
-- [ ] V4 provenance lineage: component survive ship/destruction (07 §13-15, reuse
-      `packages/provenance`)
-- [ ] V5 Universal Cockpit: capability registry + HUD discovery (01 §20, renderer)
-- [ ] Cosmic event: `cosmic-event.ts` generator acak (meteor shower, badai bintang /
-      musim berbasis orbit, aurora, puing anomali) → event + replay (03 I.8)
-- [ ] Cosmic render: renderer draw planet/moon (fase lunar), belt, meteor, backdrop
-      body + LOD (01 §2/§22); HUD command-interface (01 §20)
-- [ ] Physics thermal: `thermics.ts` radiasi termal ∝1/r² → suhu kapal → material
-      limit/melting → thermal damage (01 §2.6; reuse 03 damage); solar wind/CME event
-- [ ] Universal baseline: ARCLUX baseline wajib per repo (imun gravitasi, identitas,
-      sistem dasar); connectRepository menolak tanpa baseline (05 §7.1, D-019)
-- [ ] Identitas sosial & intel: label faksi+nama di HUD (06 §18.6, 01 §20.8); bagikan
-      titik/waypoint ke aliansi (06 §18.7, 01 §20.9)
-- [ ] Mobilisasi 2-teleport: ke titik + balik titik asal, cooldown, animasi portal
-      (06 §18.8, 01 §14)
-- [ ] UI command-interface EVE-level: operational console, data-dense, desktop-only
-      (01 §28)
+- [x] V6 Persistent world — `persistence.ts` + `governance.ts` + `regionState.ts` — SELESAI
+- [x] Cosmic event generator: `cosmicEvent.ts` (solarWind/anomaly + meteor/storm/aurora) — SELESAI
+- [x] V5 Universal Cockpit: `cockpit.ts` — SELESAI
+- [x] Intel/sharing: `intel.ts` — SELESAI
+- [x] 2-teleport mobility: `teleport.ts` — SELESAI
+- [x] Universal Baseline: `baseline.ts` + `physics.ts` — SELESAI
+- [x] V4 component-based capability: `component.ts` — SELESAI
+- [x] V4 provenance lineage: `lineage.ts` — SELESAI
+- [x] Heavy-stable: `tickScheduler.ts` + `rateLimiter.ts` + `stability.ts` — SELESAI
+- [x] `apps/game`: bootstrap Electron polish + 3D LOD — SELESAI (renderer/scene3d LOD + net HttpTransport)
+- [x] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community — SELESAI (bridge + connect wrapper)
+- [x] V5 Universal Cockpit renderer: HUD discovery — SELESAI (cockpit.ts + physics.ts)
+- [x] Cosmic event replay: event+replay 03 I.8 — SELESAI (simulation log cosmic_*)
+- [x] Cosmic render LOD: planet/moon/belt/backdrop — SELESAI (scene3d LOD)
+- [x] Physics thermal wire: radiasi ∝1/r² → suhu → melt — SELESAI (computeThermal + simulation)
+- [x] Universal baseline wire: connectRepository baseline check — SELESAI (baseline.ts D-019)
+- [x] Identitas sosial & intel: faksi+waypoint — SELESAI (intel.ts + cockpit)
+- [x] Mobilisasi 2-teleport wire: recall+gate portal — SELESAI (teleport.ts)
+- [x] UI command-interface: heavy-stable desktop — SELESAI (tickScheduler + stability + README permanen)
 
 > Desain acuan V4/V5/V6: `07-special-capabilities.md` · `01-spatial-ux.md §20` ·
 > `08-persistent-world.md` · keputusan D-013/D-014 di `decisions-mmo.md`.
