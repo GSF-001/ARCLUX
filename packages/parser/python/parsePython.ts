@@ -6,27 +6,9 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import { createRequire } from "node:module";
-import path from "node:path";
-import { readFileSync, existsSync } from "node:fs";
 import type { LanguageParser } from "../core/ParserInterface";
+import { getTreeSitterRuntime, type TreeSitterRuntime } from "../core/treeSitterLoader";
 import type { FileInfo, ParsedFile, RawImport, RawExport } from "../../shared/types";
-
-// web-tree-sitter ships no .d.ts and cannot be module-augmented from a plain
-// .ts file (its main entry resolves to an untyped .js — see PROGRES.md
-// gotchas). We deliberately load it as untyped and keep our own type safety
-// entirely in the TSNode interface below.
-// Deliberately NOT named "require" -- Webpack's static analyzer matches on
-// the literal identifier "require" regardless of whether it is a real
-// CommonJS require or (as here) a variable from createRequire(), and tries
-// to statically bundle whatever it's called with. That breaks
-// serverExternalPackages, which only takes effect at module-resolution
-// time, after this static analysis already failed on the .wasm file below.
-// Renaming the identifier avoids triggering that analysis entirely.
-const nodeRequire = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TreeSitter: any = nodeRequire("web-tree-sitter");
-const { Parser, Language } = TreeSitter;
 
 // Minimal structural type for the parts of a web-tree-sitter node we use.
 // Avoids depending on internal/unstable type exports from the package.
@@ -42,69 +24,16 @@ export interface TSNode {
   namedChildren: (TSNode | null)[];
 }
 
-export interface PythonRuntime {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parser: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  language: any;
-}
-
-let runtimePromise: Promise<PythonRuntime> | null = null;
-
 /**
  * Loads the tree-sitter runtime + Python grammar exactly once, then reuses
- * the same Parser instance everywhere. Loading the WASM module per-call
- * would be very slow across a full repository scan (parsePython.ts below)
- * or when highlighting many files (highlightPython.ts, which imports this
- * same function so the WASM module is only ever loaded once total).
+ * the same Parser instance everywhere. Backed by the shared
+ * getTreeSitterRuntime() from treeSitterLoader, which resolves the wasm
+ * from the package location (`import.meta.url`) in addition to cwd -- so
+ * the Python grammar is found even when the CLI runs with cwd = the
+ * analyzed repository (fixes #613).
  */
-export function getPythonRuntime(): Promise<PythonRuntime> {
-  if (!runtimePromise) {
-    runtimePromise = (async () => {
-      await Parser.init();
-      const parser = new Parser();
-      // nodeRequire.resolve() (and bare require.resolve()) returns a path
-      // relative to the webpack bundle location (not a real filesystem
-      // path) when running inside Next.js's webpack runtime -- confirmed
-      // via debug logging. This has regressed multiple times (see
-      // progres/bugs.md, 2026-08-10 entries) because someone re-adds a
-      // require.resolve() call here during a later cleanup pass. DO NOT
-      // call require.resolve() or nodeRequire.resolve() anywhere in this
-      // function, for any file, including package.json.
-      //
-      // process.cwd() alone isn't reliable either -- it depends on WHERE
-      // the dev server was started from (repo root vs apps/web), and
-      // pnpm hoists tree-sitter-wasms to the monorepo root's node_modules,
-      // not apps/web's. So walk upward from process.cwd() (same algorithm
-      // Node's own module resolution uses) until node_modules/tree-sitter-wasms
-      // is found, instead of assuming a fixed relative depth.
-      function findWasmPath(): string {
-        let dir = process.cwd();
-        for (let i = 0; i < 10; i++) {
-          const candidate = path.join(
-            dir,
-            "node_modules",
-            "tree-sitter-wasms",
-            "out",
-            "tree-sitter-python.wasm"
-          );
-          if (existsSync(candidate)) return candidate;
-          const parent = path.dirname(dir);
-          if (parent === dir) break; // reached filesystem root
-          dir = parent;
-        }
-        throw new Error(
-          "Could not find tree-sitter-wasms/out/tree-sitter-python.wasm by walking up from " +
-            process.cwd()
-        );
-      }
-      const wasmPath = findWasmPath();
-      const language = await Language.load(wasmPath);
-      parser.setLanguage(language);
-      return { parser, language };
-    })();
-  }
-  return runtimePromise;
+export function getPythonRuntime(): Promise<TreeSitterRuntime> {
+  return getTreeSitterRuntime("tree-sitter-python.wasm");
 }
 
 function getLine(node: TSNode): number {

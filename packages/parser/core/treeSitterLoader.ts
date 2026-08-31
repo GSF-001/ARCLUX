@@ -18,6 +18,7 @@
 
 import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 
 const nodeRequire = createRequire(import.meta.url);
@@ -77,7 +78,10 @@ function findWasmPath(grammarFile: string): string {
   try {
     // Bundlers keep import.meta.url pointing at the emitted file; tsx
     // keeps it pointing at the source. Both walk up fine.
-    const here = path.dirname(new URL(import.meta.url).pathname);
+    // Windows: new URL(import.meta.url).pathname yields "/D:/..." with a
+    // leading slash that does not resolve on disk, so use fileURLToPath
+    // (handles file:///D:/... -> D:\...) instead (#613 suffix).
+    const here = path.dirname(fileURLToPath(import.meta.url));
     if (here && !searchRoots.includes(here)) searchRoots.push(here);
   } catch {
     /* import.meta unavailable — cwd search only */
