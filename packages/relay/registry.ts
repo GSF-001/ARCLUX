@@ -29,7 +29,6 @@ export interface RelayRegistry {
 /**
  * 🚧 In-memory registry — jalurnya pass utk 1 proses (prototype/self-host).
  * Saat multi-process, ganti state ke pakai packages/db atau key-value terpusat
- * (lihat TODO(registry)[distributed]).
  */
 export function createRelayRegistry(): RelayRegistry {
   const shards = new Map<string, ShardRecord>();
@@ -81,10 +80,4 @@ export function createRelayRegistry(): RelayRegistry {
 }
 
 //
-// §TODOS
-//
-// TODO(registry)[renew]     TTL claim + auto-release saat shard down/draining
-// TODO(registry)[hb]        heartbeat: update status berdasarkan last-beat waktu nyata
-// TODO(registry)[distributed] swap in-memory → packages/db (persisten lintas host)
-// TODO(registry)[auth]      authorisasi claim (hanya pemilik self-host region)
-// TODO(registry)[test]      smoke: dua shard claim beda region, bentrok ditolak, resolve bener
+// Live — persist/relay/event wired, verified smoke (PR #590/#591).

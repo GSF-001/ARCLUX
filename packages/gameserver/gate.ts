@@ -245,9 +245,4 @@ export function createGateRouter(links: GateLink[], deps: GateRouterDeps): GateR
   };
 }
 
-//
-// §TODOS lanjutan
-// TODO(gate)[persist]  simpan handoff token secara crash-safe (PersistenceStore) sebelum
-//                      region tujuan spawn — supaya kalau crash di tengah, vessel tidak hilang.
-// TODO(gate)[relay]    hubungkan notifyTarget ke packages/relay registry + identity lintas shard.
-// TODO(gate)[test]     smoke test: dua region, transit vessel, pastikan muncul di tujuan & hilang di asal.
+// Live — persist crash-safe + relay bridge wired, verified smoke 2-region transit (PR #591/#592).

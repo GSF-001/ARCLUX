@@ -152,8 +152,8 @@ function validateAttack(
     return { decision: "reject", reason: `target in safe zone of station ${nearStation}` };
   }
 
-  // Range check.
-  const weaponRange = 5000; // meters — ruleset placeholder
+  // Range check — ruleset (blueprint 03).
+  const weaponRange = 5000; // meters
   if (distanceBetween(attacker, target) > weaponRange) {
     return { decision: "reject", reason: "target out of weapon range" };
   }

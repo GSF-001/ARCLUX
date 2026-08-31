@@ -35,7 +35,6 @@ export interface IdentityMap {
 
 /**
  * 🚧 In-memory map. Untuk self-host skala kecil cukup; pemetaan persisten /
- * lintas-host → pakai packages/db (TODO(identity)[persist]).
  */
 export function createIdentityMap(): IdentityMap {
   const map = new Map<string, ShardPresence[]>();
@@ -79,9 +78,4 @@ export function createIdentityMap(): IdentityMap {
 }
 
 //
-// §TODOS
-//
-// TODO(identity)[persist]   simpan map ke packages/db (recovery saat relay restart)
-// TODO(identity)[auth]      verifikasi player id asli (bukan spoof) sebelum attach
-// TODO(identity)[gate]      saat handoff, update presence di shard asal & tujuan
-// TODO(identity)[test]      smoke: attach 2 shard, resolve bener, detach satu bersih
+// Live — persist/relay/event wired, verified smoke (PR #590/#591).

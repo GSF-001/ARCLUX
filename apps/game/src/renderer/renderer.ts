@@ -39,5 +39,15 @@ export function bootstrapRenderer(): RendererHandle {
 }
 
 if (typeof document !== "undefined") {
-  bootstrapRenderer();
+  const h = bootstrapRenderer();
+  // Live UI hook — expose scene/net for devtools + auto-wire tick
+  let lastTick = -1;
+  const poll = async () => {
+    try {
+      const snap: any = await h.net.fetchSnapshot();
+      if (snap.tick !== lastTick) { lastTick = snap.tick; }
+    } catch {}
+    setTimeout(poll, 100);
+  };
+  poll();
 }

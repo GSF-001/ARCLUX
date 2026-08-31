@@ -62,10 +62,9 @@ export function connectNet(url?: string): NetHandle {
   };
 
   const send = async (intent: PlayerIntent): Promise<void> => {
-    // MVP: intent diteruskan sebagai deliver handoff jika type === "spawn",
-    // else POST /intent (server harus expose — fallback: no-op poll akan sync)
-    // Keep client thin — server authoritative (D-008).
-    void intent;
+    try {
+      await fetch(`${resolvedUrl}/intent`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(intent) });
+    } catch { void intent; }
   };
 
   return { client, url: resolvedUrl, send, onState, fetchSnapshot };
