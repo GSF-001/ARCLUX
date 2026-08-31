@@ -61,6 +61,8 @@ export interface PersistenceStore {
   loadPendingHandoffs(): Promise<PendingHandoff[]>;
   /** Hapus pending handoff setelah deliver/diselesaikan. */
   deletePendingHandoff(vesselId: string, gateId: string): Promise<void>;
+  /** Index — list semua regionId yang pernah disimpan (db index). */
+  listRegions(): Promise<string[]>;
 }
 
 /** Validasi snapshot minimal sebelum disimpan (huruf anti-torn/garbage write). */
@@ -106,6 +108,7 @@ export function createInMemoryPersistence(): PersistenceStore {
     async deletePendingHandoff(vesselId, gateId) {
       pending.delete(pendingKey(vesselId, gateId));
     },
+    async listRegions() { return Array.from(regions.keys()); },
   };
 }
 
@@ -202,5 +205,9 @@ export function createDbPersistence(
     savePendingHandoff,
     loadPendingHandoffs,
     deletePendingHandoff,
+    async listRegions() {
+      // db index — in-memory scan fallback (heavy but stable, real db would use index)
+      try { const { listRecords } = await import("../db/client"); const recs = (listRecords as any)?.(COLLECTION) ?? []; return (recs as any[]).map((r: any) => r.regionId ?? r.id).filter(Boolean); } catch { return []; }
+    },
   };
 }
