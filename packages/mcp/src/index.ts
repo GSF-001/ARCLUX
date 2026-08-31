@@ -708,6 +708,13 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     }
     case "doctor": {
       const r = await doAnalyze(args);
+      // 0 modules = analysis failed (parser/WASM), not "clean code".
+      // Running the detectors would report every file as orphan → false
+      // error counts. Skip and say so explicitly (#618). Repository exposes
+      // a `moduleCount` getter — `modules` is a private Map (no .length).
+      if (r.repository.moduleCount === 0) {
+        return json({ skipped: true, findings: [], errorCount: 0, warningCount: 0, infoCount: 0, notice: "0 modules parsed — detectors skipped to avoid a false orphan FAIL. This is a parse failure (likely WASM/tree-sitter runtime), not a clean bill." });
+      }
       return json(runDoctor(r.repository));
     }
     case "health": {
@@ -717,6 +724,12 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     }
     case "verify": {
       const r = await doAnalyze(args);
+      // 0 modules = analysis failed, not "no violations". A bare FAIL here
+      // would be a false verdict from orphan detectors, and a PASS would
+      // hide the failure entirely. Report UNKNOWN instead (#618).
+      if (r.repository.moduleCount === 0) {
+        return json({ skipped: true, verdict: "UNKNOWN", errorCount: 0, notice: "0 modules parsed — verdict withheld. This is a parse failure (likely WASM/tree-sitter runtime), not a clean result." });
+      }
       const result = runAllChecks(r.repository);
       return json({ verdict: result.errorCount === 0 ? "PASS" : "FAIL", ...result });
     }
