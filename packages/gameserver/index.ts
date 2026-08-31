@@ -34,3 +34,5 @@ export * from "./teleport";
 export * from "./baseline";
 export * from "./physics";
 export * from "./regionState";
+export * from "./component";
+export * from "./lineage";
