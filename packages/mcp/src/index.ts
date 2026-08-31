@@ -800,7 +800,7 @@ async function handleTool(name: string, args: Record<string, unknown>) {
         return json({
           hits: [],
           indexedFiles: 0,
-          totalModules: r.repository.modules.length,
+          totalModules: r.repository.moduleCount,
           notice: "No files were indexed — this is a parse failure (likely WASM/tree-sitter runtime), not a genuine empty result. Run analyze or fix the parser.",
         });
       }
