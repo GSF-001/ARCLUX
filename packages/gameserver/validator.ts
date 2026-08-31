@@ -64,8 +64,25 @@ export function validateIntent(
       if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot attack" };
       return validateAttack(region, v, intent, ctx);
     }
+    case "activate_capability": {
+      const v = entity as VesselEntity;
+      if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot activate" };
+      // V4 component check — reuse component.ts (07 §10)
+      const compId = intent.payload?.componentId as string | undefined;
+      if (compId) {
+        const { getComponent } = require("./component");
+        const c = getComponent(compId);
+        if (c && c.depleted) return { decision: "reject", reason: "component depleted" };
+      }
+      return { decision: "accept" };
+    }
     case "scan":
       return { decision: "accept" };
+    case "teleport": {
+      const to = intent.payload as { x?: number; y?: number; z?: number } | undefined;
+      if (!to || typeof to.x !== "number") return { decision: "reject", reason: "teleport requires x/y/z" };
+      return { decision: "accept" };
+    }
     case "dock":
       return validateDock(region, entity, intent);
     default:
