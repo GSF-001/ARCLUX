@@ -123,6 +123,7 @@ export function createGameBridge(opts: GameBridgeOptions): GameBridge {
     const router = createGateRouter(shard.gateLinks, {
       region: shard.region,
       persist: opts.persistence,
+      directory: { getServer: (id: string) => { try { const { getServer } = require("../directory/registry"); return getServer(id); } catch { return {}; } } },
       notifyTarget: (targetRegionId, handoff) => {
         const toShard = coordinator.resolveTarget(targetRegionId);
         if (!toShard || toShard === shard.shardId) return; // target bukan shard ini / belum dikenal

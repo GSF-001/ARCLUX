@@ -11,6 +11,7 @@ import { createHttpClientTransport, type TransportClient } from "../../../../pac
 
 /** Resolve shard URL — dynamic ARCLUX_GAME_PORT (env) atau fallback 24001. */
 function resolveShardUrl(): string {
+  // Directory wire — try discovery first (DIRECTORY ≠ AUTHORITY), fallback to env port
   // Vite/Electron renderer: guard for process availability
   const envPort = (() => {
     try {
@@ -44,8 +45,13 @@ export interface NetHandle {
  * Inisialisasi koneksi client ke world (HTTP, D-009 runtime terpisah).
  * Dynamic port via ARCLUX_GAME_PORT — wire ke apps/game tanpa hardcode.
  */
-export function connectNet(url?: string): NetHandle {
-  const resolvedUrl = url ?? resolveShardUrl();
+export function connectNet(url?: string, directoryUrl?: string): NetHandle {
+  // Wire: try directory listServers public → first ONLINE endpoint (live, not yatim)
+  const dirEndpoint = (() => {
+    if (url) return undefined;
+    try { const { listServers } = require("../../../../packages/directory/registry"); const s = listServers({ status: "ONLINE" as any })?.[0]; return s?.endpoint; } catch { return undefined; }
+  })();
+  const resolvedUrl = url ?? dirEndpoint ?? directoryUrl ?? resolveShardUrl();
   const client = createHttpClientTransport(resolvedUrl);
 
   const fetchSnapshot = () => client.requestSnapshot();
