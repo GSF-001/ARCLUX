@@ -4,21 +4,26 @@ Copyright 2026 GSF-001 (Mikatoshi)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of the MMO Product (packages/gameserver, packages/relay, packages/universe,
-apps/game, and related MMO docs/blueprint), to use, copy, modify, and merge
-copies for the purposes of:
+packages/directory, apps/game, and related MMO docs/blueprint), to use, copy,
+modify, and merge copies for the purposes of:
 
-- Reading, learning, and auditing source code
-- Contributing pull requests to GSF-001/ARCLUX under this license
-- Running a private non-commercial instance for testing and review
+🟢 PERMITTED — Community Self-Host & Gameplay (D-009 self-host per shard):
+- Reading, learning, auditing source code and contributing PRs to GSF-001/ARCLUX
+- Clone, install, modify for personal, community, campus, lab, and private use
+- Self-host shard/server and run persistent regions for actual gameplay (non-commercial)
+- Community server for friends, org, campus, lab — federation via Gate Protocol (OPT-IN)
+- Private universe, development/testing, education, and non-commercial community operation
+- Federated connection between trusted shards that opt-in to Federation Mode
 
-RESTRICTION — No Commercial Game Clone:
-You may NOT, without prior written permission from GSF-001, deploy, host,
-operate, sell, or offer as a service any MMO game that reuses, in whole or
-in substantial part, the MMO Product's vessel/gate/economy/thermal/cosmic
-simulation logic (including but not limited to packages/gameserver,
-packages/relay, packages/universe game model, and apps/game client) to
-provide a competing commercial game service. This includes SaaS hosting per
-shard (D-009) for third-party commercial use.
+🔴 RESTRICTED — No Commercial Competing MMO (without written permission from GSF-001):
+- Selling, licensing, or offering the MMO Product as your own product/service
+- Creating a competing commercial game from substantial MMO logic (vessel/gate/economy/thermal/cosmic simulation in packages/gameserver, relay, universe, directory, apps/game)
+- Offering commercial hosted MMO/shard service for third parties (SaaS per shard, D-009 commercial)
+- Rebranding and reselling ARCLUX MMO as a competing product
+
+Federation Directory (packages/directory) is part of MMO Product — discovery only, DIRECTORY ≠ AUTHORITY (not authoritative simulation).
+
+RESTRICTION — No Commercial Game Clone (details): You may NOT deploy/host/operate/sell/offer as a service any competing commercial MMO that reuses substantial MMO Product logic without permission. Non-commercial self-host and community gameplay are explicitly ALLOWED above.
 
 The ARCLUX Platform (apps/web, apps/cli, packages/engine, parser, graph,
 db, etc.) remains under Apache License 2.0 (see LICENSE-ENGINE). The MMO
