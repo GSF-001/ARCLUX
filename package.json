@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit -p apps/web/tsconfig.json",
     "build:cli": "node scripts/build-cli.mjs",
     "check:mmo": "node scripts/check-mmo.mjs",
+    "check:license": "node scripts/check-license.mjs",
     "check:cli": "node scripts/build-cli.mjs && node -e \"const fs=require('fs');const c=fs.readFileSync('apps/cli/dist/arclux.mjs','utf8');if(c.includes('getModuleById')){console.error('STALE: dist contains getModuleById');process.exit(1)}else console.log('CLI bundle OK (no stale getModuleById)')\""
   },
   "dependencies": {

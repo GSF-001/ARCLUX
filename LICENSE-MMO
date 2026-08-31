@@ -1,0 +1,36 @@
+ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone
+
+Copyright 2026 GSF-001 (Mikatoshi)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of the MMO Product (packages/gameserver, packages/relay, packages/universe,
+apps/game, and related MMO docs/blueprint), to use, copy, modify, and merge
+copies for the purposes of:
+
+- Reading, learning, and auditing source code
+- Contributing pull requests to GSF-001/ARCLUX under this license
+- Running a private non-commercial instance for testing and review
+
+RESTRICTION — No Commercial Game Clone:
+You may NOT, without prior written permission from GSF-001, deploy, host,
+operate, sell, or offer as a service any MMO game that reuses, in whole or
+in substantial part, the MMO Product's vessel/gate/economy/thermal/cosmic
+simulation logic (including but not limited to packages/gameserver,
+packages/relay, packages/universe game model, and apps/game client) to
+provide a competing commercial game service. This includes SaaS hosting per
+shard (D-009) for third-party commercial use.
+
+The ARCLUX Platform (apps/web, apps/cli, packages/engine, parser, graph,
+db, etc.) remains under Apache License 2.0 (see LICENSE-ENGINE). The MMO
+Product is distinct — graph stays Apache, MMO stays no-clone.
+
+Contributions to the MMO Product are licensed under this ARCLUX MMO License
+and require a CLA: by submitting a PR you agree your contribution is under
+this license and may be relicensed by GSF-001 for the MMO Product.
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. The licensor
+shall not be liable for any damages arising from use of the MMO Product.
+
+SPDX: LicenseRef-ARCLUX-MMO
+
+Contact: GSF-001 via https://github.com/GSF-001/ARCLUX

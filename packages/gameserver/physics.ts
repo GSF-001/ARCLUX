@@ -1,10 +1,8 @@
-// Copyright 2026 Mikatoshi
+// Copyright 2026 GSF-001
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
+// Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
+// See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
+// Engine (apps/web, packages/engine, etc.) remains Apache-2.0 (LICENSE-ENGINE).
 //
 // physics.ts — Newtonian helper presisi (G, σ, c, Kepler, 1/r²).
 // Semua rumus blueprint kasar di-fix di sini biar gak brantakan — 01 §2.3 / D-019 / D-020.
