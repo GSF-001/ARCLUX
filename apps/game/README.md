@@ -1,33 +1,16 @@
 # ARCLUX GAME — MMO Client (Electron + three.js)
 
-> 🚧 **SCAFFOLD** — kerangka aplikasi, BELUM jalan. Baca
-> `docs/blueprint/progres/MMO-IMPLEMENTATION.md` §2.4 sebelum implementasi.
->
-> Client = **renderer + input + net**, TIDAK pernah jadi otoritas (D-008,
-> invariant I-1). Semua posisi/damage/ownership datang dari gameserver.
+> **PERMANEN** — arsitektur + run. Daftar file hidup ada di `arclux_file_info` / `folderGraph` / `docs/blueprint/progres/MMO-IMPLEMENTATION.md`, bukan di README. Commit baru (`physics.ts`/`component.ts`) gak perlu edit README lagi.
 
-## Struktur
+**Arch:** `apps/game` = renderer + input + net (D-008 client never authoritative). Server `packages/gameserver` yang hitung `environs`/`thermics`/`collision`/`baseline` heavy tapi stabil kayak EVE — client cuma render.
 
+**Run (komputer, bukan mobile):**
+```bash
+pnpm install
+pnpm --filter game dev          # Electron window + three.js scene
+ARCLUX_GAME_PORT=8080 pnpm --filter game dev  # dynamic port (resolveGamePort)
+npx electron apps/game          # direct
 ```
-apps/game/
-├── package.json          # Electron + three
-├── tsconfig.json
-├── index.ts              # entry: bootstrap Electron
-└── src/
-    ├── main/             # Electron main process (jendela, lifecycle, IPC bridge)
-    │   └── main.ts
-    └── renderer/         # Electron renderer (3D universe + input + net)
-        ├── index.html
-        ├── renderer.ts   # bootstrap renderer (three scene)
-        ├── scene3d.ts    # 3D vessel render dari RegionState (mesh/material/camera)
-        └── net.ts        # wrapper netcode: kirim intent, terima events
-```
+Net: `createHttpClientTransport(resolveGameUrl())` → `PlayerIntent` → `GameEvent` replay.
 
-## Arah implementasi (urutan)
-
-1. `main/main.ts` — bootstrap jendela Electron + load `renderer/index.html`
-2. `renderer/scene3d.ts` — render vessel dari `RegionState` (pakai `three`,
-   fondasi sama kayak `apps/web` GraphCanvas3D)
-3. `renderer/net.ts` — gabung `packages/gameserver/netcode.ts` (in-process
-   dulu), kirim `PlayerIntent`, render events
-4. UI universe (blueprint `01-spatial-ux.md`) setelah 3D dasar jalan
+**Link:** `docs/blueprint/01-spatial-ux.md §20/§28` (HUD EVE), `05 §7.1` baseline, `06 §18` intel/teleport, `07` V4, `08` V6, `MMO-IMPLEMENTATION.md §3` checklist. Heavy-stable: `SimulationEngine` 10 ticks/sec, `tickScheduler` + `rateLimiter` di gameserver.
