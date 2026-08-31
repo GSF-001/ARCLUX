@@ -81,6 +81,8 @@ export interface GateEvent {
 export interface GateRouterDeps {
   /** Region lokal (server yang memiliki gate & vessel). */
   region: WorldRegion;
+  /** Directory lookup (DIRECTORY ≠ AUTHORITY) — cek federation/trustedPeers. */
+  directory?: { getServer: (id: string) => { manifest?: import("../directory/types").ServerManifest } };
   /** Notify region tujuan (via relay) untuk men-spawn vessel. */
   notifyTarget?: (targetRegionId: string, handoff: NonNullable<GateTransitResult["handoff"]>) => void;
   /** Emit world event (gate.transit.*). */
@@ -156,6 +158,12 @@ export function createGateRouter(links: GateLink[], deps: GateRouterDeps): GateR
       return { ok: false, reason: "vessel is out of gate activation radius" };
     }
 
+    // Directory federation check — OFF/PRIVATE vs trustedPeers (wire, not yatim)
+    if (deps.directory) {
+      const target = deps.directory.getServer(req.targetRegionId)?.manifest;
+      if (target && target.federation === "OFF") return { ok: false, reason: "target federation OFF" };
+      if (target && target.federation === "PRIVATE" && target.trustedPeers && !target.trustedPeers.includes(deps.region.regionId)) return { ok: false, reason: "not in trustedPeers" };
+    }
     const faction = deps.resolveFaction?.(req.vesselId);
     if (!authorized(link, vessel, faction)) {
       deps.onEvent?.({
