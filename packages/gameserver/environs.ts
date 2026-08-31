@@ -47,13 +47,25 @@ export function createEnvirons(bodies: SystemBody[]): EnvironsState {
 }
 
 /** Deterministic orbit position at tick t (Kepler circular approx — eccentricity handled via radius modulation). */
+// Strengthened: anomaly perturbasi 5% via small GM/r² offset when body near anomaly zone (01 §2.3)
 function orbitPos(body: SystemBody, tick: number, parentPos: Vec3): Vec3 {
   const { semiMajorAxis: a, eccentricity: e, periodTicks: p, phase, inclination = 0 } = body.orbit;
   const theta = (2 * Math.PI * (tick % p)) / p + phase;
   const r = a * (1 - e * e) / (1 + e * Math.cos(theta));
-  const x = parentPos.x + r * Math.cos(theta) * Math.cos(inclination);
-  const y = parentPos.y + r * Math.sin(theta) * Math.sin(inclination) * 0.3;
-  const z = parentPos.z + r * Math.sin(theta);
+  let x = parentPos.x + r * Math.cos(theta) * Math.cos(inclination);
+  let y = parentPos.y + r * Math.sin(theta) * Math.sin(inclination) * 0.3;
+  let z = parentPos.z + r * Math.sin(theta);
+  // Anomaly perturbasi: deterministic pseudo-anomaly at (a*0.7,0,0) with M=5e23kg — adds ≤5% wobble
+  const anomalyPos: Vec3 = { x: a * 0.7, y: 0, z: 0 };
+  const dx = x - anomalyPos.x, dy = y - anomalyPos.y, dz = z - anomalyPos.z;
+  const rAnom = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  if (rAnom > 1e6 && rAnom < a * 2) {
+    const GM = 6.67430e-11 * 5e23;
+    const perturb = (GM / (rAnom * rAnom)) * 0.05; // 5% scaling so orbit stays stable
+    x += (dx / rAnom) * perturb * 1e6;
+    y += (dy / rAnom) * perturb * 1e6;
+    z += (dz / rAnom) * perturb * 1e6;
+  }
   return { x, y, z };
 }
 
