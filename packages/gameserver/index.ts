@@ -36,3 +36,6 @@ export * from "./physics";
 export * from "./regionState";
 export * from "./component";
 export * from "./lineage";
+export * from "./tickScheduler";
+export * from "./rateLimiter";
+export * from "./stability";
