@@ -11,10 +11,10 @@
     "dev": "node ../../scripts/build-game.mjs && electron ."
   },
   "dependencies": {
-    "three": "^0.169.0"
+    "three": "^0.185.1"
   },
   "devDependencies": {
-    "@types/three": "0.169",
+    "@types/three": "^0.185.4",
     "electron": "^31.0.0",
     "esbuild": "^0.28.0"
   }
