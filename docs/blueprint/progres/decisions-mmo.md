@@ -283,6 +283,24 @@ konteks, pilihan, dan alasan — supaya bisa dilacak & tidak bolak-balik.
 
 ---
 
+## D-025 — Visual MMO game-native, bukan skin `apps/web`
+
+- **Tanggal:** 2026-09-01
+- **Konteks:** ARCLUX MMO punya identitasnya sendiri sebagai game (EVE-industrial,
+  perjuangan fisika sun/planet, struktur Ark-Librarieschip). Apps/web adalah
+  *dashboard* terpisah (dual-license, layering identitas). Tidak boleh ada
+  pernyataan bahwa UI MMO adalah "3D dari graph web".
+- **Keputusan:** **`apps/game` punya bahasa visualnya sendiri** di
+  `src/ui/tokens.ts` — satu sumber warna/typografi/spacing/glow, berakar fisik & lore
+  (sun emissive ∝ aktivitas, planet termal, fraksi sosial), **bukan tailwind web**.
+  FIGMA (kalau nanti) **re-skin tokens**, bukan reverse-engineer komponen.
+- **Konsep:** Ark-Librarieschip — satu vessel-world raksasa tempat semua sejarah
+  kembali ([06 §18.5](../06-community-social-ownership.md), [01 §15](../01-spatial-ux.md)):
+  repository → distrik, community → fraksi, pilot → karakter persisten.
+- **Implementasi:** `apps/game/src/ui/tokens.ts` + `scene3d.ts` + `hud.ts` + `index.html`.
+
+---
+
 ## Keputusan pending / terbuka
 
 - Model gate antar shard: eksplisit (pindah dunia) vs seamless real-time —

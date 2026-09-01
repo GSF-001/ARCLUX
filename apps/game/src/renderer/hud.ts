@@ -4,12 +4,16 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 // Engine (apps/web, packages/engine, etc.) remains Apache-2.0 (LICENSE-ENGINE).
 //
-// src/renderer/hud.ts — EVE-level command HUD overlay (01-spatial-ux §20/§28).
-// Data-dense INDUSTRIAL, bukan SaaS dashboard card: cockpit universal (§20.4),
-// tactical readout (§7), region/system telemetry, vessel identity (§20.8).
+// src/renderer/hud.ts — Cockpit ARCLUX (01 §20/§28). Operasional console,
+// data-dense industri, BUKAN dashboard-card. Blueprint:
+//   §20.4 universal cockpit slots · §20.8 identitas sosial callsign/faksi ·
+//   §7 tactical target grid · §11 subsystem visualization · §28 command-interface.
 // Visual hanya representasi client; data authoritative dari server (D-008).
+// Mengkonsumsi tokens (src/ui/tokens.ts) sebagai satu sumber — FIGMA nanti
+// re-skin tokens, bukan reverse-engineer komponen.
 
 import type { RegionState, VesselEntity, StationEntity } from "../../../../packages/gameserver/types";
+import { colors, typography, spacing, glow } from "../ui/tokens";
 
 export interface Hud {
   update(region: RegionState): void;
@@ -25,35 +29,47 @@ export function initHud(container?: HTMLElement): Hud {
   el.id = "arclux-hud";
   el.style.cssText = [
     "position:fixed", "inset:0", "pointer-events:none",
-    "font-family:'JetBrains Mono',monospace", "color:#c9d6ff",
-    "text-shadow:0 0 6px rgba(60,160,255,0.35)",
-    "letter-spacing:0.5px", "z-index:10",
+    `font-family:${typography.mono}`, `color:${colors.foreground}`,
+    `text-shadow:${glow.textTech}`,
+    `letter-spacing:${typography.letterspacing}`, "z-index:10",
   ].join(";");
+
+  // Gaya dasar elemen HUD (dipakai berulang)
+  const label = `style="font-size:${typography.sizes.micro};color:${colors.muted};text-transform:uppercase"`;
+
   el.innerHTML = `
-    <div data-hud="top" style="position:absolute;top:16px;left:50%;transform:translateX(-50%);text-align:center">
-      <div data-hud="region" style="font-size:15px;font-weight:600;color:#9cd6ff;text-transform:uppercase">—</div>
-      <div data-hud="sysmeta" style="font-size:10px;color:#5c7db0;margin-top:3px">SYSTEM ONLINE</div>
+    <div data-hud="scanline" style="position:absolute;top:0;left:0;right:0;height:100%;background:repeating-linear-gradient(0deg,${glow.scanline} 0px,${glow.scanline} 2px,transparent 3px,transparent 8px);opacity:0.5"></div>
+
+    <div data-hud="top" style="position:absolute;top:${spacing.inset};left:50%;transform:translateX(-50%);text-align:center">
+      <div data-hud="region" style="font-family:${typography.display};${typography.displaySpacing && `letter-spacing:${typography.displaySpacing}`};font-size:${typography.sizes.display};font-weight:700;color:${colors.foreground};text-transform:uppercase">—</div>
+      <div data-hud="sysmeta" style="font-size:${typography.sizes.micro};color:${colors.muted};margin-top:4px;text-transform:uppercase">SYSTEM ONLINE</div>
     </div>
-    <div data-hud="left" style="position:absolute;left:18px;top:50%;transform:translateY(-50%);width:230px">
-      <div style="font-size:9px;color:#5c7db0;text-transform:uppercase;margin-bottom:6px">TAC // TARGET</div>
-      <div data-hud="target" style="font-size:11px;line-height:1.7;color:#8fb1e0"></div>
+
+    <div data-hud="left" style="position:absolute;left:${spacing.inset};top:50%;transform:translateY(-50%);width:${spacing.panelWidthLeft}">
+      <div ${label}>TAC // TARGET</div>
+      <div data-hud="target" style="font-size:${typography.sizes.data};line-height:1.8;color:${colors.body}"></div>
     </div>
-    <div data-hud="right" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);width:250px;text-align:right">
-      <div style="font-size:9px;color:#5c7db0;text-transform:uppercase;margin-bottom:6px">VESSEL // STATE</div>
-      <div data-hud="vessel" style="font-size:11px;line-height:1.7;color:#8fb1e0"></div>
+
+    <div data-hud="right" style="position:absolute;right:${spacing.inset};top:50%;transform:translateY(-50%);width:${spacing.panelWidthRight};text-align:right">
+      <div ${label}>VESSEL // STATE</div>
+      <div data-hud="vessel" style="font-size:${typography.sizes.data};line-height:1.75;color:${colors.body}"></div>
+      <div ${label} style="margin-top:12px">SUBSYSTEMS</div>
+      <div data-hud="subsystems" style="margin-top:4px"></div>
     </div>
-    <div data-hud="bottom" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);text-align:center">
-      <div style="font-size:9px;color:#5c7db0;text-transform:uppercase;margin-bottom:6px">COCKPIT // UNIVERSAL</div>
-      <div data-hud="slots" style="display:flex;gap:10px;justify-content:center">
+
+    <div data-hud="bottom" style="position:absolute;bottom:${spacing.inset};left:50%;transform:translateX(-50%);text-align:center">
+      <div ${label}>COCKPIT // UNIVERSAL</div>
+      <div data-hud="slots" style="display:flex;gap:${spacing.gapSlot};justify-content:center;margin-top:6px">
         ${["MOVE", "TARGET", "SCAN", "DOCK", "ACTIVATE"].map((s, i) => `
-          <div style="border:1px solid #2c4566;padding:5px 12px;font-size:10px;color:#9cd6ff;background:rgba(10,18,32,0.55)">
-            <span style="color:#5c7db0">${i + 1}</span> ${s}
+          <div style="border:1px solid ${colors.edge};padding:${spacing.slotPad};font-size:${typography.sizes.data};color:${colors.tech};background:${glow.panelBg};text-shadow:${glow.textTech}">
+            <span style="color:${colors.muted}">${i + 1}</span> ${s}
           </div>`).join("")}
       </div>
-      <div data-hud="tick" style="font-size:10px;color:#5c7db0;margin-top:8px">TICK —</div>
+      <div data-hud="tick" style="font-size:${typography.sizes.micro};color:${colors.muted};margin-top:9px;text-transform:uppercase">TICK —</div>
     </div>
-    <div data-hud="frame" style="position:absolute;top:16px;left:16px;background:linear-gradient(135deg,rgba(60,140,255,0.12),rgba(60,140,255,0));width:90px;height:54px;border:1px solid #2c4566;border-right:none;border-top:none;opacity:0.6"></div>
-    <div data-hud="frame2" style="position:absolute;top:16px;right:16px;background:linear-gradient(-135deg,rgba(60,140,255,0.12),rgba(60,140,255,0));width:90px;height:54px;border:1px solid #2c4566;border-left:none;border-top:none;opacity:0.6"></div>
+
+    <div data-hud="frame" style="position:absolute;top:${spacing.inset};left:${spacing.inset};background:linear-gradient(135deg,${glow.frameGradient},transparent);width:110px;height:66px;border:1px solid ${colors.edge};border-right:none;border-top:none;opacity:0.7"></div>
+    <div data-hud="frame2" style="position:absolute;top:${spacing.inset};right:${spacing.inset};background:linear-gradient(-135deg,${glow.frameGradient},transparent);width:110px;height:66px;border:1px solid ${colors.edge};border-left:none;border-top:none;opacity:0.7"></div>
   `;
   root.appendChild(el);
 
@@ -63,7 +79,6 @@ export function initHud(container?: HTMLElement): Hud {
     const regionEl = q('[data-hud="region"]');
     if (regionEl) regionEl.textContent = region.name || region.regionId;
 
-    // Vessel utama (pertama) = "kapal pemain" untuk demo; data server-authoritative.
     let player: VesselEntity | undefined;
     let station: StationEntity | undefined;
     for (const e of region.entities.values()) {
@@ -73,20 +88,34 @@ export function initHud(container?: HTMLElement): Hud {
     }
 
     if (player) {
+      const model = player.vessel;
       const v = q('[data-hud="vessel"]');
       if (v) {
-        const model = player.vessel;
+        const faction = player.faction ?? "NEUTRAL";
+        const factionColor = factionColorFor(faction);
         v.innerHTML = [
-          `<div style="color:#9cd6ff;font-size:12px">${model?.name ?? "VESSEL"} <span style="color:#5c7db0">· ${log2(player.id)}</span></div>`,
-          `OWNER <span style="color:#c9d6ff">${player.owner ?? "—"}</span>`,
-          `FACTION <span style="color:#c9d6ff">${player.faction ?? "NEUTRAL"}</span>`,
-          `INTEGRITY <span style="color:#c9d6ff">${model?.integrity != null ? Math.round(model.integrity) : "—"}</span>`,
-          `DEFENSE <span style="color:#c9d6ff">${model?.defense != null ? Math.round(model.defense) : "—"}</span>`,
-          `WEAPONS <span style="color:#c9d6ff">${model?.weapons != null ? Math.round(model.weapons) : "—"}</span>`,
-          `ENGINE <span style="color:#c9d6ff">${model?.engine != null ? Math.round(model.engine) : "—"}</span>`,
-          `SPEED <span style="color:#c9d6ff">${Math.round(mag(player.velocity) ?? 0)} m/s</span>`,
-          `HASH <span style="color:#5c7db0">${player.stateHash?.slice(0, 10) ?? "—"}</span>`,
+          `<div style="font-family:${typography.display};font-size:${typography.sizes.title};letter-spacing:${typography.displaySpacing};color:${colors.foreground};text-transform:uppercase">${model?.name ?? "VESSEL"} <span style="font-family:${typography.mono};color:${colors.muted};font-size:${typography.sizes.micro}">${log2(player.id)}</span></div>`,
+          `<div style="font-size:${typography.sizes.data};color:${factionColor};text-shadow:${glow.textTactical};margin-top:2px">${faction.toUpperCase()} // PILOT</div>`,
+          `INTEGRITY <span style="color:${colors.tech}">${model?.integrity != null ? Math.round(model.integrity) : "—"}</span>`,
+          `DEFENSE  <span style='color:${colors.tech}'>${model?.defense != null ? Math.round(model.defense) : "—"}</span>`,
+          `WEAPONS  <span style='color:${colors.tech}'>${model?.weapons != null ? Math.round(model.weapons) : "—"}</span>`,
+          `SPEED  <span style='color:${colors.body}'>${Math.round(mag(player.velocity) ?? 0)} m/s</span>`,
+          `HASH  <span style='color:${colors.muted}'>${player.stateHash?.slice(0, 10) ?? "—"}</span>`,
         ].join("<br>");
+      }
+
+      const subs = q('[data-hud="subsystems"]');
+      if (subs && model?.systems) {
+        subs.innerHTML = model.systems.slice(0, 6).map((s: { label?: string; health?: number }) => {
+          const lvl = s.health != null ? Math.max(0, Math.min(100, Math.round((s.health as number) * 100))) : 0;
+          const barColor = lvl > 60 ? colors.ok : lvl > 30 ? colors.warn : colors.danger;
+          return `<div style="display:flex;justify-content:space-between;gap:8px;font-size:${typography.sizes.micro};line-height:1.9">
+            <span style="color:${colors.muted};text-transform:uppercase">${logLabel(s.label)}</span>
+            <span style="display:inline-block;width:74px;height:7px;background:${colors.struct};border:1px solid ${colors.edge}">
+              <span data-subbar style="display:block;height:100%;width:${lvl}%;background:${barColor};box-shadow:0 0 8px ${barColor}"></span>
+            </span>
+          </div>`;
+        }).join("");
       }
     }
 
@@ -96,10 +125,11 @@ export function initHud(container?: HTMLElement): Hud {
       for (const e of region.entities.values()) {
         if (!player || e.id === player.id) continue;
         const d = player ? dist(player.position, e.position) : 0;
-        const tag = e.kind === "vessel" ? `🚀 ${log2(e.id)}` : `🛰 ${(e as StationEntity).name ?? log2(e.id)}`;
-        vacuum.push(`${tag} <span style="color:#5c7db0">${formatDist(d)}</span>`);
+        const tag = e.kind === "vessel" ? `▸ VSL ${log2(e.id)}` : `◈ STN ${(e as StationEntity).name ?? log2(e.id)}`;
+        const dcol = e.kind === "station" ? colors.ok : colors.tactical;
+        vacuum.push(`${tag} <span style="color:${dcol}">${formatDist(d)}</span>`);
       }
-      tgt.innerHTML = vacuum.length ? vacuum.join("<br>") : `<span style="color:#33455e">NO CONTACTS</span>`;
+      tgt.innerHTML = vacuum.length ? vacuum.join("<br>") : `<span style="color:${colors.empty}">NO CONTACTS</span>`;
     }
 
     const tickEl = q('[data-hud="tick"]');
@@ -116,6 +146,16 @@ export function initHud(container?: HTMLElement): Hud {
   return { update, setTick, dispose };
 }
 
+function factionColorFor(faction: string): string {
+  const f = faction.toUpperCase();
+  if (f.includes("A") || f.includes("KV") || f.includes("VLT")) return colors.factionA;
+  if (f.includes("B") || f.includes("AB") || f.includes("ORA")) return colors.factionB;
+  return colors.neutral;
+}
+function logLabel(s?: string): string {
+  if (!s) return "—";
+  return s.length > 10 ? s.replace(/([A-Z])/g, " $1").trim().slice(0, 14) : s.toUpperCase();
+}
 function mag(v: { x: number; y: number; z: number }): number {
   return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
