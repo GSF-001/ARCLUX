@@ -7,19 +7,22 @@
 // src/renderer/renderer.ts — bootstrap renderer (three scene) di browser context.
 
 import { initScene3D, type Scene3D } from "./scene3d";
+import { initHud, type Hud } from "./hud";
 import { connectNet, type NetHandle } from "./net";
 
 export interface RendererHandle {
   scene: Scene3D;
+  hud: Hud;
   net: NetHandle;
   dispose(): void;
 }
 
 export function bootstrapRenderer(): RendererHandle {
   const scene = initScene3D();
+  const hud = initHud();
   const net = connectNet();
 
-  // Wire snapshot → scene (server-authoritative, D-008)
+  // Wire snapshot → scene + HUD (server-authoritative, D-008)
   const stop = net.onState((region) => {
     // RegionSnapshot (from HTTP) is { regionId, tick, entities: [] } — adapt to RegionState shape for scene
     const adapted: any = {
@@ -28,14 +31,15 @@ export function bootstrapRenderer(): RendererHandle {
       entities: new Map((region as any).entities?.map?.((e: any) => [e.id, e]) ?? []),
     };
     scene.renderRegion(adapted);
+    hud.update(adapted);
   });
 
-  const dispose = () => { stop(); scene.dispose(); };
+  const dispose = () => { stop(); scene.dispose(); hud.dispose(); };
 
   // Expose for manual control in devtools
-  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net };
+  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud };
 
-  return { scene, net, dispose };
+  return { scene, hud, net, dispose };
 }
 
 if (typeof document !== "undefined") {
@@ -45,7 +49,7 @@ if (typeof document !== "undefined") {
   const poll = async () => {
     try {
       const snap: any = await h.net.fetchSnapshot();
-      if (snap.tick !== lastTick) { lastTick = snap.tick; }
+      if (snap.tick !== lastTick) { lastTick = snap.tick; h.hud.setTick(snap.tick); }
     } catch {}
     setTimeout(poll, 100);
   };

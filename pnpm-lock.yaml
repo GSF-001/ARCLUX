@@ -77,9 +77,12 @@ importers:
   apps/game:
     dependencies:
       three:
-        specifier: ^0.169.0
-        version: 0.169.0
+        specifier: ^0.185.1
+        version: 0.185.1
     devDependencies:
+      '@types/three':
+        specifier: ^0.185.4
+        version: 0.185.4
       electron:
         specifier: ^31.0.0
         version: 31.7.7
@@ -3960,9 +3963,6 @@ packages:
     engines: {node: '>=12'}
     peerDependencies:
       three: '>=0.179'
-
-  three@0.169.0:
-    resolution: {integrity: sha512-Ed906MA3dR4TS5riErd4QBsRGPcx+HBDX2O5yYE5GqJeFQTPU+M56Va/f/Oph9X7uZo3W3o4l2ZhBZ6f6qUv0w==}
 
   three@0.185.1:
     resolution: {integrity: sha512-5aojFCXKwnjBRZvUnt3WFfEcvUJgkN5LlijRFN95hMy8WVkG4I0QNcJE+OuWvuJ0bOdStrbfXn0pkd6/QyiAlg==}
@@ -8217,8 +8217,6 @@ snapshots:
       three: 0.185.1
     transitivePeerDependencies:
       - preact-render-to-string
-
-  three@0.169.0: {}
 
   three@0.185.1: {}
 

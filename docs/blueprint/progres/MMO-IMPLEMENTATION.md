@@ -173,6 +173,12 @@ net), `index.ts`, `package.json`. **Arah**:
 - [x] Identitas sosial & intel: faksi+waypoint — SELESAI (intel.ts + cockpit)
 - [x] Mobilisasi 2-teleport wire: recall+gate portal — SELESAI (teleport.ts)
 - [x] UI command-interface: heavy-stable desktop — SELESAI (tickScheduler + stability + README permanen)
+- [x] Observability & telemetry: `observability.ts` — SELESAI (OTEL recordTickTrace + Prometheus toPrometheus)
+- [x] Physics konstanta Newtonian: `physics.ts` — SELESAI (G, σ, c, AU + helper)
+- [x] Rate limiting & anti-cheat: `rateLimiter.ts` — SELESAI (IP + shadowban)
+- [x] `regionState.ts` live world RegionState — SELESAI (shard world state)
+- [x] Heavy-stable tick resilience: `stability.ts` — SELESAI (tick SLI)
+- [x] UHD renderer SUPER HD: `scene3d.ts` + `hud.ts` — SELESAI (PBR instancing starfield/belt/planets + EVE-level command HUD §28)
 
 > Desain acuan V4/V5/V6: `07-special-capabilities.md` · `01-spatial-ux.md §20` ·
 > `08-persistent-world.md` · keputusan D-013/D-014 di `decisions-mmo.md`.
