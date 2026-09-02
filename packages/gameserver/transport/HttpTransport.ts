@@ -9,7 +9,9 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { WorldRegion } from "../world";
-import type { NetworkHandoff, TransportClient, HttpServerTransport } from "./Transport";
+import type { NetworkHandoff, HttpServerTransport } from "./Transport";
+import { createHttpClientTransport } from "./HttpClientTransport";
+import type { TransportClient } from "./Transport";
 
 function readBody(req: IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -27,15 +29,8 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
-export function createHttpClientTransport(baseUrl: string): TransportClient {
-  const post = (path: string, body: unknown) =>
-    fetch(`${baseUrl}${path}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then((res) => res.json());
-  const get = (path: string) => fetch(`${baseUrl}${path}`).then((res) => res.json());
-  return {
-    async requestSnapshot() { return get("/snapshot") as Promise<import("../types").RegionSnapshot>; },
-    async deliver(h) { return (await post("/deliver", h)) as { ok: boolean; reason?: string }; },
-  };
-}
+export { createHttpClientTransport };
+export type { TransportClient };
 
 export function createHttpServerTransport(region: WorldRegion, port: number): HttpServerTransport {
   const server: Server = createServer(async (req, res) => {

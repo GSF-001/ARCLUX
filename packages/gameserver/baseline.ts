@@ -8,6 +8,7 @@
 // Added: time dilation per region (γ = 1/sqrt(1-v²/c²)) + per-region tick scaling — blueprint strengthening.
 
 import type { Vec3 } from "./types";
+import { createSeedRng } from "./random";
 
 export const UNIVERSAL_BASELINE = {
   gravityConstant: 0,
@@ -53,8 +54,9 @@ export function dilatedTickDuration(speed_mps: number, baseTickDt: number = UNIV
 }
 
 export function perRegionTimeDilation(regionId: string, tick: number, baseSpeed: number): number {
-  // Deterministic per-region variation (0.98 — 1.02) — e.g., near-star region ticks slightly faster
-  const seed = regionId.length * 9301 + tick * 49297;
-  const jitter = (Math.sin(seed) * 0.5 + 0.5) * 0.04 + 0.98;
+  // Deterministic per-region variation (0.98 — 1.02) — e.g., near-star region ticks slightly faster.
+  // Seed by regionId+tick → identical output cross-env (replaces old Math.sin integer hash).
+  const rng = createSeedRng(Math.imul(regionId.length, 0x9e3779b9) ^ Math.imul(tick, 0x6d2b79f5));
+  const jitter = rng.range(0.98, 1.02);
   return dilatedTickDuration(baseSpeed) * jitter;
 }

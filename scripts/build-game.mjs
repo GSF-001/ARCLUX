@@ -14,13 +14,14 @@
 // This is a SCAFFOLD build script — it only proves the module graph resolves;
 // real packaging (electron-builder, asar, native .wasm handling) comes later.
 
-import { mkdirSync, readdirSync, existsSync } from "node:fs";
+import { mkdirSync, readdirSync, existsSync, copyFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "apps", "game", "dist");
+const rendererOut = path.join(outDir, "renderer");
 
 const __req = createRequire(import.meta.url);
 let esbuildPkg;
@@ -39,6 +40,8 @@ try {
 const { build } = esbuildPkg;
 
 mkdirSync(outDir, { recursive: true });
+mkdirSync(path.join(outDir, "main"), { recursive: true });
+mkdirSync(rendererOut, { recursive: true });
 
 await build({
   entryPoints: [path.join(root, "apps", "game", "src", "main", "main.ts")],
@@ -51,4 +54,21 @@ await build({
   logLevel: "info",
 });
 
-console.log("✓ bundled apps/game/dist/main/main.js (Electron main, scaffold)");
+// Renderer bundle (browser ESM). `three` di-bundle (CSP default-src 'self' —
+// tidak boleh CDN), menutup gap: raw `.ts` tidak bisa di-browser.
+await build({
+  entryPoints: [path.join(root, "apps", "game", "src", "renderer", "renderer.ts")],
+  bundle: true,
+  platform: "browser",
+  format: "esm",
+  target: "es2020",
+  outfile: path.join(rendererOut, "renderer.bundle.js"),
+  sourcemap: true,
+  logLevel: "info",
+});
+
+// index.html ikut ke dist/renderer (biar satu folder statis utuh).
+copyFileSync(path.join(root, "apps", "game", "src", "renderer", "index.html"), path.join(rendererOut, "index.html"));
+
+console.log("✓ bundled apps/game/dist/main/main.js (Electron main)");
+console.log("✓ bundled apps/game/dist/renderer/ (index.html + renderer.bundle.js)");

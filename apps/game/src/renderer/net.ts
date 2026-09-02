@@ -7,7 +7,7 @@
 // src/renderer/net.ts — wrapper netcode: kirim intent, terima snapshot/events dari server (D-008 authoritative).
 
 import type { PlayerIntent, RegionSnapshot } from "../../../../packages/gameserver/types";
-import { createHttpClientTransport, type TransportClient } from "../../../../packages/gameserver/netcode";
+import { createHttpClientTransport } from "../../../../packages/gameserver/transport/HttpClientTransport";
 
 /** Resolve shard URL — dynamic ARCLUX_GAME_PORT (env) atau fallback 24001. */
 function resolveShardUrl(): string {
@@ -29,11 +29,11 @@ function resolveShardUrl(): string {
 }
 
 export interface NetHandle {
-  /** Client transport ke shard (requestSnapshot/deliver). */
-  client: TransportClient;
+  /** Client transport ke shard (requestSnapshot/sendIntent). */
+  client: import("../../../../packages/gameserver/transport/HttpClientTransport").HttpClientTransport;
   /** URL shard yang dipakai. */
   url: string;
-  /** Kirim intent via HTTP (future: POST /intent — saat ini via deliver/snapshot). */
+  /** Kirim intent via HTTP POST /intent — server-authoritative (D-008). */
   send(intent: PlayerIntent): Promise<void>;
   /** Poll snapshot periodik dan panggil cb. Returns stop fn. */
   onState(cb: (region: RegionSnapshot) => void): () => void;
@@ -68,9 +68,7 @@ export function connectNet(url?: string, directoryUrl?: string): NetHandle {
   };
 
   const send = async (intent: PlayerIntent): Promise<void> => {
-    try {
-      await fetch(`${resolvedUrl}/intent`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(intent) });
-    } catch { void intent; }
+    await client.sendIntent(intent);
   };
 
   return { client, url: resolvedUrl, send, onState, fetchSnapshot };

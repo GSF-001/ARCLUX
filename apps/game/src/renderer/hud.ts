@@ -36,6 +36,10 @@ export function initHud(container?: HTMLElement): Hud {
 
   // Gaya dasar elemen HUD (dipakai berulang)
   const label = `style="font-size:${typography.sizes.micro};color:${colors.muted};text-transform:uppercase"`;
+  const esc = (s: unknown): string =>
+    String(s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
   el.innerHTML = `
     <div data-hud="scanline" style="position:absolute;top:0;left:0;right:0;height:100%;background:repeating-linear-gradient(0deg,${glow.scanline} 0px,${glow.scanline} 2px,transparent 3px,transparent 8px);opacity:0.5"></div>
@@ -94,13 +98,13 @@ export function initHud(container?: HTMLElement): Hud {
         const faction = player.faction ?? "NEUTRAL";
         const factionColor = factionColorFor(faction);
         v.innerHTML = [
-          `<div style="font-family:${typography.display};font-size:${typography.sizes.title};letter-spacing:${typography.displaySpacing};color:${colors.foreground};text-transform:uppercase">${model?.name ?? "VESSEL"} <span style="font-family:${typography.mono};color:${colors.muted};font-size:${typography.sizes.micro}">${log2(player.id)}</span></div>`,
-          `<div style="font-size:${typography.sizes.data};color:${factionColor};text-shadow:${glow.textTactical};margin-top:2px">${faction.toUpperCase()} // PILOT</div>`,
+          `<div style="font-family:${typography.display};font-size:${typography.sizes.title};letter-spacing:${typography.displaySpacing};color:${colors.foreground};text-transform:uppercase">${esc(model?.name ?? "VESSEL")} <span style="font-family:${typography.mono};color:${colors.muted};font-size:${typography.sizes.micro}">${esc(log2(player.id))}</span></div>`,
+          `<div style="font-size:${typography.sizes.data};color:${factionColor};text-shadow:${glow.textTactical};margin-top:2px">${esc(faction.toUpperCase())} // PILOT</div>`,
           `INTEGRITY <span style="color:${colors.tech}">${model?.integrity != null ? Math.round(model.integrity) : "—"}</span>`,
           `DEFENSE  <span style='color:${colors.tech}'>${model?.defense != null ? Math.round(model.defense) : "—"}</span>`,
           `WEAPONS  <span style='color:${colors.tech}'>${model?.weapons != null ? Math.round(model.weapons) : "—"}</span>`,
           `SPEED  <span style='color:${colors.body}'>${Math.round(mag(player.velocity) ?? 0)} m/s</span>`,
-          `HASH  <span style='color:${colors.muted}'>${player.stateHash?.slice(0, 10) ?? "—"}</span>`,
+          `HASH  <span style='color:${colors.muted}'>${esc(player.stateHash?.slice(0, 10) ?? "—")}</span>`,
         ].join("<br>");
       }
 
@@ -110,7 +114,7 @@ export function initHud(container?: HTMLElement): Hud {
           const lvl = s.health != null ? Math.max(0, Math.min(100, Math.round((s.health as number) * 100))) : 0;
           const barColor = lvl > 60 ? colors.ok : lvl > 30 ? colors.warn : colors.danger;
           return `<div style="display:flex;justify-content:space-between;gap:8px;font-size:${typography.sizes.micro};line-height:1.9">
-            <span style="color:${colors.muted};text-transform:uppercase">${logLabel(s.label)}</span>
+            <span style="color:${colors.muted};text-transform:uppercase">${esc(logLabel(s.label))}</span>
             <span style="display:inline-block;width:74px;height:7px;background:${colors.struct};border:1px solid ${colors.edge}">
               <span data-subbar style="display:block;height:100%;width:${lvl}%;background:${barColor};box-shadow:0 0 8px ${barColor}"></span>
             </span>
@@ -125,7 +129,7 @@ export function initHud(container?: HTMLElement): Hud {
       for (const e of region.entities.values()) {
         if (!player || e.id === player.id) continue;
         const d = player ? dist(player.position, e.position) : 0;
-        const tag = e.kind === "vessel" ? `▸ VSL ${log2(e.id)}` : `◈ STN ${(e as StationEntity).name ?? log2(e.id)}`;
+        const tag = e.kind === "vessel" ? `▸ VSL ${esc(log2(e.id))}` : `◈ STN ${esc((e as StationEntity).name ?? log2(e.id))}`;
         const dcol = e.kind === "station" ? colors.ok : colors.tactical;
         vacuum.push(`${tag} <span style="color:${dcol}">${formatDist(d)}</span>`);
       }

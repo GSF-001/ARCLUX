@@ -69,7 +69,7 @@ export interface GateTransitResult {
 
 /** Event gate yang dipancarkan (blueprint 06 §14 governance/world event). */
 export interface GateEvent {
-  type: "gate.transit.start" | "gate.transit.complete" | "gate.transit.reject";
+  type: "gate.transit.start" | "gate.transit.complete" | "gate.transit.reject" | "gate.transit.rollback";
   gateId: string;
   regionId: string;
   targetRegionId: string;
@@ -83,8 +83,11 @@ export interface GateRouterDeps {
   region: WorldRegion;
   /** Directory lookup (DIRECTORY ≠ AUTHORITY) — cek federation/trustedPeers. */
   directory?: { getServer: (id: string) => { manifest?: import("../directory/types").ServerManifest } };
-  /** Notify region tujuan (via relay) untuk men-spawn vessel. */
-  notifyTarget?: (targetRegionId: string, handoff: NonNullable<GateTransitResult["handoff"]>) => void;
+  /** Notify region tujuan (via relay) untuk men-spawn vessel.
+   *  HARUS mengembalikan hasil delivery: { ok:true } bila vessel sudah benar-benar
+   *  materialized di region tujuan. Bila undefined/throw/ditolak → transit di-rollback
+   *  dan vessel KEMBALI ke region asal (vessel tidak pernah hilang / dobel-spawn). */
+  notifyTarget?: (targetRegionId: string, handoff: NonNullable<GateTransitResult["handoff"]>) => Promise<GateTransitResult> | GateTransitResult;
   /** Emit world event (gate.transit.*). */
   onEvent?: (ev: GateEvent) => void;
   /** Opsional: hub entity/faction lookup untuk otorisasi lanjutan. */
@@ -208,13 +211,37 @@ export function createGateRouter(links: GateLink[], deps: GateRouterDeps): GateR
       await deps.persist.savePendingHandoff(pending);
     }
 
-    // lepas vessel dari region lokal (authoritative transfer).
+    // FASE 1 (PREPARE): tanyakan tujuan — apakah vessel bisa diterima & materialized?
+    // Jangan lepas vessel dulu. Ini mencegah vessel hilang / dobel-spawn kalau delivery gagal.
+    let ack: GateTransitResult | undefined;
+    try {
+      ack = (await deps.notifyTarget?.(req.targetRegionId, handoff)) ?? { ok: false, reason: "no notifyTarget configured" };
+    } catch (err) {
+      ack = { ok: false, reason: `notifyTarget threw: ${err instanceof Error ? err.message : String(err)}` };
+    }
+
+    // FASE 1 ROLLBACK: tujuan menolak / unreachable → vessel TETAP di region asal.
+    if (!ack.ok) {
+      // Abort: pending handoff tidak lagi in-flight (delivery tidak pernah confirmed).
+      if (deps.persist) {
+        await deps.persist.deletePendingHandoff(req.vesselId, req.gateId);
+      }
+      deps.onEvent?.({
+        type: "gate.transit.rollback",
+        gateId: req.gateId,
+        regionId: deps.region.regionId,
+        targetRegionId: req.targetRegionId,
+        vesselId: req.vesselId,
+        actorId: req.requestedBy,
+        payload: { reason: ack.reason ?? "target did not accept handoff" },
+      });
+      return { ok: false, reason: ack.reason ?? "target did not accept handoff" };
+    }
+
+    // FASE 2 (COMMIT): tujuan sudah materialized → lepas vessel dari region asal.
     deps.region.remove(req.vesselId);
 
-    // notify region tujuan (via relay/netcode) untuk men-spawn.
-    deps.notifyTarget?.(req.targetRegionId, handoff);
-
-    // deliver sukses → hapus pending handoff (tidak lagi in-flight).
+    // COMMIT DONE → hapus pending handoff (tidak lagi in-flight).
     if (deps.persist) {
       await deps.persist.deletePendingHandoff(req.vesselId, req.gateId);
     }
@@ -239,14 +266,23 @@ export function createGateRouter(links: GateLink[], deps: GateRouterDeps): GateR
       const pending = await deps.persist.loadPendingHandoffs();
       let recovered = 0;
       for (const h of pending) {
-        deps.notifyTarget?.(h.toRegionId, {
-          vesselId: h.vesselId,
-          owner: h.owner,
-          position: h.position,
-          hubId: h.hubId,
-        });
-        await deps.persist.deletePendingHandoff(h.vesselId, h.gateId);
-        recovered++;
+        // Recovery juga transactional: hanya hapus pending kalau tujuan benar-benar menerima.
+        let ack: GateTransitResult | undefined;
+        try {
+          ack = (await deps.notifyTarget?.(h.toRegionId, {
+            vesselId: h.vesselId,
+            owner: h.owner,
+            position: h.position,
+            hubId: h.hubId,
+          })) ?? { ok: false, reason: "no notifyTarget configured" };
+        } catch (err) {
+          ack = { ok: false, reason: `notifyTarget threw: ${err instanceof Error ? err.message : String(err)}` };
+        }
+        if (ack.ok) {
+          await deps.persist.deletePendingHandoff(h.vesselId, h.gateId);
+          recovered++;
+        }
+        // ack.ok=false → pending handoff DIBIARKAN (retry di recovery berikutnya / crash-safe persist).
       }
       return recovered;
     },
