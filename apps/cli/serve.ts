@@ -22,6 +22,8 @@ import * as p from "@clack/prompts";
 import { createGameServer } from "../../packages/gameserver/server";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { analyzeRepository } from "../../packages/engine/pipeline";
+import { buildVesselModel } from "../../packages/universe";
 
 export function registerServeCommand(program: Command): void {
   program
@@ -31,11 +33,17 @@ export function registerServeCommand(program: Command): void {
     .option("--name <name>", "human-readable region name (defaults to region id)")
     .option("--port <port>", "listen port", (v) => Number(v), 0)
     .option("--client <dir>", "static dir of the bundled game client (served at /)")
+    .option("--vessel <path>", "path to vessel repo to auto-spawn on boot (analyzed via .arclux/)")
     .option("--no-register", "do NOT register this server in the public directory")
-    .action(async (options: { region: string; name?: string; port: number; client?: string; register: boolean }) => {
+    .action(async (options: { region: string; name?: string; port: number; client?: string; vessel?: string; register: boolean }) => {
       const clientDir = options.client ? resolve(options.client) : null;
-      if (options.client && !existsSync(clientDir)) {
+      if (clientDir && !existsSync(clientDir as string)) {
         p.log.error(`--client dir not found: ${clientDir}`);
+        return;
+      }
+      const vesselPath = options.vessel ? resolve(options.vessel) : null;
+      if (vesselPath && !existsSync(vesselPath as string)) {
+        p.log.error(`--vessel path not found: ${vesselPath}`);
         return;
       }
 
@@ -53,6 +61,20 @@ export function registerServeCommand(program: Command): void {
       p.log.info(`   Port : ${port}`);
       if (clientDir) p.log.info(`   Game : ${url}/ (static client from ${clientDir})`);
       else p.log.info(`   Game : no --client supplied — serve the bundled client with --client dist/renderer`);
+
+      if (vesselPath) {
+        try {
+          p.log.info(`   Vessel: analyzing ${vesselPath} ...`);
+          const analysis = await analyzeRepository({ localPath: vesselPath });
+          const vessel = buildVesselModel(analysis);
+          const owner = vessel.source.repo || "player-1";
+          gs.spawnPlayerVessel({ playerId: owner, vessel });
+          p.log.success(`   Vessel spawned: ${vessel.name} (${vessel.id}) owner=${owner} — integrity ${vessel.integrity}%`);
+        } catch (e) {
+          p.log.error(`   Vessel spawn failed: ${(e as Error).message}`);
+        }
+      }
+
       p.log.info(`   Ctrl+C to stop`);
 
       const shutdown = async () => {
