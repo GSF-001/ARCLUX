@@ -5,11 +5,12 @@
 // Engine (apps/web, packages/engine, etc.) remains Apache-2.0 (LICENSE-ENGINE).
 //
 // src/renderer/input.ts — FREE-FLIGHT control binding (01 §4/§6).
-// WASD/arrows/throttle + pointer-look → kirim `move` intent ke server.
-// Server-authoritative (D-008): client cuma ngirim intent, posisi datang dari sim.
-// Tidak ada teleport/hack posisi: intent `move` = target thrust, server yang integrasi.
+// W maju · S mundur · A/D strafe · Q/E vertikal · Shift boost · Space brake ·
+// pointer-look (mouse). Configurable via settings (rebind dari controls panel).
+// Server-authoritative (D-008): client ngirim intent `move`, server yang integrasi.
 
 import type { PlayerIntent, Vec3, VesselEntity } from "../../../../packages/gameserver/types";
+import { loadSettings } from "./settings";
 
 export interface InputHandle {
   /** Bind DOM listeners ke window. panggil sekali saat game jalan. */
@@ -21,46 +22,76 @@ export interface InputHandle {
   /** Intent terakhir yang dikirim (untuk debug/otomatis poll). */
   currentIntent(): PlayerIntent | undefined;
   /** Kunci arah yang sedang ditekan (debug). */
-  state(): { up: boolean; down: boolean; left: boolean; right: boolean; boost: boolean };
+  state(): { up: boolean; down: boolean; left: boolean; right: boolean; boost: boolean; brake: boolean };
 }
 
-const KEY_W = "KeyW", KEY_A = "KeyA", KEY_S = "KeyS", KEY_D = "KeyD", KEY_ARROW_UP = "ArrowUp", KEY_ARROW_DOWN = "ArrowDown", KEY_ARROW_LEFT = "ArrowLeft", KEY_ARROW_RIGHT = "ArrowRight", KEY_SHIFT = "ShiftLeft", KEY_SPACE = "Space", KEY_CTRL = "ControlLeft";
-
-export function initInput(opts: { send: (intent: PlayerIntent) => void; onLocalVessel?: (v: VesselEntity) => void }): InputHandle {
+export function initInput(opts: {
+  send: (intent: PlayerIntent) => void;
+  /** Yaw/pitch deltas dari mouse-look → scene.setLookYawPitch. */
+  onLook?: (yaw: number, pitch: number) => void;
+}): InputHandle {
   const keys = new Set<string>();
   let playerId = "player-1";
   let entityId = "vessel-1";
   let hasLocal = false;
   let lastSeq = 0;
   let lastSentAt = 0;
-  let lastState = JSON.stringify(keys);
   let localVessel: VesselEntity | undefined;
+  let lookYaw = 0, lookPitch = 0;
+  let pointerLocked = false;
+
+  const bindings = (): ReturnType<typeof loadSettings> => loadSettings();
+  const k = (): ReturnType<typeof loadSettings> => bindings();
+
+  const isBound = (code: string): boolean => {
+    const s = k();
+    return code === s.keyForward || code === s.keyReverse || code === s.keyStrafeLeft ||
+      code === s.keyStrafeRight || code === s.keyUp || code === s.keyDown ||
+      code === s.keyBoost || code === s.keyBrake;
+  };
+
+  /** Terjemahkan key → offset thrust (best-effort; server clamp & normalisasi). */
+  const offsets = (): { tx: number; ty: number; tz: number; boost: boolean; brake: boolean } => {
+    const s = k();
+    const STEP = 2600;
+    let tx = 0, ty = 0, tz = 0;
+    if (keys.has(s.keyForward)) tz -= STEP * (KeyStep[s.keyForward] ?? 1.5);
+    if (keys.has(s.keyReverse)) tz += STEP * (KeyStep[s.keyReverse] ?? 1.0);
+    if (keys.has(s.keyStrafeLeft)) tx -= STEP * (KeyStep[s.keyStrafeLeft] ?? 1.0);
+    if (keys.has(s.keyStrafeRight)) tx += STEP * (KeyStep[s.keyStrafeRight] ?? 1.0);
+    if (keys.has(s.keyUp)) ty += STEP * (KeyStep[s.keyUp] ?? 0.8);
+    if (keys.has(s.keyDown)) ty -= STEP * (KeyStep[s.keyDown] ?? 0.8);
+    const boost = keys.has(s.keyBoost);
+    const brake = keys.has(s.keyBrake) && !boost;
+    return { tx, ty, tz, boost, brake };
+  };
 
   const sendMove = (now: number): void => {
     if (!hasLocal || !localVessel) return;
-    const thrust = 1; // unit m/s^2 target offset (server clamps via Newton)
+    const { tx, ty, tz, boost, brake } = offsets();
     const base = localVessel.position;
-    let tx = base.x, ty = base.y, tz = base.z;
-    if (keys.has(KEY_W) || keys.has(KEY_ARROW_UP)) tz -= 2600;
-    if (keys.has(KEY_S) || keys.has(KEY_ARROW_DOWN)) tz += 2600;
-    if (keys.has(KEY_A) || keys.has(KEY_ARROW_LEFT)) tx -= 2600;
-    if (keys.has(KEY_D) || keys.has(KEY_ARROW_RIGHT)) tx += 2600;
-    if (keys.has(KEY_SPACE)) ty += 2600;
-    if (keys.has(KEY_CTRL)) ty -= 2600;
-    const boost = keys.has(KEY_SHIFT) ? 2.2 : 1;
-    // Hanya kirim saat ada movement aktif (hemat bandwidth, deterministic).
-    if (tx === base.x && ty === base.y && tz === base.z) return;
-    void thrust;
-    const target: Vec3 = { x: tx, y: ty, z: tz };
-    const intent: PlayerIntent = { playerId, entityId, type: "move", seq: ++lastSeq, payload: { ...target } };
+    // Speed per §6: maju kuat, boost klaim 2.2× (~550 m/s).
+    const boostFactor = boost ? 2.2 : 1;
+    const target: Vec3 = brake
+      ? { ...base } // brake → server lihat jarak<1 → reverse thrust (cap mati)
+      : {
+          x: base.x + tx * boostFactor,
+          y: base.y + ty * boostFactor,
+          z: base.z + tz * boostFactor,
+        };
+    // Brake selalu dikirim (diperlukan biar vessel berhenti); gerak cuma saat ada input.
+    if (!brake && tx === 0 && ty === 0 && tz === 0) return;
+    const intent: PlayerIntent = {
+      playerId, entityId, type: "move", seq: ++lastSeq,
+      payload: { ...target },
+    };
     opts.send(intent);
     lastSentAt = now;
-    lastState = JSON.stringify(keys);
-    opts.onLocalVessel?.(localVessel);
   };
 
   const onKeyDown = (e: KeyboardEvent): void => {
-    if ([KEY_W, KEY_A, KEY_S, KEY_D, KEY_ARROW_UP, KEY_ARROW_DOWN, KEY_ARROW_LEFT, KEY_ARROW_RIGHT, KEY_SHIFT, KEY_SPACE, KEY_CTRL].includes(e.code)) {
+    if (e.code === "Escape") { if (pointerLocked) return; }
+    if (isBound(e.code)) {
       e.preventDefault();
       keys.add(e.code);
       sendMove(Date.now());
@@ -75,22 +106,49 @@ export function initInput(opts: { send: (intent: PlayerIntent) => void; onLocalV
 
   const throttledPoll = (): void => {
     const now = Date.now();
-    // Kirim ulang ~25Hz kalau arah masih ditekan (server drift-correct). 
+    // Resend ~25Hz kalau arah masih ditekan (server drift-correct).
     if (now - lastSentAt > 40) sendMove(now);
   };
   let timer: ReturnType<typeof setInterval> | null = null;
+
+  // Mouse-look (pointer lock). Yaw/pitch terakumulasi → scene.
+  const onMouseMove = (e: MouseEvent): void => {
+    if (!pointerLocked) return;
+    const s = k();
+    const sens = (s.lookSensitivity || 0.6) * 0.0022;
+    const invY = s.invertLookY ? -1 : 1;
+    lookYaw -= e.movementX * sens;
+    lookPitch += e.movementY * sens * invY;
+    opts.onLook?.(lookYaw, lookPitch);
+  };
+  const onCanvasClick = (): void => {
+    const s = k();
+    if (s.keyLook === "pointer-lock") {
+      const el = document.body;
+      el.requestPointerLock?.();
+    }
+  };
+  const onLockChange = (): void => {
+    pointerLocked = document.pointerLockElement === document.body;
+  };
 
   return {
     attach() {
       window.addEventListener("keydown", onKeyDown);
       window.addEventListener("keyup", onKeyUp);
       window.addEventListener("blur", onBlur);
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("click", onCanvasClick);
+      document.addEventListener("pointerlockchange", onLockChange);
       timer = setInterval(throttledPoll, 40);
     },
     detach() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("click", onCanvasClick);
+      document.removeEventListener("pointerlockchange", onLockChange);
       if (timer) clearInterval(timer); timer = null;
       keys.clear();
     },
@@ -103,7 +161,29 @@ export function initInput(opts: { send: (intent: PlayerIntent) => void; onLocalV
       return hasLocal ? { playerId, entityId, type: "move", seq: lastSeq, payload: {} } : undefined;
     },
     state() {
-      return { up: keys.has(KEY_W) || keys.has(KEY_ARROW_UP), down: keys.has(KEY_S) || keys.has(KEY_ARROW_DOWN), left: keys.has(KEY_A) || keys.has(KEY_ARROW_LEFT), right: keys.has(KEY_D) || keys.has(KEY_ARROW_RIGHT), boost: keys.has(KEY_SHIFT) };
+      const s = k();
+      return {
+        up: keys.has(s.keyForward),
+        down: keys.has(s.keyReverse),
+        left: keys.has(s.keyStrafeLeft),
+        right: keys.has(s.keyStrafeRight),
+        boost: keys.has(s.keyBoost),
+        brake: keys.has(s.keyBrake),
+      };
     },
   };
 }
+
+// Map preset key → step multiplier (forward lebih panjang daripada strafe).
+const KeyStep: Record<string, number> = {
+  KeyW: 1.5,
+  ArrowUp: 1.5,
+  KeyS: 1.0,
+  ArrowDown: 1.0,
+  KeyA: 1.0,
+  ArrowLeft: 1.0,
+  KeyD: 1.0,
+  ArrowRight: 1.0,
+  KeyQ: 0.8,
+  KeyE: 0.8,
+};

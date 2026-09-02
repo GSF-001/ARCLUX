@@ -68,6 +68,22 @@ export const colors = {
   stationHub: "#335a7a",
   stationRing: "#2b4a66",
 
+  // Sistem bintang kaya (blueprint 01 §2.1/§2.2/§2.6) — bagian dari Scene3D.
+  // Termal ∝ 1/r² (§2.6): emissive planet naik saat dekat matahari.
+  planetGasGiant: "#caa06a",     // gas giant — sabuk awan amber
+  planetGasGiantBelt: "#e8c896", // lapisan awan terang
+  ringInner: "#8a7a6a",          // cincin padat (ring system)
+  ringOuter: "#5a4f45",          // cincin luar redup
+  planetIce: "#a8d8e8",          // es — reflektif dingin
+  planetOcean: "#2a4a8a",        // oceanik — air biru
+  planetDesert: "#c9a05a",       // desert — pasir
+  planetLava: "#5a1a0a",         // lava — kena termal
+  lavaGlow: "#ff5a1a",
+  backdropPlanet: "#4a4a5a",     // BACKDROP §2.2 — planet super-jauh, depth
+  auroraA: "#5affb0",            // aurora (ATMOSPHERIC §2.4)
+  auroraB: "#52c8ff",
+  meteorTrail: "#fff2dd",        // meteor shower §2.4
+
   // Glow (scene — additive)
   glowEngine: "#4cc9ff",
   glowShield: "#3aa0ff",
