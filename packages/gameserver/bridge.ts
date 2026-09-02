@@ -124,19 +124,26 @@ export function createGameBridge(opts: GameBridgeOptions): GameBridge {
       region: shard.region,
       persist: opts.persistence,
       directory: { getServer: (id: string) => { try { const { getServer } = require("../directory/registry"); return getServer(id); } catch { return {}; } } },
-      notifyTarget: (targetRegionId, handoff) => {
+      notifyTarget: async (targetRegionId, handoff) => {
         const toShard = coordinator.resolveTarget(targetRegionId);
-        if (!toShard || toShard === shard.shardId) return; // target bukan shard ini / belum dikenal
+        if (!toShard || toShard === shard.shardId) return { ok: false, reason: "target not a known/remote shard" };
         pendingPositions.set(handoff.vesselId, handoff.position);
-        void coordinator.requestHandoff({
-          vesselId: handoff.vesselId,
-          fromRegionId: shard.region.regionId,
-          fromShardId: shard.shardId,
-          toRegionId: targetRegionId,
-          toShardId: toShard,
-          transferToken: `v:${handoff.vesselId}:${handoff.owner ?? ""}:${targetRegionId}`,
-          seq: ++seq,
-        });
+        // Tunggu ACK relay (transactional): requestHandoff → ack {ok:true} hanya
+        // kalau server tujuan benar-benar materialized vessel. Bukan fire-and-forget.
+        try {
+          const res = await coordinator.requestHandoff({
+            vesselId: handoff.vesselId,
+            fromRegionId: shard.region.regionId,
+            fromShardId: shard.shardId,
+            toRegionId: targetRegionId,
+            toShardId: toShard,
+            transferToken: `v:${handoff.vesselId}:${handoff.owner ?? ""}:${targetRegionId}`,
+            seq: ++seq,
+          });
+          return res;
+        } catch (err) {
+          return { ok: false, reason: `relay requestHandoff threw: ${err instanceof Error ? err.message : String(err)}` };
+        }
       },
     });
 

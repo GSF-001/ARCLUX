@@ -20,9 +20,18 @@ export function startMain(): MainHandle {
         win = new electron.BrowserWindow({
           width: 1280,
           height: 800,
+          backgroundColor: "#02030a",
           webPreferences: { contextIsolation: true, nodeIntegration: false, preload: __dirname + "/preload.js" },
         });
-        (win as any).loadFile("index.html").catch(() => (win as any).loadURL("http://localhost:3000"));
+        // Bundled client (esbuild → dist/renderer/). Kalau belum di-build, fallback
+        // ke server game (createGameServer + staticDir) di port default.
+        const bundled = require("node:path").join(__dirname, "..", "renderer", "index.html");
+        try {
+          require("node:fs").accessSync(bundled);
+          (win as any).loadFile(bundled);
+        } catch {
+          (win as any).loadURL("http://127.0.0.1:24001");
+        }
       };
       electron.app.whenReady().then(createWindow);
       electron.app.on("window-all-closed", () => { if (process.platform !== "darwin") electron.app.quit(); });

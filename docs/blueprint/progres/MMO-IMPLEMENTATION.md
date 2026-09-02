@@ -183,6 +183,10 @@ net), `index.ts`, `package.json`. **Arah**:
 - [x] Ark-Librarieschip vessel-world: `scene3d.ts` — SELESAI (keel/prow/spire/ring-distrik/balcony struktur piercing)
 - [x] Cockpit ops-console: `hud.ts` — SELESAI (callsign+faksi §20.8, tactical contact §7, subsystem bars §11, scanline)
 - [x] Ship follow-camera: `scene3d.ts` — SELESAI (ease di belakang vessel utama, §21 follow-camera)
+- [x] Seeded deterministic RNG production-grade: `random.ts` — SELESAI (mulberry32 integer-state, ganti `Math.sin` hash di cosmicEvent/baseline; replay cross-env identik)
+- [x] Kinetic-energy collision damage: `collision.ts` — SELESAI (KE = ½mv² × impact angle × penetration → structural damage, threshold integrity vessel)
+- [x] Server launcher production (self-host 1 command): `server.ts` + `arclux serve` — SELESAI (WorldRegion + environs + SimulationEngine + HTTP /snapshot /intent /deliver + static client + tick loop + directory register)
+- [x] Gate handoff transactional: `gate.ts` + `bridge.ts` — SELESAI (notifyTarget → await ACK, rollback vessel kalau ditolak; recovery juga ACK-only delete)
 
 > Desain acuan V4/V5/V6: `07-special-capabilities.md` · `01-spatial-ux.md §20` ·
 > `08-persistent-world.md` · keputusan D-013/D-014 di `decisions-mmo.md`.
