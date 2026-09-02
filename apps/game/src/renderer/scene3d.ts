@@ -133,6 +133,15 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   const outputPass = new OutputPass(); // menangani tone mapping di akhir
   composer.addPass(outputPass);
 
+  // =================== ENV MAP (Fase 1 — PMREMGenerator) ====================
+  // Kapal memantulkan cahaya suns/planets/nebula via PBR envMap.
+  // Regen tiap 10 frame (PMREM mahal, jangan tiap frame). scene.environment
+  // auto-apply ke semua MeshStandardMaterial tanpa set envMap manual.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+  let pmremTarget: THREE.WebGLRenderTarget | null = null;
+  let envFrame = 0;
+
   const rand = mulberry32(nebulaSeed);
 
   // =================== STARFIELD (FAR §22, instanced) =======================
@@ -653,6 +662,13 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     }
     lastFrame = now;
 
+    // Fase 1 — env map regen tiap 10 frame (presentasi, bukan otoritas).
+    if (++envFrame % 10 === 0) {
+      if (pmremTarget) pmremTarget.dispose();
+      pmremTarget = pmrem.fromScene(scene, 0.04);
+      scene.environment = pmremTarget.texture;
+    }
+
     // §2.3/§2.5: sistem bintang & planet—deterministik, mengorbit barycenter.
     const tick = simTick();
     for (let i = 1; i < suns.length; i++) {
@@ -729,6 +745,9 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     if (typeof window !== "undefined") window.removeEventListener("resize", onResize);
     stopLoop();
     running = false;
+    if (pmremTarget) { pmremTarget.dispose(); pmremTarget = null; }
+    pmrem.dispose();
+    scene.environment = null;
     renderer.dispose();
     composer.dispose();
     for (const m of vessels.values()) disposeGroup(m);
