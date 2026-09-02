@@ -49,7 +49,7 @@ Konteks dari pemilik (GSF-001):
 
 # FASE 1 — ENVIRONMENT MAP REFLECTION (PMREMGenerator)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai (commit implementasi Fase 1 — scene3d.ts pmrem)
 
 ## Tujuan
 Ships jadi memantulkan cahaya dari celestial bodies (suns, planets, nebula)
@@ -77,9 +77,9 @@ if (frameCount % 10 === 0) {
 ```
 
 ## Acceptance
-- [ ] Ship hull memantulkan warna sun/planet saat berputar
-- [ ] Metalness 0.7 + envMap tetap performa (regenerate tiap 10 frame)
-- [ ] Gak ngerusak bloom composer
+- [x] Ship hull memantulkan warna sun/planet saat berputar (`scene.environment` PMREM)
+- [x] Metalness 0.7 + envMap tetap performa (regenerate tiap 10 frame, dispose target lama)
+- [x] Gak ngerusak bloom composer (`EffectComposer` tetap)
 
 ---
 
@@ -984,10 +984,10 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 
 # EXECUTION CHECKLIST (per fase — centang saat selesai)
 
-## Fase 1 — Env map
-- [ ] pmrem generator dibuat
-- [ ] scene.environment di-set tiap 10 frame
-- [ ] Verify build + tsc
+## Fase 1 — Env map ✅
+- [x] pmrem generator dibuat (`PMREMGenerator` + `compileEquirectangularShader`)
+- [x] scene.environment di-set tiap 10 frame (`pmrem.fromScene(scene,0.04)` + dispose target lama)
+- [x] Verify build + tsc (`build-game.mjs` ✓, `tsc -p apps/game` ✓, ThreatCrush 0)
 
 ## Fase 2 — Ship model
 - [ ] buildVessel() detail baru
