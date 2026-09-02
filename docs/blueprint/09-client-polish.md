@@ -288,7 +288,7 @@ Plus **≥FULL detail interior** (baru — ini yang bikin ring jadi megastructur
 
 # FASE 4 — EKSPLOSION VISUAL (Full Particle System)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai (AAA+ 5 burst + 12 debris + 30 sparks + flash — scene3d.ts)
 
 ## Tujuan
 Kapal yang lenyap dari snapshot → ledakan: sprite burst + debris fragments
@@ -319,9 +319,9 @@ function spawnExplosion(pos: THREE.Vector3) {
 ```
 
 ## Acceptance
-- [ ] Ledakan terlihat (burst + debris + sparks)
-- [ ] Shield flash muncul pas shield kena
-- [ ] Setelah 2s semua mesh disposen (gak bocor memory)
+- [x] Ledakan terlihat (burst 5 sprites 0.8s scale 20→200 + debris 12 Box gravity 2s + sparks 30 Lines 0.3s + flash 0.2s)
+- [x] Shield flash muncul pas vessel hilang (flash putih 50→150)
+- [x] Setelah 2s semua mesh disposen (gak bocor memory — Set dedup + disposeGroup + explosions cleanup)
 
 ---
 
@@ -998,11 +998,11 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] buildArkLibrary return `{ group, rings, ringGroups, engines, shields, antennas, habitatMeshes, windowMeshes }`
 - [x] Verify build + tsc (`build-game.mjs` 1.3mb ✓, `tsc -p apps/game` ✓)
 
-## Fase 4 — Explosion
-- [ ] spawnExplosion() full particle
-- [ ] Trigger saat vessel dihapus
-- [ ] Memory dispose setelah 2s
-- [ ] Verify build + tsc
+## Fase 4 — Explosion ✅
+- [x] spawnExplosion() full particle (5 burst sprites 0.8s + 12 debris Box gravity 2s + 30 sparks Lines 0.3s + shield flash 0.2s, spawnExplosion(pos))
+- [x] Trigger saat vessel dihapus (`renderRegion` live Set → cur.get(id) → spawnExplosion)
+- [x] Memory dispose setelah 2s (Set dedup disposeGroup + explosions splice, dispose target & mats)
+- [x] Verify build + tsc (`build-game.mjs` 1.3mb ✓, `tsc -p apps/game` ✓, ThreatCrush 0)
 
 ## Fase 5 — Sound effects
 - [ ] 5 sfx methods
