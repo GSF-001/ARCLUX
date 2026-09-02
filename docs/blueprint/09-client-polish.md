@@ -85,7 +85,7 @@ if (frameCount % 10 === 0) {
 
 # FASE 2 — MODEL KAPAL PEMAIN UPGRADE
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai (AAA+ studio — fuselage+canopy+delta wings+nacelles+weapons) — commit Fase 2
 
 ## Tujuan
 Kapal player yang sekarang (ConeGeometry fighter sederhana) diganti model
@@ -106,10 +106,10 @@ detail: hull, cockpit transparan, engine nacelles, weapon mounts.
 - Weapons: metalness 0.8, roughness 0.2
 
 ## Acceptance
-- [ ] Kapal player terlihat detail dari dekat
-- [ ] Cockpit transparan (kaca)
-- [ ] Engine ada glow
-- [ ] Refleksi (Fase 1) kelihatan di hull
+- [x] Kapal player terlihat detail dari dekat (AAA+ fuselage+canopy+delta wings+canard+fin)
+- [x] Cockpit transparan (kaca `MeshPhysicalMaterial` transmission 0.82, frame torus)
+- [x] Engine ada glow (2 nacelle cylinder + 2 sprite + afterburner torus)
+- [x] Refleksi (Fase 1) kelihatan di hull (`MeshStandardMaterial` 0.78/0.28 + `scene.environment`)
 
 ---
 
@@ -989,9 +989,9 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] scene.environment di-set tiap 10 frame (`pmrem.fromScene(scene,0.04)` + dispose target lama)
 - [x] Verify build + tsc (`build-game.mjs` ✓, `tsc -p apps/game` ✓, ThreatCrush 0)
 
-## Fase 2 — Ship model
-- [ ] buildVessel() detail baru
-- [ ] Verify build + tsc
+## Fase 2 — Ship model ✅
+- [x] buildVessel() detail baru AAA+ (fuselage+canopy+delta wings+canard+fin+nacelles+glow+afterburner+weapon mounts+barrels, disposeGroup dedup Set)
+- [x] Verify build + tsc (`build-game.mjs` 1.3mb ✓, `tsc -p apps/game` ✓, ThreatCrush 0)
 
 ## Fase 3 — Ark detail (stadium megastructure)
 - [ ] 12 komponen detail

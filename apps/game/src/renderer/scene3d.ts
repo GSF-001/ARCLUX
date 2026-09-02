@@ -467,31 +467,137 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
 
   const buildVessel = (v: VesselEntity): THREE.Group => {
     const g = new THREE.Group();
-    const hull = new THREE.Mesh(
-      new THREE.ConeGeometry(20, 60, 10),
-      new THREE.MeshStandardMaterial({ color: threeColor(colors.hull), metalness: 0.7, roughness: 0.35, emissive: threeColor("#0a1424"), emissiveIntensity: 0.5 })
-    );
-    const wing = new THREE.Mesh(
-      new THREE.BoxGeometry(60, 3, 15),
-      new THREE.MeshStandardMaterial({ color: threeColor(colors.hullHigh), metalness: 0.6, roughness: 0.45 })
-    );
-    wing.position.y = 2;
-    const canard = new THREE.Mesh(
-      new THREE.BoxGeometry(13, 2, 34),
-      new THREE.MeshStandardMaterial({ color: threeColor(colors.hullHigh), metalness: 0.6, roughness: 0.5 })
-    );
-    const eng = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: makeGlowTexture(), color: threeColor(colors.glowEngine), transparent: true, opacity: 0.95,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    }));
-    eng.position.set(0, 0, 34);
-    eng.scale.set(22, 22, 1);
+
+    // --- AAA+ Studio materials (PBR, pantul env map Fase 1) ---
+    const hullMat = new THREE.MeshStandardMaterial({
+      color: threeColor(colors.hull), metalness: 0.78, roughness: 0.28,
+      emissive: threeColor("#0a1424"), emissiveIntensity: 0.45,
+    });
+    const hullHighMat = new THREE.MeshStandardMaterial({
+      color: threeColor(colors.hullHigh), metalness: 0.72, roughness: 0.32,
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: threeColor(colors.structHigh), metalness: 0.75, roughness: 0.3,
+    });
+    const cockpitMat = new THREE.MeshPhysicalMaterial({
+      color: threeColor("#a8d8ff"), metalness: 0.05, roughness: 0.08,
+      transmission: 0.82, thickness: 1.2, ior: 1.45, transparent: true, opacity: 0.92,
+      envMapIntensity: 1.4,
+    });
+    const engineMetalMat = new THREE.MeshStandardMaterial({
+      color: threeColor("#1a2535"), metalness: 0.85, roughness: 0.35,
+      emissive: threeColor(colors.glowEngine), emissiveIntensity: 0.55,
+    });
+
+    // Fuselage utama — tapered box (studio hard-surface)
+    const fuselage = new THREE.Mesh(new THREE.BoxGeometry(18, 10, 52), hullMat);
+    fuselage.position.y = 1.5;
+    g.add(fuselage);
+
+    // Nose — cone runcing depan
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(9, 28, 12), hullHighMat);
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, 1.5, -40);
+    g.add(nose);
+
+    // Cockpit canopy — dome kaca di atas depan
+    const canopy = new THREE.Mesh(new THREE.SphereGeometry(7.5, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), cockpitMat);
+    canopy.position.set(0, 8.2, -18);
+    canopy.rotation.x = -0.18;
+    canopy.scale.set(1, 0.72, 1.35);
+    g.add(canopy);
+    // Cockpit frame — rim tipis
+    const frame = new THREE.Mesh(new THREE.TorusGeometry(7.2, 0.7, 8, 24, Math.PI), accentMat);
+    frame.position.set(0, 5.8, -18);
+    frame.rotation.x = Math.PI / 2;
+    frame.scale.set(1, 1.35, 1);
+    g.add(frame);
+
+    // Delta wings — swept-back hard-surface (kiri/kanan)
+    const wingShape = new THREE.Shape();
+    wingShape.moveTo(0, 0);
+    wingShape.lineTo(26, 0);
+    wingShape.lineTo(8, 22);
+    wingShape.lineTo(0, 22);
+    wingShape.lineTo(0, 0);
+    const wingExtrude = new THREE.ExtrudeGeometry(wingShape, { depth: 2.2, bevelEnabled: true, bevelThickness: 0.4, bevelSize: 0.3, bevelSegments: 2 });
+    wingExtrude.translate(0, 0, -1.1);
+    const wingL = new THREE.Mesh(wingExtrude, hullHighMat);
+    wingL.position.set(9, 0.5, 6);
+    const wingRExtrude = wingExtrude.clone();
+    wingRExtrude.scale(-1, 1, 1);
+    (wingRExtrude as THREE.BufferGeometry).computeVertexNormals();
+    const wingR = new THREE.Mesh(wingRExtrude, hullHighMat);
+    wingR.position.set(-9, 0.5, 6);
+    g.add(wingL, wingR);
+
+    // Canard depan kecil
+    const canardL = new THREE.Mesh(new THREE.BoxGeometry(10, 1.4, 7), accentMat);
+    canardL.position.set(12, 1.2, -14);
+    canardL.rotation.y = 0.55;
+    const canardR = canardL.clone();
+    canardR.position.set(-12, 1.2, -14);
+    canardR.rotation.y = -0.55;
+    g.add(canardL, canardR);
+
+    // Engine nacelles — 2 cylinder di belakang
+    const nacelleGeom = new THREE.CylinderGeometry(4.2, 4.6, 22, 16);
+    const nacL = new THREE.Mesh(nacelleGeom, engineMetalMat);
+    nacL.rotation.x = Math.PI / 2;
+    nacL.position.set(10, 1.2, 28);
+    const nacR = nacL.clone();
+    nacR.position.set(-10, 1.2, 28);
+    g.add(nacL, nacR);
+    // Engine glow — sprite di exhaust
+    const engGlowTex = makeGlowTexture();
+    const glowMat = new THREE.SpriteMaterial({ map: engGlowTex, color: threeColor(colors.glowEngine), transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
+    const engL = new THREE.Sprite(glowMat);
+    engL.position.set(10, 1.2, 39);
+    engL.scale.set(14, 14, 1);
+    const engR = new THREE.Sprite(glowMat.clone());
+    (engR.material as THREE.SpriteMaterial).color = new THREE.Color(threeColor(colors.glowEngine));
+    engR.position.set(-10, 1.2, 39);
+    engR.scale.set(14, 14, 1);
+    g.add(engL, engR);
+    // Heat distortion ring — torus tipis di exhaust
+    const afterburnerMat = new THREE.MeshBasicMaterial({ color: threeColor(colors.glowEngine), transparent: true, opacity: 0.35 });
+    const ringL = new THREE.Mesh(new THREE.TorusGeometry(4.8, 0.9, 8, 24), afterburnerMat);
+    ringL.position.set(10, 1.2, 39);
+    ringL.rotation.x = Math.PI / 2;
+    const ringR = ringL.clone();
+    ringR.position.set(-10, 1.2, 39);
+    g.add(ringL, ringR);
+
+    // Weapon mounts — di wing tip
+    const mountGeom = new THREE.BoxGeometry(5, 2.2, 8);
+    const mountL = new THREE.Mesh(mountGeom, accentMat);
+    mountL.position.set(34, 0.2, 12);
+    const mountR = mountL.clone();
+    mountR.position.set(-34, 0.2, 12);
+    g.add(mountL, mountR);
+    const barrelGeom = new THREE.CylinderGeometry(0.9, 1.1, 14, 8);
+    const barrelMat = new THREE.MeshStandardMaterial({ color: threeColor("#2a3448"), metalness: 0.85, roughness: 0.2 });
+    const barrelL = new THREE.Mesh(barrelGeom, barrelMat);
+    barrelL.rotation.x = Math.PI / 2;
+    barrelL.position.set(34, 0.2, 4);
+    const barrelR = barrelL.clone();
+    barrelR.position.set(-34, 0.2, 4);
+    g.add(barrelL, barrelR);
+
+    // Spine fin atas
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(1.2, 9, 16), accentMat);
+    fin.position.set(0, 9.5, 10);
+    fin.rotation.x = 0.22;
+    g.add(fin);
+
+    // Shield bubble — tetap, opacity ikut health (di-update luar jika perlu)
     const shield = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: makeGlowTexture(), color: threeColor(colors.glowShield), transparent: true, opacity: 0.4,
+      map: makeGlowTexture(), color: threeColor(colors.glowShield), transparent: true, opacity: 0.32,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }));
-    shield.scale.set(40, 40, 1);
-    g.add(hull, wing, canard, eng, shield);
+    shield.scale.set(52, 52, 1);
+    g.add(shield);
+
     return g;
   };
 
@@ -843,13 +949,25 @@ function makeGlowTexture(): THREE.Texture {
 }
 
 function disposeGroup(g: THREE.Group): void {
+  const seenGeom = new Set<THREE.BufferGeometry>();
+  const seenMat = new Set<THREE.Material>();
+  const seenTex = new Set<THREE.Texture>();
   g.traverse((o: THREE.Object3D) => {
-    const mesh = o as THREE.Mesh;
-    if (mesh.geometry) mesh.geometry.dispose();
-    const m = mesh.material;
-    if (m) {
-      if (Array.isArray(m)) m.forEach((mm) => mm.dispose());
-      else m.dispose();
+    const mesh = o as THREE.Mesh & { material?: THREE.Material | THREE.Material[] };
+    const geom = mesh.geometry as THREE.BufferGeometry | undefined;
+    if (geom && !seenGeom.has(geom)) { seenGeom.add(geom); geom.dispose(); }
+    const mats = mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : [];
+    for (const mm of mats as THREE.Material[]) {
+      if (!mm || seenMat.has(mm)) continue;
+      seenMat.add(mm);
+      const withMap = mm as unknown as { map?: THREE.Texture | null };
+      if (withMap.map && !seenTex.has(withMap.map)) { seenTex.add(withMap.map); withMap.map.dispose(); }
+      mm.dispose();
+    }
+    const sprite = o as unknown as { material?: THREE.SpriteMaterial };
+    if (sprite.material && (sprite.material as unknown as { map?: THREE.Texture }).map) {
+      const tex = (sprite.material as unknown as { map: THREE.Texture }).map;
+      if (tex && !seenTex.has(tex)) { seenTex.add(tex); tex.dispose(); }
     }
   });
 }
