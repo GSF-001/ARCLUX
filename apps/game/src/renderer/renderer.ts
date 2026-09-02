@@ -8,13 +8,16 @@
 // di browser context. Server-authoritative: client render snapshot + kirim intent.
 //
 // Layering (D-008):
-//   input (WASD) → intent `move` → server /intent
-//   server tick → /snapshot → scene + HUD render
+//   input (WASD/QE + look) → intent `move` → server /intent
+//   server tick → /snapshot → scene + HUD render (+ rAF smooth interpolation)
 
 import { initScene3D, type Scene3D } from "./scene3d";
 import { initHud, type Hud } from "./hud";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
+import { initAudio, type AudioHandle } from "./audio";
+import { initMenu, type MenuHandle, type MenuCameraMode } from "./menu";
+import { loadSettings } from "./settings";
 import type { RegionSnapshot, VesselEntity, WorldEntity } from "../../../../packages/gameserver/types";
 
 export interface RendererHandle {
@@ -22,6 +25,8 @@ export interface RendererHandle {
   hud: Hud;
   net: NetHandle;
   input: InputHandle;
+  audio: AudioHandle;
+  menu: MenuHandle;
   dispose(): void;
 }
 
@@ -37,33 +42,68 @@ function toRegionState(snap: RegionSnapshot) {
 }
 
 export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle {
-  const scene = initScene3D();
+  const settings = loadSettings();
+  const scene = initScene3D(undefined, settings);
   const hud = initHud();
   const net = connectNet(opts?.serverUrl);
-  const input = initInput({ send: (intent) => { void net.send(intent); } });
+  const audio = initAudio();
+  const input = initInput({
+    send: (intent) => { void net.send(intent); },
+    onLook: (yaw, pitch) => scene.setLookYawPitch(yaw, pitch),
+  });
+  const menu = initMenu({
+    onQuality: (s) => scene.applyQuality(s),
+    onAudio: (s) => audio.setEnabled(s.muted, s.masterVolume),
+    onCameraMode: (mode) => scene.setCameraMode(mode as Parameters<Scene3D["setCameraMode"]>[0]),
+    onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
+  });
 
-  // Wire snapshot → scene + HUD + input (server-authoritative, D-008).
-  // Server posisi = meters (skala cosmo). Renderer pakai skala stylized (scene units);
-  // konversi posisi dilakukan di sini supaya renderer nggak bawa seluruh otoritas.
+  // Skena mulai dari settings tersimpan; audio unlock pertama interaksi.
+  scene.applyQuality(settings);
+
+  let lastSpeed = 0;
   const stop = net.onState((snap) => {
     const state = toRegionState(snap);
     scene.renderRegion(state);
     hud.update(state);
     // Setiap vessel dari server → input mengenali pilot local (entity pertama).
-    const vessels = state.entities.values();
-    for (const e of vessels) {
-      if (e.kind === "vessel") { input.setLocalVessel(e as VesselEntity); break; }
+    let localVessel: VesselEntity | undefined;
+    for (const e of state.entities.values()) {
+      if (e.kind === "vessel") { localVessel = e as VesselEntity; break; }
+    }
+    input.setLocalVessel(localVessel);
+    // Audio: engine hum ∝ kecepatan normalized.
+    if (localVessel) {
+      const v = localVessel.velocity;
+      const sp = Math.min(1, Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z) / 250);
+      if (Math.abs(sp - lastSpeed) > 0.01) { audio.setSpeed(sp); lastSpeed = sp; }
     }
   });
 
+  // Unlock audio + buka menu di ESC (interaction-driven, autoplay policy).
+  const onDocClick = (): void => { audio.unlock(); };
+  const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === "Escape" && !menu.isOpen) { e.preventDefault(); menu.open(); audio.ui("click"); }
+  };
+  document.addEventListener("click", onDocClick, { once: true });
+  window.addEventListener("keydown", onKeyDown);
+
   input.attach();
 
-  const dispose = () => { stop(); input.detach(); scene.dispose(); hud.dispose(); };
+  const dispose = () => {
+    stop();
+    input.detach();
+    window.removeEventListener("keydown", onKeyDown);
+    scene.dispose();
+    hud.dispose();
+    menu.dispose();
+    audio.dispose();
+  };
 
   // Expose for manual control in devtools
-  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud, input };
+  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud, input, audio, menu };
 
-  return { scene, hud, net, input, dispose };
+  return { scene, hud, net, input, audio, menu, dispose };
 }
 
 if (typeof document !== "undefined") {
