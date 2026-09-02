@@ -149,17 +149,68 @@ yang mengelilingi hull, terlihat seperti stadium/arena raksasa dari luar.
 - Comms dish: `SphereGeometry(30, 16, 16)` di salah satu antenna
 - Light strip: cylinder tipis sepanjang spire, emissive amber
 
-### 5. RINGS (4x — "STADION LUAR ANGKASA") + DETAIL
-Tiap ring:
-- Main torus (existing)
-- 8 support struts per ring (box tipis connecting ring ke hull)
-- Observation windows: rectangle emissive kecil di permukaan ring
-- Ring glow sprite existing + 1 ambient light per ring
-- **ANIMASI ROTASI:**
+### 5. RINGS (4x — "STADIUM MEGASTRUCTURE") + DETAIL (FULL)
+
+> **KONSEP (dari pemilik — prompt desain):**
+> "A colossal engineer flagship... gigantic orbital stadium-shaped megastructure.
+> Four massive rotating industrial rings surround a central armored spine hull.
+> The rings contain docking bays, habitat modules, maintenance platforms and
+> glowing windows — NOT a sports arena. Heavy sci-fi engineering, EVE Online
+> scale, Star Citizen capital ship, realistic hard-surface spacecraft."
+
+Jadi ring = **megastructure stadion orbital** (EVE/Star Citizen scale),
+mengelilingi spine hull, berisi fungsi industri (bukan arena olahraga).
+
+Tiap ring (4x total), **semua pakai `InstancedMesh` biar performa**:
+- **Main torus** (existing `TorusGeometry(640-760, 26, 16, 72)`)
+- **8 support struts** (box tipis connecting ring ke hull)
+- **Ring glow sprite** existing + **1 ambient light per ring**
+
+Plus **≥FULL detail interior** (baru — ini yang bikin ring jadi megastructure):
+
+#### 5a. HABITAT MODULES (baru, **24/ring**)
+- `BoxGeometry(30, 18, 26)` kecil, menempel di **permukaan dalam** ring
+- 24 instance per ring, tersebar merata (setiap 15°)
+- Material: steel + sedikit emissive amber (jalur hidup)
+- Pakai `InstancedMesh` (24×4 ring = 96 mesh, tapi 1 draw call)
+
+#### 5b. DOCKING BAY PORTS (baru, **12/ring**)
+- Opening gelap di tepi luar ring (arch-shaped, `TorusGeometry` kecil atau
+  `BoxGeometry` hollow dengan interior hitam)
+- 12 instance per ring
+- Amber frame + marker light di tiap port
+- Bay door: 2 panel box tipis yang bisa "buka" (animasi scale saat docking)
+
+#### 5c. MAINTENANCE PLATFORMS (baru, **4/ring**)
+- Flat deck (`BoxGeometry(80, 3, 40)`) menempel horizontal di beberapa ring
+- "Walkable" walkway, sedikit protruding dari permukaan
+- 4 platform per ring, sudut 90° terpisah
+- Detail: guard rail (2 box tipis) + hazard stripe (emissive amber strip)
+
+#### 5d. GLOWING WINDOWS (baru, banyak — pakai instancing)
+- Rectangle kecil emissive warm (`#ffd9a0`) tersebar di seluruh permukaan ring
+- **96 windows per ring** via `InstancedMesh` (single draw call)
+- Ditambah window clusters di habitat modules (tiap module 2-3 jendela)
+- Windows jadi sumber cahaya "life" di ring — terlihat dari jauh
+
+#### 5e. ANIMASI ROTASI (4 ring, arah beda)
   - Ring 1: rotation.z += 0.001/frame (clockwise)
   - Ring 2: rotation.z -= 0.0015/frame (counter)
   - Ring 3: rotation.z += 0.002/frame (clockwise)
   - Ring 4: rotation.z -= 0.0008/frame (counter)
+
+#### WINDOW/INSTANCE MATERIAL NOTES
+- Semua `InstancedMesh` di-animate via `instanceMatrix.setMatrixAt(i, m)`,
+  `instanceMatrix.needsUpdate = true` — di-update bersamaan rotasi ring.
+- Material windows pakai emissive (tidak butuh light), jadi murah.
+- Windows warm (`#ffd9a0`) vs habitat amber (`#ffb36b`) vs hull tech cyan
+  (`#52c8ff`) — contrast warna biar ring terlihat hidup dari jauh.
+
+#### Ring section total per ring: ~156 instance + torus + struts + glow
+- 24 habitat + 12 docking + 4 platform + 96 windows + 8 struts = 144 instance
+- Semua dalam 1 `InstancedMesh` class / beberapa group — minim draw call.
+- Implementasi: helper `buildRingSection(radius, opts)` dipanggil 4x (bedah
+  radius 640-760 + kecepatan rotasi). ~120 baris.
 
 ### 6. SPARS (6x) + DETAIL
 - Light strips: cylinder tipis di setiap spar (emissive)
@@ -204,6 +255,8 @@ Tiap ring:
 | tech | #52c8ff | — | — | #52c8ff (1.2) | Shield generators |
 | cockpit | — | 0.1 | 0.1 | — | MeshPhysicalMaterial, trans 0.8 |
 | engineGlow | #ff6a00 | — | — | #ff6a00 (2.0) | Engine nacelle glow |
+| windowWarm | #ffd9a0 | — | — | #ffd9a0 (1.8) | Ring glowing windows (warm light) |
+| habitatAmber | #ffb36b | — | — | #ffb36b (0.8) | Habitat module accent |
 
 ## Animasi keseluruhan
 | Komponen | Animasi | Speed |
@@ -219,15 +272,17 @@ Tiap ring:
 ## Integrasi (PENTING)
 - Ark position di-set ke **anchor (position player)**, BUKAN `(-32000, -2000, 3000)`
 - Camera mode "follow" = player vessel depan, Ark terlihat di belakang (radius 3000)
-- `buildArkLibrary()` return: `{ group, rings: Mesh[], engines: Sprite[], shields: Sprite[] }`
-  buat keperluan animasi per-frame.
+- `buildArkLibrary()` return: `{ group, rings: Mesh[], engines: Sprite[], shields: Sprite[], ringInstances: { group, habitats: InstancedMesh, windows: InstancedMesh }[] }`
+  buat keperluan animasi per-frame (rotasi ring + update instanceMatrix windows).
 
 ## Acceptance
 - [ ] Ark jadi kapal utama player, bukan background
 - [ ] Detail parah (12 komponen): cockpit, engine, weapons, docking, cargo,
       antenna, shield gens, observatory, dll
-- [ ] Ring berputar (animasi stadion/arena)
-- [ ] Tambah ~355 baris di scene3d.ts
+- [ ] Ring jadi **stadium megastructure**: 24 habitat + 12 docking port +
+      4 maintenance platform + 96 glowing windows per ring (via InstancedMesh)
+- [ ] Ring berputar (animasi stadium/arena) + windows ikut berputar
+- [ ] Tambah ~475 baris di scene3d.ts (naik dari 355 karena ring detail penuh)
 
 ---
 
@@ -481,20 +536,20 @@ btn.addEventListener("mouseleave", () => {
 |------|-------|------|----------|
 | 1 | Environment map reflection | scene3d.ts | 2 jam |
 | 2 | Player ship model upgrade | scene3d.ts | 3 jam |
-| 3 | Ark-Librarieschip detail | scene3d.ts | 4 jam |
+| 3 | Ark-Librarieschip detail (incl. stadium ring) | scene3d.ts | 4.5 jam |
 | 4 | Explosion visual (full particle) | scene3d.ts | 3 jam |
 | 5 | 5 sound effects | audio.ts | 2.5 jam |
 | 6 | Custom music upload | audio.ts + menu.ts | 1.5 jam |
 | 7 | UI effects polish | hud.ts + menu.ts | 1.5 jam |
-| | **TOTAL** | | **~17.5 jam** |
+| | **TOTAL** | | **~18 jam** |
 
 ## File additions
-- `scene3d.ts`: +555 baris (fase 1+2+3+4)
+- `scene3d.ts`: +675 baris (fase 1+2+3+4 — naik karena ring stadium detail, +120)
 - `audio.ts`: +250 baris (fase 5+6)
 - `menu.ts`: +110 baris (fase 6+7)
 - `hud.ts`: +30 baris (fase 7)
 
-## Grand total lines: ~945 baris, 4 file, 0 file baru.
+## Grand total lines: ~1065 baris, 4 file, 0 file baru.
 
 ---
 
@@ -509,11 +564,12 @@ btn.addEventListener("mouseleave", () => {
 - [ ] buildVessel() detail baru
 - [ ] Verify build + tsc
 
-## Fase 3 — Ark detail
+## Fase 3 — Ark detail (stadium megastructure)
 - [ ] 12 komponen detail
-- [ ] Ring animation
+- [ ] Ring = stadium megastructure: 24 habitat + 12 docking + 4 platform + 96 windows per ring (InstancedMesh)
+- [ ] Ring animation (rotasi + instanceMatrix update windows)
 - [ ] Anchor position (bukan background)
-- [ ] buildArkLibrary return ring/engine/shield refs
+- [ ] buildArkLibrary return ring/engine/shield/ringInstances refs
 - [ ] Verify build + tsc
 
 ## Fase 4 — Explosion
