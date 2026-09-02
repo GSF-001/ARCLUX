@@ -134,7 +134,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
 
   const server: Server = createServer(async (req, res) => {
     try {
-      const u = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+      const u = new URL(req.url ?? "/", "http://localhost");
       if (req.method === "GET" && u.pathname === "/snapshot") {
         sendJson(res, 200, region.snapshot());
         return;
