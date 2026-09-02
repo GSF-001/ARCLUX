@@ -33,14 +33,17 @@ Konteks dari pemilik (GSF-001):
 
 ---
 
-## FILE YANG DIUBAH (4 file saja — gak ada file baru)
+## FILE YANG DIUBAH
 
 | File | Perkiraan Baris Tambah | Isi |
 |------|------------------------|-----|
-| `apps/game/src/renderer/scene3d.ts` | +555 | Env map, model kapal player, Ark detail, explosions |
-| `apps/game/src/renderer/audio.ts` | +250 | 5 SFX + custom music playback |
-| `apps/game/src/renderer/menu.ts` | +110 | UI upload musik + refine |
-| `apps/game/src/renderer/hud.ts` | +30 | UI polish |
+| `apps/game/src/renderer/scene3d.ts` | +675 | Part A: Env map, model kapal player, Ark detail, explosions |
+| `apps/game/src/renderer/interior.ts` | +480 | **Part B NEW:** FPS interior walkable, promenade, hangar bay, corridor (lazy-load pas docking) |
+| `apps/game/src/renderer/renderer.ts` | +60 | Part B: switch exterior↔interior, DockingState, wiring CharacterEntity |
+| `apps/game/src/renderer/input.ts` | +80 | Part B: mode FPS_INTERIOR (WASD+Shift+pointer-lock), collision Box3 |
+| `apps/game/src/renderer/audio.ts` | +250 | 5 SFX + custom music playback (Part A) + interior ambient/hangar sfx |
+| `apps/game/src/renderer/menu.ts` | +200 | Part A upload musik + Part B bazaar/character/marketplace overlay |
+| `apps/game/src/renderer/hud.ts` | +40 | Part A polish + Part B interior HUD (deck, slot, lapak) |
 
 ---
 
@@ -530,7 +533,419 @@ btn.addEventListener("mouseleave", () => {
 
 ---
 
-# ESTIMASI TOTAL
+---
+
+# PART B — STADIUM INTERIOR WORLD (FULL AAA MMORPG, wire ke gameserver)
+
+> **PRINSIP Part B:** Stadium/kapal luar angkasa **BUKAN background**. Tiap stadium
+> = `StationEntity`/`VesselEntity` hidup di `packages/gameserver/types.ts:29` (D-008
+> server-authoritative). `1 repo = 1 vessel` (`06 §18.1:842`, `decisions-mmo.md:87`
+> D-007) — **repo = repo user sendiri** (`VesselModel.source.org/repo`
+> `packages/universe/types.ts:75`), `owner = VesselEntity.owner` `types.ts:32`
+> di-set `WorldRegion.spawnVessel({owner:playerId})` `world.ts:96` /
+> `server.ts:218` `spawnPlayerVessel`. Damage kapal = code kapal di repo ikut
+> rusak — itu udah ada di `gameserver` (`component.ts`, `collision.ts:92`
+> `KE=½mv²×angle×penetration`, `thermics.ts:28` `∝1/r²→>1200K→health-2/tick`,
+> `combat.ts:39` `DAMAGE_CEILING=12` per-subsystem), Part B cuma polish UI
+> biar selevel engine gila yang udah lu bikin — **FULL FPS AAA, gak ada versi
+> murah, tinggal wire**.
+
+> **Repo siapa?** Jawab jebakan: **repo user sendiri** — user bikin repo baru
+> di akun dia (`github.com/dia/my-stadium` isinya `arclux.stadium.json` +
+> `vessel.json` universe), game kirim `repoUrl` → `gameserver` `world.ts:96`
+> spawn jadi `StationEntity`/`VesselEntity`/`CharacterEntity`. Validasi
+> `validator.ts:53` `entity.owner===playerId` + 3-tier license
+> `universe/license.ts:10` `open/shared/private`. `engine/pipeline.ts:1`
+> **TIDAK** dipakai game — itu buat analisis codebase workspace.
+
+---
+
+# FASE 8 — FPS WALKABLE INTERIOR WORLD (Genshin-like, FULL)
+
+## Status: ⬜ Belum mulai
+
+## Tujuan
+Di dalam Ark/stadium bisa **jalan FPS beneran**, ada kehidupan, bisa ketemu
+player lain — kayak Genshin/MMORPG, bukan click-to-move murah. Skala tetap
+EVE/Star Citizen kayak exterior stadium megastructure.
+
+## Konsep
+Exterior = `scene3d.ts:760` `buildArkLibrary()` (sudah). Interior = scene
+terpisah `buildArkInterior()` di file baru, **lazy-load cuma pas docking**
+biar gak berat di orbit. Dua scene gak dirender bareng — `renderer.ts`
+switch `exterior ↔ interior` via `DockingState`.
+
+## File
+- **NEW** `apps/game/src/renderer/interior.ts` ~480 baris — `buildArkInterior()`,
+  promenade, plaza, corridor, hangar bay geometry
+- `apps/game/src/renderer/renderer.ts` +60 — `DockingState` + switch scene
+- `apps/game/src/renderer/input.ts` +80 — mode `FPS_INTERIOR`
+- `apps/game/src/renderer/scene3d.ts` — reuse `tokens.ts` D-025 palette
+
+## Detail implementasi
+
+### 8a. FPS Controller (FULL, bukan click)
+```typescript
+// interior.ts — FPS interior, pointer-lock kayak game AAA
+type InteriorMode = "EXTERIOR" | "FPS_INTERIOR";
+let mode: InteriorMode = "EXTERIOR";
+let yaw = 0, pitch = 0, vel = new THREE.Vector3();
+
+// input.ts — extend, bukan ganti
+// WASD + Shift sprint + Space jump + Ctrl crouch + mouse look
+// pointer-lock: canvas.requestPointerLock() → mousemove → yaw/pitch
+// collision: THREE.Box3 per corridor/promenade + raycast lantai
+// clamp pitch ±85°, sprint 1.6×, jump impulse 4m/s, gravity 9.8
+```
+
+### 8b. Interior Geometry (FULL detail, bukan placeholder)
+- **Corridor spine** — `BoxGeometry(4200, 80, 80)` sepanjang keel, panel lines +
+  emissive strip kayak exterior 12 hull panel (`Fase 3.1`), 8 window strips
+- **Promenade 4 ring** — walkway melingkar di tiap ring (reuse radius
+  640-760 `Fase 3.5`), guard rail + hazard stripe, `96 windows` warm
+  `#ffd9a0` tetap kelihatan dari dalam
+- **Plaza central** — `CylinderGeometry(400, 400, 20, 48)` di tengah hull,
+  tempat kumpul, `StationEntity.safeZoneRadius:58` = `1000m`
+- **Habitat deck** — 24 habitat `Box(30,18,26)` per ring jadi ruangan beneran
+  (bisa masuk), bukan cuma `InstancedMesh` luar
+- **Lighting** — `AmbientLight` + `PointLight` per deck + emissive window,
+  `PMREMGenerator` reuse Fase 1 (scene.environment tetap)
+
+### 8c. Wire ke gameserver (authoritative D-008)
+```typescript
+// packages/gameserver/types.ts — tambah (server authoritative)
+export interface CharacterEntity extends GameEntity {
+  kind: "character"; // baru, selain "vessel"|"station" types.ts:26
+  vesselId: string;  // vessel induk yang dimiliki
+  deck: "hangar"|"promenade"|"plaza"|"habitat";
+}
+// RegionSnapshot:79 tambah entities: (WorldEntity|CharacterEntity)[]
+// WorldRegion: world.ts:96 spawnCharacter(opts) mirip spawnVessel
+// Simulation: simulation.ts:85 step() sync CharacterEntity 25Hz bareng VesselEntity
+// Persistence: persistence.ts:120 saveRegion/loadRegion ikut simpan CharacterEntity
+```
+
+### 8d. Multiplayer
+- `WorldRegion:65` `entities: Map<string, WorldEntity|CharacterEntity>` —
+  semua karakter sync kayak vessel
+- `governance.ts:31` `isInSafeZone` — di dalam stadium = safe zone, `combat.ts`
+  gak bisa hit
+- `observability.ts` + `intel.ts` — presence `CharacterEntity` kelihatan di
+  overlay `[KOMUNITAS A] [GSF-xxxx] [username]` `01:806`
+
+## Performance
+- Lazy-load: `buildArkInterior()` cuma dipanggil pas `DockingState.entering`
+- `InstancedMesh` habitat/windows tetap 1 draw call
+- Exterior scene `visible=false` pas di dalam
+
+## Acceptance
+- [ ] FPS beneran (WASD+Shift+Space+mouse look, pointer-lock) — bukan click
+- [ ] Collision jalan gak tembus dinding/lantai
+- [ ] Interior detail full (corridor+promenade+plaza+habitat) — bukan kotak kosong
+- [ ] Karakter player lain kelihatan & sync (2+ player di plaza)
+- [ ] Lazy-load — orbit tetap 60fps, interior load pas docking aja
+- [ ] `buildArkInterior()` ~480 baris, `input.ts` +80, `renderer.ts` +60
+
+---
+
+# FASE 9 — KARAKTER ENGINEER (bikin kayak bikin kapal di repo)
+
+## Status: ⬜ Belum mulai
+
+## Tujuan
+Tiap orang bisa **bikin karakter sendiri kayak bikin kapal di repo** — vessel
+langsung ada karakter. Pilot = karakter persisten `D-025` `repository→distrik,
+community→fraksi, pilot→karakter` `decisions-mmo.md:297`.
+
+## Konsep — Repo = Karakter
+- **Kapal** → repo dengan `VesselModel` (`packages/universe/types.ts:75`
+  `source.org/repo`) → `world.ts:96` `spawnVessel({owner:playerId})`
+- **Stadium** → repo dengan `arclux.stadium.json` + `VesselModel` →
+  `world.ts:115` `spawnStation({owner, communityId})`
+- **Karakter** → repo karakter (repo kecil isinya `character.json`:
+  `body, armorColor, emblemRepo`) → `world.ts:96` `spawnCharacter` /
+  `spawnVessel` mini `owner=playerId` → `CharacterEntity` di dalam stadium
+- Semua **repo user sendiri** (`github.com/dia/my-character`), game kirim
+  `repoUrl` → `gameserver` clone/validasi → spawn. Bukan repo ARCLUX pusat.
+
+## File
+- `apps/game/src/renderer/menu.ts` +80 — `CharacterCustom` UI
+- `packages/gameserver/types.ts` +15 — `CharacterEntity`
+- `packages/gameserver/world.ts` +25 — `spawnCharacter()`
+- `packages/gameserver/persistence.ts` +10 — simpan karakter
+- `packages/gameserver/lineage.ts:22` `recordCreation` — provenance karakter
+
+## Detail implementasi
+
+### 9a. CharacterCustom UI (pertama masuk stadium)
+```
+┌─────────────────────────────────┐
+│ CREATE CHARACTER (repo = karakter)│
+│ Body: [A] [B] [C] [D] preset    │
+│ Armor: [██] color picker         │
+│ Emblem: repo GSF-001/my-emblem   │
+│ Nama: GSF-xxxx (prefix user)    │
+│ [Spawn di Plaza]                │
+└─────────────────────────────────┘
+```
+- DOM `textContent` ThreatCrush-safe (kayak `hud.ts` `esc()`)
+- Pilih 4 body preset dulu (box+capsule, bukan skeletal — AAA feel awal)
+- `emblemRepo` = repo yang jadi emblem (bisa repo vessel dia sendiri)
+- Simpan: `PlayerIntent { type:"spawn_character", payload:{characterJson} }`
+  → `simulation.ts:167` `applyIntent` → `validator.ts:45` cek `playerId` →
+  `world.ts` spawn
+
+### 9b. Karakter di world
+- `CharacterEntity: types.ts` `id = char:${playerId}`, `kind="character"`,
+  `vesselId = vessel.id` (kapal miliknya), `deck="plaza"` awal
+- `server.ts:218` `spawnPlayerVessel` sudah idempotent — karakter reuse pola
+  itu
+- `lineage.ts:22` `recordCreation(characterId, vesselId, owner, tick)` —
+  provenance karakter tetap walau ganti baju
+
+### 9c. Animasi
+- `THREE.AnimationMixer` idle/walk/run/sprint (box rig simpel, bukan skeletal
+  dulu — tetap AAA feel karena FPS + interior detail)
+- Third-person follow cam + first-person toggle (`V` key)
+
+## Wire ke gameserver
+- `validator.ts:45` `playerId===ctx.playerId` + `53` `owner check`
+- `persistence.ts:120` `saveRegion`/`loadRegion` ikut karakter (restart ≠ reset
+  V6 `08:6`)
+- `bridge.ts:102` `token = v:${vesselId}:${owner}:${target}` — karakter ikut
+  pindah shard bareng vessel
+
+## Acceptance
+- [ ] Bikin karakter kayak bikin kapal (repo → spawn) — bukan form doang
+- [ ] 4 preset + armor color + emblem repo
+- [ ] Karakter spawn di plaza stadium, bisa jalan FPS
+- [ ] `CharacterEntity` sync antar player & persist restart
+
+---
+
+# FASE 10 — HANGAR GARASI + ANIMASI DOCKING SINEMATIK FILM (FULL)
+
+## Status: ⬜ Belum mulai
+
+## Tujuan
+Parkir kapal **luar & dalam kayak film**, ada garasi semua orang parkir kapal
+nya di situ, animasi masuk stadium keren 💀.
+
+## Konsep
+- Garasi = bagian dari stadium `StationEntity` `safeZoneRadius:58` `1000m`
+- 12 docking port di tiap ring (48 total, dari Fase 3.5b) → tiap port = gate
+  ke hangar
+- Hangar = `BoxGeometry(400x200x600)` di hull, 32 slot `InstancedMesh`
+
+## File
+- `apps/game/src/renderer/interior.ts` +120 — hangar bay geometry + 32 slot
+- `apps/game/src/renderer/scene3d.ts` +40 — bay door anim di ring
+- `apps/game/src/renderer/renderer.ts` +40 — `DockingState`
+- `apps/game/src/renderer/audio.ts` +20 — docking siren + clamp sfx
+- `packages/gameserver/gate.ts:34` `GateLink` — sudah ada, tinggal pakai
+- `packages/gameserver/bridge.ts:75` `createGameBridge` — sudah transactional
+
+## Detail implementasi
+
+### 10a. Hangar Bay Geometry
+```typescript
+// interior.ts — hangar di hull tengah
+const hangar = new THREE.Mesh(new THREE.BoxGeometry(400, 200, 600),
+  new THREE.MeshStandardMaterial({ color: threeColor(colors.struct), metalness:0.7 }));
+// 32 slot InstancedMesh — tiap slot Box(60,20,80) + marker light amber
+// Vessel yang parkir = InstancedMesh instance, pos = slotPos[i]
+// Exterior kapal tetap visible di slot (scale 0.6 biar muat)
+```
+
+### 10b. Animasi Docking Film 3 Detik (FULL, controllable)
+```
+APPROACH (<800m dari port, tekan F)
+  → validate: validator.ts:45 + gate.ts:151 dist < activationRadius
+  → request: gate.ts:185 log gate.transit.start + persistence.ts:146 savePendingHandoff (BEFORE remove)
+  → anim exterior: kapal lerp dari approach vector → port (1s)
+  → bay door: 2 panel Box scale 1→0 (0.5s) + light sweep PointLight 0→1.4
+  → kamera: lerp lewat koridor (1s), BISA lihat kanan-kiri (controllable, bukan lock total)
+  → commit: bridge.ts:134 coordinator.requestHandoff → await ACK
+  → phase2: gate.ts:242 region.remove(vesselId) di source, interior.ts switch ke FPS
+  → auto-clamp: kapal lerp ke slot kosong, gear down, clamp FX Sprite
+  → persist: gate.ts:245 deletePendingHandoff
+  → log gate.transit.complete
+```
+- Total 3 detik, `THREE.AnimationMixer` + `lerp`, bukan cutscene lock total
+- Kalau `ack.ok===false` → `gate.ts:224` rollback `deletePendingHandoff`, tetap di orbit
+- Crash mid-transit → `gate.ts:264` `recoverPendingHandoffs()` re-deliver (crash-safe `persistence.ts:120`)
+
+### 10c. Parkir Luar vs Dalam
+- **Luar:** vessel tetap `VesselEntity` di `WorldRegion` orbit, `position` dekat port
+- **Dalam:** `CharacterEntity` di interior + vessel `InstancedMesh` di slot (visual), `VesselEntity` tetap di `RegionState` tapi `position = hangarSlotPos` + `velocity=0`
+- Semua kapal kelihatan di garasi (32 slot, `InstancedMesh` 1 draw call)
+
+### 10d. Audio
+- `audio.ts` `sfxDocking()` — low hum + siren sweep, `sfxClamp()` — metal clamp
+- `setSpeed(0)` pas docking biar engine hum pelan
+
+## Wire ke gameserver (udah ada, tinggal pakai)
+- `gate.ts:127` `createGateRouter` — `transit(req)` sudah 2-phase commit + federation check `directory.getServer`
+- `bridge.ts:92` `deliver` — `target.region.spawnVessel` dari `vesselModels` Map (token anti-clone, bukan kirim source code)
+- `simulation.ts:201` `dock` intent — `position=station.position`, zero velocity
+
+## Acceptance
+- [ ] 32 slot garasi kelihatan di hangar (InstancedMesh)
+- [ ] Parkir luar & dalam bisa
+- [ ] Animasi masuk 3 detik kayak film, controllable, door buka + light sweep
+- [ ] Crash-safe (pending handoff survive restart)
+- [ ] Semua kapal di garasi kelihatan (32)
+
+---
+
+# FASE 11 — BAZAAR KOMPONEN (jual SOURCE code vessel beneran, FULL)
+
+## Status: ⬜ Belum mulai
+
+## Tujuan
+Di dalam stadium ada **lapak, orang bisa jalan, jual/beli komponen kapal** —
+tiap komponen = code vessel beneran, kayak Genshin lapak + MMORPG trade.
+
+## Konsep — Komponen = Code Vessel
+- Tiap `VesselModel` di `packages/universe/types.ts:75` + `packages/gameserver/component.ts:10`
+  punya `ComponentCondition { componentId, vesselId, health 0..100, usageCount, maxUsage, depleted }`
+- 16 lapak di promenade ring (4 per ring), tiap lapak = stall `BoxGeometry(40,30,40)` + signage
+- Listing = komponen beneran dari `WorldRegion` snapshot, **bukan** `ModuleInfo` engine
+
+## File
+- `apps/game/src/renderer/interior.ts` +80 — 16 stall geometry di promenade
+- `apps/game/src/renderer/menu.ts` +120 — marketplace overlay (filter, preview, trade)
+- `packages/gameserver/component.ts:30` `useComponent` — sudah ada
+- `packages/gameserver/validator.ts:169` `checkComponent` — sudah ada
+- `packages/gameserver/simulation.ts:167` `applyIntent` — sudah ada
+
+## Detail implementasi
+
+### 11a. Stall Geometry
+```typescript
+// interior.ts — 16 stall di promenade (4 per ring × 4 ring)
+for (let r=0; r<4; r++) for (let s=0; s<4; s++) {
+  const stall = new THREE.Mesh(new THREE.BoxGeometry(40,30,40),
+    new THREE.MeshStandardMaterial({ color: threeColor(colors.structHigh), emissive: threeColor(colors.tactical) }));
+  stall.position.set(promenadePos(r,s));
+  // signage: Sprite textContent "LAPAK 1" (DOM overlay, bukan innerHTML)
+  // proximity trigger: distance(player, stall) < 30 → show [E] Interact
+}
+```
+
+### 11b. Marketplace Overlay (FULL)
+```
+┌──────────────────────────────────────────┐
+│ BAZAAR — LAPAK 7 (Promenade Ring 2)     │
+│ Filter: [All][Engine][Shield][Weapon]   │
+│ ┌─────────────────────────────────────┐ │
+│ │ Component: Thruster Mk3             │ │
+│ │ Vessel: GSF-001/my-vessel           │ │
+│ │ Health: 87%  Usage: 3/10            │ │
+│ │ Price: 500 cr  Seller: GSF-002      │ │
+│ │ [Preview Stats] [Graph] [Beli]      │ │
+│ └─────────────────────────────────────┘ │
+│ Preview: VesselModel.systems[engine]=87%│
+│ Graph: mini GraphCanvas kapal seller   │
+└──────────────────────────────────────────┘
+```
+- `menu.ts` DOM `textContent` + `esc()` kayak `hud.ts` (ThreatCrush-safe, `innerHTML` 0)
+- Filter by `componentId` (engine/shield/weapon/reactor), search by `vesselId`
+- Preview: `VesselModel.systems` health + `lineage.ts:44` `getLineage` provenance
+- Trade button cuma aktif kalau `component.ts:30` `useComponent` `!depleted` + `validator.ts:169` `checkComponent` pass
+
+### 11c. Trade Flow (authoritative D-008)
+```typescript
+// client: PlayerIntent { playerId, entityId: characterId, type:"trade_component", payload:{ listingId, componentId }, seq }
+// server: simulation.ts:167 applyIntent → validator.ts:45 playerId check → component.ts:30 useComponent → lineage.ts:37 transferOwnership → log GameEvent type:"trade"
+// result: RegionState.entities update, buyer vessel dapat component, seller vessel kehilangan
+// damage check: kalau komponen rusak (health 0) → component.ts:30 return depleted → validator reject
+```
+
+### 11d. Damage → Code Mapping (bener — gameserver, bukan engine)
+- `combat.ts:39` `applyCombatIntent` → `SystemState.health -= damage` (12 max) → komponen rusak
+- `collision.ts:92` `checkCollisions` → `KE×angle×penetration` → semua `SystemState.health -= damage` → `destroyed = damage >= integrity(80)` → `region.remove`
+- `thermics.ts:28` `computeThermal` → `>1200K → health-=2/tick`
+- `lineage.ts:28` `recordDestruction` — provenance tetap walau hancur (`04:22` wreckage archive)
+
+## Acceptance
+- [ ] 16 lapak kelihatan di promenade (bisa jalan ke lapak, [E] interact)
+- [ ] Bisa jual/beli source code komponen vessel beneran (bukan dummy)
+- [ ] Validasi gameserver (cuma komponen hidup yang bisa dijual)
+- [ ] Preview stats + graph + lineage
+- [ ] Trade update `RegionState` langsung, damage mapping bener
+
+---
+
+# FASE 12 — USER BEBAS BIKIN STADIUM + LIVING WORLD INTERAKSI (FULL)
+
+## Status: ⬜ Belum mulai
+
+## Tujuan
+**Semua stadium yang dibikin user bebas**, kayak Genshin — di dalam bisa
+interaksi sesama player, ada lapak, ada garasi, MMORPG AAA.
+
+## Konsep — Stadium = StationEntity dari Repo
+- User bebas bikin stadium via repo — push repo dengan
+  `arclux.stadium.json` (isinya `ringCount, habitatDensity, dockingCount`,
+  plus `VesselModel` config universe). Contoh:
+  ```json
+  // arclux.stadium.json di github.com/dia/my-stadium
+  { "name": "Stadion Dia", "rings": 4, "habitatsPerRing": 24, "dockingPerRing": 12, "communityId": "dia-faction" }
+  ```
+- `scene3d.ts:760` `buildArkLibrary()` → `buildStadiumFromConfig(config)` di
+  `scene3d.ts`/`interior.ts` generate `StationEntity` baru (bukan background).
+  `world.ts:115` `spawnStation({id, name, owner:playerId, communityId, safeZoneRadius:1000})`
+- Stadium muncul di world, `gate.ts:34` `GateLink` bikin gate antar stadium
+
+## File
+- `apps/game/src/renderer/scene3d.ts` +60 — `buildStadiumFromConfig()`
+- `apps/game/src/renderer/interior.ts` +60 — interior stadium user
+- `packages/gameserver/world.ts:115` `spawnStation` — sudah ada
+- `packages/gameserver/gate.ts:34` `GateLink` — sudah ada
+- `packages/gameserver/governance.ts:31` `isInSafeZone` — sudah ada
+- `packages/gameserver/persistence.ts:120` — simpan stadium
+
+## Detail implementasi
+
+### 12a. Build Stadium dari Repo
+```typescript
+// scene3d.ts — extend buildArkLibrary
+function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
+  // reuse Fase 3.5 ring logic: buildRingSection(radius, {habitats: cfg.habitatsPerRing, docking: cfg.dockingPerRing})
+  // habitat/docking/windows InstancedMesh kayak Ark, tapi param dari cfg
+  // return group + ringInstances kayak Fase 3 integration
+}
+// client kirim: PlayerIntent { type:"spawn_station", payload:{ stadiumJson, repoUrl } }
+// server: validator cek repoUrl valid → world.spawnStation → persistence.saveRegion
+```
+
+### 12b. Living World Interaksi
+- **Di dalam stadium:** semua `CharacterEntity` bisa `proximity` chat/interact
+  (wire `governance.ts` + `intel.ts` `addIntel`/`getIntel` untuk presence &
+  `cockpit.ts` HUD faction `[KOMUNITAS A] [GSF-xxxx]` `01:806`)
+- **Antar stadium:** `gate.ts:127` `createGateRouter` + `bridge.ts:75`
+  `createGameBridge` transactional ACK + `teleport.ts` 2-teleport mobilisasi
+  (`MAX 50000, cooldown 300 ticks` `teleport.ts`)
+- **Damage stadium:** `combat.ts`/`collision.ts` hit stadium → `governance.ts`
+  `isInSafeZone` cek — di dalam safe zone `02:160` `BLOCKED`, di luar →
+  `SystemState.health` turun kayak vessel
+
+### 12c. Wire Community (06 §13, §15-16)
+- `02:190` `Station permissions` `PUBLIC/COMMUNITY/FLEET/PRIVATE` via `GateLink.allowedCommunityIds:43`
+- `06:540` `Access ≠ Ownership` — `OWNER→OPERATOR→MAINTAINER→AUTHORIZED→TEMPORARY→COMMUNITY_ADMIN` `06:554`
+- `06:728` multi-sig `REQUEST→LEADER+COUNCIL→ACTION` buat ganti safe-zone
+
+## Acceptance
+- [ ] User bisa bikin stadium baru via repo (`arclux.stadium.json`) — muncul di world
+- [ ] Stadium punya interior FPS + 16 lapak + 32 garasi kayak Ark
+- [ ] Bisa interaksi sesama player di dalam (proximity, chat, trade)
+- [ ] Gate antar stadium jalan (transactional, crash-safe)
+- [ ] Damage stadium ngaruh ke code repo itu (health turun)
+
+---
+
+# ESTIMASI TOTAL (Part A + Part B)
 
 | Fase | Fitur | File | Estimasi |
 |------|-------|------|----------|
@@ -541,15 +956,29 @@ btn.addEventListener("mouseleave", () => {
 | 5 | 5 sound effects | audio.ts | 2.5 jam |
 | 6 | Custom music upload | audio.ts + menu.ts | 1.5 jam |
 | 7 | UI effects polish | hud.ts + menu.ts | 1.5 jam |
-| | **TOTAL** | | **~18 jam** |
+| **Part A TOTAL** | | | **~18 jam** |
+| 8 | FPS walkable interior (Genshin-like) | interior.ts + renderer.ts + input.ts | 6 jam |
+| 9 | Karakter (repo = karakter) | menu.ts + types.ts + world.ts | 3 jam |
+| 10 | Hangar garasi + docking film 3s | interior.ts + scene3d.ts + gate.ts | 4 jam |
+| 11 | Bazaar jual source code vessel | interior.ts + menu.ts + component.ts | 3.5 jam |
+| 12 | User bebas bikin stadium + living world | scene3d.ts + interior.ts + world.ts | 3.5 jam |
+| **Part B TOTAL** | | | **~20 jam** |
+| | **GRAND TOTAL A+B** | | **~38 jam** |
 
 ## File additions
-- `scene3d.ts`: +675 baris (fase 1+2+3+4 — naik karena ring stadium detail, +120)
-- `audio.ts`: +250 baris (fase 5+6)
-- `menu.ts`: +110 baris (fase 6+7)
-- `hud.ts`: +30 baris (fase 7)
+- `scene3d.ts`: +735 baris (Part A 675 + Part B 60 stadium config)
+- `interior.ts`: **+620 baris NEW** (Fase 8 480 + 10 120 + 11 80 + 12 60, lazy-load)
+- `renderer.ts`: +60 baris (Part B DockingState switch)
+- `input.ts`: +80 baris (Part B FPS mode)
+- `audio.ts`: +270 baris (Part A 250 + Part B 20 docking/hangar sfx)
+- `menu.ts`: +280 baris (Part A 110 + Part B 170 bazaar+character)
+- `hud.ts`: +40 baris (Part A 30 + Part B 10 interior HUD)
 
-## Grand total lines: ~1065 baris, 4 file, 0 file baru.
+## Grand total lines: **~2085 baris, 7 file (1 baru interior.ts), 0 breaking change.**
+
+> Part A = polish exterior (ship, Ark stadium, ledakan, sfx, musik, UI)
+> Part B = polish interior living world (FPS, karakter repo, hangar film, bazaar code, stadium bebas)
+> Semua wire ke `packages/gameserver` yang udah ada (D-008 authoritative), **gak sentuh `packages/engine`**.
 
 ---
 
@@ -596,6 +1025,40 @@ btn.addEventListener("mouseleave", () => {
 - [ ] Menu hover effects
 - [ ] Verify build + tsc
 
+## Fase 8 — FPS interior
+- [ ] interior.ts buildArkInterior() (corridor+promenade+plaza+habitat)
+- [ ] FPS controller WASD+Shift+pointer-lock + Box3 collision
+- [ ] Lazy-load pas docking, exterior visible=false
+- [ ] CharacterEntity sync 25Hz
+- [ ] Verify build + tsc
+
+## Fase 9 — Karakter repo
+- [ ] CharacterEntity + spawnCharacter()
+- [ ] CharacterCustom UI 4 preset + emblem repo
+- [ ] lineage + persistence
+- [ ] Verify build + tsc
+
+## Fase 10 — Hangar + docking film
+- [ ] Hangar 32 slot InstancedMesh
+- [ ] Animasi 3 detik controllable + bay door + light sweep
+- [ ] 2-phase commit gate.ts + bridge.ts
+- [ ] Parkir luar & dalam
+- [ ] Verify build + tsc
+
+## Fase 11 — Bazaar
+- [ ] 16 stall promenade + proximity [E]
+- [ ] Marketplace overlay filter + preview graph/lineage
+- [ ] Trade via PlayerIntent + validator + component
+- [ ] Validasi health/usage
+- [ ] Verify build + tsc
+
+## Fase 12 — Stadium bebas + living world
+- [ ] arclux.stadium.json → buildStadiumFromConfig()
+- [ ] spawnStation + GateLink + governance
+- [ ] Interaksi proximity + trade antar stadium
+- [ ] Damage stadium → health
+- [ ] Verify build + tsc
+
 ---
 
 # FINAL VERIFICATION (SEBELUM COMMIT)
@@ -603,15 +1066,14 @@ btn.addEventListener("mouseleave", () => {
 1. [ ] `node scripts/build-game.mjs` — bundle success (gak error)
 2. [ ] `npx tsc --noEmit -p apps/game/tsconfig.json` — type check clean
 3. [ ] `grep -rn "innerHTML.*+" apps/game/src/renderer/` — 0 match (ThreatCrush)
-4. [ ] Manual test di game client (Electron / browser):
-     - Ark terlihat detail, ring berputar, engine glow
-     - Ship player detail + refleksi env map
-     - Kapal dihancurkan → ledakan + suara explosion
-     - Upload file musik → play/pause/stop jalan
-5. [ ] Gak ada stray files ke-commit (`ArcluxEnvironment.ts`, `ARCLUX`)
-6. [ ] Konfirmasi kepemilikan sebelum push (jangan force push)
-7. [ ] Committed ke branch `feat/mmo-blueprint-full`
-8. [ ] Push + buka/update PR
+4. [ ] `npx tsc --noEmit -p packages/gameserver/tsconfig.json` — gameserver type check (CharacterEntity, GateLink)
+5. [ ] Manual test di game client (Electron / browser):
+     - Part A: Ark detail, ring berputar, engine glow, ship detail + refleksi, ledakan + sfx, musik upload
+     - Part B: FPS jalan di interior (WASD+mouse), bikin karakter via repo, parkir 32 slot + animasi docking 3 detik, 16 lapak bazaar trade, bikin stadium baru via arclux.stadium.json
+6. [ ] Gak ada stray files ke-commit (`ArcluxEnvironment.ts`, `ARCLUX`)
+7. [ ] Konfirmasi kepemilikan sebelum push (jangan force push)
+8. [ ] Committed ke branch `feat/mmo-blueprint-full`
+9. [ ] Push + buka/update PR
 
 ---
 
