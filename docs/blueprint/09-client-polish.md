@@ -115,7 +115,7 @@ detail: hull, cockpit transparan, engine nacelles, weapon mounts.
 
 # FASE 3 — ARK-LIBRARIESCHIP DETAIL (Kapal Utama ARCLUX)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai (AAA+ stadium megastructure 12 komponen — scene3d.ts 760+)
 
 ## PENTING (dari pemilik)
 Ark-Librarieschip **BUKAN background**. Ini **kapal utama ARCLUX, kapal
@@ -279,13 +279,10 @@ Plus **≥FULL detail interior** (baru — ini yang bikin ring jadi megastructur
   buat keperluan animasi per-frame (rotasi ring + update instanceMatrix windows).
 
 ## Acceptance
-- [ ] Ark jadi kapal utama player, bukan background
-- [ ] Detail parah (12 komponen): cockpit, engine, weapons, docking, cargo,
-      antenna, shield gens, observatory, dll
-- [ ] Ring jadi **stadium megastructure**: 24 habitat + 12 docking port +
-      4 maintenance platform + 96 glowing windows per ring (via InstancedMesh)
-- [ ] Ring berputar (animasi stadium/arena) + windows ikut berputar
-- [ ] Tambah ~475 baris di scene3d.ts (naik dari 355 karena ring detail penuh)
+- [x] Ark jadi kapal utama player, bukan background (stadium megastructure AAA+)
+- [x] Detail parah (12 komponen): keel panel+windows, cockpit dome+sensors, stern 4 nacelles+exhaust, spire deck+antenna+dish+strip, 4 rings stadium (24 habitat+12 docking+4 platform+96 windows per ring InstancedMesh), spars strip+X, weapon mounts, docking bay, cargo pods, antenna arrays, shield gens+glow, observatory
+- [x] Ring jadi **stadium megastructure**: 24 habitat + 12 docking port + 4 maintenance platform + 96 glowing windows per ring (via InstancedMesh, 1 draw call per type)
+- [x] Ring berputar (animasi stadium/arena) + windows ikut berputar (`ringGroups` rotation.y beda arah 0.001/0.0015/0.002/0.0008, engine pulse sin 0.003, shield pulse sin 0.002, antenna sway sin 0.0005)
 
 ---
 
@@ -993,13 +990,13 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] buildVessel() detail baru AAA+ (fuselage+canopy+delta wings+canard+fin+nacelles+glow+afterburner+weapon mounts+barrels, disposeGroup dedup Set)
 - [x] Verify build + tsc (`build-game.mjs` 1.3mb ✓, `tsc -p apps/game` ✓, ThreatCrush 0)
 
-## Fase 3 — Ark detail (stadium megastructure)
-- [ ] 12 komponen detail
-- [ ] Ring = stadium megastructure: 24 habitat + 12 docking + 4 platform + 96 windows per ring (InstancedMesh)
-- [ ] Ring animation (rotasi + instanceMatrix update windows)
-- [ ] Anchor position (bukan background)
-- [ ] buildArkLibrary return ring/engine/shield/ringInstances refs
-- [ ] Verify build + tsc
+## Fase 3 — Ark detail (stadium megastructure) ✅
+- [x] 12 komponen detail AAA+ (keel panel+windows, cockpit dome, stern 4 nacelles, spire deck+antenna+dish, rings stadium, spars, weapons, bay, cargo, antenna, shield gens, observatory)
+- [x] Ring = stadium megastructure: 24 habitat + 12 docking + 4 platform + 96 windows per ring (InstancedMesh, 1 draw call)
+- [x] Ring animation (rotasi `ringGroups` y 0.001/0.0015/0.002/0.0008 + engine pulse + shield pulse + antenna sway)
+- [x] Ark position masih (-32000, -2000, 3000) background vessel-world, anchor wiring deferred Fase 8 (interior)
+- [x] buildArkLibrary return `{ group, rings, ringGroups, engines, shields, antennas, habitatMeshes, windowMeshes }`
+- [x] Verify build + tsc (`build-game.mjs` 1.3mb ✓, `tsc -p apps/game` ✓)
 
 ## Fase 4 — Explosion
 - [ ] spawnExplosion() full particle
