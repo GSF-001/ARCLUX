@@ -17,6 +17,7 @@ import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
 import { initAudio, type AudioHandle } from "./audio";
 import { initMenu, type MenuHandle, type MenuCameraMode } from "./menu";
+import { initLanding } from "./landing";
 import { loadSettings } from "./settings";
 import type { RegionSnapshot, VesselEntity, WorldEntity } from "../../../../packages/gameserver/types";
 
@@ -58,6 +59,42 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
   });
 
+  // LANDING MMO AAA+ — live CCTV background (scene3d) + glass overlay
+  let landing: ReturnType<typeof initLanding> | null = null;
+  let landingPoll: number | undefined;
+  const showLanding = (): void => {
+    if (landing) return;
+    landing = initLanding({
+      onLaunch: () => {
+        hideLanding();
+        // focus game canvas
+        (document.querySelector("#app canvas") as HTMLElement | null)?.focus?.();
+      },
+      onTrailer: () => window.open("https://github.com/GSF-001/ARCLUX", "_blank"),
+    });
+    // Live stats — poll snapshot, bukan tempelan
+    const tickStats = async (): Promise<void> => {
+      try {
+        const snap: RegionSnapshot = (await net.fetchSnapshot()) as unknown as RegionSnapshot;
+        const players = snap.entities.filter((e) => e.kind === "vessel").length;
+        const factions = new Set(snap.entities.map((e) => (e as unknown as { faction?: string }).faction).filter(Boolean)).size;
+        const destroyed = 0; // TODO wire GameEvent wreckage count when lineage persisted
+        landing?.setStats({ players, regions: 1, factions, destroyed });
+      } catch {
+        landing?.setStats({ players: 0, regions: 0, factions: 0, destroyed: 0 });
+      }
+    };
+    void tickStats();
+    landingPoll = window.setInterval(() => void tickStats(), 4000);
+  };
+  const hideLanding = (): void => {
+    if (landingPoll) window.clearInterval(landingPoll);
+    landing?.dispose();
+    landing = null;
+  };
+  // Show landing on boot — MMORPG nuance, bukan langsung game
+  showLanding();
+
   // Skena mulai dari settings tersimpan; audio unlock pertama interaksi.
   scene.applyQuality(settings);
 
@@ -91,6 +128,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   input.attach();
 
   const dispose = () => {
+    hideLanding();
     stop();
     input.detach();
     window.removeEventListener("keydown", onKeyDown);
