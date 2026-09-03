@@ -7,7 +7,7 @@
 > Semantic: ✅ = berfungsi & terverifikasi · 🚧 = kerangka/parsial · ⬜ = kosong.
 > Tiap file yang di-update harus isi §Arah sesuai checklist di bawah ini.
 
-Update terakhir: 2026-08-31 (MMO complete — 27 files gameserver flat heavy-stable EVE-grade, all §3 checklist SELESAI; PR #607/#608).
+Update terakhir: 2026-09-03 (MMO live — 31 files gameserver + 09 client polish Fase 1-5 done + clouds AAA + landing MMO CCTV + quickstart EN + serve --vessel wire; PR #630-#639).
 
 
 ---
@@ -22,12 +22,18 @@ Update terakhir: 2026-08-31 (MMO complete — 27 files gameserver flat heavy-sta
 │                            GAME MMO (product terpisah)                     │
 │                                                                            │
 │  packages/universe  ✅ World Model (VesselModel, System, License)          │
-│  packages/gameserver 🚧 Authoritative server (world/validator/sim/combat)  │
+│  packages/gameserver ✅ Authoritative server (31 files, EVE-grade)         │
 │     ├─ gate.ts      ✅ Jump gate routing antar region (radius+community)   │
 │     ├─ netcode.ts   ✅ Client<->server transport (intent in, events out)   │
 │     ├─ persistence.ts ✅ Save/load region (db JSON store + RecoveryManager)│
+│     └─ server.ts    ✅ Self-host launcher + serve --vessel auto-spawn      │
 │  packages/relay     ✅ Shard registry + gate handoff + identity            │
-│  apps/game          🚧 Electron client (3D render + input + net)           │
+│  apps/game          ✅ Electron client (landing CCTV + 3D + input + net)   │
+│     ├─ scene3d.ts   ✅ Cosmic + Ark stadium + clouds + explosions + env map│
+│     ├─ landing.ts   ✅ MMO landing AAA+ (live CCTV bg + glass + stats)    │
+│     ├─ audio.ts     ✅ 5 SFX + ambient + music                             │
+│  docs/blueprint/09  ✅ Client polish Part A (7 fase) + Part B (5 fase)     │
+│  QUICKSTART-MMO.md  ✅ English quickstart from zero                        │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -80,20 +86,20 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
   store (`savePendingHandoff`/`loadPendingHandoffs`/`deletePendingHandoff`,
   collection "handoffs", index list utk recovery) (PR #592).
 
-**Arah (prioritas isi berikutnya):**
-1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591, jalur eksplisit D-006). ~~Runtime terpisah~~ — SELESAI via `transport/HttpTransport` (tiap shard = host sendiri).
-2. ~~gameserver: handoff token crash-safe di `gate.ts`~~ — SELESAI via PR #592 (persist sblm remove, recovery `recoverPendingHandoffs()`).
-3. ~~`transport` terpisah + `apps/game` wire~~ — SELESAI (transport/* terpisah, apps/game `net.ts` HttpClient dynamic port + `scene3d.ts` three.js + `renderer.ts` wire, PR #600).
-4. V4 capability (07): usage_count + component_condition + depletion di
-   validator/simulation; batas 2 kapal induk
-5. V5 HUD registry (01 §20.2): expose capabilities[] ke renderer
-6. Cosmic environs (01 §2.3): `environs.ts` orbit integrator deterministik +
-   `SystemBodies[]`; lalu `collision.ts` (03 I.9) & `cosmic-event.ts`
-7. Cosmic render (01 §2/§22): planet/moon fase lunar, belt, meteor, backdrop + HUD
-8. Physics thermal (01 §2.6): `thermics.ts` radiasi ∝1/r² → suhu → melt; solar wind/CME
-9. Universal baseline (05 §7.1): baseline wajib per repo; imun gravitasi + identitas
-10. Intel & mobilisasi (06 §18.6-18.8): label sosial, bagikan titik, 2-teleport + portal
-11. UI command-interface (01 §28): operational console EVE-level (desktop)
+**Arah (prioritas isi berikutnya) — update 09-03:**
+1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591).
+2. ~~handoff token crash-safe di `gate.ts`~~ — SELESAI via PR #592.
+3. ~~`transport` terpisah + `apps/game` wire~~ — SELESAI via PR #600.
+4. ~~V4 capability~~ — SELESAI `capability.ts` (PR #608).
+5. ~~V5 HUD registry~~ — SELESAI `cockpit.ts` (PR #608).
+6. ~~Cosmic environs~~ — SELESAI `environs.ts` + `collision.ts` + `cosmicEvent.ts` (PR #607/608).
+7. ~~Cosmic render~~ — SELESAI `scene3d.ts` planet/moon/belt/backdrop (PR #608) + **clouds AAA+ di SEMUA planet** `makeCloudTexture` (PR #639, visual-only, gak nabrak `WorldRegion`/`Environs`).
+8. ~~Physics thermal~~ — SELESAI `thermics.ts` (PR #608).
+9. ~~Universal baseline~~ — SELESAI `baseline.ts` + `connect.ts` `arclux connect` (PR #580) + **`serve --vessel` auto-spawn** `serve.ts:36` `apps/cli/serve.ts` → `analyzeRepository` + `buildVesselModel` → `spawnPlayerVessel` (PR #633, tanpa nebak).
+10. ~~Intel & mobilisasi~~ — SELESAI `intel.ts` + `teleport.ts` (PR #608).
+11. ~~UI command-interface~~ — SELESAI `tickScheduler` + `hud.ts` EVE-level (PR #608) + **landing MMO AAA+** `landing.ts` live CCTV `scene3d` bg + glass + live stats `directory` (PR #635).
+12. **09 Client Polish Part A** — Fase 1 env map PMREM `scene.environment` tiap 10 frame (PR #630) + Fase 2 vessel AAA+ fuselage+canopy+delta wings+nacelles (PR #630) + Fase 3 Ark stadium 12 komponen 4 ring InstancedMesh (PR #631) + Fase 4 explosion 5 burst+12 debris+30 sparks+flash (PR #632) + Fase 5 5 SFX `audio.ts` (PR #638) — **Fase 1-5 DONE, Fase 6-7 + Part B 8-12 next**.
+13. **Quickstart EN** — `QUICKSTART-MMO.md` English from zero (clone → vessel → serve --vessel → landing) (PR #636).
 
 ### 2.3 `packages/relay` ✅ (shard registry + gate handoff + identity lintas shard)
 **File**: `index.ts`, `registry.ts`, `gate.ts`, `identity.ts`, `types.ts`.
@@ -113,13 +119,19 @@ semua shard, deliver materialkan vessel di region tujuan (token anti-clone),
 update identity.move. Prototype in-process (2 shard, 1 proses). Runtime terpisah
 benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 
-### 2.4 `apps/game` 🚧 (Electron client 3D)
-**Kerangka dibuat**: `src/main/` (Electron main), `src/renderer/` (3D + input +
-net), `index.ts`, `package.json`. **Arah**:
-- bootstrap Electron + jendela
-- renderer pakai `three` (sama kayak apps/web GraphCanvas3D) buat render vessel
-- input -> netcode -> game server; render event dari server (anti-cheat D-008)
-- belum ada executable; jalan via `npx electron .` sekali kerangka net terisi
+### 2.4 `apps/game` ✅ (Electron client 3D — live)
+**Sudah ada (PR #608 + #630-#639):**
+- `src/main/main.ts` + `index.ts` — Electron 1280×800, `staticDir` `dist/renderer`, fallback `http://127.0.0.1:24001`
+- `src/renderer/scene3d.ts` — cosmic heavy-stable: starfield 6160 Instanced, nebula 9 sprites, suns 1-3 Directional, planets 9 Sphere 48 + atmo Sprite + ring + moons Kepler + fase lunar `emissiveIntensity`, belt 6000 Instanced Dodecahedron, backdrops 6, meteors 60 Lines + aurora 2 Sprites, **env map PMREM** `scene.environment` tiap 10 frame (Fase 1), **vessel AAA+** fuselage+canopy+delta wings+nacelles (Fase 2), **Ark stadium 12 komponen** 4 ring habitat/docking/platform/windows InstancedMesh + animasi (Fase 3), **explosions** 5 burst+12 debris+30 sparks+flash 2s (Fase 4), **clouds AAA+** `makeCloudTexture` 512 per-kind `Sphere 1.018` child drift (PR #639, di SEMUA planet, visual-only, 1 draw/planet, 1 MB/tex, dispose `buildPlanetSystem` + `dispose()`)
+- `src/renderer/renderer.ts` — bootstrap `initScene3D` + `initHud` + `connectNet` + `initInput` + `initAudio` + `initMenu` + `initLanding` (Fase 5 wire `setSfxHandler` + ambient hum), `toRegionState` adapter, `landing` live CCTV + glass
+- `src/renderer/landing.ts` — **MMO landing AAA+** (PR #635) live CCTV bg (scene3d canvas), glass `rgba(12,16,32,0.62)` + thin border + orange accent `tactical` + HUD type `Orbitron/JetBrains Mono`, top navbar HOME…LAUNCH GAME, hero PLAY NOW, live stats bar `net.fetchSnapshot()` 4s (players/regions/factions/destroyed), 3 feature cards + news panel, footer — semua interaktif, bukan tempelan, logo `public/arclux-logo.svg|.png`
+- `src/renderer/audio.ts` — **5 SFX** `sfxExplosion` lowpass 2000→100 0.8s, `sfxWeapon` square 800→200 0.15s, `sfxShieldHit` triangle+bandpass 0.3s, `sfxDebris` 3× noise bursts, `sfxAmbientHum` saw 38 Hz → `musicGain` continuous (PR #638), sfxGain vs musicGain terpisah, bus master
+- `src/renderer/input.ts` — WASD/QE + boost/brake + pointer-lock look + `onWeapon` KeyF/J / mousedown → `attack` intent + `sfxWeapon`
+- `src/renderer/settings.ts` + `ui/tokens.ts` — D-025 palette, `GameSettings` presets LOW..CINEMATIC, `effPixelRatio`
+- `src/renderer/index.html` — CSP `default-src 'self'`, `#app` 100vw/vh
+- `public/arclux-logo.svg` — placeholder, upload `arclux-logo.svg|png` langsung muncul di landing
+
+**Arah next:** Fase 6 custom music (MP3/OGG/WAV/FLAC decode via `AudioContext`), Fase 7 UI polish, Part B 8-12 interior FPS + karakter + hangar + bazaar + stadium bebas (`09-client-polish.md` Part B).
 
 ### 2.5 Modul platform yang DIPAKAI MMO (jangan dibikin ulang)
 | Paket | Peran di MMO |
@@ -139,54 +151,66 @@ net), `index.ts`, `package.json`. **Arah**:
 ### PR #582 ✅ gameserver core (world/validator/sim/combat) — SUDJAH
 ### PR #589 ✅ gameserver core impl (gate/persistence/netcode) — SUDJAH
 ### PR #590 ✅ relay impl (registry claim bugfix + gate coordinator handoff + identity move) — SUDJAH
-### PR #591 ✅ integrasi gate↔relay (gameserver bridge multi-shard, vessel transit lintas shard) — SUDJAH
-### PR #592 ✅ handoff token crash-safe (persistence.ts + gate.ts + bridge.ts) — SUDJAH
-### PR #597 ✅ netcode konsolidasi — HTTP + in-process dalam 1 module (fix duplicate) — SUDJAH
-### PR #598 ✅ MCP repair — file_info & impact (getModule fix) — SUDJAH
-### PR #600 ✅ game wire — HttpTransport dynamic ARCLUX_GAME_PORT + three.js scene — SUDJAH
-### PR #601 ✅ transport terpisah — `transport/*` (Transport/InProcess/Http + Factory, re-export netcode, no dummy) — SUDJAH
-### PR #607 ✅ physics strengthening — solarWind + anomaly + timeDilation + environs + tickScheduler + stability — SUDJAH
-### PR #608 ✅ MMO complete — V4 component+lineage + integrations + cosmic/thermal/baseline wire — SUDJAH
-### PR berikutnya (urutan) — semua dari MMO-IMPLEMENTATION #1-11 SELESAI, flat gameserver heavy-stable EVE-grade
+### PR #591 ✅ integrasi gate↔relay (gameserver bridge multi-shard) — SUDJAH
+### PR #592 ✅ handoff token crash-safe — SUDJAH
+### PR #597 ✅ netcode konsolidasi — SUDJAH
+### PR #598 ✅ MCP repair — SUDJAH
+### PR #600 ✅ game wire — SUDJAH
+### PR #601 ✅ transport terpisah — SUDJAH
+### PR #607 ✅ physics strengthening — SUDJAH
+### PR #608 ✅ MMO complete — SUDJAH
+### PR #622-624 ✅ UHD + self-host — SUDJAH
+### PR #625 ✅ blueprint §2 cosmic client — SUDJAH
+### PR #626-628 ✅ 09 Part A+B doc — SUDJAH
+### PR #630 ✅ 09 Fase 1+2 — env map PMREM + vessel AAA+ (scene3d.ts) — SUDJAH (2026-09-02)
+### PR #631 ✅ 09 Fase 3 — Ark stadium 12 komponen 4 ring InstancedMesh (scene3d.ts) — SUDJAH (2026-09-02)
+### PR #632 ✅ 09 Fase 4 — explosion 5 burst+12 debris+30 sparks+flash (scene3d.ts) — SUDJAH (2026-09-02)
+### PR #633 ✅ fix serve --vessel auto-spawn wire — SUDJAH (2026-09-02, apps/cli/serve.ts:36)
+### PR #635 ✅ landing MMO AAA+ — live CCTV scene3d bg + glass + live stats (landing.ts) — SUDJAH (2026-09-03)
+### PR #636 ✅ quickstart MMO EN — SUDJAH (QUICKSTART-MMO.md)
+### PR #638 ✅ 09 Fase 5 — 5 SFX explosion/weapon/shield/debris/ambient hum (audio.ts) — SUDJAH (2026-09-03)
+### PR #639 ✅ clouds AAA+ — procedural clouds di SEMUA planet visual-only (scene3d.ts makeCloudTexture) — SUDJAH (2026-09-03, pause 09 di Fase 5)
+### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
-- [x] Cosmic environs: `environs.ts` — SELESAI
-- [x] Cosmic collision: `collision.ts` — SELESAI
-- [x] Physics thermal: `thermics.ts` — SELESAI
-- [x] V4 special capability: `capability.ts` — SELESAI
-- [x] dynamic safe-zone / governance — `governance.ts` — SELESAI
-- [x] V6 Persistent world — `persistence.ts` + `governance.ts` + `regionState.ts` — SELESAI
-- [x] Cosmic event generator: `cosmicEvent.ts` (solarWind/anomaly + meteor/storm/aurora) — SELESAI
-- [x] V5 Universal Cockpit: `cockpit.ts` — SELESAI
-- [x] Intel/sharing: `intel.ts` — SELESAI
-- [x] 2-teleport mobility: `teleport.ts` — SELESAI
-- [x] Universal Baseline: `baseline.ts` + `physics.ts` — SELESAI
-- [x] V4 component-based capability: `component.ts` — SELESAI
-- [x] V4 provenance lineage: `lineage.ts` — SELESAI
-- [x] Heavy-stable: `tickScheduler.ts` + `rateLimiter.ts` + `stability.ts` — SELESAI
-- [x] `apps/game`: bootstrap Electron polish + 3D LOD — SELESAI (renderer/scene3d LOD + net HttpTransport)
-- [x] integrasi: `arclux connect` → vessel masuk universe → jump gate → station/community — SELESAI (bridge + connect wrapper)
-- [x] V5 Universal Cockpit renderer: HUD discovery — SELESAI (cockpit.ts + physics.ts)
-- [x] Cosmic event replay: event+replay 03 I.8 — SELESAI (simulation log cosmic_*)
-- [x] Cosmic render LOD: planet/moon/belt/backdrop — SELESAI (scene3d LOD)
-- [x] Physics thermal wire: radiasi ∝1/r² → suhu → melt — SELESAI (computeThermal + simulation)
-- [x] Universal baseline wire: connectRepository baseline check — SELESAI (baseline.ts D-019)
-- [x] Identitas sosial & intel: faksi+waypoint — SELESAI (intel.ts + cockpit)
-- [x] Mobilisasi 2-teleport wire: recall+gate portal — SELESAI (teleport.ts)
-- [x] UI command-interface: heavy-stable desktop — SELESAI (tickScheduler + stability + README permanen)
-- [x] Observability & telemetry: `observability.ts` — SELESAI (OTEL recordTickTrace + Prometheus toPrometheus)
-- [x] Physics konstanta Newtonian: `physics.ts` — SELESAI (G, σ, c, AU + helper)
-- [x] Rate limiting & anti-cheat: `rateLimiter.ts` — SELESAI (IP + shadowban)
-- [x] `regionState.ts` live world RegionState — SELESAI (shard world state)
-- [x] Heavy-stable tick resilience: `stability.ts` — SELESAI (tick SLI)
-- [x] UHD renderer SUPER HD: `scene3d.ts` + `hud.ts` — SELESAI (PBR instancing starfield/belt/planets + EVE-level command HUD §28)
-- [x] Visual identity game-native: `src/ui/tokens.ts` — SELESAI (D-025, satu sumber warna/typografi/spacing/glow, bukan skin web)
-- [x] Ark-Librarieschip vessel-world: `scene3d.ts` — SELESAI (keel/prow/spire/ring-distrik/balcony struktur piercing)
-- [x] Cockpit ops-console: `hud.ts` — SELESAI (callsign+faksi §20.8, tactical contact §7, subsystem bars §11, scanline)
-- [x] Ship follow-camera: `scene3d.ts` — SELESAI (ease di belakang vessel utama, §21 follow-camera)
-- [x] Seeded deterministic RNG production-grade: `random.ts` — SELESAI (mulberry32 integer-state, ganti `Math.sin` hash di cosmicEvent/baseline; replay cross-env identik)
-- [x] Kinetic-energy collision damage: `collision.ts` — SELESAI (KE = ½mv² × impact angle × penetration → structural damage, threshold integrity vessel)
-- [x] Server launcher production (self-host 1 command): `server.ts` + `arclux serve` — SELESAI (WorldRegion + environs + SimulationEngine + HTTP /snapshot /intent /deliver + static client + tick loop + directory register)
-- [x] Gate handoff transactional: `gate.ts` + `bridge.ts` — SELESAI (notifyTarget → await ACK, rollback vessel kalau ditolak; recovery juga ACK-only delete)
+- [x] Cosmic environs — SELESAI
+- [x] Cosmic collision — SELESAI
+- [x] Physics thermal — SELESAI
+- [x] V4 special capability — SELESAI
+- [x] dynamic safe-zone / governance — SELESAI
+- [x] V6 Persistent world — SELESAI
+- [x] Cosmic event generator — SELESAI
+- [x] V5 Universal Cockpit — SELESAI
+- [x] Intel/sharing — SELESAI
+- [x] 2-teleport mobility — SELESAI
+- [x] Universal Baseline — SELESAI (plus serve --vessel wire)
+- [x] V4 component-based capability — SELESAI
+- [x] V4 provenance lineage — SELESAI
+- [x] Heavy-stable — SELESAI
+- [x] `apps/game` bootstrap — SELESAI
+- [x] UHD renderer SUPER HD — SELESAI
+- [x] Visual identity game-native — SELESAI
+- [x] Ark-Librarieschip vessel-world — SELESAI (plus clouds di SEMUA planet)
+- [x] Cockpit ops-console — SELESAI
+- [x] Ship follow-camera — SELESAI
+- [x] Seeded RNG — SELESAI
+- [x] Kinetic-energy collision — SELESAI
+- [x] Server launcher production — SELESAI (plus serve --vessel)
+- [x] Gate handoff transactional — SELESAI
+- [x] Landing MMO AAA+ — SELESAI (landing.ts live CCTV + glass)
+- [x] Quickstart MMO EN — SELESAI
+- [x] 09 Fase 1 env map — SELESAI
+- [x] 09 Fase 2 vessel AAA+ — SELESAI
+- [x] 09 Fase 3 Ark stadium — SELESAI
+- [x] 09 Fase 4 explosion — SELESAI
+- [x] 09 Fase 5 5 SFX — SELESAI
+- [x] Clouds AAA+ di SEMUA planet — SELESAI (pause 09)
+- [ ] 09 Fase 6 custom music (MP3/OGG/WAV/FLAC decode via AudioContext, playlist, menu.ts + audio.ts) — NEXT
+- [ ] 09 Fase 7 UI polish (hud.ts + menu.ts glass + glow)
+- [ ] 09 Part B Fase 8 FPS interior (interior.ts 480 + renderer.ts + input.ts FPS_INTERIOR)
+- [ ] 09 Part B Fase 9 karakter repo (CharacterEntity + spawnCharacter)
+- [ ] 09 Part B Fase 10 hangar 32 slot + docking film 3s (gate.ts + bridge.ts)
+- [ ] 09 Part B Fase 11 bazaar 16 lapak (component.ts + validator)
+- [ ] 09 Part B Fase 12 stadium bebas (arclux.stadium.json → spawnStation)
 
 > Desain acuan V4/V5/V6: `07-special-capabilities.md` · `01-spatial-ux.md §20` ·
 > `08-persistent-world.md` · keputusan D-013/D-014 di `decisions-mmo.md`.
@@ -230,3 +254,12 @@ net), `index.ts`, `package.json`. **Arah**:
 | 2026-08-28 | — | blueprint V4 (07), V5 HUD (01 §20), V6 persistent (08) + D-013/D-014 + respawn-open | in progress |
 | 2026-08-28 | — | blueprint cosmic: 01 §2 living environment + fase lunar + 3 lapis body; 03 I.9 collision damage; 04 source wreckage; arsitektur environs/collision/cosmic-event | in progress |
 | 2026-08-28 | — | blueprint physics/social/intel: 01 §2.5 dua skala + §2.6 fisika (Newton/Kepler/thermal/melt/solar-wind); 05 §7.1 baseline; 06 §18.5-18.8 (kapal=kode, label faksi, intel-kordinat, 2-teleport); 01 §14/§20.8-9/§28 UI EVE-level; D-018..022 | in progress |
+| 2026-09-02 | #630 | 09 Fase 1+2 env map PMREM + vessel AAA+ fuselage+canopy+delta wings+nacelles | ✅ merged |
+| 2026-09-02 | #631 | 09 Fase 3 Ark stadium 12 komponen 4 ring InstancedMesh (habitat/docking/platform/windows) | ✅ merged |
+| 2026-09-02 | #632 | 09 Fase 4 explosion 5 burst+12 debris+30 sparks+flash 2s | ✅ merged |
+| 2026-09-02 | #633 | fix serve --vessel auto-spawn wire (apps/cli/serve.ts:36, tanpa nebak) | ✅ merged |
+| 2026-09-03 | #635 | landing MMO AAA+ live CCTV scene3d bg + glass + live stats (landing.ts) | ✅ merged |
+| 2026-09-03 | #636 | quickstart MMO EN (QUICKSTART-MMO.md English from zero) | ✅ merged |
+| 2026-09-03 | #638 | 09 Fase 5 5 SFX explosion/weapon/shield/debris/ambient hum (audio.ts) | ✅ merged |
+| 2026-09-03 | #639 | clouds AAA+ di SEMUA planet procedural makeCloudTexture 512, visual-only | ✅ merged |
+| 2026-09-03 | — | update MMO-IMPLEMENTATION.md ketinggalan → sync 09 + clouds + landing + serve --vessel | in progress |
