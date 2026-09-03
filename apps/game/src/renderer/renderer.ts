@@ -51,12 +51,21 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   const input = initInput({
     send: (intent) => { void net.send(intent); },
     onLook: (yaw, pitch) => scene.setLookYawPitch(yaw, pitch),
+    onWeapon: () => { try { audio.sfxWeapon(); } catch {} },
   });
   const menu = initMenu({
     onQuality: (s) => scene.applyQuality(s),
     onAudio: (s) => audio.setEnabled(s.muted, s.masterVolume),
     onCameraMode: (mode) => scene.setCameraMode(mode as Parameters<Scene3D["setCameraMode"]>[0]),
     onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
+  });
+  // Fase 5 — wire explosion/shield/debris sfx ke scene (server-authoritative, client hanya play)
+  scene.setSfxHandler((kind) => {
+    try {
+      if (kind === "explosion") audio.sfxExplosion();
+      else if (kind === "shield") audio.sfxShieldHit();
+      else audio.sfxDebris();
+    } catch {}
   });
 
   // LANDING MMO AAA+ — live CCTV background (scene3d) + glass overlay
@@ -99,6 +108,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   scene.applyQuality(settings);
 
   let lastSpeed = 0;
+  let ambientHandle: ReturnType<AudioHandle["sfxAmbientHum"]> | null = null;
   const stop = net.onState((snap) => {
     const state = toRegionState(snap);
     scene.renderRegion(state);
@@ -109,12 +119,14 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       if (e.kind === "vessel") { localVessel = e as VesselEntity; break; }
     }
     input.setLocalVessel(localVessel);
-    // Audio: engine hum ∝ kecepatan normalized.
+    // Audio: engine hum ∝ kecepatan normalized + ambient hum continuous (Fase 5)
     if (localVessel) {
       const v = localVessel.velocity;
       const sp = Math.min(1, Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z) / 250);
       if (Math.abs(sp - lastSpeed) > 0.01) { audio.setSpeed(sp); lastSpeed = sp; }
-    }
+      if (sp > 0.06 && !ambientHandle) ambientHandle = audio.sfxAmbientHum() ?? null;
+      else if (sp <= 0.01 && ambientHandle) { ambientHandle.stop(); ambientHandle = null; }
+    } else if (ambientHandle) { ambientHandle.stop(); ambientHandle = null; }
   });
 
   // Unlock audio + buka menu di ESC (interaction-driven, autoplay policy).
@@ -128,6 +140,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   input.attach();
 
   const dispose = () => {
+    try { ambientHandle?.stop(); } catch {}
     hideLanding();
     stop();
     input.detach();

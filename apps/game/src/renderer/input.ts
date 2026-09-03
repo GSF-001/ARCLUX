@@ -29,6 +29,7 @@ export function initInput(opts: {
   send: (intent: PlayerIntent) => void;
   /** Yaw/pitch deltas dari mouse-look → scene.setLookYawPitch. */
   onLook?: (yaw: number, pitch: number) => void;
+  onWeapon?: () => void;
 }): InputHandle {
   const keys = new Set<string>();
   let playerId = "player-1";
@@ -91,6 +92,16 @@ export function initInput(opts: {
 
   const onKeyDown = (e: KeyboardEvent): void => {
     if (e.code === "Escape") { if (pointerLocked) return; }
+    // Fase 5 — sfxWeapon trigger (attack) — KeyF / KeyJ / Space+Ctrl
+    if (e.code === "KeyF" || e.code === "KeyJ" || (e.code === "Space" && e.ctrlKey)) {
+      e.preventDefault();
+      if (hasLocal) {
+        const intent: PlayerIntent = { playerId, entityId, type: "attack", seq: ++lastSeq, payload: { weapon: "plasma", targetId: entityId } };
+        opts.send(intent);
+      }
+      opts.onWeapon?.();
+      return;
+    }
     if (isBound(e.code)) {
       e.preventDefault();
       keys.add(e.code);
@@ -128,6 +139,15 @@ export function initInput(opts: {
       el.requestPointerLock?.();
     }
   };
+  const onMouseDown = (e: MouseEvent): void => {
+    if (!pointerLocked || e.button !== 0) return;
+    // left click while locked = fire
+    if (hasLocal) {
+      const intent: PlayerIntent = { playerId, entityId, type: "attack", seq: ++lastSeq, payload: { weapon: "plasma", targetId: entityId } };
+      opts.send(intent);
+    }
+    opts.onWeapon?.();
+  };
   const onLockChange = (): void => {
     pointerLocked = document.pointerLockElement === document.body;
   };
@@ -139,6 +159,7 @@ export function initInput(opts: {
       window.addEventListener("blur", onBlur);
       window.addEventListener("mousemove", onMouseMove);
       window.addEventListener("click", onCanvasClick);
+      window.addEventListener("mousedown", onMouseDown);
       document.addEventListener("pointerlockchange", onLockChange);
       timer = setInterval(throttledPoll, 40);
     },
@@ -148,6 +169,7 @@ export function initInput(opts: {
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("click", onCanvasClick);
+      window.removeEventListener("mousedown", onMouseDown);
       document.removeEventListener("pointerlockchange", onLockChange);
       if (timer) clearInterval(timer); timer = null;
       keys.clear();

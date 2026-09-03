@@ -36,6 +36,7 @@ export interface Scene3D {
   setCameraMode(mode: CameraMode): void;
   applyQuality(settings: GameSettings): void;
   setLookYawPitch(yaw: number, pitch: number): void;
+  setSfxHandler(cb: (kind: "explosion" | "shield" | "debris") => void): void;
   dispose(): void;
 }
 
@@ -485,7 +486,9 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     ttlDebris: number;
   }
   const explosions: Explosion[] = [];
+  let sfxHandler: ((kind: "explosion" | "shield" | "debris") => void) | null = null;
   const spawnExplosion = (pos: THREE.Vector3): void => {
+    sfxHandler?.("explosion");
     const p = pos.clone();
     // 5 burst sprites — orange→red→dark, scale 20→200→0 over 0.8s
     const burstColors = ["#ff6a00", "#ff3a00", "#ff1a00", "#8a1a05", "#2a0a03"];
@@ -763,6 +766,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     lookYaw = yaw; lookPitch = Math.max(-1.2, Math.min(1.2, pitch));
   };
   const setCameraMode = (mode: CameraMode): void => { camMode = mode; };
+  const setSfxHandler = (cb: (kind: "explosion" | "shield" | "debris") => void): void => { sfxHandler = cb; };
 
   const updateCamera = (t: number): void => {
     const target = firstVesselRef;
@@ -1077,7 +1081,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   lastSnapshotAt = lastFrame;
   rafId = requestAnimationFrame(frame);
 
-  return { renderRegion, updateVessel, setCameraMode, applyQuality, setLookYawPitch, dispose };
+  return { renderRegion, updateVessel, setCameraMode, applyQuality, setLookYawPitch, setSfxHandler, dispose };
 }
 
 // ---------------------------------------------------------------------------
