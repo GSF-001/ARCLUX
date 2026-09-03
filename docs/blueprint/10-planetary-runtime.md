@@ -1,111 +1,139 @@
-# Blueprint 10 — Planetary Runtime (Civilization Can Live)
+# Blueprint 10 — Planetary Layer (Simplified Aerospace)
 
-> Status: **PLAN — belum diimplementasikan.** Pause 09 di Fase 5, gas planetary. File ini blueprint `planet kosong + runtime hidup` — `ARCLUX cuma sediain planet kosong + atmosfer + hukum alam, komunitas yang bangun civilization` (infrastruktur, mobil, jalan, hangar, karakter — urusan mereka, kita sediain runtime biar semua bisa hidup & hancur kayak vessel).
+> Status: **PLAN — belum diimplementasikan.** Simplified: planet seamless + persistent, tapi simulation scope kecil — aerospace operations dulu, bukan full civilization simulator. Pause 09 di Fase 5, gas 10 simplified.
 
-## Problem Statement (yang bener)
+## Problem Statement
 
 Bukan:
-> “Bisa bikin planet?” — `Sphere 1.018 + clouds AAA` `scene3d.ts` EZZ
+> “Bisa bikin planet?” — Sphere 1.018 + clouds AAA EZZ
 
 Melainkan:
-> **“Bisa gak kita bikin sebuah `runtime` tempat `civilization yang TIDAK kita buat sendiri` dapat hidup di `planet kosong` yang kita sediakan?”**
+> **“Bisa gak kita bikin planet yang seamless & persistent, di mana `aerospace operations` hidup, tanpa harus langsung sim full Earth-scale civilization?”**
 
-`Planet` = substrate. `Runtime` = `WorldRegion` + `Simulation` + `Validator` + `Persistence` + `Gate` yang bikin `BASE → CITY → ROVER → HANGAR` bukan mesh mati.
+ARCLUX cuma sediain planet natural + fasilitas aerospace — civilization komplet jadi future expansion, bukan hari 1.
 
 ---
 
 ## Pondasi yang Udah Ada (gak bikin dari 0)
 
-* **Matahari/cahaya:** `scene3d.ts:249` `DirectionalLight(sunCore 2.2)` + `PMREM scene.environment:858` + `MeshStandardMaterial` — sinar yang sama nyorot planet & awan `makeCloudTexture` + `Sphere 1.018` drift.
-* **Bulan/orbit:** `Sphere(radius*0.18)` `scene3d.ts:333` Kepler `environs.ts:49` `r=a(1-e²)/(1+e cosθ)` + fase lunar `mdir.dot(sdir):904` — fisik asli.
-* **Hukum alam:** `physics.ts:12` `G, σ, c, AU` + `g=9.81` + `thermics.ts:34` `L/4πr²` `∝1/r²` `>1200K` + `collision.ts:92` `KE=½mv²×angle×penetration` + `baseline.ts` imun D-019 `WorldRegion:41` `Map` 5000 entities `stability.ts:13` `tickScheduler 10/s`.
-* **Dunia persistent:** `WorldRegion:41` `Map` + `RegionSnapshot:79` `/snapshot` `server.ts:139` + `persistence.ts:120` `RecoveryManager` + `gate.ts:86` transactional `notifyTarget→ACK` + `bridge.ts:75` `identity.move` + `relay/registry.ts:33`.
-* **Vessel = repo:** `universe/connect.ts:74` `connectRepository` → `.arclux/` + `buildVesselModel` `stats.ts:183` → `server.ts:216` `spawnPlayerVessel` (`VesselEntity.owner` `types.ts:32` `validator.ts:53`).
+* **Matahari/cahaya:** `scene3d.ts:249` `DirectionalLight` + `PMREM` + `MeshStandard` — nyorot planet & awan.
+* **Orbit:** Kepler `environs.ts:49` `r=a(1-e²)/(1+e cosθ)` + fase lunar.
+* **Fisika:** `physics.ts:12` `G` + `g=9.81` + `thermics.ts:34` `∝1/r²` + `collision.ts:92` `KE=½mv²`.
+* **Dunia persistent:** `WorldRegion:41` `Map` + `persistence.ts:120` + `gate.ts:86` transactional + `bridge.ts:75` + `relay/registry.ts:33`.
+* **Vessel = repo:** `universe/connect.ts:74` → `.arclux/` → `buildVesselModel` → `server.ts:216` `spawnPlayerVessel`.
 
 ---
 
-## Planetary Substrate (ARCLUX sediain — kosong, bukan kota)
+## 1. Planet sebagai Natural Environment
 
-```
-PLANET KOSONG
-├── terrain heightmap (seed → continental → mountain → biome → river, streaming chunks LOD 16-64 settings.ts:28)
-├── ocean 71% (Sphere + Gerstner waves ω²=g·k, depth dari heightmap, evaporation thermics.ts)
-├── forest 6000 InstancedMesh Dodecahedron 14 like belt:373 + soil layers vertexColors
-├── atmosphere Sphere 1.018 + clouds AAA per-kind 512 CanvasTexture (gasGiant banded, ocean swirl, ice wispy, desert dust, volcanic ash) + drift rotation.y
-├── weather mulberry32(tick) + Perlin (rain/wind, gak 100% deterministic)
-├── gravity per-planet Earth 9.81 / Mars lower / extreme toxic
-└── day/night 24h + temperature variable
-```
+ARCLUX sediakan:
+* procedural terrain, mountains/valleys/desert/ocean, atmosphere 1.018, clouds AAA per-kind 512 `makeCloudTexture`, gravity per-planet, temperature, weather `mulberry32`, day/night 24h, planetary lighting, terrain streaming LOD 16-64 `settings.ts:28`.
 
-Visual-only: `child sphere 1.018` drift `scene3d.ts:890` `speedMap[kind]`, `depthWrite:false`, `metalness 0`, `dispose` `buildPlanetSystem:283`, gak masuk `WorldRegion.entities`/`EnvironsState.bodies`/`RegionSnapshot` — gak nambah `O(V*B)` `simulation.ts:121`.
+Planet tidak perlu langsung punya simulasi kehidupan lengkap — cuma natural environment yang streaming.
 
 ---
 
-## Runtime — Biar Semua yang Dibangun Bisa Hidup
+## 2. Planet sebagai Aerospace Operations Layer
 
-### 1. Jalan di Planet Kayak di Bumi (WTF #1)
-* `FPS capsule 1.8m` + `gravity 9.81` + `raycast terrain` + `navmesh` streaming + `clampLocal 1/1` (bukan `1/90000` space `scene3d.ts:472`) + `clampSpeed 5.5 m/s` (kapal 250 `baseline.ts:16`) + `drag 0.12` — `simulation.ts:238` `p+=v*dt` yang sama, tick 10/s.
+Fokus utama: `spacecraft` seamless tanpa loading.
 
-### 2. Karakter Punya Darah/Kehidupan (WTF #2)
-* `CharacterEntity = VesselEntity mini` `mass 80kg` + `SystemState:32` `health blood/stamina/hunger 0..100` + `thermics/combat/collision → health-2` + `lineage.ts:22` provenance — `tebang pohon / jatuh / lapar` → `health--` persist `persistence.ts`, bukan `respawn`.
+```
+ORBIT
+  ↓
+ATMOSPHERE (awan procedural drift)
+  ↓
+LOW-ALTITUDE FLIGHT
+  ↓
+PLANET SURFACE
+  ↓
+LANDING PAD → HANGAR → SHIP OPERATIONS
+```
 
-### 3. Infrastruktur Bisa Hidup & Hancur (WTF #3 — kayak vessel)
-* Tiap `BASE/hangar/jalan` = `StationEntity:54` `health 0..100` `component.ts:10` `health/usageCount` + `code → health` `buildVesselModel` — `combat.ts:39` `DAMAGE_CEILING=12` / `KE=½mv²` → `destroyed = damage>=integrity(80)` → `region.remove` + `wreckage 04` `RECOVERY` + `Repair=commit 02:257` — `🏕️→🏭→🏢→💥→🏚️` persistent.
+Balik:
+```
+HANGAR → LAUNCH → ATMOSPHERE → ORBIT
+```
 
-### 4. Mobil/Jalan/Hangar Kapal di Planet
-* `ROVER = VesselEntity mass 2000kg thrust 4e3 N` (kapal `5e6 kg 2e7 N` `simulation.ts:267`), `ROAD = StationEntity safeZone governance.ts:31`, `HANGAR = StationEntity + 32 InstancedMesh slots` `interior.ts:480` — semua `Map` 5000, `GateLink:34` `spaceport runway` → `SPACE ↔ PLANET` `Gate` `SPACE ↔ ATMOSPHERE ↔ LANDING ↔ PLANET`.
-
-### 5. Penebangan & Tanah Berlapis — UI & Deformasi Realistis
-* **Pohon:** `🌲 = StationEntity mini` `types.ts:54` `health 100` + `InstancedMesh` 6000 `#355a70` `scene3d.ts:373` — `🪓` = `PlayerIntent type:"harvest" payload:{targetId: treeId}` → `validator.ts:53` + `collision.ts:79` `damage 12` → `health 0 → stump` `health 0` + `lineage.ts:22` + `wreckage 04` `log` — **UI:** raycast crosshair `HUD` `🌲 87%` + `hold F` progress bar `0→1.2s` + `sfxDebris` `audio.ts:213` + particle `scene3d.ts:476` wood chips, `stump` tinggal `persistence.ts:120` 2s dispose kayak `explosion 2s` `scene3d.ts`.
-* **Tanah berlapis:** `heightmap` `seed → continental → mountain → biome → river` → `vertexColors` `topsoil 0-0.3m brown #8a6a4a, clay 0.3-1.2m #c9a05a, rock >1.2m #6a6a6a` + `MeshStandardMaterial roughness 1 metalness 0` — `excavator keruk` = `Vehicle VesselEntity` `bucket Box` `raycast terrain` → `heightmap[y][x] -= depth` + `vertex update` + `collision mesh rebuild` + `soil pile InstancedMesh` di bucket — `governance.ts:31` `isInSafeZone` cek biar gak keruk di `safeZone` kota.
-
-### 5b. Medan Realistis per Planet — Serealistis Mungkin
-* **Earth:** `gravity 9.81` `ocean 71%` `Gerstner ω²=gk` `temperature variable` `forest/jungle/desert/mountains` `CONTEXT 27 bahasa` `seed` beda → `NORTH arctic/tundra, EQUATOR jungle/ocean, SOUTH desert` — `heightmap` `continental 0.6 + mountain 0.3 + river carve` + `erosion` `thermal 1/r²` `thermics.ts:34`.
-* **Mars:** `gravity 3.71` `atmosphere thin` `ocean 0%` `temperature hostile -60°C` `dust storm` `cosmicEvent.ts:42` `P=Ṁv/4πr²` + `desert #c9a05a roughness 0.95` + `crater` noise.
-* **Gas giant moon:** `gravity extreme 24.79` `radiation high` `toxic` `volcanic #5a1a0a emissive #ff6a1a` `scene3d.ts:101` — `health` drain `thermics.ts:42` `>1200K → health-2/tick`.
-* Semua `terrain` streaming `chunks 1024²` `LOD 16-64` `settings.ts:28` + `instancing` biar client gak load full planet.
-
-### 6. Lautan Dalam + Ombak + Cuaca
-* `Ocean Sphere + Gerstner Shader pos+=amp·sin(k·pos-ωt) ω=√(gk)` + `depth` heightmap + `evaporation → rain` `thermics 1/r²` + `weather` `mulberry32(tick*regionId)` `cosmicEvent 0.2%`.
-
-### 7. Semua Built by Community Bisa Hidup — Kita Mikirin Engine-nya
-* Kita sediain `simulation D-008 authoritative + validator owner/license + gate transactional + directory` — user isi `content schema 11` `community-base: structures/components/capabilities` → `runtime` cek `valid?` (bukan `bebas jalanin kode`). Jadi `code mereka → health → hidup/hancur` di `WorldRegion` `SPACE + PLANET = SAME UNIVERSE / SAME PERSISTENCE / SAME COMMUNITIES`.
-
-### 7b. Fauna Hidup Bebas — Kayak Dunia Asli, Bukan Code Kita Ngatur
-* **Hewan = `VesselEntity` autonomous** `types.ts:42` `mass 15kg (ular) .. 4000kg (dino)` `kind:"fauna"` baru (selain `vessel|station`) + `SystemState:32` `health 0..100` + `stateHash` `simulation.ts:292` — **bukan `code kita ngatur path`**, tapi `AI instinct` di `server`:
-  * **Behavior tree:** `wander → seek water/food (ocean/river heightmap) → flee predator → hunt prey (raycast)` + `boid` `separation/alignment/cohesion` buat kawanan — `tick 10/s` `simulation.ts:85` sama, `moveToward` `simulation.ts:264` `thrust/mass` beda per spesies (ular `a=1.2`, dino `a=3.5`).
-  * **Bisa melukai user:** `collision.ts:92` `KE=½mv²×angle` + `combat.ts:39` `damage = 4+(weaponsHealth/100)*8` → `CharacterEntity health blood--` + `sfxShieldHit` `audio.ts:194` — `ular gigit → blood 100→88`, `dino seruduk → health 64`.
-  * **Hidup sendiri:** `spawnFauna` `world.ts:96` `spawnVessel` tapi `owner=fauna` + `governance.ts:31` `isInSafeZone` `false` di wilderness — `fauna` `wander` terus walau gak ada player, `persistence.ts:120` + `lineage.ts` + `regionState.ts` persist, `rateLimiter.ts` `20/s` cegah spam `fauna` `movement` `stability.ts:13` `5000 entities` cap.
-* **Spesies per planet:** `Earth: forest→deer/wolf, ocean→fish/shark, desert→snake/scorpion` `Mars: none / engineered` `Jungle planet: dino/raptor` — `seed per biome` `mulberry32(planetSeed+biome)` `random.ts` biar fauna spawn deterministik tapi gerak `Perlin` gak 100% prediksi.
+Pakai `scene3d.ts:890` cloud drift + `environs.ts` Kepler + `GateLink:34` `spaceport` — lerp lapisan awan, bukan `planet → loading screen`.
 
 ---
 
-## Space ↔ Planet — Satu Universe
+## 3. Civilization Tidak Dibuat Oleh ARCLUX
 
-```
-ARCLUX
-   ├─ 🌌 SPACE (kapal/station/combat/gates)  ✅ udah ada — WorldRegion + Environs
-   └─ 🌍 PLANET (terrain/ocean/city/base)    🆕 substrate + runtime di atas
-            └─ SPACEPORT GateLink:34 — kapal orbit LANDING ke planet, LAUNCH ke orbit tanpa loading screen, lerp lapisan awan
-```
+ARCLUX gak bikin kota/NPC/fauna global. Community yang bangun:
 
-`SPACEPORT` jadi `Gate` — `SPACE → ORBIT → ATMOSPHERE (awan procedural) → SURFACE` kayak film, bukan `planet → loading screen`.
+* Landing Pad, Hangar, Repair Facility, Refit Facility, Radar, Communication Station, Military Facility, Storage, Manufacturing Facility, Spaceport
+
+Planet mulai kosong (`🌲🌲🌲`), community isi fasilitas sesuai kebutuhan.
 
 ---
 
-## Checklist (pause 09 di Fase 5)
+## 4. Character Tetap Berguna (Scope Dibatasi)
 
-* [ ] Substrate: terrain heightmap streaming + ocean Gerstner 71% + forest 6000 Instanced + atmosphere 1.018 + clouds AAA per-kind (visual-only, gak nabrak WorldRegion)
-* [ ] Terrain serealistis mungkin: Earth/Mars/extreme per-planet `gravity/atmosphere/ocean/temperature` + soil layers topsoil/clay/rock + streaming LOD 16-64
-* [ ] Runtime FPS walk 9.81 + raycast + navmesh (capsule 1.8m, 5.5 m/s, drag 0.12)
-* [ ] Character health blood/stamina/hunger + lineage (health-- bukan respawn)
-* [ ] Building health (StationEntity, code → health, DAMAGE_CEILING 12 / KE, wreckage, repair=commit)
-* [ ] Vehicle VesselEntity (ROVER 2000kg/4e3N, ROAD safeZone, HANGAR 32 slots, GateLink spaceport)
-* [ ] Penebangan UI: `🌲 StationEntity health` + crosshair `🌲 87%` + hold F 1.2s + sfxDebris + stump persist
-* [ ] Excavator keruk gunung: bucket raycast → heightmap[y][x]-=depth + vertex update + soil pile Instanced + safeZone check
-* [ ] Fauna hidup bebas: `kind:"fauna"` VesselEntity `mass 15-4000kg` + behavior tree wander/boid + bisa melukai user `KE×angle` → blood-- (ular/dino)
-* [ ] Lautan depth + ombak Gerstner ω²=gk + cuaca mulberry32+Perlin gak 100% prediksi
-* [ ] Content schema validation (safe, bukan bebas kode, 5 packages stub tetap)
-* [ ] Space ↔ Planet Gate (SPACE → ORBIT → ATMOSPHERE → SURFACE, lerp awan, tanpa loading)
+Player tetap bisa keluar vessel & jalan, tapi cuma di fasilitas.
 
-> `09 Part A` Fase 6 custom music + Fase 7 UI + `Part B` 8-12 interior FPS tetap next setelah planetary substrate — tapi planetary runtime ini pondasi biar semua yang mereka bangun bisa hidup.
+```
+Vessel → Dock → Player keluar → Hangar → Repair/Refit → kembali → Launch
+```
+
+FPS `capsule 1.8m` + `gravity 9.81` + `raycast` + `clampSpeed 5.5` `baseline.ts:16` — hanya di `hangar/facility`, bukan full planet FPS MMORPG.
+
+---
+
+## 5. Tidak Perlu Full Planet Civilization Simulation (Di-tahan)
+
+Tahap awal **gak perlu**:
+* NPC population simulation, fauna ecosystem, animals/dinosaurs, tree chopping, excavator terrain deformation, real-time mountain destruction, civilian vehicle ecosystem, procedural cities, full planetary economy, global human-life simulation.
+
+Semua itu future expansion kalau diperlukan — bukan hari 1.
+
+---
+
+## 6. Infrastructure Tetap Persistent
+
+Fasilitas community tetap pakai konsep existing:
+
+```
+Community → Structure → Components → Health → Damage → Destruction → Persistence
+```
+
+`StationEntity:54` `health 0..100` `component.ts:10` + `combat.ts:39` `DAMAGE_CEILING=12` / `KE=½mv²` → `region.remove` + `wreckage 04` + `Repair=commit 02:257` — hangar/military tetap punya konsekuensi.
+
+---
+
+## 7. Space dan Planet Tetap Satu Universe
+
+Planet bukan game terpisah — extension dari space universe.
+
+```
+Space Region → Planetary Region → Spaceport → Hangar/Facility
+```
+
+`GateLink` / `region transition` sebagai boundary logical. Yang penting:
+
+```
+SPACE → ATMOSPHERE → PLANET  terasa satu perjalanan seamless
+```
+
+---
+
+## 8. Tujuan Proposal
+
+Bukan bikin planet lebih sederhana secara visual — planet tetap besar & realistis. Tapi **lebih sederhana secara simulation scope**.
+
+Dengan ini ARCLUX dapat:
+* explorable planets, seamless space-to-planet transition, low-altitude flight, player landing, hangars, community infrastructure, FPS character interaction, persistent planetary facilities
+
+tanpa langsung bangun full Earth-scale civilization simulator. Blueprint 10 civilization komplet tetap bisa jadi future expansion, tapi gak perlu di hari 1.
+
+---
+
+## Checklist (simplified)
+
+* [ ] Substrate natural: terrain + ocean + atmosphere 1.018 + clouds AAA + gravity/temperature/weather/day-night (visual-only)
+* [ ] Aerospace seamless: ORBIT → ATMOSPHERE → LOW-FLIGHT → LANDING PAD → HANGAR (GateLink spaceport, tanpa loading)
+* [ ] Community facilities: Landing Pad/Hangar/Repair/Refit/Radar/Comms/Military/Storage/Manufacturing/Spaceport (StationEntity health, code→health)
+* [ ] Character terbatas di fasilitas: Vessel→Dock→keluar→Hangar→Launch (FPS 5.5 m/s, bukan full planet)
+* [ ] Space ↔ Planet satu universe: Planetary Region via GateLink
+
+> 09 Part A Fase 6-7 + Part B 8-12 tetap next setelah 10 simplified — tapi 10 sekarang aerospace dulu, bukan simcity.
