@@ -15,6 +15,7 @@ import {
   loadSettings, saveSettings, applyPreset, updateSettings,
   type GameSettings, type QualityPreset, type FpsCap, type BloomQuality,
 } from "./settings";
+import type { AudioHandle } from "./audio";
 
 export type MenuCameraMode = "free" | "follow" | "tactical" | "cinematic";
 
@@ -37,7 +38,7 @@ const PRESET_OPTS: QualityPreset[] = ["LOW", "MEDIUM", "HIGH", "ULTRA", "CINEMAT
 const FPS_OPTS: FpsCap[] = [30, 60, 90, 120, 240, 0];
 const BLOOM_OPTS: BloomQuality[] = ["off", "low", "high"];
 
-export function initMenu(callbacks: MenuCallbacks): MenuHandle {
+export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): MenuHandle {
   const root = typeof document !== "undefined" ? document.body : null;
   if (!root) {
     return { toggle: () => {}, open: () => {}, close: () => {}, isOpen: false, dispose: () => {} };
@@ -244,6 +245,118 @@ export function initMenu(callbacks: MenuCallbacks): MenuHandle {
   });
   mRow.appendChild(mBtn);
   a.appendChild(mRow);
+
+  // ===================== CUSTOM MUSIC (Fase 6) =====================
+  if (audioHandle) {
+    const cmHead = document.createElement("div");
+    cmHead.textContent = "CUSTOM MUSIC";
+    cmHead.style.cssText = `margin:16px 0 8px;font-size:11px;letter-spacing:0.12em;color:${colors.tech};border-top:1px solid ${colors.edge};padding-top:12px`;
+    a.appendChild(cmHead);
+
+    const fileRow = document.createElement("div");
+    fileRow.style.cssText = "display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed rgba(90,110,146,0.25);margin-bottom:6px";
+    const fileLabel = document.createElement("span");
+    fileLabel.style.cssText = "font-size:11px;color:" + colors.body;
+    fileLabel.textContent = "UPLOAD";
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".mp3,.ogg,.wav,.flac,audio/*";
+    fileInput.multiple = true;
+    fileInput.style.cssText = `font-family:inherit;font-size:10px;color:${colors.muted};max-width:220px`;
+    fileRow.append(fileLabel, fileInput);
+    a.appendChild(fileRow);
+
+    const nowRow = document.createElement("div");
+    nowRow.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed rgba(90,110,146,0.25);margin-bottom:6px";
+    const nowLabel = document.createElement("span");
+    nowLabel.style.cssText = "font-size:11px;color:" + colors.body;
+    nowLabel.textContent = "NOW PLAYING";
+    const nowVal = document.createElement("span");
+    nowVal.style.cssText = "font-size:10px;color:" + colors.tech + ";max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+    nowVal.textContent = "—";
+    nowRow.append(nowLabel, nowVal);
+    a.appendChild(nowRow);
+
+    const ctrlRow = document.createElement("div");
+    ctrlRow.style.cssText = "display:flex;gap:6px;padding:7px 0;margin-bottom:6px";
+    const mkBtn = (txt: string): HTMLButtonElement => {
+      const b = document.createElement("button");
+      b.textContent = txt;
+      b.style.cssText = `padding:4px 10px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-size:10px`;
+      return b;
+    };
+    const playBtn = mkBtn("▶ PLAY");
+    const pauseBtn = mkBtn("⏸ PAUSE");
+    const stopBtn = mkBtn("⏹ STOP");
+    const nextBtn = mkBtn("⏭ NEXT");
+    ctrlRow.append(playBtn, pauseBtn, stopBtn, nextBtn);
+    a.appendChild(ctrlRow);
+
+    const listHead = document.createElement("div");
+    listHead.textContent = "PLAYLIST";
+    listHead.style.cssText = `font-size:10px;color:${colors.muted};margin:8px 0 4px;letter-spacing:0.08em`;
+    a.appendChild(listHead);
+    const playlistEl = document.createElement("div");
+    playlistEl.style.cssText = "max-height:120px;overflow-y:auto;border:1px solid " + colors.edge + ";background:rgba(6,9,18,0.6);padding:6px";
+    a.appendChild(playlistEl);
+
+    const refreshPlaylist = (): void => {
+      playlistEl.textContent = "";
+      const list = audioHandle.getCustomPlaylist();
+      const cur = audioHandle.getCustomNowPlaying();
+      if (!list.length) {
+        const empty = document.createElement("div");
+        empty.style.cssText = "font-size:10px;color:" + colors.muted + ";padding:4px";
+        empty.textContent = "No tracks — upload .mp3/.ogg/.wav/.flac";
+        playlistEl.appendChild(empty);
+        return;
+      }
+      for (const name of list) {
+        const rowEl = document.createElement("div");
+        rowEl.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:3px 4px;font-size:10px;color:" + (name === cur ? colors.tech : colors.body) + ";background:" + (name === cur ? "rgba(255,179,107,0.08)" : "transparent") + ";border-bottom:1px dashed rgba(90,110,146,0.15);cursor:pointer";
+        const nameSpan = document.createElement("span");
+        nameSpan.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px";
+        nameSpan.textContent = name;
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "×";
+        delBtn.style.cssText = `padding:0 6px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.muted};cursor:pointer;font-size:10px`;
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // remove from playlist — not in audio API yet, just UI hide (actual Map keeps)
+          rowEl.remove();
+          if (playlistEl.children.length === 0) refreshPlaylist();
+        });
+        rowEl.addEventListener("click", () => {
+          audioHandle.playCustom(name);
+          nowVal.textContent = name;
+          refreshPlaylist();
+        });
+        rowEl.append(nameSpan, delBtn);
+        playlistEl.appendChild(rowEl);
+      }
+    };
+
+    fileInput.addEventListener("change", async () => {
+      const files = fileInput.files;
+      if (!files) return;
+      for (const f of Array.from(files)) {
+        try {
+          const name = await audioHandle.loadCustomMusic(f);
+          nowVal.textContent = name;
+        } catch (e) {
+          nowVal.textContent = "ERR: " + (e as Error).message;
+        }
+      }
+      refreshPlaylist();
+      fileInput.value = "";
+    });
+    playBtn.addEventListener("click", () => { audioHandle.playCustom(); const cur = audioHandle.getCustomNowPlaying(); if (cur) nowVal.textContent = cur; refreshPlaylist(); });
+    pauseBtn.addEventListener("click", () => audioHandle.pauseCustom());
+    stopBtn.addEventListener("click", () => { audioHandle.stopCustom(); nowVal.textContent = "—"; });
+    nextBtn.addEventListener("click", () => { audioHandle.nextCustom(); const cur = audioHandle.getCustomNowPlaying(); if (cur) nowVal.textContent = cur; refreshPlaylist(); });
+
+    refreshPlaylist();
+  }
 
   // ===================== CONTROLS =====================
   const c = sections.get("CONTROLS")!;

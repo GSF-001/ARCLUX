@@ -23,6 +23,15 @@ export interface AudioHandle {
   sfxShieldHit(): void;
   sfxDebris(): void;
   sfxAmbientHum(): { stop: () => void } | undefined;
+  /** Fase 6 — custom music upload (user provides MP3/OGG/WAV/FLAC, decode via AudioContext, playlist via musicGain) */
+  loadCustomMusic(file: File): Promise<string>;
+  playCustom(name?: string): void;
+  pauseCustom(): void;
+  stopCustom(): void;
+  nextCustom(): void;
+  getCustomPlaylist(): string[];
+  getCustomNowPlaying(): string | null;
+  isCustomPlaying(): boolean;
   setEnabled(muted: boolean, masterVolume: number): void;
   dispose(): void;
 }
@@ -49,6 +58,14 @@ export function initAudio(): AudioHandle {
   let musicTimer: ReturnType<typeof setInterval> | null = null;
   let ambientOsc: OscillatorNode | null = null;
   let ambientGain: GainNode | null = null;
+  // Fase 6 — custom music
+  const customBuffers = new Map<string, AudioBuffer>();
+  const customOrder: string[] = [];
+  let customCurrent: string | null = null;
+  let customSource: AudioBufferSourceNode | null = null;
+  let customStartTime = 0;
+  let customOffset = 0;
+  let customPlaying = false;
 
   const ensure = (): AudioContext | null => {
     if (ctx) return ctx;
@@ -104,6 +121,8 @@ export function initAudio(): AudioHandle {
   const scheduleMusic = (): void => {
     const c = ctx;
     if (!c || !musicGain || muted) return;
+    // Jika custom music lagi play, jangan ganggu (procedural pause)
+    if (customPlaying) return;
     const now = c.currentTime;
     const notes = [220, 277.18, 329.63, 440, 329.63, 277.18, 220, 246.94];
     const base = (s0.musicVolume || 0.5) * 0.06;
@@ -121,6 +140,42 @@ export function initAudio(): AudioHandle {
       o.stop(now + i * 2.5 + 2.5);
     }
     stepIdx += 1;
+  };
+
+  const stopCustomInternal = (): void => {
+    if (customSource) {
+      try { customSource.stop(); } catch {}
+      try { customSource.disconnect(); } catch {}
+      customSource = null;
+    }
+  };
+  const playCustomInternal = (name: string, offset = 0): void => {
+    const c = ensure();
+    const buf = customBuffers.get(name);
+    if (!c || !buf || !musicGain) return;
+    stopCustomInternal();
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(musicGain);
+    src.onended = () => {
+      if (customCurrent === name && customPlaying) {
+        const idx = customOrder.indexOf(name);
+        const next = customOrder[(idx + 1) % customOrder.length];
+        if (next && next !== name) {
+          customCurrent = next;
+          customOffset = 0;
+          playCustomInternal(next, 0);
+        } else {
+          customPlaying = false;
+        }
+      }
+    };
+    customStartTime = c.currentTime - offset;
+    customOffset = offset;
+    src.start(0, offset);
+    customSource = src;
+    customCurrent = name;
+    customPlaying = true;
   };
 
   return {
@@ -255,6 +310,51 @@ export function initAudio(): AudioHandle {
         },
       };
     },
+    async loadCustomMusic(file: File): Promise<string> {
+      const c = ensure();
+      if (!c) throw new Error("AudioContext not available");
+      const buf = await file.arrayBuffer();
+      const decoded = await c.decodeAudioData(buf.slice(0));
+      const name = file.name;
+      customBuffers.set(name, decoded);
+      if (!customOrder.includes(name)) customOrder.push(name);
+      return name;
+    },
+    playCustom(name?: string) {
+      const target = name ?? customCurrent ?? customOrder[0];
+      if (!target) return;
+      const c = ensure();
+      if (!c) return;
+      // resume if same track paused
+      if (customCurrent === target && !customPlaying && customSource === null) {
+        playCustomInternal(target, customOffset);
+        return;
+      }
+      if (customPlaying && customCurrent === target) return;
+      customOffset = 0;
+      playCustomInternal(target, 0);
+    },
+    pauseCustom() {
+      if (!customPlaying || !customSource || !ctx) return;
+      const elapsed = ctx.currentTime - customStartTime;
+      customOffset = Math.max(0, elapsed);
+      stopCustomInternal();
+      customPlaying = false;
+    },
+    stopCustom() {
+      stopCustomInternal();
+      customPlaying = false;
+      customOffset = 0;
+    },
+    nextCustom() {
+      if (!customOrder.length) return;
+      const idx = customCurrent ? customOrder.indexOf(customCurrent) : -1;
+      const next = customOrder[(idx + 1) % customOrder.length];
+      if (next) playCustomInternal(next, 0);
+    },
+    getCustomPlaylist() { return [...customOrder]; },
+    getCustomNowPlaying() { return customCurrent; },
+    isCustomPlaying() { return customPlaying; },
     setEnabled(m, v) {
       muted = m; master = v;
       if (ctx) {
@@ -266,7 +366,7 @@ export function initAudio(): AudioHandle {
       if (musicTimer) clearInterval(musicTimer);
       musicTimer = null;
       try {
-        engineOsc?.stop(); noiseSrc?.stop(); ambientOsc?.stop();
+        engineOsc?.stop(); noiseSrc?.stop(); ambientOsc?.stop(); stopCustomInternal();
         if (ctx) void ctx.close();
       } catch {}
       ctx = null; engineOsc = null; engineGain = null; noiseSrc = null; noiseGain = null; sfxGain = null; musicGain = null; ambientOsc = null; ambientGain = null;
