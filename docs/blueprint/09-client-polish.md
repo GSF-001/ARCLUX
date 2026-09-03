@@ -327,7 +327,7 @@ function spawnExplosion(pos: THREE.Vector3) {
 
 # FASE 5 — SOUND EFFECTS (SEMUA 5, full)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai (5 SFX synthesized + wired — audio.ts + scene3d + input + renderer)
 
 ## Tujuan
 Semua efek suara disintesis via WebAudio (gak perlu file eksternal).
@@ -437,9 +437,9 @@ sfxDebris() {
 | sfxDebris | collision event |
 
 ## Acceptance
-- [ ] Kelima suara ada & berfungsi
-- [ ] Volume dikontrol sfxVolume
-- [ ] Music volume terpisah (musicGain), sfx volume terpisah (sfxGain)
+- [x] Kelima suara ada & berfungsi (sfxExplosion 0.8s lowpass, sfxWeapon 0.15s square 800→200, sfxShieldHit 0.3s triangle bandpass, sfxAmbientHum saw 38Hz continuous musicGain, sfxDebris 3× noise bursts)
+- [x] Volume dikontrol sfxVolume (s0.sfxVolume) + musicVolume terpisah
+- [x] Music volume terpisah (musicGain), sfx volume terpisah (sfxGain) + master bus
 
 ---
 
@@ -1004,11 +1004,11 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] Memory dispose setelah 2s (Set dedup disposeGroup + explosions splice, dispose target & mats)
 - [x] Verify build + tsc (`build-game.mjs` 1.3mb ✓, `tsc -p apps/game` ✓, ThreatCrush 0)
 
-## Fase 5 — Sound effects
-- [ ] 5 sfx methods
-- [ ] Trigger wiring
-- [ ] sfxVolume/musicGain terpisah
-- [ ] Verify build + tsc
+## Fase 5 — Sound effects ✅
+- [x] 5 sfx methods (sfxExplosion, sfxWeapon, sfxShieldHit, sfxDebris, sfxAmbientHum — audio.ts + ambientOsc)
+- [x] Trigger wiring (scene3d sfxHandler explosion→sfxExplosion, input KeyF/J + mousedown → sfxWeapon, renderer ambient hum via speed, shield/debris via handler)
+- [x] sfxVolume/musicGain terpisah (sfxGain 0.7, musicGain 0.35, masterBus, muted)
+- [x] Verify build + tsc (build-game.mjs 1.4mb ✓, tsc -p apps/game ✓, ThreatCrush 0)
 
 ## Fase 6 — Custom music
 - [ ] File input di menu

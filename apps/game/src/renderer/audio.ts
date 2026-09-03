@@ -17,6 +17,12 @@ export interface AudioHandle {
   setSpeed(r: number): void;
   /** Sfx HUD/combat singkat. */
   ui(kind: "hover" | "click" | "alert" | "boost"): void;
+  /** Fase 5 — 5 SFX full (synthesized, no asset): explosion/weapon/shield/ambient hum/debris */
+  sfxExplosion(): void;
+  sfxWeapon(): void;
+  sfxShieldHit(): void;
+  sfxDebris(): void;
+  sfxAmbientHum(): { stop: () => void } | undefined;
   setEnabled(muted: boolean, masterVolume: number): void;
   dispose(): void;
 }
@@ -41,6 +47,8 @@ export function initAudio(): AudioHandle {
   let sfxGain: GainNode | null = null;
   let musicGain: GainNode | null = null;
   let musicTimer: ReturnType<typeof setInterval> | null = null;
+  let ambientOsc: OscillatorNode | null = null;
+  let ambientGain: GainNode | null = null;
 
   const ensure = (): AudioContext | null => {
     if (ctx) return ctx;
@@ -148,6 +156,105 @@ export function initAudio(): AudioHandle {
       osc.start();
       osc.stop(c.currentTime + 0.2);
     },
+    sfxExplosion() {
+      const c = ensure();
+      if (!c || !sfxGain) return;
+      const noise = c.createBufferSource();
+      noise.buffer = makeNoiseBuffer(c, 1);
+      const filter = c.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(2000, c.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(100, c.currentTime + 0.8);
+      const g = c.createGain();
+      const vol = (muted ? 0 : 0.5) * (s0.sfxVolume || 0.7);
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.8);
+      noise.connect(filter);
+      filter.connect(g);
+      g.connect(sfxGain);
+      noise.start();
+      noise.stop(c.currentTime + 0.8);
+    },
+    sfxWeapon() {
+      const c = ensure();
+      if (!c || !sfxGain) return;
+      const osc = c.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(800, c.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, c.currentTime + 0.15);
+      const g = c.createGain();
+      const vol = (muted ? 0 : 0.3) * (s0.sfxVolume || 0.7);
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.15);
+      osc.connect(g);
+      g.connect(sfxGain);
+      osc.start();
+      osc.stop(c.currentTime + 0.15);
+    },
+    sfxShieldHit() {
+      const c = ensure();
+      if (!c || !sfxGain) return;
+      const osc = c.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = 440;
+      const filter = c.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 600;
+      const g = c.createGain();
+      const vol = (muted ? 0 : 0.4) * (s0.sfxVolume || 0.7);
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.3);
+      osc.connect(filter);
+      filter.connect(g);
+      g.connect(sfxGain);
+      osc.start();
+      osc.stop(c.currentTime + 0.3);
+    },
+    sfxDebris() {
+      const c = ensure();
+      if (!c || !sfxGain) return;
+      for (let i = 0; i < 3; i++) {
+        const noise = c.createBufferSource();
+        noise.buffer = makeNoiseBuffer(c, 0.1);
+        const g = c.createGain();
+        const t = c.currentTime + i * 0.05;
+        const vol = (muted ? 0 : 0.2) * (s0.sfxVolume || 0.7);
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        noise.connect(g);
+        g.connect(sfxGain);
+        noise.start(t);
+        noise.stop(t + 0.1);
+      }
+    },
+    sfxAmbientHum() {
+      const c = ensure();
+      if (!c || !musicGain) return undefined;
+      if (ambientOsc) return { stop: () => { try { ambientOsc?.stop(); } catch {} ambientOsc = null; } };
+      const osc = c.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = 38;
+      const filter = c.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 120;
+      const g = c.createGain();
+      g.gain.value = muted ? 0 : 0.08 * (s0.musicVolume || 0.5);
+      osc.connect(filter);
+      filter.connect(g);
+      g.connect(musicGain);
+      osc.start();
+      ambientOsc = osc;
+      ambientGain = g;
+      return {
+        stop: () => {
+          try { osc.stop(); } catch {}
+          try { osc.disconnect(); } catch {}
+          try { g.disconnect(); } catch {}
+          if (ambientOsc === osc) ambientOsc = null;
+          if (ambientGain === g) ambientGain = null;
+        },
+      };
+    },
     setEnabled(m, v) {
       muted = m; master = v;
       if (ctx) {
@@ -159,10 +266,10 @@ export function initAudio(): AudioHandle {
       if (musicTimer) clearInterval(musicTimer);
       musicTimer = null;
       try {
-        engineOsc?.stop(); noiseSrc?.stop();
+        engineOsc?.stop(); noiseSrc?.stop(); ambientOsc?.stop();
         if (ctx) void ctx.close();
       } catch {}
-      ctx = null; engineOsc = null; engineGain = null; noiseSrc = null; noiseGain = null; sfxGain = null; musicGain = null;
+      ctx = null; engineOsc = null; engineGain = null; noiseSrc = null; noiseGain = null; sfxGain = null; musicGain = null; ambientOsc = null; ambientGain = null;
     },
   };
 }
