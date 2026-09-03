@@ -445,7 +445,7 @@ sfxDebris() {
 
 # FASE 6 — CUSTOM MUSIC UPLOAD
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai (custom music MP3/OGG/WAV/FLAC decode + playlist + controls — audio.ts + menu.ts)
 
 ## Tujuan
 User upload file musik sendiri — gan perlu urusan pihak ketiga/lisensi.
@@ -482,10 +482,10 @@ Support MP3/OGG/WAV/FLAC. Playback via musik bus.
 - File name ditampilkan via textContent bukan innerHTML (XSS-safe).
 
 ## Acceptance
-- [ ] Upload .mp3/.ogg/.wav/.flac berfungsi
-- [ ] Play/pause/stop/next jalan
-- [ ] Volume dikontrol musicVolume
-- [ ] Gak ada innerHTML (ThreatCrush safe)
+- [x] Upload .mp3/.ogg/.wav/.flac berfungsi (`loadCustomMusic` file.arrayBuffer → decodeAudioData → Map)
+- [x] Play/pause/stop/next jalan (playCustom/pauseCustom/stopCustom/nextCustom, auto next onended)
+- [x] Volume dikontrol musicVolume (musicGain)
+- [x] Gak ada innerHTML (ThreatCrush safe — DOM textContent + input file)
 
 ---
 
@@ -1010,12 +1010,12 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] sfxVolume/musicGain terpisah (sfxGain 0.7, musicGain 0.35, masterBus, muted)
 - [x] Verify build + tsc (build-game.mjs 1.4mb ✓, tsc -p apps/game ✓, ThreatCrush 0)
 
-## Fase 6 — Custom music
-- [ ] File input di menu
-- [ ] decodeAudioData + playlist Map
-- [ ] play/pause/stop/next
-- [ ] ThreatCrush safe (no innerHTML)
-- [ ] Verify build + tsc
+## Fase 6 — Custom music ✅
+- [x] File input di menu (AUDIO tab CUSTOM MUSIC, accept .mp3/.ogg/.wav/.flac,audio/* multiple)
+- [x] decodeAudioData + playlist Map (customBuffers Map + customOrder + onended auto next)
+- [x] play/pause/stop/next (playCustom/pauseCustom/stopCustom/nextCustom + now playing label)
+- [x] ThreatCrush safe (no innerHTML — DOM textContent + input file)
+- [x] Verify build + tsc (build-game.mjs 1.4mb ✓, tsc -p apps/game ✓)
 
 ## Fase 7 — UI polish
 - [ ] HUD panel fade + glow

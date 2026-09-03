@@ -58,7 +58,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     onAudio: (s) => audio.setEnabled(s.muted, s.masterVolume),
     onCameraMode: (mode) => scene.setCameraMode(mode as Parameters<Scene3D["setCameraMode"]>[0]),
     onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
-  });
+  }, audio);
   // Fase 5 — wire explosion/shield/debris sfx ke scene (server-authoritative, client hanya play)
   scene.setSfxHandler((kind) => {
     try {
