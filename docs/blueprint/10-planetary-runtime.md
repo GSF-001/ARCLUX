@@ -1,80 +1,125 @@
-# Blueprint 10 — Planetary Runtime (Final — Simplified Aerospace)
+# Blueprint 10 — Planetary Runtime
 
-> Status: **PLAN — FINAL (company-grade).** Simplified aerospace: planet luas ribuan mil + seamless + persistent, tapi simulation scope kecil — aerospace ops dulu, bukan SimCity. Pause `09` di Fase 5, `10` dulu. File ini **perfect blueprint** dari ide abstrak — bukan tempel mentah, tapi diurai jadi komponen & kebutuhan.
+> Status: **PLAN — FINAL.** Aerospace planetary layer: seamless, persistent, planet-scale exploration with community-built surface facilities. Simulation scope deliberately small — aerospace operations first, not a full civilization simulator. `09` paused at Fase 5.
 
-## 1. Abstract
+## 1. Overview
 
-`ARCLUX` punya `SPACE` persistent yang heavy-stable (`WorldRegion` 5000 entities `stability.ts:13`, `tick 10/s` `tickScheduler`, `G`/`Kepler`/`1/r²`/`KE`). `10` menambah **planet sebagai dunia kedua** di bawahnya — **bukan map 4×4**, tapi **planet beneran skala ribuan mil** dengan **runtime yang cuma aktifkan chunk yang dipakai** + **persistent coordinate** + **waktu Newtonian sama kayak dunia asli**. ARCLUX cuma sediain **substrate natural kosong** `+` **hukum alam** — **civilization diisi komunitas** di `lahan kosong`, `hutan/laut` tetap natural.
+`ARCLUX` already provides a persistent `SPACE` universe (`WorldRegion` 5000 entities `stability.ts:13`, `tick 10/s` `tickScheduler`, `G/Kepler/1/r²/KE` `physics.ts:12`, `Gate` transactional `gate.ts:86`). `10` adds a **planetary layer beneath it** — a planet-scale natural environment that is **thousands of kilometers across**, **streamed by chunks**, and **shares the same persistence and physics** as space.
 
-## 2. Problem Statement (Final)
+The planet is **empty by default** — `terrain, ocean, atmosphere, weather` are generated, but `cities, hangars, bases` are built by communities on **empty land**. The runtime makes everything they build **live and destructible** like vessels.
 
-* Bukan `bisa bikin planet?` (`Sphere 1.018 + clouds AAA` EZZ).
-* Tapi `bisa gak bikin runtime tempat civilization yang TIDAK kita buat bisa hidup di planet kosong yang kita sediakan, dengan skala ribuan mil, coordinate persistent, spawn beda, dan waktu/kompas real?` — `runtime` harus handle `ribuan fasilitas tersebar` tanpa `load full planet 24/7`.
+## 2. Objectives / Non-Objectives
 
-## 3. Goals / Non-Goals
+**Objectives:**
+* Seamless `SPACE → ORBIT → ATMOSPHERE → SURFACE` without loading screens.
+* Planet-scale geography that is explored, not teleported.
+* Community-built surface facilities that are persistent and have consequences.
+* Character that can leave the vessel and operate inside facilities.
 
-**Goals:**
-* Planet visual besar & realistis `terrain/ocean/atmosphere/clouds` streaming `LOD 16-64` `settings.ts:28`, tapi `runtime` kecil: cuma `aerospace` `ORBIT→ATMOSPHERE→LANDING PAD→HANGAR` seamless.
-* Planet luas beribu mil, `region/chunk` distributed `WorldRegion:41` `claimRegion` `relay/registry.ts:33`, `position Vec3` `types.ts:18` persist `RegionSnapshot:79` `persistence.ts:120` — log out di `Hangar-A` balik `Hangar-A`, `Player A ↔2000 km↔ Player B` 1 planet.
-* Masuk planet `SPACE→ATMOSPHERE→SURFACE` `lerp` awan kayak film, `waktu/jam/kompas` `day/night 24h` + `Bulan Kepler` `environs.ts:49` `physics.ts:12` `G,σ` — `utara malam barat siang` beda, `waktu = dunia asli`.
-* Community bangun `Landing Pad/Hangar/Repair/Refit/Radar/Comms/Military/Storage/Manufacturing/Spaceport` di `lahan kosong` — `StationEntity` persistent.
+**Non-Objectives (deferred to future expansion):**
+* Global NPC / fauna / city simulation, terrain deformation, procedural cities, full economy — not in this blueprint.
 
-**Non-Goals (tahan untuk future `11`):**
-* NPC population, fauna/dino, tree chopping, excavator deform, procedural cities, full economy — gak di hari 1. `Gak perlu simcity lagi.` Cukup `hangar di lahan kosong`.
+## 3. Foundation Reuse (No New Laws)
 
-## 4. Pondasi yang Dipakai (gak bikin dari 0)
+* **Lighting:** `scene3d.ts:249` `DirectionalLight` + `PMREM scene.environment:858` + `MeshStandard` — same sun illuminates planet and clouds.
+* **Orbit:** Kepler `environs.ts:49` `r=a(1-e²)/(1+e cosθ)` + lunar phase.
+* **Physics:** `physics.ts:12` `G, σ, c, AU` + `g=9.81` + `thermics.ts:34` `L/4πr²` + `collision.ts:92` `KE=½mv²×angle`.
+* **Persistence:** `WorldRegion:41` `Map` + `RegionSnapshot:79` `/snapshot` `server.ts:139` + `persistence.ts:120` `RecoveryManager` + `gate.ts:86` + `bridge.ts:75` + `relay/registry.ts:33`.
+* **Vessel as Repository:** `universe/connect.ts:74` → `.arclux/` → `buildVesselModel` `stats.ts:183` → `server.ts:216` `spawnPlayerVessel`.
 
-* **Cahaya:** `scene3d.ts:249` `DirectionalLight` + `PMREM scene.environment:858` + `MeshStandard` — nyorot planet & awan.
-* **Orbit:** Kepler `environs.ts:49` `r=a(1-e²)/(1+e cosθ)` + fase lunar `mdir.dot(sdir):904`.
-* **Fisika:** `physics.ts:12` `G, σ, c, AU` + `g=9.81` + `thermics.ts:34` `L/4πr²` + `collision.ts:92` `KE=½mv²×angle` + `baseline.ts` imun D-019.
-* **Persistent world:** `WorldRegion:41` `Map` + `RegionSnapshot:79` `/snapshot` `server.ts:139` + `persistence.ts:120` + `gate.ts:86` `notifyTarget→ACK` + `bridge.ts:75` + `relay`.
-* **Vessel=repo:** `universe/connect.ts:74` → `.arclux/` → `buildVesselModel` `stats.ts:183` → `server.ts:216` `spawnPlayerVessel`.
+## 4. Planetary Substrate — Natural Environment (Visual-Only)
 
-## 5. Architecture — Substrate vs Runtime
+* **Terrain:** `seed → continental → mountain → biome → river` heightmap, streaming `LOD 16-64` `settings.ts:28`, `vertexColors` topsoil/clay/rock.
+* **Ocean:** `SphereGeometry` + Gerstner waves `ω²=g·k` `g=9.81`, depth from heightmap, `71%` coverage.
+* **Atmosphere:** `Sphere 1.018` + procedural clouds `makeCloudTexture 512` per-kind (gasGiant banded, ocean swirl, ice wispy, desert dust, volcanic ash) `scene3d.ts` child `depthWrite:false`.
+* **Weather:** `mulberry32(tick)` + Perlin `rain, wind, fog`, not fully deterministic.
+* **Environment:** per-planet `gravity, temperature, weather, day/night 24h, lighting` — streamed, `g` varies (Earth 9.81, Mars 3.71).
+
+Visual-only: `child sphere 1.018` drift, `metalness 0`, `dispose` `buildPlanetSystem:283` — does not enter `WorldRegion.entities` / `EnvironsState.bodies` / `RegionSnapshot`, does not add `O(V*B)` `simulation.ts:121`.
+
+## 5. Scale & Persistence — Large Planet, Chunked Runtime
+
+A planet is **thousands of kilometers** — `heightmap` + `ocean` + `forest` are geographically large, but the **runtime only activates chunks that are in use**.
 
 ```
-Substrate (visual-only, gak masuk WorldRegion)          Runtime (authoritative, di Map)
-planet sphere + heightmap streaming + ocean Gerstner  →  WorldRegion Map 5000 (chunk)
-clouds AAA per-kind 512 + atmosphere 1.018             →  Character FPS 5.5 m/s + health
-weather mulberry32 + Perlin + day/night 24h            →  StationEntity facility health
-                                                       →  GateLink spaceport ORBIT↔PLANET
+PLANET (thousands km)
+  ┌──────────────────────────┐
+  │   REGION A [HANGAR A]    │
+  │                 REGION B │
+  │      REGION C            │
+  └──────────────────────────┘
 ```
-* Substrate `gak nambah O(V*B)` `simulation.ts:121` — cuma `scene3d.ts` `Mesh` child `1.018` drift.
-* Runtime `tick 10/s` `simulation.ts:85` `p+=v*dt` — `SPACE + PLANET = SAME UNIVERSE / SAME PERSISTENCE`.
 
-## 6. Components — Diurai dari Ide Abstrak
+* **Chunking:** `regionId = planetId:chunkX:chunkZ` distributed via `WorldRegion:41` `relay/registry.ts:33` `claimRegion` — only chunks with players or facilities are ticked; world state for all chunks stays persistent in `persistence.ts:120`.
+* **Persistent Coordinate:** `position Vec3{x,y,z}` `types.ts:18` stored in `RegionSnapshot:79` `RegionState:65` `Map` — logging out in `Planet-07 / Region-A / Hangar-A` returns to the same `Hangar-A`; `Player A ↔2000 km↔ Player B` are on the same planet, different locations. Coordinates are shareable (`gate.ts:34` `position`) for rendezvous. Spawn is at the chosen facility, not a global `0,0,0`.
+* **Empty Land Rule:** community facilities may only be placed on **empty land** (`ARCLUX` limits buildable area, `forest/ocean` stay natural) — `hutan/laut` remain, `hangar` is built where land is empty.
 
-| # | Komponen | Apa yang Dibikin | File Baru / Ubah | Kunci |
-|---|----------|------------------|------------------|-------|
-| 1 | **Planetary Substrate** | `heightmap` `seed→continental→mountain→biome→river` + `ocean 71% Gerstner ω²=gk` + `forest Instanced` + `atmosphere 1.018` + `clouds AAA` + `weather/day-night` | `scene3d.ts:281` `buildPlanetSystem` + `makeCloudTexture` + `settings.ts:28` LOD | `child sphere 1.018` `depthWrite:false` `metalness 0` `dispose` `buildPlanetSystem:283` |
-| 2 | **Scale & Chunk** | Planet `ribuan km` → `PlanetId / ChunkId` `regionId = planet:chunkX:chunkZ` distributed `claimRegion` — aktif cuma chunk ada player/fasilitas | `world.ts:41` `WorldRegion` `regionId` + `relay/registry.ts:33` `claimRegion` + `environs.ts` `SystemBody` `planetId` | `stability.ts:13` 5000 cap |
-| 3 | **Persistent Coordinate** | `Planet-07/Region-A/Hangar-A/position Vec3` `types.ts:18` persist `RegionSnapshot:79` `persistence.ts:120` — log out `Hangar-A` balik `Hangar-A`, spawn gak sama, bisa kirim `coordinate` `Vec3` `gate.ts:34` rendez-vous | `types.ts:18` `Vec3` + `world.ts:96` `spawnVessel(pos)` + `server.ts:216` | `2000 km` 1 planet |
-| 4 | **Time & Compass** | `day/night 24h` + `Bulan Kepler` `environs.ts:49` + `season` + `physics.ts:12` `G,σ` → `utara malam barat siang` beda, `waktu = dunia asli` (gak ada malam cepat), `compass` ikut `planet rotation` | `environs.ts:49` + `physics.ts:12` + `scene3d.ts:249` Directional | `lerp` lapisan awan `SPACE→ATMOSPHERE` |
-| 5 | **Aerospace Seamless** | `ORBIT→ATMOSPHERE(awan drift)→LOW-FLIGHT→SURFACE→LANDING PAD→HANGAR` dan `LAUNCH→ORBIT` `GateLink:34` spaceport, tanpa loading | `scene3d.ts:890` `speedMap` + `gate.ts:86` + `bridge.ts:75` | `lerp` |
-| 6 | **Facilities** | Community bangun di `lahan kosong` (ARCLUX batasin biar gak cape, `hutan/laut` natural): `Landing Pad, Hangar, Repair, Refit, Radar, Comms, Military, Storage, Manufacturing, Spaceport` | `world.ts:115` `spawnStation` `StationEntity:54` `health` + `component.ts:10` | `code→health` |
-| 7 | **Character Terbatas** | `Vessel→Dock→keluar→Hangar→Repair→Launch` `FPS capsule 1.8m` `gravity 9.81` `raycast` `clampSpeed 5.5` `baseline.ts:16` — cuma di fasilitas, bukan full planet FPS | `input.ts` + `world.ts:96` `CharacterEntity` future | `Map` |
-| 8 | **Persistent Infra** | `Community→Structure→Components→Health→Damage→Destruction→Persistence` `StationEntity health` `DAMAGE_CEILING 12` `KE` → `region.remove` + `wreckage 04` + `Repair=commit 02:257` | `component.ts:10` `combat.ts:39` `collision.ts:92` | `consequence` |
+## 6. Time & Compass — Real-World Laws
 
-## 7. Data Model & Persistence
+`SPACE → ORBIT → ATMOSPHERE → SURFACE` is a `lerp` through cloud layers, not a teleport.
 
-* `PlanetaryRegion { planetId: string, chunkId: string, regionId: string, bounds: { min: Vec3, max: Vec3 } }` — `WorldRegion.regionId` reuse `planet:chunk`.
-* `Position Vec3` `types.ts:18` `x,y,z` meter — `RegionSnapshot.entities[]` `position` + `RegionState Map` — `persistence.ts:120` `RecoveryManager` per-chunk.
-* `GateLink:34` `position` `activationRadius` `allowedCommunityIds` — `spaceport runway` `ORBIT↔PLANET`.
+* **Time:** `day/night 24h` + `lunar Kepler` `environs.ts:49` + `season` + `physics.ts:12` `G,σ` — `north is night while west is day` because `compass` follows `planet rotation` + `lunar orbit` Newtonian tidal. No `night faster` — time equals real world.
 
-## 8. Scaling & Security
+## 7. Aerospace Operations — Seamless Flight
 
-* Chunk `claimRegion` `relay/registry.ts:33` — yang aktif cuma `entitiesWithin` `world.ts:83` chunk, gak load full planet `💀`.
-* Validasi `content schema 11` `community: structures/components/capabilities` → `universe/schema.ts` + `license.ts` `validator.ts:53` — `valid?` (bukan bebas kode), 5 packages stub tetap.
-* `rateLimiter.ts 20/s` + `stability.ts` `5000 entities` + `tickScheduler 10/s` — `fauna di-tahan` biar gak jebol `O(V*B)`.
+```
+ORBIT → ATMOSPHERE (cloud occlusion) → LOW-ALTITUDE FLIGHT → PLANET SURFACE → LANDING PAD → HANGAR → SHIP OPERATIONS
+HANGAR → LAUNCH → ATMOSPHERE → ORBIT
+```
 
-## 9. Checklist (Final — Simplified)
+* `GateLink:34` `spaceport` `activationRadius 800m` `gate.ts:86` + `cloud drift` `scene3d.ts:890` + `simulation.ts:238` `p+=v*dt` — approach can be `safe (auto Gate notifyTarget→ACK)` or `manual (raycast terrain, KE damage on crash)`.
+* Low-altitude flight is gameplay: `cloud closes cockpit 2s → terrain LOD fades in → search for facility`.
 
-* [ ] Substrate natural `terrain/ocean/atmosphere/clouds` streaming LOD (visual-only, gak masuk `WorldRegion`)
-* [ ] **Skala ribuan mil + chunk distributed + persistent coordinate** `Planet/Chunk` `claimRegion` `position Vec3` persist — log out `Hangar-A` balik `Hangar-A`, 2000 km 1 planet, spawn beda, bisa kirim coordinate
-* [ ] **Waktu & kompas Newtonian** `24h + Bulan Kepler + G,σ` `utara malam barat siang` `waktu = dunia asli` `SPACE→ATMOSPHERE` lerp
-* [ ] Aerospace seamless `ORBIT→HANGAR` `GateLink` tanpa loading — hangar di lahan kosong (ARCLUX batasin)
-* [ ] Community facilities `10` jenis `StationEntity health` `code→health`
-* [ ] Character terbatas di fasilitas `FPS 5.5` (bukan full planet)
-* [ ] Space ↔ Planet satu universe `Planetary Region` via `GateLink`
+## 8. Surface Facilities — Built by Community
 
-> `09` Fase 6-7 + `Part B` 8-12 tetap next setelah `10` simplified — `10` sekarang final aerospace, bukan simcity. Future `fauna/tree chopping/city` jadi `11` kalau perlu.
+ARCLUX does not build cities. Community builds on empty land:
+
+`Landing Pad, Hangar, Repair Facility, Refit Facility, Radar, Communication Station, Military Facility, Storage, Manufacturing Facility, Spaceport`
+
+Planet starts empty (`🌲🌲🌲`), community fills it. Each facility is `StationEntity:54` `health 0..100` `component.ts:10` — `code → health` `buildVesselModel` — `combat.ts:39` `DAMAGE_CEILING=12` / `KE=½mv²` → `region.remove` + `wreckage 04` + `Repair=commit 02:257` — hangars have consequences.
+
+## 9. Character — Limited to Facilities
+
+```
+Vessel → Dock → Exit → Hangar → Repair/Refit → Return → Launch
+```
+
+`FPS capsule 1.8m` `gravity 9.81` `raycast` `clampSpeed 5.5 m/s` `baseline.ts:16` — only inside `hangar/facility` interiors, not full-planet FPS. `CharacterEntity` `mass 80kg` `health blood/stamina` `SystemState:32` persists via `lineage.ts`.
+
+## 10. Strategic Geography — Terrain Creates Opportunity
+
+`heightmap` deterministically (`mulberry32(planetId)` `random.ts`) creates:
+
+* `mountains (slope>0.4) → military`, `plains (slope<0.1) → spaceport`, `desert → remote`, `poles → observatory`, `coastline <2km → coastal facilities`, `valleys → hidden`.
+
+Geography itself creates strategic locations — no hand-placed cities needed.
+
+## 11. Night & Discovery — Planet Feels Inhabited Without NPCs
+
+* **Night:** `StationEntity` `emissive #ffd9a0` `96 windows/ring` + `PointLight` `runway` `amber` — from orbit at night `DirectionalLight` off, facility emissive stays (`PMREM` off) — `orbit sees light → descend → runway → hangar` feels inhabited without one NPC.
+* **Discovery:** `Radar` `world.ts:83` `entitiesWithin(pos,50000)` + `distanceBetween:150` + `directory listServers` — `Planet-07: Hangar-A 12 km / Military-B 847 km / Spaceport-C 1,920 km / Unknown 430 km` — thousands of km matter.
+
+## 12. Social Geography — Empty by Default, Shaped by Players
+
+```
+Developer:  “Here is the planet.”
+Community A: “Here I build a spaceport.”
+Community B: “I build a military hangar 800 km away.”
+Player:      “I discover their facilities.”
+```
+
+Planet slowly acquires social geography organically — no global sim needed. `Don't make the planet more complex — make the same planet feel deeper.`
+
+## 13. Checklist
+
+* [ ] Substrate natural `terrain/ocean/atmosphere/clouds` streaming LOD (visual-only)
+* [ ] Scale + chunk + persistent coordinate `Planet/Chunk` `claimRegion` `Vec3` persist — log out `Hangar-A` returns `Hangar-A`, 2000 km same planet, shareable coordinate
+* [ ] Time & compass Newtonian `24h + lunar Kepler + G,σ` `north night west day`
+* [ ] Aerospace seamless `ORBIT→HANGAR` `GateLink` without loading — hangar on empty land
+* [ ] Community facilities `10` types `StationEntity` persistent
+* [ ] Character limited to facilities `FPS 5.5`
+* [ ] Strategic geography from `heightmap`
+* [ ] Night emissive + discovery `Radar` + `Unknown`
+* [ ] Empty by default, shaped by players
+
+> `09` Part A Fase 6-7 + Part B 8-12 remain next after `10` — `10` is now final aerospace depth, not SimCity.
