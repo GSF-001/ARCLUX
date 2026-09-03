@@ -1,6 +1,6 @@
 # ARCLUX MMO — Quickstart (from Zero)
 
-> Language: English (international). Clone → install → self-host → create vessel → play. No URL every login.
+> Clone → install → self-host → create vessel → play. No URL every login.
 
 ## Requirements
 
@@ -75,7 +75,7 @@ Open `http://127.0.0.1:24001/` in a browser or `pnpm --filter @arclux/game dev` 
 Landing (`apps/game/src/renderer/landing.ts`) shows:
 
 * **Top navbar** — HOME / UNIVERSE / FEATURES / FACTIONS / MEDIA / ROADMAP / DOCS + **LAUNCH GAME**
-* **Hero** — live CCTV background from `scene3d.ts` (nebula, suns, Ark, vessels that are actually online) — not a static image
+* **Hero** — live background from `scene3d.ts` (nebula, suns, Ark, vessels that are actually online) — not a static image
 * **Live stats bar** — PLAYERS ONLINE / REGIONS ONLINE / FACTIONS / SHIPS DESTROYED (polled from `RegionSnapshot` every 4s via `net.fetchSnapshot()`)
 * **Live universe** — 3 feature cards + **News panel** (wreckage, treaties, storms) — all clickable
 * **Footer** — engine info
