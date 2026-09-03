@@ -55,14 +55,28 @@ Visual-only: `child sphere 1.018` drift `scene3d.ts:890` `speedMap[kind]`, `dept
 ### 4. Mobil/Jalan/Hangar Kapal di Planet
 * `ROVER = VesselEntity mass 2000kg thrust 4e3 N` (kapal `5e6 kg 2e7 N` `simulation.ts:267`), `ROAD = StationEntity safeZone governance.ts:31`, `HANGAR = StationEntity + 32 InstancedMesh slots` `interior.ts:480` — semua `Map` 5000, `GateLink:34` `spaceport runway` → `SPACE ↔ PLANET` `Gate` `SPACE ↔ ATMOSPHERE ↔ LANDING ↔ PLANET`.
 
-### 5. Penebangan & Tanah Berlapis
-* `forest InstancedMesh` + `heightmap vertexColors` + `🌲 = StationEntity mini health` → `🪓 collision → health-- → stump` — `persistence`.
+### 5. Penebangan & Tanah Berlapis — UI & Deformasi Realistis
+* **Pohon:** `🌲 = StationEntity mini` `types.ts:54` `health 100` + `InstancedMesh` 6000 `#355a70` `scene3d.ts:373` — `🪓` = `PlayerIntent type:"harvest" payload:{targetId: treeId}` → `validator.ts:53` + `collision.ts:79` `damage 12` → `health 0 → stump` `health 0` + `lineage.ts:22` + `wreckage 04` `log` — **UI:** raycast crosshair `HUD` `🌲 87%` + `hold F` progress bar `0→1.2s` + `sfxDebris` `audio.ts:213` + particle `scene3d.ts:476` wood chips, `stump` tinggal `persistence.ts:120` 2s dispose kayak `explosion 2s` `scene3d.ts`.
+* **Tanah berlapis:** `heightmap` `seed → continental → mountain → biome → river` → `vertexColors` `topsoil 0-0.3m brown #8a6a4a, clay 0.3-1.2m #c9a05a, rock >1.2m #6a6a6a` + `MeshStandardMaterial roughness 1 metalness 0` — `excavator keruk` = `Vehicle VesselEntity` `bucket Box` `raycast terrain` → `heightmap[y][x] -= depth` + `vertex update` + `collision mesh rebuild` + `soil pile InstancedMesh` di bucket — `governance.ts:31` `isInSafeZone` cek biar gak keruk di `safeZone` kota.
+
+### 5b. Medan Realistis per Planet — Serealistis Mungkin
+* **Earth:** `gravity 9.81` `ocean 71%` `Gerstner ω²=gk` `temperature variable` `forest/jungle/desert/mountains` `CONTEXT 27 bahasa` `seed` beda → `NORTH arctic/tundra, EQUATOR jungle/ocean, SOUTH desert` — `heightmap` `continental 0.6 + mountain 0.3 + river carve` + `erosion` `thermal 1/r²` `thermics.ts:34`.
+* **Mars:** `gravity 3.71` `atmosphere thin` `ocean 0%` `temperature hostile -60°C` `dust storm` `cosmicEvent.ts:42` `P=Ṁv/4πr²` + `desert #c9a05a roughness 0.95` + `crater` noise.
+* **Gas giant moon:** `gravity extreme 24.79` `radiation high` `toxic` `volcanic #5a1a0a emissive #ff6a1a` `scene3d.ts:101` — `health` drain `thermics.ts:42` `>1200K → health-2/tick`.
+* Semua `terrain` streaming `chunks 1024²` `LOD 16-64` `settings.ts:28` + `instancing` biar client gak load full planet.
 
 ### 6. Lautan Dalam + Ombak + Cuaca
 * `Ocean Sphere + Gerstner Shader pos+=amp·sin(k·pos-ωt) ω=√(gk)` + `depth` heightmap + `evaporation → rain` `thermics 1/r²` + `weather` `mulberry32(tick*regionId)` `cosmicEvent 0.2%`.
 
 ### 7. Semua Built by Community Bisa Hidup — Kita Mikirin Engine-nya
 * Kita sediain `simulation D-008 authoritative + validator owner/license + gate transactional + directory` — user isi `content schema 11` `community-base: structures/components/capabilities` → `runtime` cek `valid?` (bukan `bebas jalanin kode`). Jadi `code mereka → health → hidup/hancur` di `WorldRegion` `SPACE + PLANET = SAME UNIVERSE / SAME PERSISTENCE / SAME COMMUNITIES`.
+
+### 7b. Fauna Hidup Bebas — Kayak Dunia Asli, Bukan Code Kita Ngatur
+* **Hewan = `VesselEntity` autonomous** `types.ts:42` `mass 15kg (ular) .. 4000kg (dino)` `kind:"fauna"` baru (selain `vessel|station`) + `SystemState:32` `health 0..100` + `stateHash` `simulation.ts:292` — **bukan `code kita ngatur path`**, tapi `AI instinct` di `server`:
+  * **Behavior tree:** `wander → seek water/food (ocean/river heightmap) → flee predator → hunt prey (raycast)` + `boid` `separation/alignment/cohesion` buat kawanan — `tick 10/s` `simulation.ts:85` sama, `moveToward` `simulation.ts:264` `thrust/mass` beda per spesies (ular `a=1.2`, dino `a=3.5`).
+  * **Bisa melukai user:** `collision.ts:92` `KE=½mv²×angle` + `combat.ts:39` `damage = 4+(weaponsHealth/100)*8` → `CharacterEntity health blood--` + `sfxShieldHit` `audio.ts:194` — `ular gigit → blood 100→88`, `dino seruduk → health 64`.
+  * **Hidup sendiri:** `spawnFauna` `world.ts:96` `spawnVessel` tapi `owner=fauna` + `governance.ts:31` `isInSafeZone` `false` di wilderness — `fauna` `wander` terus walau gak ada player, `persistence.ts:120` + `lineage.ts` + `regionState.ts` persist, `rateLimiter.ts` `20/s` cegah spam `fauna` `movement` `stability.ts:13` `5000 entities` cap.
+* **Spesies per planet:** `Earth: forest→deer/wolf, ocean→fish/shark, desert→snake/scorpion` `Mars: none / engineered` `Jungle planet: dino/raptor` — `seed per biome` `mulberry32(planetSeed+biome)` `random.ts` biar fauna spawn deterministik tapi gerak `Perlin` gak 100% prediksi.
 
 ---
 
@@ -81,14 +95,17 @@ ARCLUX
 
 ## Checklist (pause 09 di Fase 5)
 
-* [ ] Substrate: terrain heightmap streaming + ocean Gerstner + forest Instanced + atmosphere 1.018 + clouds AAA (visual-only)
-* [ ] Runtime FPS walk 9.81 + raycast + navmesh (capsule, 5.5 m/s)
-* [ ] Character health blood/stamina + lineage
-* [ ] Building health (StationEntity, code → health, damage, wreckage, repair=commit)
-* [ ] Vehicle VesselEntity (ROVER 2000kg, ROAD safeZone, HANGAR 32 slots)
-* [ ] Penebangan + soil layers
-* [ ] Lautan depth + ombak + cuaca
-* [ ] Content schema validation (safe, bukan bebas kode)
-* [ ] Space ↔ Planet Gate (spaceport runway)
+* [ ] Substrate: terrain heightmap streaming + ocean Gerstner 71% + forest 6000 Instanced + atmosphere 1.018 + clouds AAA per-kind (visual-only, gak nabrak WorldRegion)
+* [ ] Terrain serealistis mungkin: Earth/Mars/extreme per-planet `gravity/atmosphere/ocean/temperature` + soil layers topsoil/clay/rock + streaming LOD 16-64
+* [ ] Runtime FPS walk 9.81 + raycast + navmesh (capsule 1.8m, 5.5 m/s, drag 0.12)
+* [ ] Character health blood/stamina/hunger + lineage (health-- bukan respawn)
+* [ ] Building health (StationEntity, code → health, DAMAGE_CEILING 12 / KE, wreckage, repair=commit)
+* [ ] Vehicle VesselEntity (ROVER 2000kg/4e3N, ROAD safeZone, HANGAR 32 slots, GateLink spaceport)
+* [ ] Penebangan UI: `🌲 StationEntity health` + crosshair `🌲 87%` + hold F 1.2s + sfxDebris + stump persist
+* [ ] Excavator keruk gunung: bucket raycast → heightmap[y][x]-=depth + vertex update + soil pile Instanced + safeZone check
+* [ ] Fauna hidup bebas: `kind:"fauna"` VesselEntity `mass 15-4000kg` + behavior tree wander/boid + bisa melukai user `KE×angle` → blood-- (ular/dino)
+* [ ] Lautan depth + ombak Gerstner ω²=gk + cuaca mulberry32+Perlin gak 100% prediksi
+* [ ] Content schema validation (safe, bukan bebas kode, 5 packages stub tetap)
+* [ ] Space ↔ Planet Gate (SPACE → ORBIT → ATMOSPHERE → SURFACE, lerp awan, tanpa loading)
 
 > `09 Part A` Fase 6 custom music + Fase 7 UI + `Part B` 8-12 interior FPS tetap next setelah planetary substrate — tapi planetary runtime ini pondasi biar semua yang mereka bangun bisa hidup.
