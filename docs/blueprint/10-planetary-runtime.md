@@ -31,6 +31,28 @@ ARCLUX sediakan:
 
 Planet tidak perlu langsung punya simulasi kehidupan lengkap — cuma natural environment yang streaming.
 
+### Skala & Persistent Coordinate (Planet Luas Beribu Mil, Bukan Map 4×4)
+
+Planet **harus luas beribu mil** secara geografis — `terrain heightmap` + `ocean 71% Gerstner` + `forest` + `desert` + `mountains` serealistis mungkin (medan per-planet beda, `heightmap` `seed` + `LOD` `settings.ts:28`). Tapi **runtime gak load full planet 24/7** `💀`:
+
+```
+PLANET (ribuan km)
+        ┌──────────────────────────┐
+        │   REGION A               │
+        │     [HANGAR A]           │
+        │                 REGION B │
+        │      REGION C            │
+        └──────────────────────────┘
+```
+
+* Planet dibagi `region/chunk` `WorldRegion:41` `regionId = planetId:chunkX:chunkZ` (distributed, `relay/registry.ts:33` `claimRegion`) — yang aktif cuma chunk yang ada player/fasilitas, `world state` tetap persistent di `persistence.ts:120`.
+* **Persistent coordinate/state, bukan `player di planet X`**: `Planet-07 / Region-A / Hangar-A / position = Vec3{x,y,z}` `types.ts:18` `Vec3` disimpan `RegionSnapshot:79` + `RegionState:65` `Map` — kalau player log out di `Hangar-A`, besok login balik ke `Hangar-A` yang sama, bukan spawn point planet `😭`. `Player A Planet-07/Region-A ↔ 2000 km ↔ Player B Planet-07/Region-B` tetap 1 planet yang sama, beda lokasi — community bisa kirim `coordinate` `Vec3` yang udah kita bikin (`gate.ts:34` `position`) buat rendez-vous. **Spawn gak di tempat sama walau planet sama** — `spawnPlayerVessel` `server.ts:216` pakai `position` dari `VesselModel` / `Hangar` yang dipilih, bukan `0,0,0` global.
+* **Isi planet tetap luas + realistik alam** `hutan lebat, lautan ombak, badai hujan, malam lihat bintang/bulan` — `hangar` komunitas bangun di **lahan kosong** yang mereka tentukan (empty land), `ARCLUX batasin` biar gak cape: yang bisa dipakai `engineer` cuma `lahan kosong`, `isi planet (hutan/laut)` tetap natural, gak perlu `tebang pohon` / `excavator` di tahap awal — kalau ada lahan kosong ya di situ bangun `hangar` `wwk`.
+
+### Waktu, Kompas & Hukum Fisika Sama Kayak Dunia Asli
+
+Masuk planet `SPACE → ORBIT → ATMOSPHERE (awan drift) → SURFACE` kayak film — **realistis** `lerp` lapisan awan, bukan teleport. `Waktu/jam di planet pakai hukum yang udah kita bikin` — `physics.ts:12` `G, σ`, `environs.ts:49` Kepler `Bulan` `r=a(1-e²)/(1+e cosθ)` + `day/night 24h` + `season` — `utara malam, barat siang` beda `waktu & kompas` ikut `rotasi planet` + `orbit bulan` Newtonian `tidal`, **gak ada malam lebih cepat / siang lebih lambat** `perputaran bulan` tetap sama kayak dunia asli. User `explore hutan` & `bedain waktu utara-barat` bisa, tapi itu `future expansion` — sekarang `substrate` dulu.
+
 ---
 
 ## 2. Planet sebagai Aerospace Operations Layer
@@ -128,10 +150,12 @@ tanpa langsung bangun full Earth-scale civilization simulator. Blueprint 10 civi
 
 ---
 
-## Checklist (simplified)
+## Checklist (simplified + zoom detail)
 
-* [ ] Substrate natural: terrain + ocean + atmosphere 1.018 + clouds AAA + gravity/temperature/weather/day-night (visual-only)
-* [ ] Aerospace seamless: ORBIT → ATMOSPHERE → LOW-FLIGHT → LANDING PAD → HANGAR (GateLink spaceport, tanpa loading)
+* [ ] Substrate natural: terrain + ocean 71% Gerstner + forest + atmosphere 1.018 + clouds AAA per-kind + gravity/temperature/weather/day-night (visual-only, streaming LOD)
+* [ ] **Skala luas beribu mil + persistent coordinate:** planet dibagi `Region/Chunk` `WorldRegion:41` `claimRegion` — yang aktif cuma chunk yang dipakai, `position Vec3` `RegionSnapshot:79` persist `persistence.ts:120` — log out di `Hangar-A` balik ke `Hangar-A`, Player A ↔ 2000 km ↔ Player B tetap 1 planet, spawn gak sama, bisa kirim `coordinate` `gate.ts:34`
+* [ ] **Waktu & kompas Newtonian:** `day/night 24h` + `Bulan Kepler` `environs.ts:49` + `physics.ts:12` `G, σ` — `utara malam barat siang` beda, `waktu = dunia asli` (gak ada malam cepat), `compass` ikut rotasi planet — masuk `SPACE→ATMOSPHERE→SURFACE` lerp awan kayak film
+* [ ] Aerospace seamless: ORBIT → ATMOSPHERE → LOW-FLIGHT → LANDING PAD → HANGAR (GateLink spaceport, tanpa loading) — `hangar` di `lahan kosong` yang komunitas tentukan, `ARCLUX batasin` biar gak cape, `hutan/laut` tetap natural
 * [ ] Community facilities: Landing Pad/Hangar/Repair/Refit/Radar/Comms/Military/Storage/Manufacturing/Spaceport (StationEntity health, code→health)
 * [ ] Character terbatas di fasilitas: Vessel→Dock→keluar→Hangar→Launch (FPS 5.5 m/s, bukan full planet)
 * [ ] Space ↔ Planet satu universe: Planetary Region via GateLink
