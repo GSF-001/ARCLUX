@@ -19,14 +19,14 @@
 // Post-processing: EffectComposer + UnrealBloomPass + OutputPass (core THREE,
 // no CDN — CSP default-src 'self'). Semua texture dari Canvas (no asset).
 
-import type { RegionState, VesselEntity, StationEntity } from "../../../../packages/gameserver/types";
+import type { RegionState, VesselEntity, StationEntity } from "../../../../../packages/gameserver/types";
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { colors, threeColor, nebulaSeed } from "../ui/tokens";
-import { effPixelRatio, type GameSettings } from "./settings";
+import { colors, threeColor, nebulaSeed } from "../../ui/tokens";
+import { effPixelRatio, type GameSettings } from "../settings";
 
 export type CameraMode = "free" | "follow" | "tactical" | "cinematic";
 
