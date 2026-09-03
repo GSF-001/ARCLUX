@@ -270,6 +270,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     radius: number;
     spec: PlanetSpec;
     ring?: THREE.Mesh;
+    cloud?: THREE.Mesh;
+    cloudMat?: THREE.MeshStandardMaterial;
     moons: { mesh: THREE.Mesh; orbit: OrbitSpec }[];
     baseColor: THREE.Color;
   }
@@ -280,6 +282,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
 
   const buildPlanetSystem = (count: number, detail: number): void => {
     for (const p of planets) {
+      // cloud is child of mesh — remove via mesh.remove, dispose separately
+      if (p.cloud) { p.mesh.remove(p.cloud); p.cloud.geometry.dispose(); p.cloudMat?.map?.dispose(); p.cloudMat?.dispose(); }
       scene.remove(p.mesh); scene.remove(p.atmo); if (p.ring) scene.remove(p.ring);
       for (const m of p.moons) scene.remove(m.mesh);
       (p.mesh.material as THREE.Material).dispose();
@@ -314,6 +318,23 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       const atmo = new THREE.Sprite(atmoMat);
       atmo.scale.set(radius * 3.6, radius * 3.6, 1);
       mesh.add(atmo);
+
+      // AAA+ Cloud layer — visual-only (D-019 imun, gak masuk Environs/WorldRegion), di semua planet
+      const cloudOpacity: Record<PlanetKind, number> = { gasGiant: 0.52, gasGiantRinged: 0.50, ice: 0.32, ocean: 0.44, desert: 0.30, volcanic: 0.38 };
+      const cloudTex = makeCloudTexture(spec.kind, 512);
+      const cloudMat = new THREE.MeshStandardMaterial({
+        map: cloudTex,
+        transparent: true,
+        opacity: cloudOpacity[spec.kind] ?? 0.4,
+        roughness: 1.0,
+        metalness: 0.0,
+        depthWrite: false,
+        side: THREE.FrontSide,
+      });
+      const cloudSeg = Math.max(24, Math.floor(seg * 0.75));
+      const cloud = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.018, cloudSeg, cloudSeg), cloudMat);
+      // child di 0,0,0 biar gak dobel position (frame cuma rotate, gak copy position)
+      mesh.add(cloud);
 
       // Ring (hanya gas giant ringed)
       let ring: THREE.Mesh | undefined;
@@ -357,6 +378,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
         radius,
         spec,
         ring,
+        cloud,
+        cloudMat,
         moons,
         baseColor: new THREE.Color(threeColor(spec.baseColor)),
       });
@@ -874,6 +897,11 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       pl.mesh.position.copy(p);
       pl.atmo.position.copy(p);
       if (pl.ring) pl.ring.position.copy(p);
+      // AAA+ cloud — visual-only, drift beda dari planet (faster)
+      if (pl.cloud) {
+        const speedMap: Record<string, number> = { gasGiant: 0.00042, gasGiantRinged: 0.00045, ice: 0.00032, ocean: 0.00072, desert: 0.00028, volcanic: 0.00035 };
+        pl.cloud.rotation.y += speedMap[pl.spec.kind] ?? 0.0005;
+      }
       for (const mo of pl.moons) {
         const mp = keplerPosition(mo.orbit, tick);
         mo.mesh.position.set(p.x + mp.x, p.y + mp.y, p.z + mp.z);
@@ -1428,6 +1456,100 @@ function makeGlowTexture(): THREE.Texture {
   ctx.fillRect(0, 0, size, size);
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
+  return tex;
+}
+
+// AAA+ cloud texture — procedural canvas, per-kind, shared 1 tex per kind (512² = 1 MB)
+// Gas giant = banded, ocean = swirl, ice = wispy, desert = dust, volcanic = ash
+function makeCloudTexture(kind: PlanetKind, size = 512): THREE.Texture {
+  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (!canvas) return new THREE.Texture();
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, size, size);
+  // seed per kind — deterministic
+  const seedMap: Record<string, number> = { gasGiant: 0x5a2d, gasGiantRinged: 0x5a2e, ice: 0x1ce7, ocean: 0x0cea, desert: 0xde57, volcanic: 0x70fc };
+  const rnd = mulberry32(seedMap[kind] ?? 0x1234);
+  // base
+  if (kind === "gasGiant" || kind === "gasGiantRinged") {
+    // banded stripes
+    for (let y = 0; y < size; y += 6 + (rnd() * 8 | 0)) {
+      const h = 4 + rnd() * 10;
+      const alpha = 0.22 + rnd() * 0.28;
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fillRect(0, y, size, h);
+      // waviness
+      ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.5})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = 0; x < size; x += 8) {
+        const wy = y + Math.sin(x * 0.02 + rnd() * 6) * 3;
+        if (x === 0) ctx.moveTo(x, wy); else ctx.lineTo(x, wy);
+      }
+      ctx.stroke();
+    }
+    // storms
+    for (let i = 0; i < 7; i++) {
+      const x = rnd() * size, y = rnd() * size, rx = 18 + rnd() * 36, ry = 10 + rnd() * 18;
+      ctx.fillStyle = `rgba(255,245,230,${0.18 + rnd() * 0.18})`;
+      ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rnd() * Math.PI, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (kind === "ocean") {
+    // swirl clouds — Earth-like
+    for (let i = 0; i < 180; i++) {
+      const x = rnd() * size, y = rnd() * size, r = 12 + rnd() * 38;
+      const a = 0.14 + rnd() * 0.22;
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      // second lobe for wispy
+      if (rnd() > 0.6) {
+        ctx.fillStyle = `rgba(255,255,255,${a * 0.6})`;
+        ctx.beginPath(); ctx.arc(x + (rnd() - 0.5) * r, y + (rnd() - 0.5) * r, r * 0.7, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // soft blur via globalCompositeOperation lighter
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 60; i++) {
+      const x = rnd() * size, y = rnd() * size, r = 22 + rnd() * 28;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(255,255,255,0.18)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  } else if (kind === "ice") {
+    for (let i = 0; i < 120; i++) {
+      const x = rnd() * size, y = rnd() * size, r = 10 + rnd() * 22;
+      ctx.fillStyle = `rgba(255,255,255,${0.10 + rnd() * 0.14})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (kind === "desert") {
+    for (let y = 0; y < size; y += 4) {
+      const a = 0.08 + rnd() * 0.12;
+      ctx.fillStyle = `rgba(255,240,210,${a})`;
+      ctx.fillRect(0, y, size, 1 + rnd() * 2);
+    }
+    for (let i = 0; i < 50; i++) {
+      const x = rnd() * size, y = rnd() * size, r = 14 + rnd() * 26;
+      ctx.fillStyle = `rgba(255,235,200,${0.10 + rnd() * 0.12})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+  } else { // volcanic
+    for (let i = 0; i < 90; i++) {
+      const x = rnd() * size, y = rnd() * size, r = 16 + rnd() * 30;
+      ctx.fillStyle = `rgba(120,90,70,${0.14 + rnd() * 0.16})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    for (let i = 0; i < 40; i++) {
+      const x = rnd() * size, y = rnd() * size, r = 20 + rnd() * 32;
+      ctx.fillStyle = `rgba(255,160,90,${0.08 + rnd() * 0.10})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   return tex;
 }
 
