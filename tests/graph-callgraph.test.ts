@@ -278,7 +278,7 @@ describe("buildIndex call resolution", () => {
 
     const a = repository.getModule("a.js");
     const b = repository.getModule("b.js");
-    expect(a?.calls).toEqual([{ moduleId: "b.js", calleeName: "helper", line: 2 }]);
+    expect(a?.calls).toEqual([{ moduleId: "b.js", calleeName: "helper", line: 2, confidence: 1.0, resolver: "import" }]);
     expect(b?.calledBy).toEqual(["a.js"]);
   });
 
@@ -293,7 +293,7 @@ describe("buildIndex call resolution", () => {
 
     const a = repository.getModule("a.ts");
     const b = repository.getModule("b.ts");
-    expect(a?.calls).toEqual([{ moduleId: "b.ts", calleeName: "helper", line: 2 }]);
+    expect(a?.calls).toEqual([{ moduleId: "b.ts", calleeName: "helper", line: 2, confidence: 1.0, resolver: "import" }]);
     expect(b?.calledBy).toEqual(["a.ts"]);
 
     const graph = buildCallGraph(repository);
@@ -313,7 +313,7 @@ describe("buildIndex call resolution", () => {
     const a = repository.getModule("a.tsx");
     // Only the bare helper() on line 5 resolves — the JSX element, the
     // type-only import, and obj.helper() are all non-call sites.
-    expect(a?.calls).toEqual([{ moduleId: "b.ts", calleeName: "helper", line: 5 }]);
+    expect(a?.calls).toEqual([{ moduleId: "b.ts", calleeName: "helper", line: 5, confidence: 1.0, resolver: "import" }]);
   });
 
   it("drops a bare call whose callee is not among the module's named imports", async () => {
@@ -326,7 +326,11 @@ describe("buildIndex call resolution", () => {
     const repository = await buildIndex({ rootPath: dir, meta: { ...META, rootPath: dir } });
 
     const a = repository.getModule("a.js");
-    expect(a?.calls).toEqual([{ moduleId: "b.js", calleeName: "helper", line: 3 }]);
+    expect(a?.calls).toEqual([{ moduleId: "b.js", calleeName: "helper", line: 3, confidence: 1.0, resolver: "import" }]);
+
+    // missing() at line 2 stays out of the graph, but is RECORDED explicitly
+    // (two-pass resolver never drops silently) — unresolved "unknown".
+    expect(a?.unresolvedCalls).toEqual([{ calleeName: "missing", line: 2, reason: "unknown" }]);
 
     // missing() at line 2 was dropped, so the call graph has one edge
     const graph = buildCallGraph(repository);
@@ -346,7 +350,7 @@ describe("buildIndex call resolution", () => {
     const a = repository.getModule("a.js");
     // require("fs") at line 2 is an import, obj.helper() at line 3 is a
     // property access — only the bare helper() at line 4 resolves.
-    expect(a?.calls).toEqual([{ moduleId: "b.js", calleeName: "helper", line: 4 }]);
+    expect(a?.calls).toEqual([{ moduleId: "b.js", calleeName: "helper", line: 4, confidence: 1.0, resolver: "import" }]);
 
     const graph = buildCallGraph(repository);
     expect(graph.edges).toHaveLength(1);

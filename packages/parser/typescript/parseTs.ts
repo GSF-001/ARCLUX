@@ -22,11 +22,15 @@ function extractImports(sourceFile: ts.SourceFile): RawImport[] {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const namedImports: string[] = [];
       let hasDefaultImport = false;
+      let defaultLocalName: string | undefined;
       let hasNamespaceImport = false;
       let kind: ImportKind = node.importClause?.isTypeOnly ? "type-only" : "static";
 
       if (node.importClause) {
-        if (node.importClause.name) hasDefaultImport = true;
+        if (node.importClause.name) {
+          hasDefaultImport = true;
+          defaultLocalName = node.importClause.name.text;
+        }
         const bindings = node.importClause.namedBindings;
         if (bindings && ts.isNamedImports(bindings)) {
           for (const el of bindings.elements) {
@@ -42,6 +46,7 @@ function extractImports(sourceFile: ts.SourceFile): RawImport[] {
         kind,
         namedImports,
         hasDefaultImport,
+        defaultLocalName,
         hasNamespaceImport,
         line: getLine(sourceFile, node.getStart()),
       });
@@ -182,8 +187,9 @@ function extractExports(sourceFile: ts.SourceFile): RawExport[] {
  * Known limitations (documented, not bugs — AST-only, no type info):
  * - `obj.foo()` / `this.foo()` are PropertyAccessExpressions, not
  *   captured — resolving them needs type information.
- * - Default-imported callees are never resolved downstream because
- *   RawImport has no local name for default imports.
+ * - Default-imported callees resolve via RawImport.defaultLocalName in the
+ *   two-pass resolver (resolveCalls.ts), verified against the target's
+ *   default export — the old "never resolved" gap (G2) is closed.
  * - `require(...)` is excluded — it's an import, not a call edge.
  */
 function extractCalls(sourceFile: ts.SourceFile): RawCall[] {

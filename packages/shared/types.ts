@@ -73,6 +73,13 @@ export interface RawImport {
   /** Named imports, e.g. ["useState", "useEffect"]. Empty for default/namespace-only. */
   namedImports: string[];
   hasDefaultImport: boolean;
+  /**
+   * Local name of the default import, e.g. "h" in `import h from "./h"`.
+   * Needed by the two-pass call resolver (resolveCalls.ts) so calls of
+   * default-imported functions resolve instead of dropping silently (G2).
+   * Absent when there is no default import.
+   */
+  defaultLocalName?: string;
   hasNamespaceImport: boolean;
   /** Line number in source file (1-indexed) */
   line: number;
@@ -198,16 +205,50 @@ export interface ResolvedImport {
 /**
  * A RawCall whose callee name matched a named import of the calling module,
  * resolved to the module that exports it. Built by buildIndex.ts pass 3
- * (named import name -> target moduleId). A RawCall whose callee is not
- * among the module's named imports is dropped there (unresolvable — e.g.
- * a local function or a default-imported function) and never reaches the
- * call graph.
+ * via packages/graph/resolveCalls.ts (two-pass resolver, ported from
+ * ManSio/mscodebase-intelligence PR #20 — see resolveCalls.ts for the
+ * strategy ladder). A RawCall that cannot be resolved is NOT dropped
+ * silently anymore: it lands in ModuleInfo.unresolvedCalls with a reason.
  */
 export interface ResolvedCall {
   /** Module id of the module that exports the callee */
   moduleId: string;
   calleeName: string;
   line: number;
+  /**
+   * Resolution confidence (ManSio ladder): 1.0 = matched via an explicit
+   * import of the caller; 0.85 = unique global (exported by exactly one
+   * repo module, no import). Optional so fixtures/tests built before the
+   * two-pass resolver keep compiling — resolver output always sets it.
+   */
+  confidence?: 1.0 | 0.85;
+  /** Which ladder rung resolved this call. Absent on pre-resolver fixtures. */
+  resolver?: "import" | "unique-global";
+}
+
+/**
+ * A call site the two-pass resolver explicitly could NOT resolve — the
+ * anti-silent-drop record (ManSio rule 3.4). Every RawCall ends up either
+ * in `calls` or here; nothing vanishes.
+ */
+export interface UnresolvedCall {
+  calleeName: string;
+  line: number;
+  /**
+   * - "ambiguous": exported/imported by 2+ modules — resolver refuses to
+   *   pick (no last-write-wins). `candidates` lists the module ids.
+   * - "external": callee comes from an external package (node builtin or
+   *   package.json dep). `packageName` set. No graph node is created for
+   *   it (call graph stays file-node-only) — the record is the evidence.
+   * - "unknown": no import, no unique global, not external (local def,
+   *   global, typo, or unsupported syntax like default-import without a
+   *   verifiable default export).
+   */
+  reason: "ambiguous" | "external" | "unknown";
+  /** Candidate module ids (reason "ambiguous" only). */
+  candidates?: string[];
+  /** Package name (reason "external" only). */
+  packageName?: string;
 }
 
 export interface ModuleInfo {
@@ -237,6 +278,14 @@ export interface ModuleInfo {
    * `obj.foo()`/`this.foo()` calls are never resolved.
    */
   calls: ResolvedCall[];
+  /**
+   * Call sites the two-pass resolver explicitly left unresolved (with
+   * reasons) — the anti-silent-drop counterpart to `calls`. Optional (not
+   * REQUIRED like `calls`) so the ~15 test fixtures constructing ModuleInfo
+   * manually keep compiling; buildIndex.ts always populates it. Consumers
+   * treat absent as [].
+   */
+  unresolvedCalls?: UnresolvedCall[];
   /** Module ids that call this module's exported functions — back-filled by buildIndex.ts pass 4, mirrors `importedBy` */
   calledBy: string[];
   /**

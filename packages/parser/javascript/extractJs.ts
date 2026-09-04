@@ -30,11 +30,15 @@ export function extractImportsJs(sourceFile: ts.SourceFile): RawImport[] {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const namedImports: string[] = [];
       let hasDefaultImport = false;
+      let defaultLocalName: string | undefined;
       let hasNamespaceImport = false;
       const kind: ImportKind = "static";
 
       if (node.importClause) {
-        if (node.importClause.name) hasDefaultImport = true;
+        if (node.importClause.name) {
+          hasDefaultImport = true;
+          defaultLocalName = node.importClause.name.text;
+        }
         const bindings = node.importClause.namedBindings;
         if (bindings && ts.isNamedImports(bindings)) {
           for (const el of bindings.elements) {
@@ -50,6 +54,7 @@ export function extractImportsJs(sourceFile: ts.SourceFile): RawImport[] {
         kind,
         namedImports,
         hasDefaultImport,
+        defaultLocalName,
         hasNamespaceImport,
         line: getLine(sourceFile, node.getStart()),
       });
@@ -317,15 +322,15 @@ export function extractExportsJs(sourceFile: ts.SourceFile): RawExport[] {
  *
  * This is an AST-only pass — no type information is available — so a bare
  * call like `helper()` cannot be attributed to a module here. Attribution
- * happens later in buildIndex.ts pass 3, which matches the callee name
- * against the module's named imports. Two known limitations, both by
- * design (issue #50):
- *   1. Calls of default-imported functions (`import helper from "./h"`
- *      then `helper()`) can never be resolved — RawImport does not capture
- *      a local name for default imports, only hasDefaultImport: true.
- *   2. `obj.foo()` / `this.foo()` can never be resolved — even with type
- *      info this would need a full type-checker pass (method resolution),
- *      which the parser layer deliberately does not run.
+ * happens later in buildIndex.ts pass 3 via the two-pass resolver
+ * (packages/graph/resolveCalls.ts). One known limitation, by design
+ * (issue #50):
+ *   - `obj.foo()` / `this.foo()` can never be resolved — even with type
+ *     info this would need a full type-checker pass (method resolution),
+ *     which the parser layer deliberately does not run.
+ * (The old limitation #1 — default-import calls never resolving — is
+ * closed: RawImport.defaultLocalName feeds the resolver, verified against
+ * the target's default export.)
  */
 export function extractCallsJs(sourceFile: ts.SourceFile): RawCall[] {
   const calls: RawCall[] = [];
