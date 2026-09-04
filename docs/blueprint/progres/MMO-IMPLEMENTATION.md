@@ -98,7 +98,7 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 9. ~~Universal baseline~~ — SELESAI `baseline.ts` + `connect.ts` `arclux connect` (PR #580) + **`serve --vessel` auto-spawn** `serve.ts:36` `apps/cli/serve.ts` → `analyzeRepository` + `buildVesselModel` → `spawnPlayerVessel` (PR #633, tanpa nebak).
 10. ~~Intel & mobilisasi~~ — SELESAI `intel.ts` + `teleport.ts` (PR #608).
 11. ~~UI command-interface~~ — SELESAI `tickScheduler` + `hud.ts` EVE-level (PR #608) + **landing MMO AAA+** `landing.ts` live CCTV `scene3d` bg + glass + live stats `directory` (PR #635).
-12. **09 Client Polish Part A** — Fase 1 env map PMREM `scene.environment` tiap 10 frame (PR #630) + Fase 2 vessel AAA+ fuselage+canopy+delta wings+nacelles (PR #630) + Fase 3 Ark stadium 12 komponen 4 ring InstancedMesh (PR #631) + Fase 4 explosion 5 burst+12 debris+30 sparks+flash (PR #632) + Fase 5 5 SFX `audio.ts` (PR #638) — **Fase 1-5 DONE, Fase 6-7 + Part B 8-12 next**.
+12. **09 Client Polish Part A** — Fase 1 env map PMREM `scene.environment` tiap 10 frame (PR #630) + Fase 2 vessel AAA+ fuselage+canopy+delta wings+nacelles (PR #630) + Fase 3 Ark stadium 12 komponen 4 ring InstancedMesh (PR #631) + Fase 4 explosion 5 burst+12 debris+30 sparks+flash (PR #632) + Fase 5 5 SFX `audio.ts` (PR #638) + **Fase 7 UI polish** `hud.ts` (fadeOnChange/hash-guard, target glow pulse, scanline drift, hierarchy, gradient edges) + `menu.ts` (wireHover/wireSliderGlow, tab fade, slide-in 0.3s) — **Fase 1-5 + 7 DONE, Part B 8-12 next**.
 13. **Quickstart EN** — `QUICKSTART-MMO.md` English from zero (clone → vessel → serve --vessel → landing) (PR #636).
 
 ### 2.3 `packages/relay` ✅ (shard registry + gate handoff + identity lintas shard)
@@ -205,7 +205,7 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 - [x] 09 Fase 5 5 SFX — SELESAI
 - [x] Clouds AAA+ di SEMUA planet — SELESAI (pause 09)
 - [ ] 09 Fase 6 custom music (MP3/OGG/WAV/FLAC decode via AudioContext, playlist, menu.ts + audio.ts) — NEXT
-- [ ] 09 Fase 7 UI polish (hud.ts + menu.ts glass + glow)
+- [x] 09 Fase 7 UI polish (hud.ts fade+glow + menu.ts hover+slide-in) — SELESAI
 - [ ] 09 Part B Fase 8 FPS interior (interior.ts 480 + renderer.ts + input.ts FPS_INTERIOR)
 - [ ] 09 Part B Fase 9 karakter repo (CharacterEntity + spawnCharacter)
 - [ ] 09 Part B Fase 10 hangar 32 slot + docking film 3s (gate.ts + bridge.ts)
