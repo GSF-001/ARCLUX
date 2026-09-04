@@ -33,6 +33,7 @@ content, searchable and organized
 -----
 - [`ABOUT.md`](ABOUT.md) — the ARCLUX map: what it is, the intelligence layer, the platform underneath — **start here if you're new**
 - [`QUICKSTART.md`](QUICKSTART.md) — start here, fast-path workflow cheat sheet
+- [`QUICKSTART-MMO.md`](QUICKSTART-MMO.md) — MMO game: clone → vessel → self-host region → play (from zero)
 - [`TOOLING.md`](TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions for contributing code
 - [`PROGRES.md`](PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas

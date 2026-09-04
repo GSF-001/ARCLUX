@@ -147,6 +147,34 @@ The daemon, watcher, incremental indexer, shell session, and workspace layers si
 - The platform's runtime layers (scheduler/services/storage/observation/web-intake) are built but not all wired to consumers
 - Some exotic tree-sitter grammars shipped in `tree-sitter-wasms` are stale (elm was ABI 12 — vendored fix; ReScript's wasm predates its modern `import` syntax) — see `packages/parser/wasms/`
 
+## Fair Evaluation Protocol — how to judge ARCLUX (or any architecture)
+
+Don't evaluate architecture from screenshots. Screenshot → feeling → ranking
+is not analysis. The fair ladder is:
+
+```
+repository → source → graph → build/test → runtime → conclusion
+```
+
+1. **Repository** — look at structure and scope, not renders.
+2. **Source** — read the actual implementation.
+3. **Graph** — check dependencies, impact, coupling (`arclux graph`,
+   `arclux impact`, `arclux doctor` do exactly this).
+4. **Build/Test** — verify claims executably (build scripts, `tsc`,
+   detectors, checks — not words).
+5. **Runtime** — observe real system behavior (server, snapshots,
+   persistence — not mockups).
+6. **Conclusion** — only conclude what the evidence supports.
+
+And keep four words apart — an honest engineer knows exactly which is which:
+
+| Word | Meaning | Example |
+|---|---|---|
+| **DONE** | commit + PR + build/test + acceptance | MMO Fase 1–7 (`docs/blueprint/progres/MMO-IMPLEMENTATION.md`) |
+| **PLAN** | designed, not implemented — never counted as a feature | Blueprint 10 (planetary runtime) |
+| **ANALOGY** | explains architecture, claims nothing about resources | "ARCLUX is the factory, not the plane" — expansive by design, still bounded by compute/storage/network |
+| **CLAIM** | anything else — must be verified before it becomes DONE | — |
+
 ## Where to go next
 
 - [`QUICKSTART.md`](QUICKSTART.md) — fast-path workflow cheat sheet
