@@ -491,7 +491,7 @@ Support MP3/OGG/WAV/FLAC. Playback via musik bus.
 
 # FASE 7 — UI EFFECTS POLISH
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai
 
 ## HUD polish (hud.ts)
 - Panel opacity transition (data berubah → fade in 0.2s)
@@ -524,9 +524,9 @@ btn.addEventListener("mouseleave", () => {
 ```
 
 ## Acceptance
-- [ ] HUD panel fade on data change
-- [ ] Target panel glow
-- [ ] Menu tab/slider/button hover effects jalan
+- [x] HUD panel fade on data change
+- [x] Target panel glow
+- [x] Menu tab/slider/button hover effects jalan
 
 ---
 
@@ -1017,10 +1017,10 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] ThreatCrush safe (no innerHTML — DOM textContent + input file)
 - [x] Verify build + tsc (build-game.mjs 1.4mb ✓, tsc -p apps/game ✓)
 
-## Fase 7 — UI polish
-- [ ] HUD panel fade + glow
-- [ ] Menu hover effects
-- [ ] Verify build + tsc
+## Fase 7 — UI polish ✅
+- [x] HUD panel fade + glow (fadeOnChange hash-guard 0.2s, target text-shadow pulse, scanline drift+opacity, hierarchy 700/400, gradient panel edges — hud.ts)
+- [x] Menu hover effects (wireHover box-shadow+border, wireSliderGlow tactical, tab color-fade transition, panel slide-in 0.3s — menu.ts)
+- [x] Verify build + tsc (build-game.mjs ✓, ThreatCrush 0 `innerHTML.*+` ✓; 3 error TS2307 scene3d/cosmic|planets|textures pre-existing di base, bukan dari Fase 7 — terbukti via stash)
 
 ## Fase 8 — FPS interior
 - [ ] interior.ts buildArkInterior() (corridor+promenade+plaza+habitat)

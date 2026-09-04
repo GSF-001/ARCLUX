@@ -47,6 +47,27 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
   let isOpen = false;
   const els = new Map<string, HTMLElement>();
 
+  // Fase 7: hover effects — visual only (tanpa sfx, sfx hover sudah di-wire
+  // terpisah di optsRow). border:false untuk tombol stateful (tab/opts yang
+  // border-nya dikontrol paint) supaya hover tidak merusak state aktif.
+  const HOVER_TRANSITION = "color 0.2s ease, border-color 0.2s ease, text-shadow 0.2s ease, box-shadow 0.15s ease";
+  const wireHover = (b: HTMLElement, border: boolean): void => {
+    b.style.transition = HOVER_TRANSITION;
+    b.addEventListener("mouseenter", () => {
+      if (border) b.style.borderColor = colors.tech;
+      b.style.boxShadow = `0 0 8px ${colors.tactical}`;
+    });
+    b.addEventListener("mouseleave", () => {
+      if (border) b.style.borderColor = colors.edge;
+      b.style.boxShadow = "none";
+    });
+  };
+  const wireSliderGlow = (input: HTMLInputElement): void => {
+    input.style.transition = "box-shadow 0.15s ease";
+    input.addEventListener("mouseenter", () => { input.style.boxShadow = `0 0 8px ${colors.tactical}`; });
+    input.addEventListener("mouseleave", () => { input.style.boxShadow = "none"; });
+  };
+
   const wrap = document.createElement("div");
   wrap.id = "arclux-menu";
   wrap.style.cssText = [
@@ -64,6 +85,8 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
     `font-family:${typography.mono}`, `color:${colors.foreground}`,
     "padding:22px", "box-sizing:border-box", "overflow-y:auto",
     `letter-spacing:${typography.letterspacing}`,
+    // Fase 7: slide-in dari kanan 0.3s (dipicu di open()).
+    "transition:transform 0.3s ease",
   ].join(";");
   wrap.appendChild(panel);
 
@@ -78,6 +101,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
   const closeBtn = document.createElement("button");
   closeBtn.textContent = "ESC ×";
   closeBtn.style.cssText = `background:${glow.panelBg};border:1px solid ${colors.edge};color:${colors.tactical};padding:4px 10px;cursor:pointer;font-family:inherit`;
+  wireHover(closeBtn, true);
   head.appendChild(closeBtn);
 
   // Tabs
@@ -91,6 +115,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
     const b = document.createElement("button");
     b.textContent = id;
     b.style.cssText = `padding:6px 14px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.muted};cursor:pointer;font-family:inherit;font-size:11px`;
+    wireHover(b, false);
     tabs.appendChild(b);
     tabBtns.set(id, b);
     const sec = document.createElement("div");
@@ -141,6 +166,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
       b.setAttribute("aria-checked", v);
       const vv = v;
       b.style.cssText = `padding:3px 8px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.muted};cursor:pointer;font-family:inherit;font-size:10px`;
+      wireHover(b, false);
       b.addEventListener("click", () => {
         callbacks.onSfx?.("click");
         onPick(vv);
@@ -197,6 +223,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
     input.min = "0"; input.max = "1"; input.step = "0.05";
     input.value = String(get(cached));
     input.style.cssText = "width:120px;accent-color:" + colors.tactical;
+    wireSliderGlow(input);
     input.addEventListener("input", () => {
       commit(() => set(cached, Number(input.value)));
       callbacks.onSfx?.("click");
@@ -219,6 +246,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
     input.min = "0"; input.max = "1"; input.step = "0.05";
     input.value = String(cached[key]);
     input.style.cssText = "width:120px;accent-color:" + colors.tactical;
+    wireSliderGlow(input);
     input.addEventListener("input", () => {
       const s = commit({ [key]: Number(input.value) });
       callbacks.onAudio(s);
@@ -233,6 +261,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
   const mRow = row("MUTE");
   const mBtn = document.createElement("button");
   mBtn.style.cssText = `padding:3px 10px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.tactical};cursor:pointer;font-family:inherit;font-size:10px`;
+  wireHover(mBtn, true);
   const paintMute = (): void => {
     mBtn.textContent = mutedCache ? "MUTED" : "LIVE";
   };
@@ -283,6 +312,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
       const b = document.createElement("button");
       b.textContent = txt;
       b.style.cssText = `padding:4px 10px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-size:10px`;
+      wireHover(b, true);
       return b;
     };
     const playBtn = mkBtn("▶ PLAY");
@@ -320,6 +350,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
         const delBtn = document.createElement("button");
         delBtn.textContent = "×";
         delBtn.style.cssText = `padding:0 6px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.muted};cursor:pointer;font-size:10px`;
+        wireHover(delBtn, true);
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           // remove from playlist — not in audio API yet, just UI hide (actual Map keeps)
@@ -378,6 +409,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
     const btn = document.createElement("button");
     btn.textContent = prettyKey(cached[meta.key as keyof GameSettings] as string);
     btn.style.cssText = `padding:3px 10px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-size:10px`;
+    wireHover(btn, true);
     btn.addEventListener("click", () => {
       callbacks.onSfx?.("click");
       const target = meta.key as keyof GameSettings;
@@ -405,6 +437,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
   const sensIn = document.createElement("input");
   sensIn.type = "range"; sensIn.min = "0.1"; sensIn.max = "2"; sensIn.step = "0.1"; sensIn.value = String(sensCache);
   sensIn.style.cssText = "width:120px;accent-color:" + colors.tactical;
+  wireSliderGlow(sensIn);
   sensIn.addEventListener("input", () => {
     const s = commit({ lookSensitivity: Number(sensIn.value) });
     sensCache = s.lookSensitivity;
@@ -415,6 +448,7 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
   const invRow = row("INVERT LOOK Y");
   const invBtn = document.createElement("button");
   invBtn.style.cssText = `padding:3px 10px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-size:10px`;
+  wireHover(invBtn, true);
   const paintInv = (): void => { invBtn.textContent = cached.invertLookY ? "ON" : "OFF"; };
   paintInv();
   invBtn.addEventListener("click", () => {
@@ -436,12 +470,20 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
   }
   camSel.value = "follow";
   camSel.style.cssText = `background:${glow.panelBg};color:${colors.tech};border:1px solid ${colors.edge};font-family:inherit`;
+  wireHover(camSel, true);
   camSel.addEventListener("change", () => { callbacks.onCameraMode(camSel.value as MenuCameraMode); callbacks.onSfx?.("click"); });
   camRow.appendChild(camSel);
   c.appendChild(camRow);
 
   // ===================== Open/Close =====================
-  const open = (): void => { isOpen = true; wrap.style.display = "flex"; };
+  // Fase 7: slide-in dari kanan 0.3s — transform dianimasikan via transition
+  // yang dipasang saat panel dibuat; double-rAF supaya start frame ke-render.
+  const open = (): void => {
+    isOpen = true;
+    wrap.style.display = "flex";
+    panel.style.transform = "translateX(40px)";
+    requestAnimationFrame(() => { requestAnimationFrame(() => { panel.style.transform = "translateX(0)"; }); });
+  };
   const close = (): void => { isOpen = false; wrap.style.display = "none"; };
   const toggle = (): void => { if (isOpen) close(); else open(); };
 
