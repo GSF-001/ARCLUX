@@ -18,7 +18,7 @@ import { computeHealthScore } from "../../engine/healthScore.ts";
 import { buildCallGraph } from "../../graph/buildCallGraph.ts";
 import { buildDependencyGraph } from "../../graph/buildDependencyGraph.ts";
 import { buildExportGraph } from "../../graph/buildExportGraph.ts";
-import { buildFolderGraph } from "../../graph/buildFolderGraph.ts";
+import { buildFolderGraph, folderGraphToJSON } from "../../graph/buildFolderGraph.ts";
 
 // ── impact ────────────────────────────────────────────────────────────────
 import { buildImpactTree } from "../../impact/buildImpactTree.ts";
@@ -727,7 +727,9 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     }
     case "folder_graph": {
       const r = await doAnalyze(args);
-      return json(buildFolderGraph(r.repository));
+      // folderGraphToJSON: HierarchyNode has parent pointers (circular) —
+      // never JSON.stringify the raw buildFolderGraph() result (BUG-1).
+      return json(folderGraphToJSON(buildFolderGraph(r.repository)));
     }
 
     // ── Impact ─────────────────────────────────────────────────────

@@ -58,6 +58,45 @@ export interface FolderGraphResult {
   folders: FolderInfo[];
 }
 
+/**
+ * JSON-safe view of a FolderGraphResult for API/MCP responses.
+ *
+ * BUG-1 fix: HierarchyNode carries `parent` pointers (d3-hierarchy decorates
+ * on construction), so JSON.stringify(hierarchyRoot) throws "Converting
+ * circular structure to JSON" — which killed the folder_graph MCP tool on
+ * every repo. The hierarchy is a compute aid, not a transfer shape: callers
+ * that need depth/counts read them from `stats` (derived via traversal,
+ * never serialized). Web consumers keep using `.tree` directly.
+ */
+export interface FolderGraphJSON {
+  tree: FileTreeNode;
+  folders: FolderInfo[];
+  stats: {
+    /** Max depth below root (hierarchyRoot.height). */
+    depth: number;
+    /** Total tree nodes (folders + files). */
+    nodeCount: number;
+    fileCount: number;
+    folderCount: number;
+  };
+}
+
+export function folderGraphToJSON(result: FolderGraphResult): FolderGraphJSON {
+  let nodeCount = 0;
+  let fileCount = 0;
+  let folderCount = 0;
+  result.hierarchyRoot.each((node) => {
+    nodeCount += 1;
+    if (node.data.type === "file") fileCount += 1;
+    else folderCount += 1;
+  });
+  return {
+    tree: result.tree,
+    folders: result.folders,
+    stats: { depth: result.hierarchyRoot.height, nodeCount, fileCount, folderCount },
+  };
+}
+
 export function buildFolderGraph(repository: Repository): FolderGraphResult {
   const relativePaths = repository.getAllModules().map((m) => m.file.relativePath);
   const tree = buildFileTree(relativePaths);
