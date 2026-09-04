@@ -478,6 +478,7 @@ const TOOLS = [
         branch:    { type: "string" },
         refA:      { type: "string" },
         refB:      { type: "string" },
+        detail:    { type: "string", enum: ["summary", "full"], description: "summary (default): file lists + impact counts, no per-file trees. full: complete impactByModule + symbol arrays (large)." },
       },
       required: ["refA", "refB"],
     },
@@ -802,7 +803,8 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     }
     case "semantic_diff": {
       const r = await doAnalyze(args);
-      return json(computeSemanticDiff({ repository: r.repository, repoPath: r.meta.rootPath, refA: args.refA as string, refB: args.refB as string }));
+      const detail = args.detail === "full" ? "full" : "summary";
+      return json(computeSemanticDiff({ repository: r.repository, repoPath: r.meta.rootPath, refA: args.refA as string, refB: args.refB as string, detail }));
     }
 
     // ── Git ────────────────────────────────────────────────────────
