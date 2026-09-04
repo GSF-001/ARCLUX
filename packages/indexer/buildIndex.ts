@@ -9,6 +9,7 @@
 import { scanFiles } from "../parser/core/scanFiles";
 import { parserRegistry } from "../parser/core/ParserRegistry";
 import { resolvePath } from "../graph/resolvePath";
+import { resolveModuleCalls } from "../graph/resolveCalls";
 import { loadAliasConfig } from "../graph/resolveAliases";
 import { resolveSameScopeDependencies, type ScopedFile } from "./resolveSameScopeDependencies";
 import { Repository } from "../repository/Repository";
@@ -19,7 +20,7 @@ import {
   setDiskCachedParsedFile,
 } from "../cache/diskCache";
 import { ArcluxError } from "../shared/errors";
-import type { RepositoryMeta, ModuleInfo, ParsedFile, ResolvedImport, ResolvedCall } from "../shared/types";
+import type { RepositoryMeta, ModuleInfo, ParsedFile, RawImport, ResolvedImport, ResolvedCall } from "../shared/types";
 
 export interface BuildIndexOptions {
   rootPath: string;
@@ -120,53 +121,91 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
   const implicitDepsByPath = resolveSameScopeDependencies(scopedFiles);
 
   // Pass 3: build ModuleInfo with resolved import ids (but importedBy not filled yet)
+  // Call resolution runs through the two-pass resolver
+  // (packages/graph/resolveCalls.ts — port of ManSio PR #20):
+  // 3.1 verified import (incl. default-local) → 3.2 unique global →
+  // 3.3 recognized external → 3.4 explicit unresolved. Ambiguous bindings
+  // are refused, never last-write-wins; nothing drops silently.
   const modulesByPath = new Map<string, ModuleInfo>();
-  for (const [relativePath, parsed] of parsedByPath) {
-    const resolvedImportIds: string[] = [];
-    const resolvedImports: ResolvedImport[] = [];
-    // callee name -> moduleId for every named import of this module. Used
-    // below to resolve bare call sites (extractCallsJs output) to the
-    // module that exports the callee. Last write wins if the same name is
-    // imported from two modules — that source is a duplicate-identifier
-    // error anyway, so there is no correct answer to prefer.
-    const namedImportToModule = new Map<string, string>();
 
+  // Pre-pass: resolve every raw import once (internal vs external) so the
+  // resolver below sees both sides; externals used to vanish here.
+  interface BoundImport {
+    internal?: { moduleId: string; namedImports: string[]; defaultLocalName?: string };
+    external?: { packageName: string; namedImports: string[]; defaultLocalName?: string };
+    raw: RawImport;
+  }
+  const boundByPath = new Map<string, BoundImport[]>();
+  const knownDependencies = new Set<string>();
+  for (const [relativePath, parsed] of parsedByPath) {
+    const bound: BoundImport[] = [];
     for (const rawImport of parsed.imports) {
       const resolution = resolvePath(relativePath, rawImport.source, knownFiles, aliasConfig);
       if (resolution.type === "internal") {
-        resolvedImportIds.push(resolution.moduleId);
-        resolvedImports.push({
-          moduleId: resolution.moduleId,
-          kind: rawImport.kind,
-          namedImports: rawImport.namedImports,
-          hasDefaultImport: rawImport.hasDefaultImport,
-          hasNamespaceImport: rawImport.hasNamespaceImport,
-          line: rawImport.line,
+        bound.push({
+          internal: { moduleId: resolution.moduleId, namedImports: rawImport.namedImports, defaultLocalName: rawImport.defaultLocalName },
+          raw: rawImport,
         });
-        for (const name of rawImport.namedImports) {
-          namedImportToModule.set(name, resolution.moduleId);
-        }
+      } else {
+        knownDependencies.add(resolution.packageName);
+        bound.push({
+          external: { packageName: resolution.packageName, namedImports: rawImport.namedImports, defaultLocalName: rawImport.defaultLocalName },
+          raw: rawImport,
+        });
       }
-      // external packages intentionally not added as modules — they're graph nodes, not repo modules
+    }
+    boundByPath.set(relativePath, bound);
+  }
+
+  // Repo-wide export maps for rungs 3.1 (verify) and 3.2 (unique global).
+  const exportMap = new Map<string, Set<string>>();
+  const hasDefaultExport = new Map<string, boolean>();
+  const globalNameMap = new Map<string, string[]>();
+  for (const [relativePath, parsed] of parsedByPath) {
+    const names = new Set<string>();
+    let hasDefault = false;
+    for (const exp of parsed.exports) {
+      if (exp.kind === "default") hasDefault = true;
+      else {
+        names.add(exp.name);
+        const list = globalNameMap.get(exp.name) ?? [];
+        if (!list.includes(relativePath)) list.push(relativePath);
+        globalNameMap.set(exp.name, list);
+      }
+    }
+    exportMap.set(relativePath, names);
+    hasDefaultExport.set(relativePath, hasDefault);
+  }
+
+  for (const [relativePath, parsed] of parsedByPath) {
+    const resolvedImportIds: string[] = [];
+    const resolvedImports: ResolvedImport[] = [];
+    const bound = boundByPath.get(relativePath) ?? [];
+
+    for (const b of bound) {
+      if (!b.internal) continue; // external packages intentionally not added as modules — they're graph nodes, not repo modules
+      resolvedImportIds.push(b.internal.moduleId);
+      resolvedImports.push({
+        moduleId: b.internal.moduleId,
+        kind: b.raw.kind,
+        namedImports: b.raw.namedImports,
+        hasDefaultImport: b.raw.hasDefaultImport,
+        hasNamespaceImport: b.raw.hasNamespaceImport,
+        line: b.raw.line,
+      });
     }
 
-    // Resolve bare call sites to the module exporting the callee. A call
-    // whose callee is not among the module's named imports (a local
-    // function, a default-imported function, or a global) is dropped here
-    // on purpose — see extractJs.ts's extractCallsJs doc comment for the
-    // two by-design limitations (default-import calls and
-    // obj.foo()/this.foo() calls are never resolved).
-    const resolvedCalls: ResolvedCall[] = [];
-    for (const rawCall of parsed.calls ?? []) {
-      const targetModuleId = namedImportToModule.get(rawCall.calleeName);
-      if (targetModuleId) {
-        resolvedCalls.push({
-          moduleId: targetModuleId,
-          calleeName: rawCall.calleeName,
-          line: rawCall.line,
-        });
-      }
-    }
+    // Two-pass call resolution (replaces the old namedImportToModule
+    // last-write-wins map + silent drop).
+    const { resolved: resolvedCalls, unresolved: unresolvedCalls } = resolveModuleCalls({
+      rawCalls: parsed.calls ?? [],
+      internalImports: bound.flatMap((b) => (b.internal ? [b.internal] : [])),
+      externalImports: bound.flatMap((b) => (b.external ? [b.external] : [])),
+      exportMap,
+      hasDefaultExport,
+      globalNameMap,
+      knownDependencies,
+    });
 
     const resolvedReExports: Record<string, string> = {};
     for (const exp of parsed.exports) {
@@ -186,6 +225,7 @@ export async function buildIndex(options: BuildIndexOptions): Promise<Repository
       imports: resolvedImportIds,
       resolvedImports,
       calls: resolvedCalls,
+      unresolvedCalls,
       importedBy: [], // filled in pass 4
       calledBy: [], // filled in pass 4
       implicitDependencies: implicitDepsByPath.get(relativePath) ?? [],

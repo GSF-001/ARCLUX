@@ -19,13 +19,13 @@ import type { DependencyGraph, GraphNode, GraphEdge } from "../shared/types";
  * call site.
  *
  * The raw material is ModuleInfo.calls (ResolvedCall[]), populated by
- * buildIndex.ts pass 3: each bare-identifier call site in the source is
- * matched against the module's named imports to find the module that
- * exports the callee. Two known limitations inherited from that pass (see
- * extractJs.ts's extractCallsJs doc comment for the full rationale):
- *   1. Calls of default-imported functions are never resolved — RawImport
- *      stores no local name for default imports, so there is no name to
- *      match the callee against.
+ * buildIndex.ts pass 3 via the two-pass resolver (packages/graph/
+ * resolveCalls.ts — import-verified, unique-global, explicit-unresolved;
+ * never silent-picks, never silent-drops). Two known limitations inherited
+ * from extraction (see extractJs.ts's extractCallsJs doc comment):
+ *   1. Calls of default-imported functions resolve via
+ *      RawImport.defaultLocalName, verified against the target's default
+ *      export — the old total blind spot is closed.
  *   2. `obj.foo()` / `this.foo()` are never captured at all — the parser
  *      layer is AST-only (no type checker), and those callees are property
  *      accesses, not identifiers.
