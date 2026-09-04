@@ -11,7 +11,7 @@
 //   input (WASD/QE + look) → intent `move` → server /intent
 //   server tick → /snapshot → scene + HUD render (+ rAF smooth interpolation)
 
-import { initScene3D, type Scene3D } from "./scene3d";
+import { initScene3D, type Scene3D } from "./scene3d/index";
 import { initHud, type Hud } from "./hud";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
