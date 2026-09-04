@@ -53,6 +53,7 @@ import { parseCsproj } from "../parser/csharp/parseCsproj";
 import { parseGradle_, parsePom } from "../parser/java/parseGradlePom";
 import { parseRequirements } from "../parser/python/parseRequirements";
 import { detectFrameworks, detectPackageManager } from "./detectRepositoryMeta";
+import { getHeadState } from "../git/headFreshness";
 import { ArcluxError, isArcluxError } from "../shared/errors";
 import type { DependencyGraph, RepositoryMeta, ScanSummary } from "../shared/types";
 import type { Repository } from "../repository/Repository";
@@ -210,6 +211,10 @@ export async function analyzeRepository(
  */
 async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryResult> {
   const resolvedPath = path.resolve(localPath);
+  // Freshness stamp (ManSio #22 line): git head at build time, so readers
+  // holding this result can evaluateFreshness() before trusting it.
+  // Never throws (non-git -> null stamp -> INCONCLUSIVE downstream).
+  const head = await getHeadState(resolvedPath);
 
   const meta: RepositoryMeta = {
     id: "local",
@@ -220,6 +225,7 @@ async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryRes
     detectedFrameworks: detectFrameworks(resolvedPath),
     packageManager: detectPackageManager(resolvedPath),
     analyzedAt: new Date().toISOString(),
+    buildHead: head.isRepo ? { commit: head.commit, dirty: head.dirty } : null,
   };
 
   let repository: Repository;
@@ -275,6 +281,8 @@ async function analyzeRemoteRepository(
     const cloneResult = await cloneRepository({ repoUrl, branch });
     localPath = cloneResult.localPath;
 
+    const head = await getHeadState(localPath);
+
     const meta: RepositoryMeta = {
       id: randomUUID(),
       org,
@@ -284,6 +292,7 @@ async function analyzeRemoteRepository(
       detectedFrameworks: detectFrameworks(localPath),
       packageManager: detectPackageManager(localPath),
       analyzedAt: new Date().toISOString(),
+      buildHead: head.isRepo ? { commit: head.commit, dirty: head.dirty } : null,
     };
 
     // Cheap up-front scan (hashing only, not parsing) to compute a
