@@ -83,6 +83,8 @@ export function validateIntent(
     }
     case "dock":
       return validateDock(region, entity, intent);
+    case "spawn_character":
+      return { decision: "accept" };
     default:
       return { decision: "reject", reason: `unsupported intent: ${intent.type}` };
   }
