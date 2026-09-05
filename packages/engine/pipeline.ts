@@ -225,7 +225,7 @@ async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryRes
     detectedFrameworks: detectFrameworks(resolvedPath),
     packageManager: detectPackageManager(resolvedPath),
     analyzedAt: new Date().toISOString(),
-    buildHead: head.isRepo ? { commit: head.commit, dirty: head.dirty } : null,
+    buildHead: head.isRepo ? { isRepo: true, commit: head.commit, dirty: head.dirty } : null,
   };
 
   let repository: Repository;
@@ -292,7 +292,7 @@ async function analyzeRemoteRepository(
       detectedFrameworks: detectFrameworks(localPath),
       packageManager: detectPackageManager(localPath),
       analyzedAt: new Date().toISOString(),
-      buildHead: head.isRepo ? { commit: head.commit, dirty: head.dirty } : null,
+      buildHead: head.isRepo ? { isRepo: true, commit: head.commit, dirty: head.dirty } : null,
     };
 
     // Cheap up-front scan (hashing only, not parsing) to compute a

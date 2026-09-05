@@ -26,6 +26,7 @@
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
 import { analyzeRepository } from "../../packages/engine/pipeline";
+import { getHeadState, reportFreshness } from "../../packages/git/headFreshness";
 import { detectCircularDependency } from "../../packages/detectors/detectCircularDependency";
 import { detectUnusedExports } from "../../packages/detectors/detectUnusedExports";
 import { detectOrphanFiles } from "../../packages/detectors/detectOrphanFiles";
@@ -56,8 +57,17 @@ export function registerDoctorCommand(program: Command): void {
       spinner.start(`Running detectors on ${targetPath}`);
 
       try {
-        const { repository } = await analyzeRepository({ localPath: targetPath });
+        const { repository, meta } = await analyzeRepository({ localPath: targetPath });
         spinner.stop("Detectors finished");
+
+        // Freshness lamp: the analysis was just built, so this reports its
+        // anchor (HEAD/clean) — STALE here means "built on a dirty tree",
+        // explained, not alarming. Held/cached results are checked by
+        // readers via evaluateFreshness, not here.
+        const fresh = reportFreshness(meta.buildHead ?? null, await getHeadState(meta.rootPath));
+        if (fresh.verdict === "FRESH") p.log.success(`Analysis fresh \u2014 ${fresh.detail}`);
+        else if (fresh.verdict === "STALE") p.log.warn(`Analysis anchor: STALE \u2014 ${fresh.detail}`);
+        else p.log.info(`Analysis anchor: INCONCLUSIVE \u2014 ${fresh.detail}`);
 
         const cycles = detectCircularDependency(repository);
         const unusedExports = detectUnusedExports(repository);

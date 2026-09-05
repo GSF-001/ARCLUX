@@ -9,6 +9,7 @@
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
 import { analyzeRepository } from "../../packages/engine/pipeline";
+import { getHeadState, reportFreshness } from "../../packages/git/headFreshness";
 import { detectCircularDependency } from "../../packages/detectors/detectCircularDependency";
 import { detectUnusedExports } from "../../packages/detectors/detectUnusedExports";
 import { detectOrphanFiles } from "../../packages/detectors/detectOrphanFiles";
@@ -53,7 +54,8 @@ export function registerAnalyzeCommand(program: Command): void {
       spinner.start(`Analyzing ${targetPath}`);
       const startedAt = Date.now();
       try {
-        const { repository, meta, graph, scanSummary } = await analyzeRepository({ localPath: targetPath });
+        const { repository, meta, graph, scanSummary, dependencies, securityAnalysis } =
+          await analyzeRepository({ localPath: targetPath });
         const elapsedMs = Date.now() - startedAt;
         spinner.stop("Analysis complete");
 
@@ -74,6 +76,21 @@ export function registerAnalyzeCommand(program: Command): void {
           `Detectors: ${summary.total} issue${summary.total === 1 ? "" : "s"} \u2014 circular ${summary.circular}, unused ${summary.unusedExports}, orphan ${summary.orphanFiles}, layer ${summary.layerViolations}`
         );
         p.log.info(`Elapsed: ${(elapsedMs / 1000).toFixed(2)}s`);
+
+        // RESULT block: the value, not just "done". Same one-line discipline
+        // as above — short lines only.
+        p.log.success(
+          `RESULT ${meta.org}/${meta.name} \u2014 ${repository.moduleCount} modules, ${graph.edges.length} edges, ${dependencies.length} dependencies`
+        );
+        p.log.info(`Security: ${securityAnalysis?.findings.length ?? 0} findings`);
+        p.log.info(`Analyzed at: ${meta.analyzedAt}`);
+        const fresh = reportFreshness(
+          meta.buildHead ?? null,
+          await getHeadState(meta.rootPath)
+        );
+        if (fresh.verdict === "FRESH") p.log.success(`Freshness: FRESH \u2014 ${fresh.detail}`);
+        else if (fresh.verdict === "STALE") p.log.warn(`Freshness: STALE \u2014 ${fresh.detail}`);
+        else p.log.info(`Freshness: INCONCLUSIVE \u2014 ${fresh.detail}`);
       } catch (err) {
         spinner.stop("Analysis failed");
         p.log.error(err instanceof Error ? err.message : String(err));

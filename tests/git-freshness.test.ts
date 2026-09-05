@@ -17,7 +17,8 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { evaluateFreshness, getHeadState } from "../packages/git/headFreshness";
+import { evaluateFreshness, getHeadState, reportFreshness } from "../packages/git/headFreshness";
+import { analyzeRepository } from "../packages/engine/pipeline";
 
 const dirs: string[] = [];
 function track(dir: string): string {
@@ -120,4 +121,59 @@ describe("evaluateFreshness (ManSio 7-case contract)", () => {
     const built = await getHeadState(dir);
     expect(evaluateFreshness({ isRepo: true, commit: null, dirty: false }, built)).toBe("INCONCLUSIVE");
   });
+});
+
+describe("reportFreshness (human wording over the verdict)", () => {
+  it("FRESH carries the short commit", async () => {
+    const dir = makeRepo();
+    const built = await getHeadState(dir);
+    const rep = reportFreshness(built, await getHeadState(dir));
+    expect(rep.verdict).toBe("FRESH");
+    expect(rep.shortCommit).toMatch(/^[0-9a-f]{7}$/);
+    expect(rep.detail).toContain("clean");
+  });
+
+  it("moved tree explains both commits", async () => {
+    const dir = makeRepo();
+    const built = await getHeadState(dir);
+    writeFileSync(join(dir, "b.txt"), "two\n");
+    git(dir, "add", ".");
+    git(dir, "commit", "-qm", "two");
+    const rep = reportFreshness(built, await getHeadState(dir));
+    expect(rep.verdict).toBe("STALE");
+    expect(rep.detail).toContain("re-run analysis");
+    expect(rep.detail).toContain(rep.shortCommit as string);
+  });
+
+  it("dirty tree explains working-tree tracking instead of alarming", async () => {
+    const dir = makeRepo();
+    const built = await getHeadState(dir);
+    writeFileSync(join(dir, "a.txt"), "dirty\n");
+    const rep = reportFreshness(built, await getHeadState(dir));
+    expect(rep.verdict).toBe("STALE");
+    expect(rep.detail).toContain("working tree");
+  });
+
+  it("legacy/non-git explains the missing anchor", async () => {
+    const dir = makeRepo();
+    const rep = reportFreshness(null, await getHeadState(dir));
+    expect(rep.verdict).toBe("INCONCLUSIVE");
+    expect(rep.shortCommit).toBeNull();
+    expect(rep.detail).toContain("no git anchor");
+  });
+});
+
+describe("pipeline stamp shape (regression: stamp must satisfy the evaluator)", () => {
+  it("analyzeRepository stamps a buildHead that evaluates FRESH end-to-end", async () => {
+    const dir = makeRepo();
+    writeFileSync(join(dir, "b.ts"), "export function b() { return 1; }\n");
+    git(dir, "add", ".");
+    git(dir, "commit", "-qm", "two");
+    const result = await analyzeRepository({ localPath: dir });
+    // The stamp must carry isRepo — a {commit,dirty}-only stamp silently
+    // degrades every read to INCONCLUSIVE (caught live via CLI smoke test).
+    expect(result.meta.buildHead?.isRepo).toBe(true);
+    const rep = reportFreshness(result.meta.buildHead ?? null, await getHeadState(dir));
+    expect(rep.verdict).toBe("FRESH");
+  }, 120000);
 });

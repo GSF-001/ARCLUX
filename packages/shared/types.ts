@@ -186,12 +186,14 @@ export interface RepositoryMeta {
   analyzedAt: string; // ISO timestamp
   /**
    * Git head captured when this analysis was built (packages/git/
-   * headFreshness.ts — port of ManSio's freshness contract). Readers
-   * holding a stamped result call evaluateFreshness() against a fresh
-   * getHeadState() before trusting it. Absent = legacy record, never
-   * FRESH (fail-closed). Optional so fixtures keep compiling.
+   * headFreshness.ts — port of ManSio's freshness contract). Same shape
+   * as HeadState (isRepo/commit/dirty) so evaluateFreshness() takes it
+   * directly. Readers holding a stamped result call evaluateFreshness()
+   * against a fresh getHeadState() before trusting it. Absent/null =
+   * legacy record, never FRESH (fail-closed). Optional so fixtures keep
+   * compiling.
    */
-  buildHead?: { commit: string | null; dirty: boolean } | null;
+  buildHead?: { isRepo: boolean; commit: string | null; dirty: boolean } | null;
 }
 
 /**
