@@ -41,14 +41,14 @@ interface ResolvedImport {
 
 function makeModule(
   relativePath: string,
-  opts: { exports?: RawExport[]; imports?: string[]; resolvedImports?: ResolvedImport[]; importedBy?: string[] } = {}
+  opts: { exports?: RawExport[]; imports?: string[]; resolvedImports?: ResolvedImport[]; importedBy?: string[]; resolvedReExports?: Record<string, string> } = {}
 ): ModuleInfo {
   const imports = opts.imports ?? [];
   return {
     id: relativePath,
     file: makeFile(relativePath),
     exports: opts.exports ?? [],
-    resolvedReExports: {},
+    resolvedReExports: opts.resolvedReExports ?? {},
     importedBy: opts.importedBy ?? [],
     imports,
     resolvedImports: (opts.resolvedImports ?? imports.map((moduleId) => ({ moduleId, namedImports: [], hasDefaultImport: false, hasNamespaceImport: false, line: 1 }))).map((r) => ({ ...r, kind: "static" as const })),
@@ -56,6 +56,10 @@ function makeModule(
     calledBy: [],
     implicitDependencies: [],
   };
+}
+
+function reexp(name: string, line = 1): RawExport {
+  return { name, kind: "re-export", reExportSource: "./x", line };
 }
 
 function makeRepository(modules: ModuleInfo[]): Repository {
@@ -147,6 +151,66 @@ describe("detectOrphanFiles — classification", () => {
     const register = findings.get("src/features/auth/register.ts");
     expect(register.classification).toBe("unwired");
     expect(register.evidence.some((e: string) => e.includes("barrel"))).toBe(true);
+  });
+
+  it("excludes pure-barrel modules (all re-exports) like entries (BUG-2D)", () => {
+    const repo = makeRepository([
+      makeModule("pkg/index.ts", {
+        exports: [reexp("*")],
+        imports: ["pkg/server.ts"],
+        importedBy: [],
+      }),
+      makeModule("pkg/server.ts", { exports: [named("serve")], importedBy: [] }),
+    ]);
+    const findings = byPath(detectOrphanFiles(repo));
+    expect(findings.has("pkg/index.ts")).toBe(false);
+  });
+
+  it("marks barrel-re-exported modules ambiguous, never unwired (BUG-2A cross-package honesty)", () => {
+    const repo = makeRepository([
+      makeModule("pkg/index.ts", {
+        exports: [reexp("*")],
+        imports: ["pkg/server.ts", "pkg/other.ts"],
+        importedBy: [],
+        resolvedReExports: { "*": "pkg/server.ts" },
+      }),
+      makeModule("pkg/server.ts", { exports: [named("serve")], importedBy: [] }),
+      makeModule("pkg/other.ts", { exports: [named("other")], importedBy: ["pkg/app.ts"] }),
+      makeModule("pkg/app.ts", { exports: [named("app")] }),
+    ]);
+    const findings = byPath(detectOrphanFiles(repo));
+    const server = findings.get("pkg/server.ts");
+    expect(server.classification).toBe("ambiguous");
+    expect(server.evidence.some((e: string) => e.includes("re-exported"))).toBe(true);
+  });
+
+  it("skips tooling noise paths: configs, d.ts, vendor-ui, _inbox (BUG-2B)", () => {
+    const repo = makeRepository([
+      makeModule("next.config.ts", { exports: [] }),
+      makeModule("src/types.d.ts", { exports: [] }),
+      makeModule("src/vendor-ui/anim.tsx", { exports: [named("Anim")] }),
+      makeModule("src/_inbox/draft.tsx", { exports: [named("Draft")] }),
+      makeModule("src/real.ts", { exports: [named("real")], importedBy: [] }),
+    ]);
+    const findings = byPath(detectOrphanFiles(repo));
+    expect(findings.has("next.config.ts")).toBe(false);
+    expect(findings.has("src/types.d.ts")).toBe(false);
+    expect(findings.has("src/vendor-ui/anim.tsx")).toBe(false);
+    expect(findings.has("src/_inbox/draft.tsx")).toBe(false);
+    // Real user code still reported.
+    expect(findings.has("src/real.ts")).toBe(true);
+  });
+
+  it("dedupes: one file gets one verdict even if the module surfaces twice (BUG-2C)", () => {
+    const dup = makeModule("src/dup.ts", { exports: [named("dup")], importedBy: [] });
+    // Fake a repository surfacing the same module twice (as observed via
+    // upstream merges) — the guard lives in the detector, not the store.
+    const repo = {
+      getAllModules: () => [dup, dup],
+      findModulesWithNoImporters: () => [dup, dup],
+    } as unknown as Repository;
+    const findings = detectOrphanFiles(repo).filter((f) => f.filePath === "src/dup.ts");
+    expect(findings).toHaveLength(1);
   });
 });
 
