@@ -145,6 +145,14 @@ export interface AnalyzeRepositoryResult {
   /** Combined dependency list from every manifest file present in the repo (package.json, go.mod, etc). See ManifestRegistry.ts. */
   dependencies: import("../parser/core/ManifestParserInterface").ManifestDependency[];
   securityAnalysis?: SecurityAnalysis;
+  /**
+   * True when repository+graph came from the fingerprint cache (content
+   * identical to a previous analysis in this process) instead of a fresh
+   * buildIndex. Optional so older fixtures keep compiling; pipeline always
+   * sets it. On a hit the meta stamp + clock are re-anchored (see
+   * analyzeLocalPath), so a hit is honest, not just fast.
+   */
+  cacheHit?: boolean;
 }
 
 /** Parses "org/name" out of a git URL, for https, ssh, and shorthand forms */
@@ -200,14 +208,23 @@ export async function analyzeRepository(
 }
 
 /**
- * Local-path flow: no git clone, no cleanup, no cache.
+ * Local-path flow: no git clone, no cleanup — but WITH the fingerprint
+ * cache (same machinery as the remote flow, keyed `local:<resolvedPath>`).
  *
- * No caching on purpose: the fingerprint/cache system (repositoryCache.ts,
- * graphCache.ts) is keyed by repoUrl+branch, which doesn't map cleanly to
- * a bare local directory a developer is actively editing. Caching stale
- * results mid-edit would be worse than the cost of re-indexing. Revisit
- * if `arclux` commands feel slow on large local repos — that's a real
- * possible follow-up, not ruled out, just not built here.
+ * Why this is safe where naive caching would not be: the key is a CONTENT
+ * fingerprint (every file's hash — an edit anywhere changes it), not a
+ * timestamp or a git HEAD. Mid-edit staleness is impossible by
+ * construction: edited tree → different fingerprint → miss → rebuild.
+ * The known sharp edge is commit-without-change (same content, new HEAD):
+ * handled by re-anchoring the stamp on a hit (see below), so freshness
+ * stays truthful.
+ *
+ * Scope honesty: the caches are IN-MEMORY (repositoryCache.ts /
+ * graphCache.ts, by design — see their headers). Long-running processes
+ * (daemon, MCP server, watch batches) hit; single-shot CLI runs are fresh
+ * processes and always miss. Cross-process disk caching of full
+ * Repositories is a separate project (Repository holds a live Map —
+ * naive JSON would silently empty it, see AnalyzeRepositoryResult docs).
  */
 async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryResult> {
   const resolvedPath = path.resolve(localPath);
@@ -228,24 +245,55 @@ async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryRes
     buildHead: head.isRepo ? { isRepo: true, commit: head.commit, dirty: head.dirty } : null,
   };
 
-  let repository: Repository;
-  try {
-    repository = await buildIndex({ rootPath: resolvedPath, meta });
-  } catch (err) {
-    throw isArcluxError(err)
-      ? err
-      : new ArcluxError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
-  }
+  // Fingerprint-first: one hashing scan up front (cheap — same pass the
+  // remote flow already pays). On a hit we skip buildIndex +
+  // buildDependencyGraph entirely; on a miss buildIndex scans again
+  // internally (one extra hashing pass, accepted — hashing is dwarfed by
+  // parsing + graph building, which the hit path avoids).
+  const scannedFiles = scanFiles(resolvedPath);
+  const fingerprint = computeRepositoryFingerprint(scannedFiles);
+  const cacheKey = `local:${resolvedPath}`;
 
+  const cachedRepository = getCachedRepository(cacheKey, "local", fingerprint);
+  const cachedGraph = getCachedGraph(cacheKey, "local", fingerprint);
+
+  let repository: Repository;
   let graph: DependencyGraph;
-  try {
-    graph = buildDependencyGraph(repository);
-  } catch (err) {
-    throw new ArcluxError({
-      code: "GRAPH_BUILD_FAILED",
-      message: "Graph construction failed",
-      cause: err,
-    });
+  let cacheHit = false;
+
+  if (cachedRepository && cachedGraph) {
+    // HIT: content identical, so the result is identical — but the ANCHOR
+    // may have moved (commit-without-change). Re-anchor stamp + clock to
+    // now so freshness stays truthful instead of pointing at the past.
+    const now = await getHeadState(resolvedPath);
+    cachedRepository.meta.buildHead = now.isRepo
+      ? { isRepo: true, commit: now.commit, dirty: now.dirty }
+      : null;
+    cachedRepository.meta.analyzedAt = new Date().toISOString();
+    repository = cachedRepository;
+    graph = cachedGraph;
+    cacheHit = true;
+  } else {
+    try {
+      repository = await buildIndex({ rootPath: resolvedPath, meta });
+    } catch (err) {
+      throw isArcluxError(err)
+        ? err
+        : new ArcluxError({ code: "INDEX_FAILED", message: "Indexing failed", cause: err });
+    }
+
+    try {
+      graph = buildDependencyGraph(repository);
+    } catch (err) {
+      throw new ArcluxError({
+        code: "GRAPH_BUILD_FAILED",
+        message: "Graph construction failed",
+        cause: err,
+      });
+    }
+
+    setCachedRepository(cacheKey, "local", fingerprint, repository);
+    setCachedGraph(cacheKey, "local", fingerprint, graph);
   }
 
   return {
@@ -261,6 +309,7 @@ async function analyzeLocalPath(localPath: string): Promise<AnalyzeRepositoryRes
     repository,
     dependencies: manifestRegistry.detectDependencies(resolvedPath),
     securityAnalysis: analyzeRepositorySecurity(repository, resolvedPath),
+    cacheHit,
   };
 }
 
@@ -306,13 +355,22 @@ async function analyzeRemoteRepository(
 
     let repository: Repository;
     let graph: DependencyGraph;
+    let cacheHit = false;
 
     const cachedRepository = getCachedRepository(repoUrl, meta.defaultBranch, fingerprint);
     const cachedGraph = getCachedGraph(repoUrl, meta.defaultBranch, fingerprint);
 
     if (cachedRepository && cachedGraph) {
+      // Same re-anchor honesty as the local flow: content identical, so
+      // re-anchor stamp + clock to now (a fresh clone is clean at HEAD).
+      const now = await getHeadState(localPath);
+      cachedRepository.meta.buildHead = now.isRepo
+        ? { isRepo: true, commit: now.commit, dirty: now.dirty }
+        : null;
+      cachedRepository.meta.analyzedAt = new Date().toISOString();
       repository = cachedRepository;
       graph = cachedGraph;
+      cacheHit = true;
     } else {
       try {
         repository = await buildIndex({ rootPath: localPath, meta });
@@ -349,6 +407,7 @@ async function analyzeRemoteRepository(
       repository,
       dependencies: manifestRegistry.detectDependencies(localPath),
       securityAnalysis: analyzeRepositorySecurity(repository, localPath),
+      cacheHit,
     };
   } finally {
     // Always clean up the temp clone, even if analysis threw partway through.
