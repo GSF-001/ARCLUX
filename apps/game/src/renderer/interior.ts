@@ -301,6 +301,29 @@ export function buildArkInterior(): InteriorBuildResult {
   const { groups: habitats, walkBoxes: habBoxes } = buildHabitats();
   for (const h of habitats) g.add(h);
 
+  // Iris 3: Lighting — Ambient + Point per deck + emissive reuse PMREM Fase 1
+  // PMREM scene.environment tetap (reuse, bukan bikin baru). Interior cuma
+  // tambah light biar gak gelap gulita pas exterior visible=false.
+  const ambient = new THREE.AmbientLight(threeColor(colors.struct), 0.85);
+  g.add(ambient);
+  // Point per deck — corridor 3 + plaza 1 + promenade 4
+  const lightPositions: [number, number, number][] = [
+    [-1400, 18, 0],
+    [0, 18, 0],
+    [1400, 18, 0],
+    [0, 12, 0], // plaza
+  ];
+  // promenade centers
+  for (let r = 0; r < 4; r++) lightPositions.push([-400 + r * 500, 14, 0]);
+  for (const [x, y, z] of lightPositions) {
+    const p = new THREE.PointLight(threeColor("#ffd9a0"), 0.55, 900, 1.8);
+    p.position.set(x, y, z);
+    g.add(p);
+  }
+  // Emissive boost — already on windowWarm/habitat mats, tinggal pastiin
+  // scene.environment (PMREM Fase 1) kepake pas exterior dimatiin. Gak bikin
+  // PMREM baru — hemat 10-frame cost.
+
   // Subtle glow di corridor (reuse makeGlowTexture biar hemat)
   const glowTex = makeGlowTexture();
   for (const cx of [-1200, 0, 1200]) {
