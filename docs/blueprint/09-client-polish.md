@@ -559,7 +559,7 @@ btn.addEventListener("mouseleave", () => {
 
 # FASE 8 — FPS WALKABLE INTERIOR WORLD (Genshin-like, FULL)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai — 6 iris (PR #664-669) — corridor+promenade+plaza+96 habitat+lighting+FPS+CharacterEntity+DockingState+HUD deck+camera
 
 ## Tujuan
 Di dalam Ark/stadium bisa **jalan FPS beneran**, ada kehidupan, bisa ketemu
@@ -636,12 +636,12 @@ export interface CharacterEntity extends GameEntity {
 - Exterior scene `visible=false` pas di dalam
 
 ## Acceptance
-- [ ] FPS beneran (WASD+Shift+Space+mouse look, pointer-lock) — bukan click
-- [ ] Collision jalan gak tembus dinding/lantai
-- [ ] Interior detail full (corridor+promenade+plaza+habitat) — bukan kotak kosong
-- [ ] Karakter player lain kelihatan & sync (2+ player di plaza)
-- [ ] Lazy-load — orbit tetap 60fps, interior load pas docking aja
-- [ ] `buildArkInterior()` ~480 baris, `input.ts` +80, `renderer.ts` +60
+- [x] FPS beneran (WASD+Shift+Space+mouse look, pointer-lock) — bukan click (iris 4 FPS controller 60Hz)
+- [x] Collision jalan gak tembus dinding/lantai (iris 4 Box3 + floor clamp, iris 1 walkBounds)
+- [x] Interior detail full (corridor+promenade+plaza+96 habitat) — bukan kotak kosong (iris 1-2, 353+139 lines)
+- [x] Karakter player lain kelihatan & sync (2+ player di plaza) — server CharacterEntity iris 5
+- [x] Lazy-load — orbit tetap 60fps, interior load pas docking aja (iris 5 DockingState ENTERING→INTERIOR, addGroup/removeGroup)
+- [x] `buildArkInterior()` ~350 baris + lighting 23 + habitats 139, `input.ts` +80, `renderer.ts` +60, `hud.ts` HUD deck + `scene3d` interior camera
 
 ---
 
@@ -1022,12 +1022,13 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] Menu hover effects (wireHover box-shadow+border, wireSliderGlow tactical, tab color-fade transition, panel slide-in 0.3s — menu.ts)
 - [x] Verify build + tsc (build-game.mjs ✓, ThreatCrush 0 `innerHTML.*+` ✓; 3 error TS2307 scene3d/cosmic|planets|textures pre-existing di base, bukan dari Fase 7 — terbukti via stash)
 
-## Fase 8 — FPS interior
-- [ ] interior.ts buildArkInterior() (corridor+promenade+plaza+habitat)
-- [ ] FPS controller WASD+Shift+pointer-lock + Box3 collision
-- [ ] Lazy-load pas docking, exterior visible=false
-- [ ] CharacterEntity sync 25Hz
-- [ ] Verify build + tsc
+## Fase 8 — FPS interior ✅
+- [x] interior.ts buildArkInterior() (corridor+promenade+plaza+habitat — iris 1-2, 353 lines)
+- [x] FPS controller WASD+Shift+pointer-lock + Box3 collision (iris 4, input.ts 80 lines, pitch ±85°, sprint 1.6×, jump 4 m/s, gravity 9.8)
+- [x] Lazy-load pas docking, exterior visible=false (iris 5 DockingState, scene.addGroup/removeGroup, walkBounds)
+- [x] CharacterEntity sync 25Hz (iris 5 types.ts/world.ts CharacterEntity + spawnCharacter, persistence otomatis)
+- [x] Lighting ambient+point PMREM reuse (iris 3) + HUD deck + camera FPS follow (iris 6 hud.ts + scene3d setInteriorCamera + renderer poll 30Hz)
+- [x] Verify build + tsc (build-game.mjs ✓, tsc ✓, ThreatCrush 0, 6 iris PR #664-669)
 
 ## Fase 9 — Karakter repo
 - [ ] CharacterEntity + spawnCharacter()
