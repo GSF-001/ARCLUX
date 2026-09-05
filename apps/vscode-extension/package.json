@@ -2,7 +2,7 @@
   "name": "arclux-vscode",
   "displayName": "ARCLUX",
   "description": "Live dependency graph, impact analysis, and diagnostics -- connects to a running ARCLUX daemon (arclux daemon --detach)",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "engines": {
     "vscode": "^1.85.0"
