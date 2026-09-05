@@ -213,3 +213,96 @@ Sunrise `DARK → HORIZON GLOW → SCATTERING → RIM LIGHT → CLOUD → GOD RA
 - [ ] Local effect volumes + quality `FAR→CINEMATIC` + budget `proximity→importance→cost` + determinism seeding + persistence boundary + seamless `SPACE→FACILITY` composition
 
 > **Dependency:** `10` substrate (`terrain/ocean/atmosphere` visual-only) lands first; `10.X` rides on top. `09` Part B 9-12 land before `10.X` needs facilities to illuminate. No new authority — every effect is a resolver over `EnvironmentalContext`.
+
+---
+
+## 14. File Mapping — Where Code Goes (No Guessing, 1 Contract + 1 Folder)
+
+> Biar pas code gak ngarang: `BLUEPRINT 10` numpang ke file yang udah ada, `BLUEPRINT 10.X` cuma tambah 1 kontrak. Hujan gak 1 planet — per chunk, deterministik dari `planetSeed+tick`.
+
+### BLUEPRINT 10 (substrate) → 2 tempat
+
+**1. Server `packages/gameserver/` — otoritas & persistence (reuse, bukan baru):**
+
+- `environs.ts` (udah ada, `SystemBodies` Kepler) → tambah `planetaryEnvirons.ts` — `heightmap` seed, chunk `planetId:chunkX:chunkZ` via `claimRegion` (`world.ts:41` + `relay/registry.ts:33` udah ada). Chunk cuma di-tick kalau ada pemain/facility; `persistence.ts:120` simpan semua.
+- `physics.ts:12` (`G, KE`) + `thermics.ts:34` (`1/r²`) → reuse buat `gravity` per planet (Earth 9.81 vs Mars 3.71), `collision.ts:92` `KE=½mv²` buat crash.
+- `types.ts:18 Vec3` + `world.ts:41 Map` + `persistence.ts:120` → koordinat persisten `Vec3` udah ada, tinggal `planetId` di `regionId` (`log out Hangar-A → Hangar-A`, 2000 km same planet).
+- `cosmicEvent.ts` (udah ada, anomali acak) → **cuaca/anomali numpang di sini**: `weatherSeed = mulberry32(planetSeed + tick)` → `rain/wind/fog` lokal per chunk, bukan global. `Anomali = cosmicEvent` yang sama, visualnya beda. Gak bikin file gede baru.
+
+**File baru (1-2 aja):** `packages/gameserver/planetary/environment.ts` (`EnvironmentalContext` + `WindState`) — kontrak yang dibaca semua sistem. Gak bikin simulasi baru.
+
+**2. Client `apps/game/src/renderer/scene3d/` — visual-only (gak masuk WorldRegion):**
+
+- `scene3d/planets.ts` (udah ada, `buildPlanetSystem` + `makeCloudTexture`) → tambah `scene3d/planetary/` folder:
+  ```
+  scene3d/planetary/
+  ├── terrain.ts    (heightmap LOD 16-64, vertexColors, continental→mountain→biome→river)
+  ├── ocean.ts      (Gerstner g=9.81, 71% coverage, depth dari heightmap)
+  ├── atmosphere.ts (Sphere 1.018 + clouds 512 per-kind, depthWrite:false)
+  ├── weather.ts    (rain/wind/fog dari EnvironmentalContext — per chunk)
+  ├── chunks.ts     (streaming LOD, cull jauh, claimRegion)
+  ├── facilities.ts (spawn di empty land — hutan/laut tetep natural)
+  └── surface.ts    (lerp SPACE→ORBIT→ATMOSPHERE→SURFACE tanpa loading)
+  ```
+  Semua `child sphere 1.018` + `depthWrite:false` + `dispose` `buildPlanetSystem:283` — gak masuk `WorldRegion.entities` / `EnvironsState.bodies` / `RegionSnapshot`, gak nambah `O(V*B)` `simulation.ts:121`. Hujan di Valley A, Valley B cerah — `weatherState` per chunk.
+
+### BLUEPRINT 10.X (cinematic) → 1 kontrak + numpang
+
+- `EnvironmentalContext.ts` + `WindState.ts` (di `planetary/environment.ts` tadi) — **satu angin dilihat awan+hujan+kabut+daun bareng** (10.X §4). Gak ada `rain` punya angin sendiri.
+- Efek lain (`god rays`, `landing dust 4 fase`, `puddles`, `lightning flash`) **gak bikin file otoritas baru** — cuma `visual resolver` baca `EnvironmentalContext → THREE`. `localEffectBudget` per chunk → habitat A hujan deres, B kering.
+
+**Jawab singkat:** Yang baru = 1 kontrak (`EnvironmentalContext`) + 1 folder `planetary/` 7 file visual. Sisanya **numpang** ke file yang udah ada. `weatherSeed per chunk + WindState localVariation` → anomali gak ketebak tapi deterministik `planetSeed+tick`. Pondasi `WorldRegion Map + Vec3 + RecoveryManager` udah beton → langit tinggal tancap.
+
+---
+
+## 15. Addendum — Gaps Closed (Continuous Event & Shoreline) — PLAN FINAL
+
+> Temuan 8 celah setelah review `APA efek ada` vs `GIMANA efek ketemu sepanjang waktu` — ditutup sebagai addendum, bukan arsitektur baru (semua cuma resolver di atas `EnvironmentalContext`, visual-only).
+
+### G1 — Continuous Environmental Event (Priority 1 — wajib)
+
+Bukan `RAIN=true/false` → langsung `CLEAR`. Tapi state machine visual:
+
+`CLEAR (☀️) → PRE-STORM (awan tebal, shadow gerak, angin naik, laut berubah) → STORM (hujan, visibility turun, lightning, spray) → LANDING DURING STORM (pad spray, wet reflection, mist) → POST-STORM (awan pecah, matahari balik, tapi GENANGAN + DAUN BASAH + MIST MASIH ADA) → RECOVERY → NORMAL`
+
+Implementasi: `EnvironmentalEvent { eventId, phase: "clear"|"pre"|"storm"|"landing"|"post"|"recovery", startedAt, weatherState, windState, cloudState }` derived dari `EnvironmentalContext` — visual only, gak ganti authority.
+
+### G2 — Weather Accumulation → Recovery (gabung G1)
+
+`RAIN → WET → DRAINING → DRYING → NORMAL` — `puddle` surut, `runoff` ke titik rendah, `vegetation` tetap basah/reflektif beberapa menit setelah hujan berhenti. Planet persistent jadi terasa: “tadi di sini badai”.
+
+### G3 — Coastal Transition (Priority 2)
+
+Bukan `TERRAIN | garis air | OCEAN`. Tapi zona:
+
+`LAND (dry) → WET SHORE (wet sand/rock, foam, spray) → SHALLOW WATER (≈≈≈) → OPEN OCEAN (wave)`
+
+Storm → `coastal spray↑, foam, wave breaking, shoreline mist, wake`. Checklist: `terrain wet → coastal foam/spray → shallow → ocean wave` gradual.
+
+### G4 — Hydrological Continuity
+
+`MOUNTAIN (snow/rain) → STREAM → RIVER (flow direction, foam, wet banks) → LAKE → COAST → OCEAN` — river dari `heightmap` procedural, visual: `flow direction, waterfalls, foam, wet banks, shallow/deep, river→ocean meeting, rain-fed runoff, mist near waterfall`. Tanpa simulasi hidrologi berat.
+
+### G5 — Terrain Visual Memory (Future — decal only)
+
+`scorch mark, dust residue, disturbed vegetation, debris, snow displacement` — `decal` per `chunkKey` persist via `persistence.ts` (bukan voxel Minecraft). “Pernah landing di sini” — taruh sebagai `FUTURE` biar gak scope creep 10.X.
+
+### G6 — Atmospheric Continuity (Optical)
+
+`Orbit (limb) → High (cloud) → Low (haze) → Surface (fog/rain)` — horizon `haze` + `valley fog` + `mountain contrast` berubah kontinu, bukan trigger `entered atmosphere`.
+
+### G7 — Terrain + Sun Moving Shadows
+
+Sunrise di balik mountain: `valley gelap → shadow line gerak melintasi valley/forest/ocean/facility/pad` — bukan global directional doang. `sunElevation + terrain heightmap → shadow map` gradual.
+
+### Checklist Gaps (PR — no auto-merge)
+
+- [ ] `EnvironmentalEvent` state machine `clear→pre→storm→landing→post→recovery` + `WET→DRAINING→DRYING` (visual timers, gak ganti weather authority)
+- [ ] Coastal zone `WET SHORE → SHALLOW → OPEN OCEAN` + foam/spray/shoreline mist (terrain/ocean meet)
+- [ ] Hydrological `river flow + foam + wet banks + river→ocean` (dari heightmap)
+- [ ] `Terrain Visual Memory` decal per chunk (FUTURE — persist scorch/dust)
+- [ ] Atmospheric optical `haze→valley fog→mountain contrast` + moving terrain shadows
+
+> **Catatan file:** G1-G2 di `planetary/weather.ts` + `EnvironmentalContext`; G3-G4 di `planetary/terrain.ts` + `ocean.ts`; G5 di `planetary/surface.ts` decal; G6-G7 di `planetary/atmosphere.ts`. Semua visual resolver, no new authority.
+
+> **Urutan:** `09` Part B 9-12 → `10` substrate (terrain/ocean/chunks) → `10.X` cinematic + `15` gaps (event/shoreline). Gak lompat.
