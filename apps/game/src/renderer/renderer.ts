@@ -19,7 +19,10 @@ import { initAudio, type AudioHandle } from "./audio";
 import { initMenu, type MenuHandle, type MenuCameraMode } from "./menu";
 import { initLanding } from "./landing";
 import { loadSettings } from "./settings";
+import { buildArkInterior } from "./interior";
 import type { RegionSnapshot, VesselEntity, WorldEntity } from "../../../../packages/gameserver/types";
+
+export type DockingState = "EXTERIOR" | "ENTERING" | "INTERIOR";
 
 export interface RendererHandle {
   scene: Scene3D;
@@ -28,6 +31,9 @@ export interface RendererHandle {
   input: InputHandle;
   audio: AudioHandle;
   menu: MenuHandle;
+  dockingState: DockingState;
+  enterInterior(): void;
+  exitInterior(): void;
   dispose(): void;
 }
 
@@ -59,6 +65,33 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     onCameraMode: (mode) => scene.setCameraMode(mode as Parameters<Scene3D["setCameraMode"]>[0]),
     onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
   }, audio);
+
+  // Iris 5 — DockingState + lazy interior (corridor+promenade+plaza+96 habitat)
+  let dockingState: DockingState = "EXTERIOR";
+  let interiorGroup: import("three").Group | null = null;
+  let interiorBounds: import("three").Box3[] = [];
+  const enterInterior = (): void => {
+    if (dockingState !== "EXTERIOR") return;
+    dockingState = "ENTERING";
+    if (!interiorGroup) {
+      const built = buildArkInterior();
+      interiorGroup = built.group;
+      interiorBounds = built.walkBounds;
+      scene.addGroup(interiorGroup);
+      input.setWalkBounds(interiorBounds);
+    } else {
+      scene.addGroup(interiorGroup);
+    }
+    input.setInteriorMode("FPS_INTERIOR");
+    input.setInteriorPosition({ x: 0, y: 0, z: 0 });
+    dockingState = "INTERIOR";
+  };
+  const exitInterior = (): void => {
+    if (dockingState !== "INTERIOR") return;
+    dockingState = "EXTERIOR";
+    input.setInteriorMode("EXTERIOR");
+    if (interiorGroup) scene.removeGroup(interiorGroup);
+  };
   // Fase 5 — wire explosion/shield/debris sfx ke scene (server-authoritative, client hanya play)
   scene.setSfxHandler((kind) => {
     try {
@@ -132,6 +165,8 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   // Unlock audio + buka menu di ESC (interaction-driven, autoplay policy).
   const onDocClick = (): void => { audio.unlock(); };
   const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === "KeyF" && dockingState === "EXTERIOR") { e.preventDefault(); enterInterior(); return; }
+    if (e.code === "Escape" && dockingState === "INTERIOR") { e.preventDefault(); exitInterior(); return; }
     if (e.code === "Escape" && !menu.isOpen) { e.preventDefault(); menu.open(); audio.ui("click"); }
   };
   document.addEventListener("click", onDocClick, { once: true });
@@ -152,9 +187,13 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   };
 
   // Expose for manual control in devtools
-  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud, input, audio, menu };
+  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud, input, audio, menu, get dockingState() { return dockingState; }, enterInterior, exitInterior };
 
-  return { scene, hud, net, input, audio, menu, dispose };
+  return {
+    scene, hud, net, input, audio, menu,
+    get dockingState(): DockingState { return dockingState; },
+    enterInterior, exitInterior, dispose,
+  };
 }
 
 if (typeof document !== "undefined") {
