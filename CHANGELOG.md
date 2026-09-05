@@ -4,6 +4,30 @@ All notable changes to ARCLUX are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning follows
 [SemVer](https://semver.org/) (pre-1.0: minor bump = significant features).
 
+## [0.3.0] — 2026-09-05
+
+Stable README + self-triggering MCP + engine honesty fixes. The “boring but brutal” release.
+
+### Added
+- **MCP self-triggering** — `SERVER_INSTRUCTIONS` (workflow 4 langkah) + 16 trigger-first tool descriptions (`FIRST`/`INSTEAD OF`/`BEFORE`). AI agents now pick the right tool without being reminded. Exported + test-locked.
+- **Two-pass call resolver** — port of ManSio PR #20: verified import `1.0` → unique-global `0.85` → external → explicit unresolved. Closes silent pick/drop (G1/G2/G4) and verifies exports (G5). `ModuleInfo.unresolvedCalls` preserves evidence.
+- **Head freshness** — port of ManSio #21/#22 line: `getHeadState` + `evaluateFreshness`/`reportFreshness` (`FRESH`/`STALE`/`INCONCLUSIVE`), `RepositoryMeta.buildHead` stamped in pipeline, re-anchored on cache hits. Doctor now shows freshness lamp.
+- **Local fingerprint cache** — `analyzeLocalPath` now uses content-hash cache (`local:<path>`). Hit = identical content, honest re-anchor; edit anywhere = miss by construction. In-memory (daemon/MCP/serve benefit), honest scope documented.
+- **CLI RESULT block** — `arclux analyze` prints modules/edges/deps/security + freshness; `arclux doctor` shows freshness lamp. Short lines, demo-safe.
+- **Fair Evaluation Protocol** — `ABOUT.md`: `repository → source → graph → build/test → runtime → conclusion` + `DONE`/`PLAN`/`ANALOGY`/`CLAIM` distinction.
+- **Scene3D split** — `scene3d.ts` 1577 lines → `scene3d/` 17 domain modules (zero behavior change), `planetary/` stub ready for Blueprint 10. Verified `tsc` + `build-game.mjs`.
+- **MMO polish** — HUD fade+glow, menu hover/slide-in (Fase 7), bot harness headless 2-player (9 checks, tick/move/scan/attack/dock), landing CCTV + live stats.
+
+### Fixed
+- **BUG-1 `folder_graph` circular JSON** — `folderGraphToJSON()` (tree+folders+stats), MCP now JSON-safe. Repro test added.
+- **BUG-3 `semantic_diff` bloat** — `detail` `summary` (default, file lists + counts) vs `full` (legacy trees). 132 KB → summary, opt-in full.
+- **BUG-2 orphan precision** — pure-barrel exclude, re-export honesty (barrel-re-exported → `ambiguous` not `unwired`), noise skip (`*.config.*`, `*.d.ts`, `vendor-ui/`, `_inbox/`), dedupe by `filePath`. Cross-package `server.ts` case fixed.
+- **Builder drift** — `packages/mcp/package.json` types etc. no longer rot; MCP tool list auto-discovers detectors/rules.
+
+### Changed
+- **README is now permanent** — high-level, links to live docs (`PROGRES.md`/`ABOUT.md`/docs site) instead of chasing numbers. Badges updated, install/usage evergreen, MCP self-triggering documented.
+- Versions bumped `0.2.0` → `0.3.0` across `package.json`, `apps/cli`, `apps/web`, `apps/vscode-extension`, `packages/mcp`, `CITATION.cff`.
+
 ## [0.2.1] — 2026-08-26
 
 ### Added

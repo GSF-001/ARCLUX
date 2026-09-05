@@ -3,8 +3,8 @@ message: "If you use this software, please cite it using the metadata below."
 authors:
   - name: "ARCLUX Contributors"
 title: "ARCLUX – codebase intelligence platform"
-version: "0.2.0"
-date-released: "2026-08-21"
+version: "0.3.0"
+date-released: "2026-09-05"
 url: "https://github.com/GSF-001/ARCLUX"
 repository-code: "https://github.com/GSF-001/ARCLUX"
 license: Apache-2.0
