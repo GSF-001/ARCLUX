@@ -85,13 +85,38 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     input.setInteriorMode("FPS_INTERIOR");
     input.setInteriorPosition({ x: 0, y: 0, z: 0 });
     dockingState = "INTERIOR";
+    if (!interiorPoll) {
+      interiorPoll = setInterval(() => {
+        if (dockingState !== "INTERIOR") return;
+        const pos = input.getInteriorPosition();
+        const { yaw, pitch } = input.getLook();
+        hud.setInterior(deckForPos(pos), pos);
+        scene.setInteriorCamera(pos, yaw, pitch);
+      }, 1000 / 30);
+    }
   };
   const exitInterior = (): void => {
     if (dockingState !== "INTERIOR") return;
     dockingState = "EXTERIOR";
     input.setInteriorMode("EXTERIOR");
     if (interiorGroup) scene.removeGroup(interiorGroup);
+    hud.clearInterior();
+    if (interiorPoll) { clearInterval(interiorPoll); interiorPoll = null; }
   };
+
+  // Iris 6: HUD deck + camera FPS follow interiorPos
+  const deckForPos = (p: { x: number; y: number; z: number }): string => {
+    if (Math.abs(p.x) < 400 && Math.abs(p.z) < 400) return "plaza";
+    if (Math.abs(p.x) < 2100 && Math.abs(p.z) < 40) return "corridor";
+    for (let r = 0; r < 4; r++) {
+      const radius = 640 + r * 46;
+      const cx = -400 + r * 500;
+      const d = Math.hypot(p.x - cx, p.z);
+      if (Math.abs(d - radius) < 40) return "promenade";
+    }
+    return "habitat";
+  };
+  let interiorPoll: ReturnType<typeof setInterval> | null = null;
   // Fase 5 — wire explosion/shield/debris sfx ke scene (server-authoritative, client hanya play)
   scene.setSfxHandler((kind) => {
     try {
@@ -176,6 +201,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
 
   const dispose = () => {
     try { ambientHandle?.stop(); } catch {}
+    if (interiorPoll) { clearInterval(interiorPoll); interiorPoll = null; }
     hideLanding();
     stop();
     input.detach();
