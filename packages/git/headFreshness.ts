@@ -89,3 +89,43 @@ export function evaluateFreshness(
   if (buildHead.dirty || current.dirty) return "STALE";
   return buildHead.commit === current.commit ? "FRESH" : "STALE";
 }
+
+/**
+ * Human-facing report over evaluateFreshness: same verdict, plus the
+ * detail a CLI needs so STALE never scares without explaining. In
+ * particular a just-built analysis of a dirty tree reports STALE with
+ * the working-tree explanation (fail-closed: dirty was never anchored
+ * to a commit), not a bare alarm.
+ */
+export interface FreshnessReport {
+  verdict: Freshness;
+  /** Short (7-char) build commit, or null when unknown. */
+  shortCommit: string | null;
+  detail: string;
+}
+
+export function reportFreshness(
+  buildHead: HeadState | null | undefined,
+  current: HeadState,
+): FreshnessReport {
+  const verdict = evaluateFreshness(buildHead, current);
+  const shortCommit = buildHead?.commit?.slice(0, 7) ?? null;
+  if (verdict === "FRESH") {
+    return { verdict, shortCommit, detail: `HEAD ${shortCommit} (clean)` };
+  }
+  if (!buildHead || !buildHead.isRepo || !current.isRepo || !buildHead.commit || !current.commit) {
+    return { verdict, shortCommit, detail: "no git anchor — legacy result or non-git tree; treat as snapshot, re-run to anchor" };
+  }
+  if (buildHead.commit !== current.commit) {
+    return {
+      verdict,
+      shortCommit,
+      detail: `tree moved since analysis (built at ${shortCommit}, now at ${current.commit.slice(0, 7)}) — re-run analysis`,
+    };
+  }
+  return {
+    verdict,
+    shortCommit,
+    detail: "uncommitted changes present — results track the working tree, re-run after commit for an anchored result",
+  };
+}
