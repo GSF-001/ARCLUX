@@ -26,16 +26,34 @@ export interface SemanticDiffOptions {
   refB: string;
   /** Optional second Repository snapshot (indexed at refB) for symbol-level diffing. Skipped if omitted. */
   repositoryAfter?: Repository;
+  /**
+   * Output detail (BUG-3): "summary" (default) returns file lists +
+   * per-module impact COUNTS + symbol counts — no per-file affected trees,
+   * no full SymbolInfo arrays. "full" returns the legacy complete shape.
+   * The full shape bloated MCP responses past truncation (132KB on a
+   * 16-module split) and ate agent context; default summary, opt-in full.
+   */
+  detail?: "summary" | "full";
+}
+
+export interface SemanticDiffSummaryCounts {
+  affectedFiles: number;
 }
 
 export interface SemanticDiffResult {
+  /** Which detail mode produced this result. */
+  mode: "summary" | "full";
   changedFiles: string[];
   dependencyDiff: DependencyDiffResult;
   symbolDiff?: SymbolDiffResult;
+  /** Summary-only projections (absent in full mode). */
+  impactCounts?: Record<string, SemanticDiffSummaryCounts>;
+  symbolCounts?: { added: number; removed: number; moved: number };
   rendered: string;
 }
 
 export function computeSemanticDiff(options: SemanticDiffOptions): SemanticDiffResult {
+  const mode = options.detail ?? "summary";
   const changed = getChangedFiles(options.repoPath, options.refA, options.refB);
   const dependencyDiff = computeDependencyDiff(options.repository, options.repoPath, options.refA, options.refB);
 
@@ -45,10 +63,27 @@ export function computeSemanticDiff(options: SemanticDiffOptions): SemanticDiffR
 
   const rendered = renderSemanticDiff({ symbolDiff, dependencyDiff });
 
+  if (mode === "full") {
+    return { mode, changedFiles: changed.map((c) => c.path), dependencyDiff, symbolDiff, rendered };
+  }
+
+  // Summary: counts + moved list only. impactByModule trees and full
+  // SymbolInfo arrays stay server-side (they caused the 132KB bloat).
+  const impactCounts: Record<string, SemanticDiffSummaryCounts> = {};
+  for (const [mod, impact] of Object.entries(dependencyDiff.impactByModule)) {
+    impactCounts[mod] = { affectedFiles: impact.affectedFiles.length };
+  }
   return {
+    mode,
     changedFiles: changed.map((c) => c.path),
-    dependencyDiff,
-    symbolDiff,
+    dependencyDiff: { ...dependencyDiff, impactByModule: {} },
+    symbolDiff: symbolDiff
+      ? { added: [], removed: [], moved: symbolDiff.moved }
+      : undefined,
+    impactCounts,
+    symbolCounts: symbolDiff
+      ? { added: symbolDiff.added.length, removed: symbolDiff.removed.length, moved: symbolDiff.moved.length }
+      : undefined,
     rendered,
   };
 }
