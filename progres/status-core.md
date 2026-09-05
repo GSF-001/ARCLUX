@@ -833,6 +833,22 @@ New packages/incremental with Cell/Database/Query classes for per-file cache inv
 
 ## 2026-08-26 — MCP server + npm publish milestone
 
-**Status:** In Progress
+**Status:** Done
 
-MCP server (32 tools) and npm publish package are both built and ready. MCP server: 32 registry-driven tools, all auto-evolving. npm package: arclux@0.2.0, single 10.2MB bundle via esbuild, ships dist/ + wasms/ tree-sitter grammars. One command: npx arclux analyze . or npx arclux mcp. Blocked on npm login — machine needs npm adduser or NPM_TOKEN.
+MCP server (32 tools) and npm publish package are both built and ready. MCP server: 32 registry-driven tools, all auto-evolving. npm package: arclux@0.2.0, single 10.2MB bundle via esbuild, ships dist/ + wasms/ tree-sitter grammars. One command: npx arclux analyze . or npx arclux mcp. Published as `arclux` on npm (v0.2.0).
+
+## 2026-09-05 — 0.3.0 engine honesty batch: two-pass resolver, freshness, local cache, CLI RESULT
+
+**Status:** Done — PRs #654, #655, #660, #661 — all merged to `ARCLUX.main` (v0.3.0)
+
+This batch ports the ManSio honesty line (PR #20 freshness) and closes 3 silent-failure classes in the engine:
+
+- **Two-pass call resolver** (`packages/graph/resolveCalls.ts`, port of ManSio PR #20): ladder verified import `1.0` → unique-global `0.85` → external → explicit unresolved. Fixes G1 (last-write-wins → explicit `ambiguous`), G2 (default-import via `RawImport.defaultLocalName` + verified `hasDefaultExport`), G4 (nothing drops silently — `ModuleInfo.unresolvedCalls`), G5 partial (verifies target actually exports the name). New types: `ResolvedCall.confidence`/`resolver`, `UnresolvedCall` (`ambiguous`/`external`/`unknown`), `RawImport.defaultLocalName`. `buildIndex` pre-resolves every import (internal vs external) once, builds repo-wide `exportMap`/`hasDefaultExport`/`globalNameMap`, calls `resolveModuleCalls` per module. Exports verified via `tests/graph-resolver.test.ts` (14) + updated `tests/graph-callgraph.test.ts` (5 expectations now assert confidence — target unchanged). Full suite 8 failing identical to main (pre-existing). Deviation documented: no `DEPENDENCY` nodes — call graph stays file-node-only (external recorded, not materialized).
+
+- **Head freshness** (`packages/git/headFreshness.ts`, port of ManSio #21/#22 line): `HeadState` (`isRepo`/`commit`/`dirty`), `getHeadState` (never throws, non-git → `INCONCLUSIVE`), `evaluateFreshness` (7-case contract: `FRESH` only `build==HEAD && clean`, else `STALE`/`INCONCLUSIVE` fail-closed), `reportFreshness` (human wording). `RepositoryMeta.buildHead` stamped in `pipeline.ts` (both local + clone paths, now `{isRepo,commit,dirty}` — earlier `{commit,dirty}` shaped bug caught live and fixed). `tests/git-freshness.test.ts` 15 cases incl. end-to-end `analyzeRepository → FRESH`.
+
+- **Local fingerprint cache** (`packages/engine/pipeline.ts`): `analyzeLocalPath` now fingerprint-first (`local:<resolvedPath>` key, same `computeRepositoryFingerprint` as remote). Hit = identical content, honest re-anchor of `buildHead`+`analyzedAt` to now (closes commit-without-change sharp edge); edit anywhere = miss by construction. In-memory only — long-running processes (daemon/MCP/serve) benefit, single-shot CLI fresh processes miss (documented, no false promise). `cacheHit` flag on `AnalyzeRepositoryResult`. `tests/pipeline-cache.test.ts` 3 cases (hit/miss/re-anchor+FRESH).
+
+- **CLI RESULT + freshness lamp** (`apps/cli/analyze.ts`, `doctor.ts`): `analyze` prints `RESULT org/name — modules, edges, dependencies` + `Security` + `Analyzed at` + `Freshness: FRESH/STALE/INCONCLUSIVE — detail` (short lines, demo-safe). `doctor` shows freshness lamp (analysis just built → `FRESH` on clean, `STALE` = built on dirty tree with explained wording, not alarm). Both verified live: `FRESH` on clean tinyrepo, `STALE` on dirty tree. `tests/git-freshness` extended.
+
+**Honest scope:** in-memory cache only; disk cache of live `Repository` (Map inside) would need serialization — separate project. Per-file incremental (`packages/incremental`) remains coarse (full rebuild) — decision #6 still holds, but this cache already kills the 21-minute repeat cost for `daemon`/`watch` loops.
