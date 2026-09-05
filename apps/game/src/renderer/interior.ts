@@ -3,10 +3,10 @@
 // Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
-// interior.ts — FPS walkable interior world (Fase 8, iris 1: corridor + promenade).
+// interior.ts — FPS walkable interior world (Fase 8, iris 1-2).
 // Genshin-like, bukan click-to-move murah. Skala EVE/Star Citizen, lazy-load
-// pas docking (exterior visible=false). Iris 1: corridor spine + promenade
-// 4 ring. Iris 2: plaza+habitat, dst. — dipecah biar presisi kecil-kecil.
+// pas docking (exterior visible=false). Iris 1: corridor+promenade. Iris 2:
+// plaza central + habitat 24 per ring (bisa masuk, bukan InstancedMesh luar).
 
 import * as THREE from "three";
 import { colors, threeColor } from "../ui/tokens";
@@ -16,7 +16,9 @@ export interface InteriorBuildResult {
   group: THREE.Group;
   corridor: THREE.Group;
   promenades: THREE.Group[];
-  /** Walkable bounds for FPS collision (Box3 per corridor/promenade). */
+  plaza: THREE.Group;
+  habitats: THREE.Group[];
+  /** Walkable bounds for FPS collision (Box3 per corridor/promenade/plaza/habitat). */
   walkBounds: THREE.Box3[];
 }
 
@@ -159,13 +161,133 @@ function buildPromenades(): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
   return { groups, walkBoxes };
 }
 
+function buildPlaza(): { group: THREE.Group; walkBox: THREE.Box3 } {
+  const g = new THREE.Group();
+  g.name = "ark-plaza";
+  const steelHigh = new THREE.MeshStandardMaterial({
+    color: threeColor(colors.structHigh),
+    metalness: 0.74,
+    roughness: 0.36,
+  });
+  const amber = new THREE.MeshStandardMaterial({
+    color: threeColor(colors.tactical),
+    emissive: threeColor(colors.tactical),
+    emissiveIntensity: 1.2,
+  });
+
+  // Plaza central — Cylinder(400,400,20,48) di tengah hull, tempat kumpul
+  const deck = new THREE.Mesh(
+    new THREE.CylinderGeometry(400, 400, 20, 48),
+    new THREE.MeshStandardMaterial({ color: threeColor("#0e1a2e"), metalness: 0.45, roughness: 0.82 }),
+  );
+  deck.position.set(0, -10, 0);
+  g.add(deck);
+
+  // Ring trim + hazard outer
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(400, 2.2, 12, 64), steelHigh);
+  trim.rotation.x = Math.PI / 2;
+  trim.position.set(0, 1, 0);
+  g.add(trim);
+  const outer = new THREE.Mesh(new THREE.TorusGeometry(398, 0.9, 8, 64), amber);
+  outer.rotation.x = Math.PI / 2;
+  outer.position.set(0, 1.1, 0);
+  g.add(outer);
+
+  // 4 pillar kecil di cardinal
+  for (let i = 0; i < 4; i++) {
+    const ang = (i / 4) * Math.PI * 2;
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(6, 8, 42, 8), steelHigh);
+    pillar.position.set(Math.cos(ang) * 360, 12, Math.sin(ang) * 360);
+    g.add(pillar);
+  }
+
+  // Safe zone hint — subtle glow di tengah (Bukan gameplay, visual doang)
+  const glowTex = makeGlowTexture();
+  const glow = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTex,
+      color: threeColor(colors.tech),
+      transparent: true,
+      opacity: 0.07,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
+  glow.position.set(0, 22, 0);
+  glow.scale.set(520, 520, 1);
+  g.add(glow);
+
+  const walkBox = new THREE.Box3(new THREE.Vector3(-380, -10, -380), new THREE.Vector3(380, 24, 380));
+  return { group: g, walkBox };
+}
+
+function buildHabitats(): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
+  const groups: THREE.Group[] = [];
+  const walkBoxes: THREE.Box3[] = [];
+  const steelHigh = new THREE.MeshStandardMaterial({
+    color: threeColor(colors.structHigh),
+    metalness: 0.74,
+    roughness: 0.36,
+  });
+  const habitatMat = new THREE.MeshStandardMaterial({
+    color: threeColor(colors.structHigh),
+    metalness: 0.72,
+    roughness: 0.4,
+    emissive: threeColor("#ffb36b"),
+    emissiveIntensity: 0.42,
+  });
+  const windowWarm = new THREE.MeshStandardMaterial({
+    color: threeColor("#ffd9a0"),
+    emissive: threeColor("#ffd9a0"),
+    emissiveIntensity: 1.5,
+  });
+
+  for (let r = 0; r < 4; r++) {
+    const radius = 640 + r * 46;
+    const cx = -400 + r * 500;
+    for (let i = 0; i < 24; i++) {
+      const ang = (i / 24) * Math.PI * 2;
+      const x = cx + Math.cos(ang) * (radius - 14);
+      const z = Math.sin(ang) * (radius - 14);
+      const g = new THREE.Group();
+      g.name = `ark-habitat-${r}-${i}`;
+      // Habitat — Box(30,18,26) beneran ruangan (bisa masuk)
+      const shell = new THREE.Mesh(new THREE.BoxGeometry(30, 18, 26), habitatMat);
+      shell.position.set(x, 9, z);
+      shell.rotation.y = -ang;
+      g.add(shell);
+      // Pintu — dark
+      const door = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 10, 1),
+        new THREE.MeshStandardMaterial({ color: threeColor("#060a14"), roughness: 1 }),
+      );
+      door.position.set(x + Math.cos(ang) * 13, 5, z + Math.sin(ang) * 13);
+      door.rotation.y = -ang;
+      g.add(door);
+      // Jendela warm 2 per habitat
+      for (const side of [-1, 1]) {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 0.6), windowWarm);
+        win.position.set(x + Math.cos(ang + side * 0.35) * 14, 11, z + Math.sin(ang + side * 0.35) * 14);
+        win.rotation.y = -ang;
+        g.add(win);
+      }
+      // Walk bounds — habitat interior (kecil, presisi)
+      const min = new THREE.Vector3(x - 13, 0, z - 11);
+      const max = new THREE.Vector3(x + 13, 18, z + 11);
+      groups.push(g);
+      walkBoxes.push(new THREE.Box3(min, max));
+    }
+  }
+  return { groups, walkBoxes };
+}
+
 /**
- * Iris 1 builder — corridor + 4 promenade, lazy-load pas docking.
- * Belum plaza/habitat/hangar (iris 2+). Return group + walkBounds buat FPS.
+ * Iris 1-2 builder — corridor + 4 promenade + plaza + 96 habitat (24×4).
+ * Hangar + bazaar menyusul iris 3+. Return group + walkBounds buat FPS.
  */
 export function buildArkInterior(): InteriorBuildResult {
   const g = new THREE.Group();
-  g.name = "ark-interior-iris1";
+  g.name = "ark-interior-iris2";
 
   const { group: corridor, walkBox: corridorBox } = buildCorridor();
   g.add(corridor);
@@ -173,7 +295,13 @@ export function buildArkInterior(): InteriorBuildResult {
   const { groups: promenades, walkBoxes: promBoxes } = buildPromenades();
   for (const pr of promenades) g.add(pr);
 
-  // Subtle glow di corridor ( reuse makeGlowTexture biar hemat)
+  const { group: plaza, walkBox: plazaBox } = buildPlaza();
+  g.add(plaza);
+
+  const { groups: habitats, walkBoxes: habBoxes } = buildHabitats();
+  for (const h of habitats) g.add(h);
+
+  // Subtle glow di corridor (reuse makeGlowTexture biar hemat)
   const glowTex = makeGlowTexture();
   for (const cx of [-1200, 0, 1200]) {
     const spr = new THREE.Sprite(
@@ -195,6 +323,8 @@ export function buildArkInterior(): InteriorBuildResult {
     group: g,
     corridor,
     promenades,
-    walkBounds: [corridorBox, ...promBoxes],
+    plaza,
+    habitats,
+    walkBounds: [corridorBox, ...promBoxes, plazaBox, ...habBoxes],
   };
 }
