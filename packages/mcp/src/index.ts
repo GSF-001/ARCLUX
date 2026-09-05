@@ -247,11 +247,26 @@ function resolveImpactModuleId(repository: any, raw: string): string {
 // Tool definitions — descriptions are built from registries above,
 // so they auto-update when you add new detectors/rules/parsers.
 // ──────────────────────────────────────────────────────────────────────────
-const TOOLS = [
+
+/**
+ * Server instructions surfaced to the model at connect time (MCP
+ * `instructions` field): the workflow that makes this server useful
+ * WITHOUT the user having to ask for it. Exported so tests lock it.
+ */
+export const SERVER_INSTRUCTIONS =
+  "ARCLUX codebase-intelligence workflow — follow it on any repo task without being asked. " +
+  "(1) FIRST contact with an unfamiliar repo: run config (cheap orientation) or analyze (full index) BEFORE opening source files — never map structure by reading files one by one. " +
+  "(2) NEVER guess relationships: what a file needs/uses/affects → file_info; repo structure → dependency_graph / folder_graph; who-calls-what → callgraph; find symbols → search. " +
+  "(3) BEFORE editing, renaming, or deleting any file: run impact (or impact_consumers / impact_dependencies) — never estimate blast radius by reading imports manually. " +
+  "(4) AFTER understanding, verify: detect / doctor / verify instead of assuming. " +
+  "Prefer these tools over shell grep/find/cat/reads for structure questions — they are compiler/AST-exact, grep is lossy. " +
+  "Results describe the analyzed snapshot: re-run analyze after the tree changes.";
+
+export const TOOLS = [
   // ── Core analysis ─────────────────────────────────────────────────
   {
     name: "analyze",
-    description: "Full analysis pipeline - parse all files, build index, build dependency graph, detect frameworks.",
+    description: "FIRST step for any unfamiliar repo: full pipeline - parse all files, build index, build dependency graph, detect frameworks. Run this before opening source files — never map a codebase by reading files one by one.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -263,7 +278,7 @@ const TOOLS = [
   },
   {
     name: "doctor",
-    description: "Run all " + DETECTOR_NAMES.length + " architecture detectors. Returns findings with checkId, severity, filePath, message.",
+    description: "Run all " + DETECTOR_NAMES.length + " architecture detectors. Returns findings with checkId, severity, filePath, message. Use AFTER understanding the code (via file_info/graphs), to verify instead of assuming — or when the user reports dead code, orphans, or structural smells.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -299,7 +314,7 @@ const TOOLS = [
   },
   {
     name: "diagnose",
-    description: "Diagnostics (circular, dead code, ambiguous) with impact context and fix suggestions.",
+    description: "Diagnostics (circular, dead code, ambiguous) with impact context and fix suggestions. Use when something is already known-broken and you need the cause + where to fix, not a full audit (that is doctor).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -313,7 +328,7 @@ const TOOLS = [
   // ── Graphs ────────────────────────────────────────────────────────
   {
     name: "callgraph",
-    description: "Build function call graph (nodes + edges).",
+    description: "Build function call graph (nodes + edges). Use when the question is who-calls-what (tracing a function across files) — exact, unlike text search for the function name.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -325,7 +340,7 @@ const TOOLS = [
   },
   {
     name: "dependency_graph",
-    description: "Build import dependency graph.",
+    description: "Build import dependency graph. Use INSTEAD of manually following import chains when asking how modules connect at repo scale.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -337,7 +352,7 @@ const TOOLS = [
   },
   {
     name: "export_graph",
-    description: "Build export relationship graph.",
+    description: "Build export relationship graph. Use when asking what a module provides to the rest of the repo (public surface), rather than reading its export statements.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -349,7 +364,7 @@ const TOOLS = [
   },
   {
     name: "folder_graph",
-    description: "Build directory tree structure with file counts.",
+    description: "Build directory tree structure with file counts. Use for repo orientation (what lives where) before diving into files.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -363,7 +378,7 @@ const TOOLS = [
   // ── Impact ────────────────────────────────────────────────────────
   {
     name: "impact",
-    description: "Full impact analysis - dependency tree, affected files, affected routes.",
+    description: "BEFORE editing, renaming, or deleting any file: exact blast radius - dependency tree, affected files, affected routes. Never estimate by reading imports manually.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -377,7 +392,7 @@ const TOOLS = [
   },
   {
     name: "impact_consumers",
-    description: "Trace all consumers of a module (who calls this).",
+    description: "Trace all consumers of a module (who calls this). Use when asking 'what breaks if I change this file' — the downstream half of impact.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -391,7 +406,7 @@ const TOOLS = [
   },
   {
     name: "impact_dependencies",
-    description: "Trace all dependencies of a module (what does this call).",
+    description: "Trace all dependencies of a module (what does this call). Use when asking 'what does this file need' before modifying or deleting it — the upstream half of impact.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -421,7 +436,7 @@ const TOOLS = [
   // ── Search ────────────────────────────────────────────────────────
   {
     name: "search",
-    description: "Fuzzy search for symbols, files, or code patterns.",
+    description: "Use INSTEAD of shell grep/rg when looking for symbols, files, or code patterns — ranked, scope-aware results. Prefer over text search for any 'where is X defined/used' question.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -438,7 +453,7 @@ const TOOLS = [
   // ── Detectors ─────────────────────────────────────────────────────
   {
     name: "detect",
-    description: "Run specific detector(s). Available: " + DETECTOR_NAMES.join(", ") + ". Use [\"all\"] for all.",
+    description: "Run specific detector(s). Available: " + DETECTOR_NAMES.join(", ") + ". Use [\"all\"] for all. Use when verifying structural health (orphans, dead code, cycles) instead of eyeballing the tree.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -454,7 +469,7 @@ const TOOLS = [
   // ── Diff ──────────────────────────────────────────────────────────
   {
     name: "diff",
-    description: "Architectural diff between two git refs - changed files + affected consumers.",
+    description: "Architectural diff between two git refs - changed files + affected consumers. Use when asking 'what did this branch/PR change structurally' instead of reading a raw git diff.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -469,7 +484,7 @@ const TOOLS = [
   },
   {
     name: "semantic_diff",
-    description: "AST-level semantic diff between two git refs - understands code structure, not just text.",
+    description: "AST-level semantic diff between two git refs - understands code structure, not just text. Use when reviewing what a branch/PR changed semantically (detail summary by default; full for complete trees).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -512,7 +527,7 @@ const TOOLS = [
   // ── Editor ────────────────────────────────────────────────────────
   {
     name: "file_info",
-    description: "Module info for a file - exports, imports, calls, dependencies, consumers.",
+    description: "Use INSTEAD of reading a file to understand its role: exports, imports, calls, dependencies, consumers in one call. Run BEFORE editing any file, or when asking what a file does and what depends on it.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -662,7 +677,7 @@ const TOOLS = [
   },
   {
     name: "config",
-    description: "Detect repository metadata - name, frameworks, package manager.",
+    description: "Cheapest first contact: repository metadata - name, frameworks, package manager. Use for orientation, or before deciding a full analyze is needed.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -1000,7 +1015,15 @@ async function handleTool(name: string, args: Record<string, unknown>) {
 // ──────────────────────────────────────────────────────────────────────────
 export async function startMcpServer(): Promise<void> {
   const server = new Server(
-    { name: "arclux", version: "0.2.0" },
+    {
+      name: "arclux",
+      version: "0.2.0",
+      // Shown to the model at connect time: the workflow that makes this
+      // server useful WITHOUT the user having to ask for it. Tool
+      // descriptions below repeat the triggers per tool; this is the spine.
+      // Exported (SERVER_INSTRUCTIONS) so tests lock its presence.
+      instructions: SERVER_INSTRUCTIONS,
+    },
     { capabilities: { tools: {}, resources: {} } }
   );
 
