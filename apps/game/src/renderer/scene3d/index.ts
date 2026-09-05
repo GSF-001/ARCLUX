@@ -20,6 +20,9 @@ import type { GameSettings } from "../settings";
 import { createBase, disposeGroup, type SceneContext } from "./bootstrap";
 import { createCamera, setCameraMode, setLookYawPitch, updateCamera, type CameraMode } from "./camera";
 import { createPost } from "./post";
+// Iris 1: interior geometry (corridor+promenade) ready — lazy-load DockingState wired in iris 2
+import { buildArkInterior as _buildArkInterior } from "../interior";
+void _buildArkInterior;
 import { buildStars } from "./stars";
 import { buildNebula } from "./nebula";
 import { buildSuns, updateSuns } from "./suns";
@@ -41,6 +44,8 @@ export interface Scene3D {
   applyQuality(settings: GameSettings): void;
   setLookYawPitch(yaw: number, pitch: number): void;
   setSfxHandler(cb: (kind: "explosion" | "shield" | "debris") => void): void;
+  addGroup(g: THREE.Group): void;
+  removeGroup(g: THREE.Group): void;
   dispose(): void;
 }
 
@@ -189,6 +194,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     applyQuality: (s: GameSettings) => applyQuality(ctx, s),
     setLookYawPitch: (yaw: number, pitch: number) => setLookYawPitch(ctx, yaw, pitch),
     setSfxHandler: (cb: (kind: "explosion" | "shield" | "debris") => void) => { ctx.sfxHandler = cb; },
+    addGroup: (g: THREE.Group) => ctx.scene.add(g),
+    removeGroup: (g: THREE.Group) => ctx.scene.remove(g),
     dispose,
   };
 }
