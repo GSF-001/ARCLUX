@@ -20,6 +20,9 @@ import type { GameSettings } from "../settings";
 import { createBase, disposeGroup, type SceneContext } from "./bootstrap";
 import { createCamera, setCameraMode, setLookYawPitch, updateCamera, type CameraMode } from "./camera";
 import { createPost } from "./post";
+// Iris 1: interior geometry (corridor+promenade) ready — lazy-load DockingState wired in iris 2
+import { buildArkInterior as _buildArkInterior } from "../interior";
+void _buildArkInterior;
 import { buildStars } from "./stars";
 import { buildNebula } from "./nebula";
 import { buildSuns, updateSuns } from "./suns";
