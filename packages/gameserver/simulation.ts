@@ -232,6 +232,18 @@ export class SimulationEngine {
         if (entity.kind === "vessel") recordCreation((entity as VesselEntity).vessel.id, entity.id, intent.playerId, this.region.tick);
         break;
       }
+      case "spawn_character": {
+        const p = intent.payload as { vesselId?: string; preset?: string; armorColor?: string; emblemRepo?: string; deck?: string };
+        const charId = `char:${intent.playerId}`;
+        if (this.region.has(charId)) break;
+        const vessel = p.vesselId ? this.region.getVessel(p.vesselId) : entity.kind === "vessel" ? entity : undefined;
+        const deck = (p.deck as import("./types").CharacterEntity["deck"]) ?? "plaza";
+        const pos = vessel ? { ...vessel.position } : { ...entity.position };
+        const character = this.region.spawnCharacter({ id: charId, owner: intent.playerId, vesselId: vessel?.id ?? charId, deck, position: pos });
+        recordCreation(character.id, character.vesselId, intent.playerId, this.region.tick);
+        this.log("character_spawned", intent.playerId, { characterId: charId, preset: p.preset, armorColor: p.armorColor, emblemRepo: p.emblemRepo, deck });
+        break;
+      }
     }
   }
 
