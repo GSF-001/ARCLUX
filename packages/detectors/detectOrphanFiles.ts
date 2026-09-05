@@ -46,6 +46,26 @@ export interface OrphanFileFinding {
  * detectEntryPoints.ts (known entry-point conventions), mirroring what
  * detectUnusedExports.ts does.
  *
+ * BUG-2 precision fixes (scope-relative honesty):
+ * - Pure-barrel modules (every export is a re-export, e.g. gameserver/
+ *   index.ts's `export *` wall) are public API surfaces, excluded like
+ *   entries. No file I/O needed — decided from RawExport kinds alone.
+ * - Config/vendor/tooling paths (*.config.*, *.d.ts, vendor-ui/, _inbox/)
+ *   are skipped: reporting them as orphans buries real signal (523-noise
+ *   case). Deliberately narrow — user code named *.config.ts that IS
+ *   imported still shows up nowhere else, but an unimported
+ *   `weird.config.ts` with real code is a corner case we accept missing
+ *   in exchange for killing hundreds of false positives.
+ * - Findings dedupe by filePath (upstream merges can surface the same
+ *   module twice — e.g. the 9x impactStore.ts case — and one file gets
+ *   one verdict).
+ * - Re-export counts as weak usage: a module re-exported by an in-scope
+ *   barrel but directly imported by nothing is "ambiguous" (public via
+ *   barrel, consumers possibly out of scope), never "unwired". This is
+ *   the cross-package honesty fix: server.ts re-exported by
+ *   gameserver/index.ts must not be called unwired just because its
+ *   importers (serve.ts, game) live outside the analyzed scope.
+ *
  * Each orphan is classified by looking at REAL structural signals in the
  * repository (see classifyOrphan): are siblings in the same folder
  * imported anywhere? Is there a barrel index.ts that skips this file?
@@ -56,12 +76,36 @@ export function detectOrphanFiles(repository: Repository): OrphanFileFinding[] {
   for (const id of getEntryModuleIds(repository.getAllModules())) entryModuleIds.add(id);
   for (const finding of detectEntryPoints(repository)) entryModuleIds.add(finding.filePath);
 
+  const allModules = repository.getAllModules();
+
+  // Pure barrels: public surface, not orphans.
+  for (const m of allModules) {
+    if (m.exports.length > 0 && m.exports.every((e) => e.kind === "re-export")) {
+      entryModuleIds.add(m.id);
+    }
+  }
+
+  // Re-export usage: moduleId -> barrel ids re-exporting it (in scope).
+  const reExportedBy = new Map<string, string[]>();
+  for (const m of allModules) {
+    for (const targetId of Object.values(m.resolvedReExports)) {
+      const list = reExportedBy.get(targetId) ?? [];
+      if (!list.includes(m.id)) list.push(m.id);
+      reExportedBy.set(targetId, list);
+    }
+  }
+
   const orphans = repository
     .findModulesWithNoImporters()
-    .filter((module) => !entryModuleIds.has(module.id) && !isTestFilePath(module.id));
+    .filter((module) => !entryModuleIds.has(module.id) && !isTestFilePath(module.id))
+    .filter((module) => !isNoisePath(module.file.relativePath));
 
-  return orphans.map((module) => {
-    const { classification, evidence } = classifyOrphan(module, repository);
+  const seen = new Set<string>();
+  const findings: OrphanFileFinding[] = [];
+  for (const module of orphans) {
+    if (seen.has(module.id)) continue; // dedupe: one file, one verdict
+    seen.add(module.id);
+    const { classification, evidence } = classifyOrphan(module, repository, reExportedBy.get(module.id) ?? []);
     const filePath = module.file.relativePath;
     const message =
       classification === "unwired"
@@ -69,8 +113,9 @@ export function detectOrphanFiles(repository: Repository): OrphanFileFinding[] {
         : classification === "dead"
           ? `"${filePath}" is never imported and shows dead-code signals — likely safe to delete.`
           : `"${filePath}" is never imported (ambiguous — no strong integration or deletion signal).`;
-    return { filePath, message, classification, evidence };
-  });
+    findings.push({ filePath, message, classification, evidence });
+  }
+  return findings;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -80,6 +125,19 @@ export function detectOrphanFiles(repository: Repository): OrphanFileFinding[] {
 const BACKUP_NAME = /\.(?:bak|old|orig|tmp|copy|backup)$/i;
 const SCRATCH_NAME = /(?:scratch|archive|-old|-copy|_draft|_tmp|-wip)/i;
 const STORY_NAME = /\.(?:stories|story)\./i;
+
+/**
+ * Tooling/config paths that are never meaningful orphans — reporting them
+ * buries real signal (BUG-2: next.config.ts, eslint.config.mjs, *.d.ts,
+ * vendor-ui/, _inbox/ dominated a 523-finding run). Deliberately narrow:
+ * only build/config latticed paths and vendored UI, never user code by
+ * naming pattern alone.
+ */
+const NOISE_PATH = /(?:^|\/)(?:[^/]*\.config\.[^/]+|[^/]*\.d\.ts|vendor-ui\/|_inbox\/)/;
+
+export function isNoisePath(relativePath: string): boolean {
+  return NOISE_PATH.test(relativePath);
+}
 
 /** Shared structural suffixes (e.g. userService.ts / paymentService.ts). */
 const KNOWN_SUFFIXES = [
@@ -156,7 +214,8 @@ export function siblingModules(module: ModuleInfo, repository: Repository): Modu
  */
 export function classifyOrphan(
   module: ModuleInfo,
-  repository: Repository
+  repository: Repository,
+  reExportedByBarrels: string[] = []
 ): { classification: OrphanClassification; evidence: string[] } {
   const evidence: string[] = [];
   const filePath = module.file.relativePath;
@@ -165,6 +224,18 @@ export function classifyOrphan(
     return {
       classification: "ambiguous",
       evidence: ["story file — loaded by story tooling, not by source imports (standalone by design)"],
+    };
+  }
+
+  // Re-exported by an in-scope barrel but directly imported by nothing:
+  // public via barrel, consumers possibly out of scope — ambiguous, never
+  // unwired (cross-package honesty, BUG-2A).
+  if (reExportedByBarrels.length > 0) {
+    return {
+      classification: "ambiguous",
+      evidence: [
+        `re-exported by ${reExportedByBarrels.length} in-scope barrel(s) (${reExportedByBarrels.slice(0, 3).join(", ")}) with no direct importers in this scope — consumers may live outside it`,
+      ],
     };
   }
 
