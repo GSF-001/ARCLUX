@@ -31,6 +31,7 @@ export interface InputHandle {
   setWalkBounds(bounds: import("three").Box3[]): void;
   getInteriorPosition(): { x: number; y: number; z: number };
   setInteriorPosition(p: { x: number; y: number; z: number }): void;
+  getLook(): { yaw: number; pitch: number };
 }
 
 export function initInput(opts: {
@@ -272,6 +273,7 @@ export function initInput(opts: {
     setWalkBounds(bounds) { walkBounds = bounds; },
     getInteriorPosition() { return { ...interiorPos }; },
     setInteriorPosition(p) { interiorPos = { ...p }; interiorVel = { x: 0, y: 0, z: 0 }; onGround = true; },
+    getLook() { return { yaw: lookYaw, pitch: lookPitch }; },
   };
 }
 
