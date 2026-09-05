@@ -10,7 +10,7 @@
 // simulation engine). The region owns its entities; external code never
 // mutates the map directly.
 
-import type { GameEntity, RegionSnapshot, StationEntity, VesselEntity, WorldEntity } from "./types";
+import type { CharacterEntity, GameEntity, RegionSnapshot, StationEntity, VesselEntity, WorldEntity } from "./types";
 
 export interface SpawnVesselOptions {
   id: string;
@@ -26,6 +26,14 @@ export interface SpawnStationOptions {
   communityId?: string;
   position?: { x: number; y: number; z: number };
   safeZoneRadius?: number;
+}
+
+export interface SpawnCharacterOptions {
+  id: string;
+  owner?: string;
+  vesselId: string;
+  deck?: CharacterEntity["deck"];
+  position?: { x: number; y: number; z: number };
 }
 
 /**
@@ -129,6 +137,29 @@ export class WorldRegion {
     };
     this.entities.set(entity.id, entity);
     return entity;
+  }
+
+  spawnCharacter(opts: SpawnCharacterOptions): CharacterEntity {
+    if (this.entities.has(opts.id)) {
+      throw new Error(`Entity already exists in region: ${opts.id}`);
+    }
+    const entity: CharacterEntity = {
+      id: opts.id,
+      kind: "character",
+      owner: opts.owner,
+      vesselId: opts.vesselId,
+      deck: opts.deck ?? "plaza",
+      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+      heading: { yaw: 0, pitch: 0 },
+    };
+    this.entities.set(entity.id, entity);
+    return entity;
+  }
+
+  getCharacter(id: string): CharacterEntity | undefined {
+    const e = this.entities.get(id);
+    return e?.kind === "character" ? e : undefined;
   }
 
   remove(id: string): boolean {
