@@ -16,7 +16,7 @@ import { initHud, type Hud } from "./hud";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
 import { initAudio, type AudioHandle } from "./audio";
-import { initMenu, type MenuHandle, type MenuCameraMode } from "./menu";
+import { initMenu, type MenuHandle, type MenuCameraMode, createCharacterOverlay } from "./menu";
 import { initLanding } from "./landing";
 import { loadSettings } from "./settings";
 import { buildArkInterior } from "./interior";
@@ -66,6 +66,23 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
   }, audio);
 
+  // Fase 9 — CharacterCustom overlay (repo = karakter)
+  let lastLocalVessel: VesselEntity | undefined;
+  let lastPlayerId = "player-1";
+  let hasSpawnedCharacter = false;
+  const characterOverlay = createCharacterOverlay((data) => {
+    hasSpawnedCharacter = true;
+    const vesselId = lastLocalVessel?.id ?? "vessel-1";
+    const intent = {
+      playerId: lastPlayerId,
+      entityId: vesselId,
+      type: "spawn_character" as const,
+      seq: Date.now() % 100000,
+      payload: { ...data, vesselId, deck: "plaza" },
+    };
+    void net.send(intent as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+  });
+
   // Iris 5 — DockingState + lazy interior (corridor+promenade+plaza+96 habitat)
   let dockingState: DockingState = "EXTERIOR";
   let interiorGroup: import("three").Group | null = null;
@@ -93,6 +110,10 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
         hud.setInterior(deckForPos(pos), pos);
         scene.setInteriorCamera(pos, yaw, pitch);
       }, 1000 / 30);
+    }
+    // Fase 9: show CharacterCustom on first interior enter
+    if (!hasSpawnedCharacter) {
+      setTimeout(() => characterOverlay.show(), 400);
     }
   };
   const exitInterior = (): void => {
@@ -177,6 +198,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       if (e.kind === "vessel") { localVessel = e as VesselEntity; break; }
     }
     input.setLocalVessel(localVessel);
+    if (localVessel) { lastLocalVessel = localVessel; lastPlayerId = localVessel.owner ?? lastPlayerId; }
     // Audio: engine hum ∝ kecepatan normalized + ambient hum continuous (Fase 5)
     if (localVessel) {
       const v = localVessel.velocity;
