@@ -355,3 +355,87 @@ Numpang semua:
 > **Catatan:** Bukan `respawn` 3 detik arcade. Ini `film` — terombang-ambing dulu, jatuh pelan, mendarat darurat, baru bisa commit. Planet jadi kuburan + bengkel.
 
 > **Urutan:** `09` Part B 9-12 → `10` substrate → `10.X` cinematic + `15` gaps → `16` emergency landing (numpang semua). Gak lompat.
+
+---
+
+## 17. Implementation Phases — Urutan Eksekusi (KAYAK 09 — TIAP FASE = PR, NO AUTO-MERGE)
+
+> Biar gak lupa besok habis A-B-C dari mana — kayak `09` ada `Fase 1-12`, `10` juga ada fase. Tiap fase punya file + checklist + dependency. No guessing.
+
+### FASE 10.1 — Substrate Contracts (pondasi dulu)
+
+- [ ] `packages/gameserver/planetary/environment.ts` — `EnvironmentalContext` + `WindState` (planetId, planetSeed, tick, worldTime, sunDirection, weatherState, dll) — 1 kontrak, semua baca ini
+- [ ] `Verify:` `npx tsc --noEmit` + `node -e "require('./environment.ts')"` — kontrak kebaca semua sistem
+
+### FASE 10.2 — Planetary Substrate Visual (terrain/ocean/atmosphere)
+
+- [ ] `scene3d/planetary/terrain.ts` — heightmap `continental→mountain→biome→river` LOD 16-64, `vertexColors`
+- [ ] `scene3d/planetary/ocean.ts` — Gerstner `g=9.81`, 71%, depth dari heightmap
+- [ ] `scene3d/planetary/atmosphere.ts` — `Sphere 1.018` + clouds `512` per-kind, `depthWrite:false`
+- [ ] `Verify:` `build-game.mjs` OK, `scene.environment` PMREM tetap
+
+### FASE 10.3 — Scale & Chunk + Persistent Coordinate
+
+- [ ] `scene3d/planetary/chunks.ts` — streaming LOD, cull jauh, `planetId:chunkX:chunkZ` via `claimRegion` (`world.ts:41` + `relay/registry.ts:33`)
+- [ ] `packages/gameserver/planetaryEnvirons.ts` — chunk tick hanya kalau ada pemain/facility, persist `persistence.ts:120`
+- [ ] `types.ts:18 Vec3` — `log out Hangar-A → Hangar-A`, 2000 km same planet, shareable `gate.ts:34`
+- [ ] `Verify:` 2 player 2000 km same planet, relog tetap di tempat
+
+### FASE 10.4 — Time & Aerospace Seamless
+
+- [ ] `scene3d/planetary/surface.ts` — `lerp SPACE→ORBIT→ATMOSPHERE→SURFACE` (bukan teleport), cloud occlusion 2s
+- [ ] `environs.ts:49` + `physics.ts:12` — `24h + lunar Kepler + G,σ` → `north night west day`
+- [ ] `gate.ts:86` `GateLink spaceport 800m` + `simulation.ts:238 p+=v*dt` — `auto ACK` vs `manual raycast crash KE`
+- [ ] `Verify:` SPACE→SURFACE tanpa loading, low flight cari facility
+
+### FASE 10.5 — Facilities + Character Limited
+
+- [ ] `scene3d/planetary/facilities.ts` — 10 facility di `empty land` (`Landing Pad, Hangar...Spaceport`) — `StationEntity:54` health
+- [ ] `packages/gameserver/world.ts:41` — `FacilityEntity` spawn di empty land rule
+- [ ] `Character` FPS 5.5 m/s limited `hangar/facility` only (`clampSpeed 5.5`, `baseline.ts:16`)
+- [ ] `Verify:` build di empty land bisa, hutan/laut tetep natural, facility health `combat.ts:39`
+
+### FASE 10.6 — Geography & Night
+
+- [ ] Strategic geography `mountains→military, plains→spaceport, poles→observatory` dari `heightmap` (mulberry32)
+- [ ] Night `emissive #ffd9a0` + `PointLight runway` + `Radar entitiesWithin 50000` + `Unknown`
+- [ ] `Verify:` orbit malam liat facility nyala, Radar `Hangar-A 12 km / Unknown 430 km`
+
+### FASE 10.X.1 — Sun + Clouds + God Rays (cinematic core)
+
+- [ ] `WindState` shared → `clouds drift`, `rain slant`, `fog flow`
+- [ ] Cloud–sun `illuminated tops/darker bases/self-shadow` + `CLOUD→SHADOW→SURFACE`
+- [ ] `GodRayContext` — `mountain gap/valley/canopy/cloud gap` shafts, not overlay, coupled `sun+fog+cloud+terrain+camera`
+- [ ] `Verify:` cloud lewat → forest darkens → god ray gerak
+
+### FASE 10.X.2 — Weather Stack + Rain + Lightning
+
+- [ ] `WeatherState CLEAR/OVERCAST/RAIN/STORM` coordinated → `RainState` + `wet/puddles/runoff/reflection` + `ocean ripples`
+- [ ] `LightningEvent` → `cloud flash + terrain/ocean/facility illumination + reflection` (bolt cuma 1 part)
+- [ ] `Verify:` storm `cloud density → sunlight down → rain → puddles → lightning flash → ocean reflection`
+
+### FASE 10.X.3 — Fog + Vegetation + Dust + Ocean
+
+- [ ] Fog `temperature/humidity/weather` → `height/distance/valley/entry haze` + `fog–sun god-ray feed`
+- [ ] Vegetation `grass→tree` wind phased + rain wetness
+- [ ] Ocean `OceanState` + `spray/wake/foam` + `sun reflection`
+- [ ] `Verify:` wind gust → leaves/grass beda fase, rain → leaf wetness
+
+### FASE 10.X.4 — Local Volumes + Quality + Budget
+
+- [ ] `Local effect volumes` (player/landing/facility) + `quality FAR→CINEMATIC` graceful degrade
+- [ ] `Budget proximity→importance→cost` + `determinism planetSeed+tick+chunkKey` + `persistence boundary` (transient vs persistent)
+- [ ] `Verify:` jauh = low cost, dekat = cinematic, handoff/reconnect regenerate
+
+### FASE 10.G — Gaps Closed (Continuous Event & Shoreline)
+
+- [ ] `EnvironmentalEvent` `clear→pre→storm→landing→post→recovery` + `WET→DRAINING→DRYING` (G1-G2)
+- [ ] Coastal `WET SHORE→SHALLOW→OPEN OCEAN` + foam/spray (G3) + Hydrological `river→ocean` (G4)
+- [ ] `Verify:` POST-STORM genangan masih ada, coastal gradual, river ketemu ocean
+
+### FASE 10.E — Emergency Landing (film-like)
+
+- [ ] `vesselState.ts` `adrift→falling→crashed` + `ADRIFT drift` + `FALLING heat` + `LANDING dust 4 fase + KE` + `CRASHED persist`
+- [ ] `Verify:` health<10% → adrift → falling pitch film → empty land survive / hutan crash → Repair=commit
+
+> **Dependency final:** `09 9-12 → 10.1 → 10.2 → 10.3 → 10.4 → 10.5 → 10.6 → 10.X.1 → 10.X.2 → 10.X.3 → 10.X.4 → 10.G → 10.E` — gak lompat, tiap fase tau file + verify, no guessing.
