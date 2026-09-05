@@ -593,6 +593,20 @@ Adding a new rule: 1 import + 1 entry in ALL_RULES → auto-wired to run_rules.
 
 Single-file CLI bundle (apps/cli/dist/arclux.mjs, ~10MB) via esbuild. Package name 'arclux' confirmed free on npm. ships dist/ + wasms/ (tree-sitter grammars). bin: arclux. engines: node>=20. prepublishOnly runs build-cli.mjs. Verified: pnpm install works, arclux --version outputs 0.2.0.
 
+## 2026-09-05 — MCP self-triggering + honesty infra (BUG-1/3)
+
+**Status:** Done — PRs #656, #657, #659 — all merged to `ARCLUX.main` (v0.3.0)
+
+This batch makes MCP discoverable and fixes two infra bugs that killed agent context:
+
+- **MCP self-triggering** (`packages/mcp/src/index.ts`, PR #659): `SERVER_INSTRUCTIONS` (workflow 4 langkah shown at connect time: `FIRST` analyze before opening files → `NEVER` guess relationships → `BEFORE` edit run `impact` → `AFTER` verify via `detect`/`doctor`) + 16 trigger-first tool descriptions (`FIRST`/`INSTEAD OF`/`BEFORE`/`NEVER guess`). `SERVER_INSTRUCTIONS` + `TOOLS` exported and test-locked (`tests/mcp-triggers.test.ts` 4 cases: tool without trigger → suite fails). Complements existing `SKILL.md` for Claude Code/Cursor. Note: instructions are strong invites, not enforcement — model can still ignore, but now has a reason at every tool.
+
+- **BUG-1 `folder_graph` circular JSON** (`packages/graph/buildFolderGraph.ts`, PR #656): `HierarchyNode` carries `parent` pointers → `JSON.stringify` threw “Converting circular structure … parent closes the circle” on every repo (4/4 repro). Fix: `FolderGraphJSON` (`tree`+`folders`+`stats` depth/nodeCount/fileCount/folderCount) via `folderGraphToJSON()`, MCP now returns it; raw `HierarchyNode` stays internal. `buildFolderGraph` signature unchanged — web’s `.tree` path untouched. `tests/graph-folder.test.ts` 3 cases incl. repro crash.
+
+- **BUG-3 `semantic_diff` bloat** (`packages/semantic-diff/SemanticDiff.ts`, PR #657): full `impactByModule` + `SymbolInfo` arrays bloated MCP response to 132 KB (truncated, ate agent context). Fix: `detail` `summary` (default, file lists + counts + `moved` only) vs `full` (legacy complete, opt-in `detail:"full"`). MCP schema passthrough. `tests/semantic-diff-modes.test.ts` 3 cases (summary smaller than full, legacy shape preserved).
+
+Also in this window: `docs/blueprint/09-client-polish.md` split follow-ups and `apps/game` scene3d modularization (see below) — infra fixes landed first so MCP remains usable for those.
+
 ## 2026-08-26 — Branch cleanup: 150+ stale local branches deleted
 
 **Status:** Done
