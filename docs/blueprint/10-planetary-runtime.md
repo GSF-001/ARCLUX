@@ -305,4 +305,53 @@ Sunrise di balik mountain: `valley gelap → shadow line gerak melintasi valley/
 
 > **Catatan file:** G1-G2 di `planetary/weather.ts` + `EnvironmentalContext`; G3-G4 di `planetary/terrain.ts` + `ocean.ts`; G5 di `planetary/surface.ts` decal; G6-G7 di `planetary/atmosphere.ts`. Semua visual resolver, no new authority.
 
-> **Urutan:** `09` Part B 9-12 → `10` substrate (terrain/ocean/chunks) → `10.X` cinematic + `15` gaps (event/shoreline). Gak lompat.
+---
+
+## 16. Emergency Landing — ADRIFT → FALLING → CRASHED (PLAN FINAL)
+
+> Kapal habis perang gak langsung `respawn`. Rusak → terombang-ambing → jatuh kayak film → mendarat darurat → butuh `Repair = commit` biar hidup lagi. Sinematik, persistent, dan numpang di pondasi yang udah ada.
+
+### State Machine (visual + authority tipis)
+
+```
+BATTLE (SPACE, health 100→12%)
+  ↓ engine 0% + reactor bocor (combat.ts:39 DAMAGE_CEILING=12)
+ADRIFT (terombang-ambing, velocity drift 8→0, emissive red pulse, HUD ENGINE 0%)
+  ↓ gravitasi planet narik (physics.ts:12 G + thermics.ts:34 1/r² beneran, bukan animasi)
+FALLING (atmosphere entry → heat haze + cloud intersection + exhaust mati)
+  ↓ raycast terrain (planetary/terrain.ts heightmap) + KE=½mv² (collision.ts:92)
+EMERGENCY LANDING (empty land? → survive, hutan/laut? → crash)
+  ↓
+CRASHED (VesselEntity grounded, health 5%, velocity 0, gak bisa takeoff, smoke/debris)
+  ↓ Repair = commit (benerin code di repo → buildVesselModel → integrity balik → launch)
+```
+
+- **ADRIFT:** `VesselEntity` `health < 10%` → `state="adrift"` + `velocity` drift pelan + `cooldowns` lock + `HUD ENGINE 0%` + `sfxDebris` pelan. Pemain lain lihat `◈ VSL GSF-xxxx 847 km — ADRIFT` (via `world.ts:83 entitiesWithin` + `directory`). Gak bisa thrust — server `validator.ts` reject `move` kalau `health < 10%`.
+- **FALLING:** Gravitasi `physics.ts:12` narik ke planet terdekat (bukan jatuh meteor batu, tapi `pitch 70° + velocity 120 m/s + heat haze + cloud gap god rays` kayak film `Interstellar`). `simulation.ts:238 p+=v*dt + drag 0.02` + `clampSpeed` biar drift natural. Visual: `atmospheric entry` (10.X §38) + `cloud intersection` (10.X §11).
+- **EMERGENCY LANDING:** `GateLink:34 spaceport 800m` gak kepake — ini manual `raycast terrain` cari `empty land` (planetary `facilities.ts` rule: hutan/laut tetep natural). `Landing dust 4 fase` (10.X §28) `Approach→Hover→Touchdown burst→Settlement + wind advection`. Kalau miring/cepat → `KE crash → wreckage` (`persistence.ts:120` + `04`).
+- **CRASHED:** `VesselEntity` `position = terrain height`, `health 5%`, `velocity 0`, `state="crashed"` persist via `RegionSnapshot` + `persistence.ts`. Visual: `smoke/debris + emissive red` (10.X §43). Gak bisa `launch` sampai `integrity` balik.
+
+### Kenapa Gak Butuh File Baru Gede
+
+Numpang semua:
+
+- Damage → `combat.ts:39` + `collision.ts:92` + `thermics.ts:34`
+- Jatuh → `physics.ts:12 G + environs.ts:49 Kepler` + `simulation.ts:238`
+- Terrain → `planetary/terrain.ts` + `chunks.ts` `planetId:chunkX:chunkZ`
+- Visual → `10.X` `atmosphere.ts` + `weather.ts` + `planetary/surface.ts`
+- Persist → `persistence.ts:120 RecoveryManager` (restart ≠ reset V6)
+
+**File baru (1 aja):** `packages/gameserver/vesselState.ts` (`VesselState { health, state: "nominal"|"adrift"|"falling"|"crashed" }`) — tipis, cuma enum + transisi, otoritas tetep `world.ts` + `validator.ts`.
+
+### Checklist (PR — no auto-merge)
+
+- [ ] `VesselState` + transisi `adrift→falling→crashed` (server, health <10% → adrift, gravitasi → falling, raycast → crashed)
+- [ ] `ADRIFT` drift + HUD `ENGINE 0%` + validator reject thrust
+- [ ] `FALLING` heat haze + cloud intersection + pitch sinematik (bukan meteor)
+- [ ] `EMERGENCY LANDING` raycast `empty land` + dust 4 fase + KE crash check
+- [ ] `CRASHED` persist + smoke/debris + `Repair=commit` → launch lagi
+- [ ] Visual only: `WIND FIELD` bawa `dust` settlement, `EnvironmentalContext` bawa `falling` state
+
+> **Catatan:** Bukan `respawn` 3 detik arcade. Ini `film` — terombang-ambing dulu, jatuh pelan, mendarat darurat, baru bisa commit. Planet jadi kuburan + bengkel.
+
+> **Urutan:** `09` Part B 9-12 → `10` substrate → `10.X` cinematic + `15` gaps → `16` emergency landing (numpang semua). Gak lompat.
