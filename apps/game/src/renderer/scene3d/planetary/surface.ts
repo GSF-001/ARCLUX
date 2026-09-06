@@ -1,5 +1,8 @@
 // Copyright 2026 GSF-001
-// 10.4 surface + time — lerp SPACE→SURFACE, 24h + lunar Kepler, GateLink 800m
+//
+// Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
+// See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
+//
 import * as THREE from "three";
 export type TimeOfDay = "dawn"|"day"|"dusk"|"night";
 export function timeOfDayFromMs(ms:number): TimeOfDay {
