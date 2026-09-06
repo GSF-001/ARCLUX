@@ -16,7 +16,7 @@ import { initHud, type Hud } from "./hud";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
 import { initAudio, type AudioHandle } from "./audio";
-import { initMenu, type MenuHandle, type MenuCameraMode, createCharacterOverlay } from "./menu";
+import { initMenu, type MenuHandle, type MenuCameraMode, createCharacterOverlay, createBazaarOverlay } from "./menu";
 import { initLanding } from "./landing";
 import { loadSettings } from "./settings";
 import { buildArkInterior } from "./interior";
@@ -83,6 +83,20 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     void net.send(intent as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
   });
 
+  // Fase 11 — Bazaar (16 lapak promenade)
+  let lastSnapshot: RegionSnapshot | null = null;
+  const bazaarOverlay = createBazaarOverlay((listing) => {
+    const vesselId = lastLocalVessel?.id ?? "vessel-1";
+    void net.send({
+      playerId: lastPlayerId,
+      entityId: vesselId,
+      type: "trade_component",
+      seq: Date.now() % 100000,
+      payload: { componentId: listing.componentId, fromVesselId: listing.vesselId, toVesselId: vesselId },
+    } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    bazaarOverlay.hide();
+  });
+
   // Iris 5 — DockingState + lazy interior (corridor+promenade+plaza+96 habitat) + Fase 10 hangar
   let dockingState: DockingState = "EXTERIOR";
   let interiorGroup: import("three").Group | null = null;
@@ -91,6 +105,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   let hangarLight: import("three").PointLight | null = null;
   let hangarSlots: import("three").InstancedMesh | null = null;
   let slotPositions: import("three").Vector3[] = [];
+  let bazaarPositions: import("three").Vector3[] = [];
   let interiorPoll: ReturnType<typeof setInterval> | null = null;
   const enterInterior = (): void => {
     if (dockingState !== "EXTERIOR") return;
@@ -103,6 +118,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       hangarLight = built.hangarLight;
       hangarSlots = built.hangarSlots;
       slotPositions = built.slotPositions;
+      bazaarPositions = built.bazaarPositions;
       scene.addGroup(interiorGroup);
       input.setWalkBounds(interiorBounds);
     } else {
@@ -231,6 +247,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   let lastSpeed = 0;
   let ambientHandle: ReturnType<AudioHandle["sfxAmbientHum"]> | null = null;
   const stop = net.onState((snap) => {
+    lastSnapshot = snap as unknown as RegionSnapshot;
     const state = toRegionState(snap);
     scene.renderRegion(state);
     hud.update(state);
@@ -254,6 +271,28 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   // Unlock audio + buka menu di ESC (interaction-driven, autoplay policy).
   const onDocClick = (): void => { audio.unlock(); };
   const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === "KeyE" && dockingState === "INTERIOR") {
+      const pos = input.getInteriorPosition();
+      const near = bazaarPositions.some((p) => Math.hypot(pos.x - p.x, pos.z - p.z) < 30);
+      if (near) {
+        e.preventDefault();
+        const listings: import("./menu").BazaarListing[] = [];
+        if (lastSnapshot) {
+          for (const ent of lastSnapshot.entities) {
+            if (ent.kind === "vessel") {
+              const v = ent as unknown as VesselEntity;
+              for (const c of v.vessel.components) {
+                const sys = v.vessel.systems.find((s) => s.id === (c as unknown as { capability?: string }).capability);
+                const health = sys ? Math.round((sys.health as number) * 100) : 100;
+                listings.push({ componentId: c.id, vesselId: v.id, vesselName: v.vessel.name ?? v.id, health, usage: "live", seller: v.owner ?? "unknown" });
+              }
+            }
+          }
+        }
+        bazaarOverlay.show(listings.length ? listings : [{ componentId: "thruster-mk3", vesselId: "demo", vesselName: "GSF-001/my-vessel", health: 87, usage: "3/10", seller: "GSF-002" }]);
+        return;
+      }
+    }
     if (e.code === "KeyF" && dockingState === "EXTERIOR") { e.preventDefault(); enterInterior(); return; }
     if (e.code === "Escape" && dockingState === "INTERIOR") { e.preventDefault(); exitInterior(); return; }
     if (e.code === "Escape" && !menu.isOpen) { e.preventDefault(); menu.open(); audio.ui("click"); }
@@ -274,6 +313,8 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     hud.dispose();
     menu.dispose();
     audio.dispose();
+    try { bazaarOverlay.dispose(); } catch {}
+    try { characterOverlay.dispose(); } catch {}
   };
 
   // Expose for manual control in devtools

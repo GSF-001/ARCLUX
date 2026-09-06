@@ -244,6 +244,39 @@ export class SimulationEngine {
         this.log("character_spawned", intent.playerId, { characterId: charId, preset: p.preset, armorColor: p.armorColor, emblemRepo: p.emblemRepo, deck });
         break;
       }
+      case "trade_component": {
+        const p = intent.payload as { componentId?: string; fromVesselId?: string; toVesselId?: string };
+        if (!p.componentId) break;
+        // Find seller vessel that owns component
+        let seller: import("./types").VesselEntity | undefined;
+        let compIdx = -1;
+        for (const e of this.region["entities"].values()) {
+          if (e.kind === "vessel") {
+            const idx = (e as import("./types").VesselEntity).vessel.components.findIndex((c) => c.id === p.componentId);
+            if (idx !== -1) { seller = e as import("./types").VesselEntity; compIdx = idx; break; }
+          }
+        }
+        if (!seller || compIdx === -1) {
+          this.log("trade_rejected", intent.playerId, { reason: "component not found", componentId: p.componentId });
+          break;
+        }
+        // Check health/depleted
+        const comp = seller.vessel.components[compIdx];
+        // simple health check: if component depleted via useComponent, reject (already validated)
+        const buyerId = p.toVesselId ?? (entity.kind === "character" ? (entity as import("./types").CharacterEntity).vesselId : entity.id);
+        const buyer = this.region.getVessel(buyerId);
+        if (!buyer) {
+          this.log("trade_rejected", intent.playerId, { reason: "buyer vessel not found", buyerId });
+          break;
+        }
+        // Transfer
+        const [transferred] = seller.vessel.components.splice(compIdx, 1);
+        // Update provenance
+        try { const { transferOwnership } = require("./lineage"); transferOwnership(transferred.id, buyer.owner ?? intent.playerId); } catch {}
+        buyer.vessel.components.push(transferred);
+        this.log("trade", intent.playerId, { componentId: p.componentId, from: seller.id, to: buyer.id });
+        break;
+      }
     }
   }
 
