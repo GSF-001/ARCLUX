@@ -3,6 +3,9 @@
 // Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
+
+// planetary/ocean.ts — 10.2 ocean Gerstner g=9.81, 71% coverage, depth from heightmap, foam, wind tick
+
 import * as THREE from "three";
 export interface OceanOpts { size: number; seg: number; windSpeed: number; depthMap?: Float32Array; }
 export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpeed: 6 }): THREE.Mesh {

@@ -3,6 +3,9 @@
 // Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
+
+// planetary/terrain.ts — 10.2 terrain heightmap continental→mountain→biome→river, LOD 16-64, vertexColors, slope physics
+
 import * as THREE from "three";
 import { mulberry32 } from "../rng";
 export interface TerrainOpts { seed: number; size: number; lod: number; chunkX: number; chunkZ: number; }

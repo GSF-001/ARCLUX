@@ -3,6 +3,9 @@
 // Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
+
+// planetary/facilities.ts — 10.5 facilities 10 types empty land, StationEntity health, clampCharacterSpeed
+
 import * as THREE from "three";
 import { threeColor } from "../../ui/tokens";
 import { colors } from "../../ui/tokens";
