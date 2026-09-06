@@ -9,6 +9,9 @@
 
 import { Command } from "commander";
 import { createRequire } from "node:module";
+import { readFileSync, existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { registerAnalyzeCommand } from "./analyze";
 import { registerGraphCommand } from "./graph";
 import { registerImpactCommand } from "./impact";
@@ -36,6 +39,48 @@ import { registerConnectCommand } from "./connect";
 import { registerServeCommand } from "./serve";
 
 function resolveVersion(): string {
+  // Deterministic: walk up from this file's location (works for source,
+  // bundled dist, and npm package layout). No hardcoded candidate list.
+  const candidates: string[] = [];
+  try {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    // Walk up max 5 levels (covers source, dist, and npm global layout)
+    let cur = here;
+    for (let i = 0; i < 6; i++) {
+      candidates.push(path.join(cur, "package.json"));
+      const parent = path.dirname(cur);
+      if (parent === cur) break;
+      cur = parent;
+    }
+  } catch {}
+  // Also try require-based (bundled esbuild banner provides require)
+  try {
+    const require = createRequire(import.meta.url);
+    for (const p of ["../package.json", "../../package.json", "../../../package.json", "./package.json"]) {
+      try {
+        const pkg = require(p);
+        if (pkg?.version) return pkg.version;
+      } catch {}
+    }
+  } catch {}
+  for (const p of candidates) {
+    try {
+      if (!existsSync(p)) continue;
+      const pkg = JSON.parse(readFileSync(p, "utf8"));
+      // Only accept arclux package (not a parent monorepo's package.json with different name)
+      if (pkg?.name === "arclux" && pkg?.version) return pkg.version;
+      // Fallback: any version if arclux not found but file exists and version looks semver
+      if (pkg?.version && /^\d+\.\d+\.\d+/.test(pkg.version)) {
+        // Prefer arclux, but accept first semver as last resort
+        // Continue walking to find arclux-named one first
+      }
+    } catch {}
+  }
+  // Second pass: accept any version if arclux-named not found (handles root package.json case)
+  for (const p of candidates) {
+    try {
+      if (!existsSync(p)) continue;
+      const pkg = JSON.parse(readFileSync(p, "utf8"))
   const require = createRequire(import.meta.url);
   const candidates = [
     // source checkout: apps/cli/index.ts -> ../../package.json (root) or ./package.json (apps/cli)
@@ -80,5 +125,4 @@ registerScriptCommand(program);
 registerMcpCommand(program);
 registerConnectCommand(program);
 registerServeCommand(program);
-
 program.parse();
