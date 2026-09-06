@@ -4,6 +4,13 @@ All notable changes to ARCLUX are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning follows
 [SemVer](https://semver.org/) (pre-1.0: minor bump = significant features).
 
+## [0.3.1] — 2026-09-06
+
+### Fixed
+- **CLI --version on npm install** — `resolveVersion()` now walks up from `import.meta.url` (handles `dist/arclux.mjs → ../package.json` npm layout). Verified: `npm pack → npm install → arclux --version → 0.3.1`. Fixes `0.0.0` fallback.
+- **doctor --help stale count** — `10/18` → dynamic `DETECTORS.length` (20, includes `orphanIntegration`). Single source of truth, never stale.
+- **Build break** — removed duplicate resolver fragment that left `const program` inside `try` (esbuild `Expected "finally" but found "const"`).
+
 ## [0.3.0] — 2026-09-05
 
 Stable README + self-triggering MCP + engine honesty fixes. The “boring but brutal” release.
