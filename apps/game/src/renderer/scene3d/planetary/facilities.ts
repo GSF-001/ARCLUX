@@ -1,5 +1,8 @@
 // Copyright 2026 GSF-001
-// 10.5 facilities — 10 facility di empty land, StationEntity health, character 5.5 m/s limited
+//
+// Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
+// See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
+//
 import * as THREE from "three";
 import { threeColor } from "../../ui/tokens";
 import { colors } from "../../ui/tokens";
