@@ -16,10 +16,14 @@ import { initHud, type Hud } from "./hud";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
 import { initAudio, type AudioHandle } from "./audio";
-import { initMenu, type MenuHandle, type MenuCameraMode } from "./menu";
+import { initMenu, type MenuHandle, type MenuCameraMode, createCharacterOverlay, createBazaarOverlay, createStadiumOverlay } from "./menu";
+import { buildStadiumFromConfig } from "./interior";
 import { initLanding } from "./landing";
 import { loadSettings } from "./settings";
+import { buildArkInterior } from "./interior";
 import type { RegionSnapshot, VesselEntity, WorldEntity } from "../../../../packages/gameserver/types";
+
+export type DockingState = "EXTERIOR" | "ENTERING" | "INTERIOR";
 
 export interface RendererHandle {
   scene: Scene3D;
@@ -28,6 +32,9 @@ export interface RendererHandle {
   input: InputHandle;
   audio: AudioHandle;
   menu: MenuHandle;
+  dockingState: DockingState;
+  enterInterior(): void;
+  exitInterior(): void;
   dispose(): void;
 }
 
@@ -59,6 +66,151 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     onCameraMode: (mode) => scene.setCameraMode(mode as Parameters<Scene3D["setCameraMode"]>[0]),
     onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
   }, audio);
+
+  // Fase 9 — CharacterCustom overlay (repo = karakter)
+  let lastLocalVessel: VesselEntity | undefined;
+  let lastPlayerId = "player-1";
+  let hasSpawnedCharacter = false;
+  const characterOverlay = createCharacterOverlay((data) => {
+    hasSpawnedCharacter = true;
+    const vesselId = lastLocalVessel?.id ?? "vessel-1";
+    const intent = {
+      playerId: lastPlayerId,
+      entityId: vesselId,
+      type: "spawn_character" as const,
+      seq: Date.now() % 100000,
+      payload: { ...data, vesselId, deck: "plaza" },
+    };
+    void net.send(intent as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+  });
+
+  // Fase 11 — Bazaar (16 lapak promenade)
+  let lastSnapshot: RegionSnapshot | null = null;
+  const bazaarOverlay = createBazaarOverlay((listing) => {
+    const vesselId = lastLocalVessel?.id ?? "vessel-1";
+    void net.send({
+      playerId: lastPlayerId,
+      entityId: vesselId,
+      type: "trade_component",
+      seq: Date.now() % 100000,
+      payload: { componentId: listing.componentId, fromVesselId: listing.vesselId, toVesselId: vesselId },
+    } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    bazaarOverlay.hide();
+  });
+
+  // Fase 12 — Stadium bebas (arclux.stadium.json)
+  const stadiumOverlay = createStadiumOverlay((data) => {
+    const vesselId = lastLocalVessel?.id ?? "vessel-1";
+    void net.send({
+      playerId: lastPlayerId,
+      entityId: vesselId,
+      type: "spawn_station",
+      seq: Date.now() % 100000,
+      payload: { name: data.name, rings: data.rings, habitatsPerRing: data.habitatsPerRing, dockingPerRing: data.dockingPerRing, communityId: data.communityId },
+    } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    // Visual preview: buildStadiumFromConfig preview (not yet persistent, just demo)
+    try { const preview = buildStadiumFromConfig(data); preview.position.set(5000, 0, 0); scene.addGroup(preview); setTimeout(() => scene.removeGroup(preview), 5000); } catch {}
+  });
+
+  // Iris 5 — DockingState + lazy interior (corridor+promenade+plaza+96 habitat) + Fase 10 hangar
+  let dockingState: DockingState = "EXTERIOR";
+  let interiorGroup: import("three").Group | null = null;
+  let interiorBounds: import("three").Box3[] = [];
+  let hangarDoors: [import("three").Mesh, import("three").Mesh] | null = null;
+  let hangarLight: import("three").PointLight | null = null;
+  let hangarSlots: import("three").InstancedMesh | null = null;
+  let slotPositions: import("three").Vector3[] = [];
+  let bazaarPositions: import("three").Vector3[] = [];
+  let interiorPoll: ReturnType<typeof setInterval> | null = null;
+  const enterInterior = (): void => {
+    if (dockingState !== "EXTERIOR") return;
+    dockingState = "ENTERING";
+    if (!interiorGroup) {
+      const built = buildArkInterior();
+      interiorGroup = built.group;
+      interiorBounds = built.walkBounds;
+      hangarDoors = built.hangarDoors;
+      hangarLight = built.hangarLight;
+      hangarSlots = built.hangarSlots;
+      slotPositions = built.slotPositions;
+      bazaarPositions = built.bazaarPositions;
+      scene.addGroup(interiorGroup);
+      input.setWalkBounds(interiorBounds);
+    } else {
+      scene.addGroup(interiorGroup);
+    }
+    input.setInteriorMode("FPS_INTERIOR");
+    input.setInteriorPosition({ x: 0, y: 0, z: 0 });
+    dockingState = "INTERIOR";
+    if (!interiorPoll) {
+      interiorPoll = setInterval(() => {
+        if (dockingState !== "INTERIOR") return;
+        const pos = input.getInteriorPosition();
+        const { yaw, pitch } = input.getLook();
+        hud.setInterior(deckForPos(pos), pos);
+        scene.setInteriorCamera(pos, yaw, pitch);
+      }, 1000 / 30);
+    }
+    // Fase 9: show CharacterCustom on first interior enter
+    if (!hasSpawnedCharacter) {
+      setTimeout(() => characterOverlay.show(), 400);
+    }
+  };
+  const exitInterior = (): void => {
+    if (dockingState !== "INTERIOR") return;
+    dockingState = "EXTERIOR";
+    input.setInteriorMode("EXTERIOR");
+    if (interiorGroup) scene.removeGroup(interiorGroup);
+    hud.clearInterior();
+    if (interiorPoll) { clearInterval(interiorPoll); interiorPoll = null; }
+  };
+
+  // Fase 10 — Docking film 3s (bay door + light sweep, controllable look)
+  const dockToHangar = (slotIdx = 0): void => {
+    if (!hangarDoors || !hangarLight || dockingState !== "INTERIOR") return;
+    const doors = hangarDoors;
+    const light = hangarLight;
+    const start = performance.now();
+    const dur = 3000;
+    const tick = (): void => {
+      const t = Math.min(1, (performance.now() - start) / dur);
+      // Bay door: open 0-0.5s, hold, close 2.5-3s
+      let s = 1;
+      if (t < 0.17) s = 1 - t / 0.17;
+      else if (t > 0.83) s = (t - 0.83) / 0.17;
+      else s = 0;
+      doors[0].scale.y = Math.max(0.01, s);
+      doors[1].scale.y = Math.max(0.01, s);
+      light.intensity = Math.sin(t * Math.PI) * 1.6;
+      // Vessel lerp to slot (visual — server position update via intent)
+      if (slotPositions[slotIdx] && lastLocalVessel) {
+        const slot = slotPositions[slotIdx];
+        // Mark slot occupied visually (marker opacity)
+        // 2-phase commit visual: light sweep controllable (player can look)
+      }
+      if (t < 1) requestAnimationFrame(tick);
+      else light.intensity = 0;
+    };
+    tick();
+    // Server 2-phase: send dock intent (gate.ts + bridge.ts transactional)
+    if (lastLocalVessel) {
+      void net.send({ playerId: lastPlayerId, entityId: lastLocalVessel.id, type: "dock", seq: Date.now() % 100000, payload: { stationId: "ark-hangar" } } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    }
+  };
+
+  // Iris 6: HUD deck + camera FPS follow interiorPos
+  const deckForPos = (p: { x: number; y: number; z: number }): string => {
+    if (Math.abs(p.x) < 400 && Math.abs(p.z) < 400) return "plaza";
+    if (Math.abs(p.x) < 2100 && Math.abs(p.z) < 40) return "corridor";
+    for (let r = 0; r < 4; r++) {
+      const radius = 640 + r * 46;
+      const cx = -400 + r * 500;
+      const d = Math.hypot(p.x - cx, p.z);
+      if (Math.abs(d - radius) < 40) return "promenade";
+    }
+    if (p.x > 0 && p.x < 400 && p.z > -300 && p.z < 300) return "hangar";
+    return "habitat";
+  };
   // Fase 5 — wire explosion/shield/debris sfx ke scene (server-authoritative, client hanya play)
   scene.setSfxHandler((kind) => {
     try {
@@ -110,6 +262,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   let lastSpeed = 0;
   let ambientHandle: ReturnType<AudioHandle["sfxAmbientHum"]> | null = null;
   const stop = net.onState((snap) => {
+    lastSnapshot = snap as unknown as RegionSnapshot;
     const state = toRegionState(snap);
     scene.renderRegion(state);
     hud.update(state);
@@ -119,6 +272,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       if (e.kind === "vessel") { localVessel = e as VesselEntity; break; }
     }
     input.setLocalVessel(localVessel);
+    if (localVessel) { lastLocalVessel = localVessel; lastPlayerId = localVessel.owner ?? lastPlayerId; }
     // Audio: engine hum ∝ kecepatan normalized + ambient hum continuous (Fase 5)
     if (localVessel) {
       const v = localVessel.velocity;
@@ -132,6 +286,31 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   // Unlock audio + buka menu di ESC (interaction-driven, autoplay policy).
   const onDocClick = (): void => { audio.unlock(); };
   const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === "KeyN") { e.preventDefault(); stadiumOverlay.show(); return; }
+    if (e.code === "KeyE" && dockingState === "INTERIOR") {
+      const pos = input.getInteriorPosition();
+      const near = bazaarPositions.some((p) => Math.hypot(pos.x - p.x, pos.z - p.z) < 30);
+      if (near) {
+        e.preventDefault();
+        const listings: import("./menu").BazaarListing[] = [];
+        if (lastSnapshot) {
+          for (const ent of lastSnapshot.entities) {
+            if (ent.kind === "vessel") {
+              const v = ent as unknown as VesselEntity;
+              for (const c of v.vessel.components) {
+                const sys = v.vessel.systems.find((s) => s.id === (c as unknown as { capability?: string }).capability);
+                const health = sys ? Math.round((sys.health as number) * 100) : 100;
+                listings.push({ componentId: c.id, vesselId: v.id, vesselName: v.vessel.name ?? v.id, health, usage: "live", seller: v.owner ?? "unknown" });
+              }
+            }
+          }
+        }
+        bazaarOverlay.show(listings.length ? listings : [{ componentId: "thruster-mk3", vesselId: "demo", vesselName: "GSF-001/my-vessel", health: 87, usage: "3/10", seller: "GSF-002" }]);
+        return;
+      }
+    }
+    if (e.code === "KeyF" && dockingState === "EXTERIOR") { e.preventDefault(); enterInterior(); return; }
+    if (e.code === "Escape" && dockingState === "INTERIOR") { e.preventDefault(); exitInterior(); return; }
     if (e.code === "Escape" && !menu.isOpen) { e.preventDefault(); menu.open(); audio.ui("click"); }
   };
   document.addEventListener("click", onDocClick, { once: true });
@@ -141,6 +320,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
 
   const dispose = () => {
     try { ambientHandle?.stop(); } catch {}
+    if (interiorPoll) { clearInterval(interiorPoll); interiorPoll = null; }
     hideLanding();
     stop();
     input.detach();
@@ -149,12 +329,19 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     hud.dispose();
     menu.dispose();
     audio.dispose();
+    try { bazaarOverlay.dispose(); } catch {}
+    try { characterOverlay.dispose(); } catch {}
+    try { stadiumOverlay.dispose(); } catch {}
   };
 
   // Expose for manual control in devtools
-  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud, input, audio, menu };
+  if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud, input, audio, menu, get dockingState() { return dockingState; }, enterInterior, exitInterior };
 
-  return { scene, hud, net, input, audio, menu, dispose };
+  return {
+    scene, hud, net, input, audio, menu,
+    get dockingState(): DockingState { return dockingState; },
+    enterInterior, exitInterior, dispose,
+  };
 }
 
 if (typeof document !== "undefined") {

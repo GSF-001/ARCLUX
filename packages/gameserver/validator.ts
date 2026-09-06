@@ -83,6 +83,24 @@ export function validateIntent(
     }
     case "dock":
       return validateDock(region, entity, intent);
+    case "spawn_character":
+      return { decision: "accept" };
+    case "trade_component": {
+      const p = intent.payload as { componentId?: string };
+      if (!p?.componentId) return { decision: "reject", reason: "trade requires componentId" };
+      // Check component exists and not depleted (reuse component.ts)
+      try {
+        const { getComponent } = require("./component");
+        const c = getComponent(p.componentId);
+        if (c && c.depleted) return { decision: "reject", reason: "component depleted" };
+      } catch {}
+      return { decision: "accept" };
+    }
+    case "spawn_station": {
+      const p = intent.payload as { name?: string };
+      if (!p?.name) return { decision: "reject", reason: "spawn_station requires name" };
+      return { decision: "accept" };
+    }
     default:
       return { decision: "reject", reason: `unsupported intent: ${intent.type}` };
   }

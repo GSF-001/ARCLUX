@@ -18,12 +18,15 @@ import { colors, typography, spacing, glow } from "../ui/tokens";
 export interface Hud {
   update(region: RegionState): void;
   setTick(tick: number): void;
+  /** Iris 6: interior deck HUD (F walks, deck name, pos). */
+  setInterior(deck: string, pos: { x: number; y: number; z: number }): void;
+  clearInterior(): void;
   dispose(): void;
 }
 
 export function initHud(container?: HTMLElement): Hud {
   const root = container ?? (typeof document !== "undefined" ? document.body : null);
-  if (!root) return { update: () => {}, setTick: () => {}, dispose: () => {} };
+  if (!root) return { update: () => {}, setTick: () => {}, setInterior: () => {}, clearInterior: () => {}, dispose: () => {} };
 
   const el = document.createElement("div");
   el.id = "arclux-hud";
@@ -52,6 +55,7 @@ export function initHud(container?: HTMLElement): Hud {
     <div data-hud="top" style="position:absolute;top:${spacing.inset};left:50%;transform:translateX(-50%);text-align:center">
       <div data-hud="region" style="font-family:${typography.display};${typography.displaySpacing && `letter-spacing:${typography.displaySpacing}`};font-size:${typography.sizes.display};font-weight:700;color:${colors.foreground};text-transform:uppercase">—</div>
       <div data-hud="sysmeta" style="font-size:${typography.sizes.micro};color:${colors.muted};margin-top:4px;text-transform:uppercase;font-weight:400">SYSTEM ONLINE</div>
+      <div data-hud="deck" style="font-size:${typography.sizes.micro};color:${colors.tactical};margin-top:6px;letter-spacing:1px;display:none"></div>
     </div>
 
     <div data-hud="left" style="position:absolute;left:${spacing.inset};top:50%;transform:translateY(-50%);width:${spacing.panelWidthLeft};${panelFade};${panelEdgeL}">
@@ -179,9 +183,20 @@ export function initHud(container?: HTMLElement): Hud {
     if (tickEl) tickEl.textContent = `TICK ${tick}`;
   };
 
+  const setInterior = (deck: string, pos: { x: number; y: number; z: number }): void => {
+    const deckEl = q('[data-hud="deck"]');
+    if (!deckEl) return;
+    deckEl.style.display = "block";
+    deckEl.textContent = `DECK ${deck.toUpperCase()} — ${Math.round(pos.x)}, ${Math.round(pos.y)}, ${Math.round(pos.z)}`;
+  };
+  const clearInterior = (): void => {
+    const deckEl = q('[data-hud="deck"]');
+    if (deckEl) { deckEl.style.display = "none"; deckEl.textContent = ""; }
+  };
+
   const dispose = () => { if (el.parentElement) el.parentElement.removeChild(el); };
 
-  return { update, setTick, dispose };
+  return { update, setTick, setInterior, clearInterior, dispose };
 }
 
 function factionColorFor(faction: string): string {

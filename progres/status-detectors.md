@@ -170,6 +170,19 @@ Two additions, verified end-to-end on ~/flask (25 orphan findings):
 Real-repo result on ~/flask: 25 orphans → 7 ambiguous / 11 dead / 7 unwired; 5 with integration suggestions; best suggestion `views.py → src/flask/app.py` (high 0.69 via 11 siblings). 12 new tests in tests/orphan-integration.test.ts → suite 641→653, typecheck clean.
 ARCLUX.main
 
+## 2026-09-05 — Orphan precision (BUG-2): barrel, re-export, noise, dedupe
+
+**Status:** Done — PR #658 — `packages/detectors/detectOrphanFiles.ts` + `tests/orphan-integration.test.ts` (4 new, 16 total)
+
+Fixes the “523 findings” noise case where `server.ts` (gameserver) was called unwired while its consumers lived outside the analyzed scope:
+
+- **Pure-barrel exclude** — modules where every export is `re-export` (`export *` wall, e.g. `gameserver/index.ts`) are public API surfaces, excluded like entry points. Decided from `RawExport.kind` alone, no file I/O.
+- **Re-export honesty** — `reExportedBy` map (moduleId → barrel ids in scope). Module re-exported by an in-scope barrel but with zero direct importers → `ambiguous` with evidence (“re-exported by N barrel(s) … consumers may live outside it”), never `unwired`.
+- **Noise skip** — `isNoisePath` (`*.config.*`, `*.d.ts`, `vendor-ui/`, `_inbox/`) — reporting `next.config.ts` etc. buried real signal.
+- **Dedupe** — dedupe by `filePath` (one file, one verdict) — fixes 9× `impactStore.ts` case where upstream merge surfaced same module twice.
+
+All decisions are pure-Repository (no file I/O, no package.json read) — detector stays mappable via MCP.
+
 ## 08-20 — 13 parser baru (12 → 25 bahasa, 38 extension)
 - Batch #529: bash, c, dart, elixir, kotlin, lua, objc, ocaml, scala, solidity,
   swift, vue, zig — semua lewat `makeTreeSitterParser()` factory config-driven

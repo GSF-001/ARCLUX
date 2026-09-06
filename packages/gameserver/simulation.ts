@@ -232,6 +232,66 @@ export class SimulationEngine {
         if (entity.kind === "vessel") recordCreation((entity as VesselEntity).vessel.id, entity.id, intent.playerId, this.region.tick);
         break;
       }
+      case "spawn_character": {
+        const p = intent.payload as { vesselId?: string; preset?: string; armorColor?: string; emblemRepo?: string; deck?: string };
+        const charId = `char:${intent.playerId}`;
+        if (this.region.has(charId)) break;
+        const vessel = p.vesselId ? this.region.getVessel(p.vesselId) : entity.kind === "vessel" ? entity : undefined;
+        const deck = (p.deck as import("./types").CharacterEntity["deck"]) ?? "plaza";
+        const pos = vessel ? { ...vessel.position } : { ...entity.position };
+        const character = this.region.spawnCharacter({ id: charId, owner: intent.playerId, vesselId: vessel?.id ?? charId, deck, position: pos });
+        recordCreation(character.id, character.vesselId, intent.playerId, this.region.tick);
+        this.log("character_spawned", intent.playerId, { characterId: charId, preset: p.preset, armorColor: p.armorColor, emblemRepo: p.emblemRepo, deck });
+        break;
+      }
+      case "trade_component": {
+        const p = intent.payload as { componentId?: string; fromVesselId?: string; toVesselId?: string };
+        if (!p.componentId) break;
+        // Find seller vessel that owns component
+        let seller: import("./types").VesselEntity | undefined;
+        let compIdx = -1;
+        for (const e of this.region["entities"].values()) {
+          if (e.kind === "vessel") {
+            const idx = (e as import("./types").VesselEntity).vessel.components.findIndex((c) => c.id === p.componentId);
+            if (idx !== -1) { seller = e as import("./types").VesselEntity; compIdx = idx; break; }
+          }
+        }
+        if (!seller || compIdx === -1) {
+          this.log("trade_rejected", intent.playerId, { reason: "component not found", componentId: p.componentId });
+          break;
+        }
+        // Check health/depleted
+        const comp = seller.vessel.components[compIdx];
+        // simple health check: if component depleted via useComponent, reject (already validated)
+        const buyerId = p.toVesselId ?? (entity.kind === "character" ? (entity as import("./types").CharacterEntity).vesselId : entity.id);
+        const buyer = this.region.getVessel(buyerId);
+        if (!buyer) {
+          this.log("trade_rejected", intent.playerId, { reason: "buyer vessel not found", buyerId });
+          break;
+        }
+        // Transfer
+        const [transferred] = seller.vessel.components.splice(compIdx, 1);
+        // Update provenance
+        try { const { transferOwnership } = require("./lineage"); transferOwnership(transferred.id, buyer.owner ?? intent.playerId); } catch {}
+        buyer.vessel.components.push(transferred);
+        this.log("trade", intent.playerId, { componentId: p.componentId, from: seller.id, to: buyer.id });
+        break;
+      }
+      case "spawn_station": {
+        const p = intent.payload as { name?: string; rings?: number; habitatsPerRing?: number; dockingPerRing?: number; communityId?: string };
+        const stationId = `stadium:${intent.playerId}:${Date.now() % 100000}`;
+        if (this.region.has(stationId)) break;
+        const station = this.region.spawnStation({
+          id: stationId,
+          name: p.name ?? `Stadion ${intent.playerId}`,
+          owner: intent.playerId,
+          communityId: p.communityId,
+          position: { x: entity.position.x + 2000 + Math.random() * 2000, y: entity.position.y, z: entity.position.z + 2000 },
+          safeZoneRadius: 1000,
+        });
+        this.log("stadium_spawned", intent.playerId, { stationId: station.id, rings: p.rings ?? 4, habitatsPerRing: p.habitatsPerRing ?? 24 });
+        break;
+      }
     }
   }
 
