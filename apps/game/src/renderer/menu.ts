@@ -611,6 +611,50 @@ export interface BazaarListing {
   seller: string;
 }
 
+export interface StadiumCreateData { name: string; rings: number; habitatsPerRing: number; dockingPerRing: number; communityId: string; }
+
+export function createStadiumOverlay(onCreate: (data: StadiumCreateData) => void): { show(): void; hide(): void; dispose(): void } {
+  const wrap = document.createElement("div");
+  wrap.style.cssText = ["position:fixed", "inset:0", "z-index:86", "display:none", "align-items:center", "justify-content:center", "background:rgba(2,3,10,0.6)", "backdrop-filter:blur(2px)"].join(";");
+  document.body.appendChild(wrap);
+  const panel = document.createElement("div");
+  panel.style.cssText = [`width:420px`, `padding:18px`, `background:linear-gradient(180deg,rgba(10,16,28,0.96),rgba(6,9,18,0.98))`, `border:1px solid ${colors.edge}`, `font-family:${typography.mono}`, `color:${colors.foreground}`].join(";");
+  wrap.appendChild(panel);
+  const title = document.createElement("div");
+  title.textContent = "CREATE STADIUM — arclux.stadium.json";
+  title.style.cssText = `font-family:${typography.display};font-weight:700;letter-spacing:${typography.displaySpacing};margin-bottom:12px`;
+  panel.appendChild(title);
+  const mkRow = (label: string, input: HTMLElement): void => {
+    const r = document.createElement("div");
+    r.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:10px";
+    const lb = document.createElement("span"); lb.textContent = label; lb.style.cssText = `font-size:11px;color:${colors.body}`;
+    r.append(lb, input); panel.appendChild(r);
+  };
+  const nameInput = document.createElement("input"); nameInput.type = "text"; nameInput.placeholder = "Stadion Ku"; nameInput.style.cssText = `flex:1;margin-left:12px;padding:6px 8px;background:${glow.panelBg};border:1px solid ${colors.edge};color:${colors.tech};font-family:inherit;font-size:11px`;
+  mkRow("NAME", nameInput);
+  const ringsInput = document.createElement("input"); ringsInput.type = "number"; ringsInput.value = "4"; ringsInput.min = "1"; ringsInput.max = "6"; ringsInput.style.cssText = `width:60px;padding:6px;background:${glow.panelBg};border:1px solid ${colors.edge};color:${colors.tech};font-family:inherit`;
+  mkRow("RINGS", ringsInput);
+  const habInput = document.createElement("input"); habInput.type = "number"; habInput.value = "24"; habInput.min = "4"; habInput.max = "48"; habInput.style.cssText = ringsInput.style.cssText;
+  mkRow("HABITATS/RING", habInput);
+  const dockInput = document.createElement("input"); dockInput.type = "number"; dockInput.value = "12"; dockInput.min = "2"; dockInput.max = "24"; dockInput.style.cssText = ringsInput.style.cssText;
+  mkRow("DOCKING/RING", dockInput);
+  const commInput = document.createElement("input"); commInput.type = "text"; commInput.placeholder = "my-faction"; commInput.style.cssText = nameInput.style.cssText;
+  mkRow("COMMUNITY", commInput);
+  const createBtn = document.createElement("button");
+  createBtn.textContent = "SPAWN STADIUM";
+  createBtn.style.cssText = `width:100%;padding:10px;border:1px solid ${colors.tech};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-weight:700`;
+  createBtn.addEventListener("click", () => {
+    onCreate({ name: nameInput.value.trim() || "Stadion Baru", rings: Math.max(1, parseInt(ringsInput.value) || 4), habitatsPerRing: Math.max(4, parseInt(habInput.value) || 24), dockingPerRing: Math.max(2, parseInt(dockInput.value) || 12), communityId: commInput.value.trim() });
+    hide();
+  });
+  panel.appendChild(createBtn);
+  const show = (): void => { wrap.style.display = "flex"; };
+  const hide = (): void => { wrap.style.display = "none"; };
+  const dispose = (): void => wrap.remove();
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) hide(); });
+  return { show, hide, dispose };
+}
+
 export function createBazaarOverlay(onTrade: (listing: BazaarListing) => void): { show(listings: BazaarListing[]): void; hide(): void; dispose(): void } {
   const wrap = document.createElement("div");
   wrap.style.cssText = ["position:fixed", "inset:0", "z-index:85", "display:none", "align-items:center", "justify-content:center", "background:rgba(2,3,10,0.6)", "backdrop-filter:blur(2px)"].join(";");

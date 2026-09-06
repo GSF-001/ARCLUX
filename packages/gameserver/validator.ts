@@ -96,6 +96,11 @@ export function validateIntent(
       } catch {}
       return { decision: "accept" };
     }
+    case "spawn_station": {
+      const p = intent.payload as { name?: string };
+      if (!p?.name) return { decision: "reject", reason: "spawn_station requires name" };
+      return { decision: "accept" };
+    }
     default:
       return { decision: "reject", reason: `unsupported intent: ${intent.type}` };
   }
