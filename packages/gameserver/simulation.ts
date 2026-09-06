@@ -277,6 +277,21 @@ export class SimulationEngine {
         this.log("trade", intent.playerId, { componentId: p.componentId, from: seller.id, to: buyer.id });
         break;
       }
+      case "spawn_station": {
+        const p = intent.payload as { name?: string; rings?: number; habitatsPerRing?: number; dockingPerRing?: number; communityId?: string };
+        const stationId = `stadium:${intent.playerId}:${Date.now() % 100000}`;
+        if (this.region.has(stationId)) break;
+        const station = this.region.spawnStation({
+          id: stationId,
+          name: p.name ?? `Stadion ${intent.playerId}`,
+          owner: intent.playerId,
+          communityId: p.communityId,
+          position: { x: entity.position.x + 2000 + Math.random() * 2000, y: entity.position.y, z: entity.position.z + 2000 },
+          safeZoneRadius: 1000,
+        });
+        this.log("stadium_spawned", intent.playerId, { stationId: station.id, rings: p.rings ?? 4, habitatsPerRing: p.habitatsPerRing ?? 24 });
+        break;
+      }
     }
   }
 

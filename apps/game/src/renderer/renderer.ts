@@ -16,7 +16,8 @@ import { initHud, type Hud } from "./hud";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
 import { initAudio, type AudioHandle } from "./audio";
-import { initMenu, type MenuHandle, type MenuCameraMode, createCharacterOverlay, createBazaarOverlay } from "./menu";
+import { initMenu, type MenuHandle, type MenuCameraMode, createCharacterOverlay, createBazaarOverlay, createStadiumOverlay } from "./menu";
+import { buildStadiumFromConfig } from "./interior";
 import { initLanding } from "./landing";
 import { loadSettings } from "./settings";
 import { buildArkInterior } from "./interior";
@@ -95,6 +96,20 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       payload: { componentId: listing.componentId, fromVesselId: listing.vesselId, toVesselId: vesselId },
     } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
     bazaarOverlay.hide();
+  });
+
+  // Fase 12 — Stadium bebas (arclux.stadium.json)
+  const stadiumOverlay = createStadiumOverlay((data) => {
+    const vesselId = lastLocalVessel?.id ?? "vessel-1";
+    void net.send({
+      playerId: lastPlayerId,
+      entityId: vesselId,
+      type: "spawn_station",
+      seq: Date.now() % 100000,
+      payload: { name: data.name, rings: data.rings, habitatsPerRing: data.habitatsPerRing, dockingPerRing: data.dockingPerRing, communityId: data.communityId },
+    } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    // Visual preview: buildStadiumFromConfig preview (not yet persistent, just demo)
+    try { const preview = buildStadiumFromConfig(data); preview.position.set(5000, 0, 0); scene.addGroup(preview); setTimeout(() => scene.removeGroup(preview), 5000); } catch {}
   });
 
   // Iris 5 — DockingState + lazy interior (corridor+promenade+plaza+96 habitat) + Fase 10 hangar
@@ -271,6 +286,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   // Unlock audio + buka menu di ESC (interaction-driven, autoplay policy).
   const onDocClick = (): void => { audio.unlock(); };
   const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === "KeyN") { e.preventDefault(); stadiumOverlay.show(); return; }
     if (e.code === "KeyE" && dockingState === "INTERIOR") {
       const pos = input.getInteriorPosition();
       const near = bazaarPositions.some((p) => Math.hypot(pos.x - p.x, pos.z - p.z) < 30);
@@ -315,6 +331,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     audio.dispose();
     try { bazaarOverlay.dispose(); } catch {}
     try { characterOverlay.dispose(); } catch {}
+    try { stadiumOverlay.dispose(); } catch {}
   };
 
   // Expose for manual control in devtools

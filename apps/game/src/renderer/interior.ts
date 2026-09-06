@@ -458,3 +458,50 @@ export function buildArkInterior(): InteriorBuildResult {
     walkBounds: [corridorBox, ...promBoxes, plazaBox, ...habBoxes, hangarBox],
   };
 }
+
+export interface StadiumConfig {
+  name: string;
+  rings?: number;
+  habitatsPerRing?: number;
+  dockingPerRing?: number;
+  communityId?: string;
+}
+
+export function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
+  const g = new THREE.Group();
+  g.name = `stadium-${cfg.name}`;
+  const rings = cfg.rings ?? 4;
+  const habitatsPerRing = cfg.habitatsPerRing ?? 24;
+  const dockingPerRing = cfg.dockingPerRing ?? 12;
+  const steelHigh = new THREE.MeshStandardMaterial({ color: threeColor(colors.structHigh), metalness: 0.74, roughness: 0.36 });
+  const amber = new THREE.MeshStandardMaterial({ color: threeColor(colors.tactical), emissive: threeColor(colors.tactical), emissiveIntensity: 1.2 });
+  for (let r = 0; r < rings; r++) {
+    const radius = 640 + r * 46;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 26, 16, 72), r === 1 ? amber : steelHigh);
+    ring.rotation.x = 1.2 + r * 0.08;
+    ring.position.x = -400 + r * 500;
+    g.add(ring);
+    // habitats
+    const habGeom = new THREE.BoxGeometry(30, 18, 26);
+    const habMat = new THREE.MeshStandardMaterial({ color: threeColor(colors.structHigh), metalness: 0.72, roughness: 0.4 });
+    const dummy = new THREE.Object3D();
+    const habMesh = new THREE.InstancedMesh(habGeom, habMat, habitatsPerRing);
+    for (let i = 0; i < habitatsPerRing; i++) {
+      const ang = (i / habitatsPerRing) * Math.PI * 2;
+      dummy.position.set((-400 + r * 500) + Math.cos(ang) * (radius - 12), Math.sin(ang) * (radius - 12), 0);
+      dummy.rotation.set(0, 0, ang + Math.PI / 2);
+      dummy.updateMatrix();
+      habMesh.setMatrixAt(i, dummy.matrix);
+    }
+    habMesh.instanceMatrix.needsUpdate = true;
+    g.add(habMesh);
+    // docking per ring — small boxes
+    for (let d = 0; d < dockingPerRing; d++) {
+      const ang = (d / dockingPerRing) * Math.PI * 2;
+      const port = new THREE.Mesh(new THREE.BoxGeometry(18, 18, 8), steelHigh);
+      port.position.set((-400 + r * 500) + Math.cos(ang) * (radius + 18), Math.sin(ang) * (radius + 18), 0);
+      g.add(port);
+    }
+  }
+  return g;
+}
