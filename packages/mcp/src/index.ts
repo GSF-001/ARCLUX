@@ -47,6 +47,7 @@ import { computeSemanticDiff } from "../../semantic-diff/SemanticDiff.ts";
 import { cloneRepository } from "../../git/cloneRepository.ts";
 import { cleanupRepository } from "../../git/cleanupRepository.ts";
 import { getBranches } from "../../git/getBranches.ts";
+import { getRemoteOriginUrl } from "../../git/getRemoteOriginUrl.ts";
 import { detectDefaultBranch } from "../../git/detectDefaultBranch.ts";
 import { getCommitHistory } from "../../git/getCommitHistory.ts";
 import { getContributors } from "../../git/getContributors.ts";
@@ -502,13 +503,13 @@ export const TOOLS = [
   // ── Git ───────────────────────────────────────────────────────────
   {
     name: "branches",
-    description: "List remote branches + default branch.",
+    description: "List remote branches + default branch of a repository (repoUrl, or localPath with an origin remote).",
     inputSchema: {
       type: "object" as const,
       properties: {
-        repoUrl: { type: "string" },
+        repoUrl:   { type: "string" },
+        localPath: { type: "string" },
       },
-      required: ["repoUrl"],
     },
   },
   {
@@ -707,6 +708,13 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     }
     case "doctor": {
       const r = await doAnalyze(args);
+      // 0 modules = analysis failed (parser/WASM), not "clean code".
+      // Running the detectors would report every file as orphan -> false
+      // error counts. Skip and say so explicitly (#618). Repository exposes
+      // a `moduleCount` getter - `modules` is a private Map (no .length).
+      if (r.repository.moduleCount === 0) {
+        return json({ skipped: true, findings: [], errorCount: 0, warningCount: 0, infoCount: 0, notice: "0 modules parsed - detectors skipped to avoid a false orphan FAIL. This is a parse failure (likely WASM/tree-sitter runtime), not a clean bill." });
+      }
       return json(runDoctor(r.repository));
     }
     case "health": {
@@ -716,6 +724,12 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     }
     case "verify": {
       const r = await doAnalyze(args);
+      // 0 modules = analysis failed, not "no violations". A bare FAIL here
+      // would be a false verdict from orphan detectors, and a PASS would
+      // hide the failure entirely. Report UNKNOWN instead (#618).
+      if (r.repository.moduleCount === 0) {
+        return json({ skipped: true, verdict: "UNKNOWN", errorCount: 0, notice: "0 modules parsed - verdict withheld. This is a parse failure (likely WASM/tree-sitter runtime), not a clean result." });
+      }
       const result = runAllChecks(r.repository);
       return json({ verdict: result.errorCount === 0 ? "PASS" : "FAIL", ...result });
     }
@@ -792,6 +806,17 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     case "search": {
       const r = await doAnalyze(args);
       const idx = buildSearchIndex(r.repository);
+      // Empty index is ambiguous - a legit no-match looks identical to a
+      // failed parse. Surface it so consumers don't mistake a broken
+      // parser for "nothing found" (#617).
+      if (idx.entries.length === 0) {
+        return json({
+          hits: [],
+          indexedFiles: 0,
+          totalModules: r.repository.moduleCount,
+          notice: "No files were indexed - this is a parse failure (likely WASM/tree-sitter runtime), not a genuine empty result. Run analyze or fix the parser.",
+        });
+      }
       return json(search(idx, args.query as string, { limit: (args.limit as number) ?? 50 }));
     }
 
@@ -826,7 +851,25 @@ async function handleTool(name: string, args: Record<string, unknown>) {
 
     // ── Git ────────────────────────────────────────────────────────
     case "branches": {
-      return json({ branches: getBranches(args.repoUrl as string), defaultBranch: detectDefaultBranch(args.repoUrl as string) });
+      // Resolve the repo target: prefer an explicit repoUrl; otherwise derive
+      // the remote from a localPath. Without this, passing only localPath made
+      // getBranches(undefined) run `git ls-remote --heads undefined` and crash
+      // (issue #616). git ls-remote accepts a local git dir, so a bare
+      // localPath also works directly.
+      const opts = analyzeOpts(args);
+      const repoUrl: string | undefined = (args.repoUrl as string | undefined) ?? (opts.localPath ? getRemoteOriginUrl(opts.localPath) ?? opts.localPath : undefined);
+      if (!repoUrl) {
+        return json({ error: "repoUrl required (or localPath with an origin remote)" });
+      }
+      let branches: string[] = [];
+      let defaultBranch: string | null = null;
+      try {
+        branches = getBranches(repoUrl);
+        defaultBranch = detectDefaultBranch(repoUrl);
+      } catch (err) {
+        return json({ error: "Could not list branches for " + repoUrl + ": " + (err as Error).message });
+      }
+      return json({ branches, defaultBranch });
     }
     case "history": {
       const fn = async (localPath: string) => {
