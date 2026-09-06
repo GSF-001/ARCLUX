@@ -481,4 +481,54 @@ Numpang semua:
 - [ ] `vesselState.ts` `adrift→falling→crashed` + `ADRIFT drift` + `FALLING heat` + `LANDING dust 4 fase + KE` + `CRASHED persist`
 - [ ] `Verify:` health<10% → adrift → falling pitch film → empty land survive / hutan crash → Repair=commit
 
-> **Dependency final:** `09 9-12 → 10.1 → 10.2 → 10.3 → 10.4 → 10.5 → 10.6 → 10.X.1 → 10.X.2 → 10.X.3 → 10.X.4 → 10.G → 10.E` — gak lompat, tiap fase tau file + verify, no guessing.
+### FASE 10.C.1 — Cinematic Contracts (pondasi presentasi)
+
+- [ ] `scene3d/cinematic/CinematicContext.ts` + `CinematicEvent.ts` + `CinematicPhase.ts` — `eventId, eventType, phase TRIGGER→EXIT, priority, exposure`
+- [ ] `Verify:` `npx tsc --noEmit` + typecheck, no authority
+
+### FASE 10.C.2 — Event Director
+
+- [ ] `CinematicEventDirector.ts` — `trigger/phase/priority/exit` (CRASH 100 > EMERGENCY 90 > ENTRY 70)
+- [ ] `Verify:` multiple events, priority resolve
+
+### FASE 10.C.3 — Atmospheric Flight & Turbulence
+
+- [ ] `AtmosphericFlightResolver.ts` + `TurbulenceResolver.ts` — `wind+density+velocity+altitude → turbulence/motion/camera` `NORMAL→BUILDUP→ACTIVE→DECAY`
+- [ ] `Verify:` `SPACE → ATMOSPHERE → LOW FLIGHT` turbulence continuity
+
+### FASE 10.C.4 — Heat Response
+
+- [ ] `HeatResponseResolver.ts` — `entry→heating→peak→cooling` (visual, gak ganti physics)
+- [ ] `Verify:` heat visual continuity `COLD→PEAK→NORMAL`
+
+### FASE 10.C.5 — Camera Director (bounded)
+
+- [ ] `CinematicCameraDirector.ts` — `entry/landing/crash/docking` `≤2° pitch/roll, exposure ≤+0.3` additive, never forced cutscene
+- [ ] `Verify:` player control intact, camera additive
+
+### FASE 10.C.6 — Audio Context
+
+- [ ] `EnvironmentalAudioResolver.ts` — `wind/rain/thunder/engine/atmosphere` sync dari `EnvironmentalContext`
+- [ ] `Verify:` audio sync `wind↑ → rain → thunder delay`
+
+### FASE 10.C.7 — Cockpit Response
+
+- [ ] `CockpitResponseResolver.ts` — `rain/lightning/heat/cloud/turbulence` presentation-only, `HUD motion`
+- [ ] `Verify:` cockpit gak ubah physics
+
+### FASE 10.C.8 — Impact / Wreck
+
+- [ ] `ImpactPresentation.ts` — `impact→debris→smoke→dust→settling→wreck` (persistent wreck authority, transient flash presentation)
+- [ ] `Verify:` `health 0 → wreck` persist, flash transient
+
+### FASE 10.C.9 — Facility Discovery
+
+- [ ] `FacilityDiscovery.ts` + `AtmosphericReveal.ts` — `distant→reveal→approach→hangar` (no cutscene, `FOG→SILHOUETTE→LIGHT→DETAIL`)
+- [ ] `Verify:` orbit night liat `tiny emissive → beacon → runway`
+
+### FASE 10.C.10 — Continuity & Budget
+
+- [ ] `CinematicBudget.ts` — `FAR→MEDIUM→NEAR→CINEMATIC` + `proximity→importance→cost` + `SPACE→FACILITY` continuity
+- [ ] `Verify:` `SPACE→ORBIT→ATMOSPHERE→CLOUD→SURFACE→FACILITY` no discontinuity, `handoff/reconnect` regenerate
+
+> **Dependency final:** `09 9-12 → 10.1 → 10.2 → 10.3 → 10.4 → 10.5 → 10.6 → 10.X.1 → 10.X.2 → 10.X.3 → 10.X.4 → 10.G → 10.E → 10.C.1 → 10.C.2 → 10.C.3 → 10.C.4 → 10.C.5 → 10.C.6 → 10.C.7 → 10.C.8 → 10.C.9 → 10.C.10` — gak lompat, tiap fase tau file + verify, no guessing, code 1:1 gampang.
