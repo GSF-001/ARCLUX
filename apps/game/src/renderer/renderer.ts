@@ -83,10 +83,15 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     void net.send(intent as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
   });
 
-  // Iris 5 — DockingState + lazy interior (corridor+promenade+plaza+96 habitat)
+  // Iris 5 — DockingState + lazy interior (corridor+promenade+plaza+96 habitat) + Fase 10 hangar
   let dockingState: DockingState = "EXTERIOR";
   let interiorGroup: import("three").Group | null = null;
   let interiorBounds: import("three").Box3[] = [];
+  let hangarDoors: [import("three").Mesh, import("three").Mesh] | null = null;
+  let hangarLight: import("three").PointLight | null = null;
+  let hangarSlots: import("three").InstancedMesh | null = null;
+  let slotPositions: import("three").Vector3[] = [];
+  let interiorPoll: ReturnType<typeof setInterval> | null = null;
   const enterInterior = (): void => {
     if (dockingState !== "EXTERIOR") return;
     dockingState = "ENTERING";
@@ -94,6 +99,10 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       const built = buildArkInterior();
       interiorGroup = built.group;
       interiorBounds = built.walkBounds;
+      hangarDoors = built.hangarDoors;
+      hangarLight = built.hangarLight;
+      hangarSlots = built.hangarSlots;
+      slotPositions = built.slotPositions;
       scene.addGroup(interiorGroup);
       input.setWalkBounds(interiorBounds);
     } else {
@@ -125,6 +134,39 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     if (interiorPoll) { clearInterval(interiorPoll); interiorPoll = null; }
   };
 
+  // Fase 10 — Docking film 3s (bay door + light sweep, controllable look)
+  const dockToHangar = (slotIdx = 0): void => {
+    if (!hangarDoors || !hangarLight || dockingState !== "INTERIOR") return;
+    const doors = hangarDoors;
+    const light = hangarLight;
+    const start = performance.now();
+    const dur = 3000;
+    const tick = (): void => {
+      const t = Math.min(1, (performance.now() - start) / dur);
+      // Bay door: open 0-0.5s, hold, close 2.5-3s
+      let s = 1;
+      if (t < 0.17) s = 1 - t / 0.17;
+      else if (t > 0.83) s = (t - 0.83) / 0.17;
+      else s = 0;
+      doors[0].scale.y = Math.max(0.01, s);
+      doors[1].scale.y = Math.max(0.01, s);
+      light.intensity = Math.sin(t * Math.PI) * 1.6;
+      // Vessel lerp to slot (visual — server position update via intent)
+      if (slotPositions[slotIdx] && lastLocalVessel) {
+        const slot = slotPositions[slotIdx];
+        // Mark slot occupied visually (marker opacity)
+        // 2-phase commit visual: light sweep controllable (player can look)
+      }
+      if (t < 1) requestAnimationFrame(tick);
+      else light.intensity = 0;
+    };
+    tick();
+    // Server 2-phase: send dock intent (gate.ts + bridge.ts transactional)
+    if (lastLocalVessel) {
+      void net.send({ playerId: lastPlayerId, entityId: lastLocalVessel.id, type: "dock", seq: Date.now() % 100000, payload: { stationId: "ark-hangar" } } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    }
+  };
+
   // Iris 6: HUD deck + camera FPS follow interiorPos
   const deckForPos = (p: { x: number; y: number; z: number }): string => {
     if (Math.abs(p.x) < 400 && Math.abs(p.z) < 400) return "plaza";
@@ -135,9 +177,9 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       const d = Math.hypot(p.x - cx, p.z);
       if (Math.abs(d - radius) < 40) return "promenade";
     }
+    if (p.x > 0 && p.x < 400 && p.z > -300 && p.z < 300) return "hangar";
     return "habitat";
   };
-  let interiorPoll: ReturnType<typeof setInterval> | null = null;
   // Fase 5 — wire explosion/shield/debris sfx ke scene (server-authoritative, client hanya play)
   scene.setSfxHandler((kind) => {
     try {
