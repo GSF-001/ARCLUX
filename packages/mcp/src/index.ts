@@ -47,6 +47,7 @@ import { computeSemanticDiff } from "../../semantic-diff/SemanticDiff.ts";
 import { cloneRepository } from "../../git/cloneRepository.ts";
 import { cleanupRepository } from "../../git/cleanupRepository.ts";
 import { getBranches } from "../../git/getBranches.ts";
+import { getRemoteOriginUrl } from "../../git/getRemoteOriginUrl.ts";
 import { detectDefaultBranch } from "../../git/detectDefaultBranch.ts";
 import { getCommitHistory } from "../../git/getCommitHistory.ts";
 import { getContributors } from "../../git/getContributors.ts";
@@ -502,13 +503,13 @@ export const TOOLS = [
   // ── Git ───────────────────────────────────────────────────────────
   {
     name: "branches",
-    description: "List remote branches + default branch.",
+    description: "List remote branches + default branch of a repository (repoUrl, or localPath with an origin remote).",
     inputSchema: {
       type: "object" as const,
       properties: {
-        repoUrl: { type: "string" },
+        repoUrl:   { type: "string" },
+        localPath: { type: "string" },
       },
-      required: ["repoUrl"],
     },
   },
   {
@@ -826,7 +827,25 @@ async function handleTool(name: string, args: Record<string, unknown>) {
 
     // ── Git ────────────────────────────────────────────────────────
     case "branches": {
-      return json({ branches: getBranches(args.repoUrl as string), defaultBranch: detectDefaultBranch(args.repoUrl as string) });
+      // Resolve the repo target: prefer an explicit repoUrl; otherwise derive
+      // the remote from a localPath. Without this, passing only localPath made
+      // getBranches(undefined) run `git ls-remote --heads undefined` and crash
+      // (issue #616). git ls-remote accepts a local git dir, so a bare
+      // localPath also works directly.
+      const opts = analyzeOpts(args);
+      const repoUrl: string | undefined = (args.repoUrl as string | undefined) ?? (opts.localPath ? getRemoteOriginUrl(opts.localPath) ?? opts.localPath : undefined);
+      if (!repoUrl) {
+        return json({ error: "repoUrl required (or localPath with an origin remote)" });
+      }
+      let branches: string[] = [];
+      let defaultBranch: string | null = null;
+      try {
+        branches = getBranches(repoUrl);
+        defaultBranch = detectDefaultBranch(repoUrl);
+      } catch (err) {
+        return json({ error: "Could not list branches for " + repoUrl + ": " + (err as Error).message });
+      }
+      return json({ branches, defaultBranch });
     }
     case "history": {
       const fn = async (localPath: string) => {
