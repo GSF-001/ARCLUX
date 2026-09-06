@@ -18,7 +18,12 @@ export interface InteriorBuildResult {
   promenades: THREE.Group[];
   plaza: THREE.Group;
   habitats: THREE.Group[];
-  /** Walkable bounds for FPS collision (Box3 per corridor/promenade/plaza/habitat). */
+  hangar: THREE.Group;
+  hangarDoors: [THREE.Mesh, THREE.Mesh];
+  hangarLight: THREE.PointLight;
+  hangarSlots: THREE.InstancedMesh;
+  slotPositions: THREE.Vector3[];
+  /** Walkable bounds for FPS collision (Box3 per corridor/promenade/plaza/habitat/hangar). */
   walkBounds: THREE.Box3[];
 }
 
@@ -301,6 +306,58 @@ export function buildArkInterior(): InteriorBuildResult {
   const { groups: habitats, walkBoxes: habBoxes } = buildHabitats();
   for (const h of habitats) g.add(h);
 
+  // Fase 10 — Hangar Bay 32 slot (hull tengah, 400×200×600)
+  const hangarGroup = new THREE.Group();
+  hangarGroup.name = "ark-hangar";
+  const hangarMat = new THREE.MeshStandardMaterial({ color: threeColor(colors.struct), metalness: 0.7, roughness: 0.45 });
+  const hangarShell = new THREE.Mesh(new THREE.BoxGeometry(400, 200, 600), hangarMat);
+  hangarShell.position.set(200, -60, 0);
+  (hangarShell.material as THREE.MeshStandardMaterial).side = THREE.BackSide;
+  hangarGroup.add(hangarShell);
+  // Bay door — 2 panel
+  const doorL = new THREE.Mesh(new THREE.BoxGeometry(200, 180, 8), new THREE.MeshStandardMaterial({ color: threeColor(colors.structHigh), metalness: 0.75 }));
+  doorL.position.set(200, -20, -306);
+  hangarGroup.add(doorL);
+  const doorR = doorL.clone();
+  doorR.position.set(200, -100, -306);
+  hangarGroup.add(doorR);
+  // Light sweep — PointLight di atas bay
+  const bayLight = new THREE.PointLight(threeColor(colors.tactical), 0, 800, 1.5);
+  bayLight.position.set(200, 40, -250);
+  hangarGroup.add(bayLight);
+  // 32 slot — 4×8 grid, tiap Box(60,20,80) + marker amber
+  const slotGeom = new THREE.BoxGeometry(60, 2, 80);
+  const slotMat = new THREE.MeshStandardMaterial({ color: threeColor("#0e1a2e"), metalness: 0.5 });
+  const slotInst = new THREE.InstancedMesh(slotGeom, slotMat, 32);
+  const dummy = new THREE.Object3D();
+  const slotPositions: THREE.Vector3[] = [];
+  for (let i = 0; i < 32; i++) {
+    const row = Math.floor(i / 8);
+    const col = i % 8;
+    const x = 80 + col * 62;
+    const z = -220 + row * 110;
+    dummy.position.set(x, -158, z);
+    dummy.updateMatrix();
+    slotInst.setMatrixAt(i, dummy.matrix);
+    slotPositions.push(new THREE.Vector3(x, -148, z));
+  }
+  slotInst.instanceMatrix.needsUpdate = true;
+  hangarGroup.add(slotInst);
+  // Marker light per slot (tiny sprite)
+  const slotMarkers: THREE.Sprite[] = [];
+  const markerTex = makeGlowTexture();
+  for (let i = 0; i < 32; i++) {
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: markerTex, color: threeColor(colors.tactical), transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+    spr.position.copy(slotPositions[i]);
+    spr.position.y = -150;
+    spr.scale.set(14, 14, 1);
+    hangarGroup.add(spr);
+    slotMarkers.push(spr);
+  }
+  g.add(hangarGroup);
+  // Walk bounds — hangar interior (besar)
+  const hangarBox = new THREE.Box3(new THREE.Vector3(0, -160, -300), new THREE.Vector3(400, 40, 300));
+
   // Iris 3: Lighting — Ambient + Point per deck + emissive reuse PMREM Fase 1
   // PMREM scene.environment tetap (reuse, bukan bikin baru). Interior cuma
   // tambah light biar gak gelap gulita pas exterior visible=false.
@@ -348,6 +405,11 @@ export function buildArkInterior(): InteriorBuildResult {
     promenades,
     plaza,
     habitats,
-    walkBounds: [corridorBox, ...promBoxes, plazaBox, ...habBoxes],
+    hangar: hangarGroup,
+    hangarDoors: [doorL, doorR] as [THREE.Mesh, THREE.Mesh],
+    hangarLight: bayLight,
+    hangarSlots: slotInst,
+    slotPositions,
+    walkBounds: [corridorBox, ...promBoxes, plazaBox, ...habBoxes, hangarBox],
   };
 }
