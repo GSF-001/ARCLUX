@@ -495,6 +495,113 @@ export function initMenu(callbacks: MenuCallbacks, audioHandle?: AudioHandle): M
   return { toggle, open, close, isOpen, dispose };
 }
 
+export interface CharacterCustomData {
+  preset: string;
+  armorColor: string;
+  emblemRepo: string;
+  name: string;
+}
+
+export function createCharacterOverlay(onSpawn: (data: CharacterCustomData) => void): { show(): void; hide(): void; dispose(): void } {
+  const wrap = document.createElement("div");
+  wrap.style.cssText = [
+    "position:fixed", "inset:0", "z-index:90", "display:none",
+    "align-items:center", "justify-content:center",
+    "background:rgba(2,3,10,0.65)", "backdrop-filter:blur(3px)",
+  ].join(";");
+  document.body.appendChild(wrap);
+
+  const panel = document.createElement("div");
+  panel.style.cssText = [
+    "width:420px", "padding:22px", "box-sizing:border-box",
+    `background:linear-gradient(180deg,rgba(10,16,28,0.96),rgba(6,9,18,0.98))`,
+    `border:1px solid ${colors.edge}`, `font-family:${typography.mono}`, `color:${colors.foreground}`,
+  ].join(";");
+  wrap.appendChild(panel);
+
+  const title = document.createElement("div");
+  title.textContent = "CREATE CHARACTER";
+  title.style.cssText = `font-family:${typography.display};font-weight:700;letter-spacing:${typography.displaySpacing};margin-bottom:14px`;
+  panel.appendChild(title);
+
+  const presets = ["A", "B", "C", "D"] as const;
+  let selectedPreset = "A";
+  const presetRow = document.createElement("div");
+  presetRow.style.cssText = "display:flex;gap:8px;margin-bottom:12px";
+  for (const p of presets) {
+    const b = document.createElement("button");
+    b.textContent = p;
+    b.style.cssText = `flex:1;padding:12px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.muted};cursor:pointer;font-family:inherit`;
+    const paint = (): void => {
+      const on = selectedPreset === p;
+      b.style.color = on ? colors.tech : colors.muted;
+      b.style.borderColor = on ? colors.tech : colors.edge;
+      b.style.textShadow = on ? glow.textTech : "none";
+    };
+    paint();
+    b.addEventListener("click", () => { selectedPreset = p; for (const c of Array.from(presetRow.children)) (c as HTMLElement).style.borderColor = colors.edge; paint(); });
+    presetRow.appendChild(b);
+  }
+  panel.appendChild(presetRow);
+
+  const armorRow = document.createElement("div");
+  armorRow.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:12px";
+  const armorLabel = document.createElement("span");
+  armorLabel.textContent = "ARMOR";
+  armorLabel.style.cssText = `font-size:11px;color:${colors.body}`;
+  const armorInput = document.createElement("input");
+  armorInput.type = "color";
+  armorInput.value = "#ff7d5c";
+  armorInput.style.cssText = "width:48px;height:28px;border:1px solid " + colors.edge + ";background:" + glow.panelBg;
+  armorRow.append(armorLabel, armorInput);
+  panel.appendChild(armorRow);
+
+  const emblemRow = document.createElement("div");
+  emblemRow.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:12px";
+  const emblemLabel = document.createElement("span");
+  emblemLabel.textContent = "EMBLEM REPO";
+  emblemLabel.style.cssText = `font-size:11px;color:${colors.body}`;
+  const emblemInput = document.createElement("input");
+  emblemInput.type = "text";
+  emblemInput.placeholder = "GSF-001/my-emblem";
+  emblemInput.style.cssText = `flex:1;margin-left:12px;padding:6px 8px;background:${glow.panelBg};border:1px solid ${colors.edge};color:${colors.tech};font-family:inherit;font-size:11px`;
+  emblemRow.append(emblemLabel, emblemInput);
+  panel.appendChild(emblemRow);
+
+  const nameRow = document.createElement("div");
+  nameRow.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:16px";
+  const nameLabel = document.createElement("span");
+  nameLabel.textContent = "NAME";
+  nameLabel.style.cssText = `font-size:11px;color:${colors.body}`;
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.placeholder = "GSF-xxxx";
+  nameInput.style.cssText = `flex:1;margin-left:12px;padding:6px 8px;background:${glow.panelBg};border:1px solid ${colors.edge};color:${colors.tech};font-family:inherit;font-size:11px`;
+  nameRow.append(nameLabel, nameInput);
+  panel.appendChild(nameRow);
+
+  const spawnBtn = document.createElement("button");
+  spawnBtn.textContent = "SPAWN DI PLAZA";
+  spawnBtn.style.cssText = `width:100%;padding:10px;border:1px solid ${colors.tech};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-weight:700;letter-spacing:1px`;
+  spawnBtn.addEventListener("click", () => {
+    const data: CharacterCustomData = {
+      preset: selectedPreset,
+      armorColor: armorInput.value,
+      emblemRepo: emblemInput.value.trim(),
+      name: nameInput.value.trim() || `GSF-${Math.floor(Math.random() * 9000 + 1000)}`,
+    };
+    onSpawn(data);
+    hide();
+  });
+  panel.appendChild(spawnBtn);
+
+  const show = (): void => { wrap.style.display = "flex"; };
+  const hide = (): void => { wrap.style.display = "none"; };
+  const dispose = (): void => wrap.remove();
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) hide(); });
+  return { show, hide, dispose };
+}
+
 function prettyKey(code: string): string {
   const map: Record<string, string> = {
     KeyW: "W", KeyS: "S", KeyA: "A", KeyD: "D", KeyQ: "Q", KeyE: "E",
