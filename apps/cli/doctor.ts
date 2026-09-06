@@ -6,9 +6,10 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Runs every detector that currently exists (all 19 — see the import list
-// below). Each detector takes (repository: Repository) => Finding[] and is
-// added to `total` / the exit code the same way.
+// Runs every detector that currently exists (see DETECTORS below).
+// Each detector takes (repository: Repository) => Finding[] and is
+// added to `total` / the exit code the same way. Count is derived
+// from the registry so --help never goes stale.
 //
 // Note: the 10 detectors wired into verify.ts are the PASS/FAIL gate;
 // the 8 convention/usage detectors added here (component/feature/route/
@@ -46,11 +47,35 @@ import { detectRouteConvention } from "../../packages/detectors/detectRouteConve
 import { detectStoryConvention } from "../../packages/detectors/detectStoryConvention";
 import { detectTestConvention } from "../../packages/detectors/detectTestConvention";
 import { detectUnusedFiles } from "../../packages/detectors/detectUnusedFiles";
+import { detectOrphanIntegration } from "../../packages/detectors/detectOrphanIntegration";
+
+const DETECTORS = [
+  detectCircularDependency,
+  detectUnusedExports,
+  detectOrphanFiles,
+  detectOrphanIntegration,
+  detectLargeModules,
+  detectDuplicateModules,
+  detectSharedModules,
+  detectIndexFiles,
+  detectLayerViolation,
+  detectDeadCode,
+  detectEntryPoints,
+  detectAmbiguousSymbolResolution,
+  detectComponentConvention,
+  detectFeatureStructure,
+  detectMissingExports,
+  detectRepositoryPattern,
+  detectRouteConvention,
+  detectStoryConvention,
+  detectTestConvention,
+  detectUnusedFiles,
+] as const;
 
 export function registerDoctorCommand(program: Command): void {
   program
     .command("doctor")
-    .description("Run all available detectors against a local repository (10/18 implemented so far)")
+    .description(`Run all available detectors against a local repository (${DETECTORS.length} detectors)`)
     .argument("[path]", "path to the repository root", ".")
     .action(async (targetPath: string) => {
       const spinner = p.spinner();
@@ -72,6 +97,7 @@ export function registerDoctorCommand(program: Command): void {
         const cycles = detectCircularDependency(repository);
         const unusedExports = detectUnusedExports(repository);
         const orphanFiles = detectOrphanFiles(repository);
+        const orphanIntegration = detectOrphanIntegration(repository);
         const largeModules = detectLargeModules(repository);
         const duplicateModules = detectDuplicateModules(repository);
         const sharedModules = detectSharedModules(repository);
@@ -93,6 +119,7 @@ export function registerDoctorCommand(program: Command): void {
           cycles.length +
           unusedExports.length +
           orphanFiles.length +
+          orphanIntegration.length +
           largeModules.length +
           duplicateModules.length +
           sharedModules.length +
@@ -137,6 +164,13 @@ export function registerDoctorCommand(program: Command): void {
           p.log.warn(`${orphanFiles.length} orphan ${orphanFiles.length === 1 ? "file" : "files"} found:`);
           p.log.message("  (entry points are filtered out \u2014 same exclusion as unused exports)");
           for (const f of orphanFiles) {
+            p.log.message(`  ${f.filePath} \u2014 ${f.message}`);
+          }
+        }
+
+        if (orphanIntegration.length > 0) {
+          p.log.warn(`${orphanIntegration.length} orphan integration suggestion${orphanIntegration.length === 1 ? "" : "s"} found:`);
+          for (const f of orphanIntegration) {
             p.log.message(`  ${f.filePath} \u2014 ${f.message}`);
           }
         }
