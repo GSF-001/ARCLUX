@@ -8,6 +8,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import { Command } from "commander";
+import { createRequire } from "node:module";
 import { registerAnalyzeCommand } from "./analyze";
 import { registerGraphCommand } from "./graph";
 import { registerImpactCommand } from "./impact";
@@ -34,8 +35,25 @@ import { registerMcpCommand } from "./commands/mcp";
 import { registerConnectCommand } from "./connect";
 import { registerServeCommand } from "./serve";
 
+function resolveVersion(): string {
+  const require = createRequire(import.meta.url);
+  const candidates = [
+    // source checkout: apps/cli/index.ts -> ../../package.json (root) or ./package.json (apps/cli)
+    "../../package.json",
+    "./package.json",
+    "../../../package.json",
+  ];
+  for (const p of candidates) {
+    try {
+      const pkg = require(p);
+      if (pkg?.version) return pkg.version;
+    } catch {}
+  }
+  return "0.0.0";
+}
+
 const program = new Command();
-program.name("arclux").description("Repository intelligence CLI").version("0.2.1");
+program.name("arclux").description("Repository intelligence CLI").version(resolveVersion());
 
 registerAnalyzeCommand(program);
 registerGraphCommand(program);
