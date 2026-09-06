@@ -3,6 +3,9 @@
 // Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
+
+// planetary/atmosphere.ts — 10.2 atmosphere Sphere 1.018 + clouds 512 per-kind, depthWrite:false, scattering
+
 import * as THREE from "three";
 import { makeCloudTexture } from "../planets";
 import type { PlanetKind } from "../planets";
