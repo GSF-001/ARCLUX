@@ -6,7 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Tests for getRemoteOriginUrl (packages/git/getRemoteOriginUrl.ts) —
+// Tests for getRemoteOriginUrl (packages/git/getRemoteOriginUrl.ts) -
 // resolver behind the branches MCP tool (issue #616). Uses real
 // throwaway git repos: returns the origin URL, or null when the dir is
 // not a git repo / has no origin remote.

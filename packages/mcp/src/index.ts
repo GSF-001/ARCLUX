@@ -709,11 +709,11 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     case "doctor": {
       const r = await doAnalyze(args);
       // 0 modules = analysis failed (parser/WASM), not "clean code".
-      // Running the detectors would report every file as orphan → false
+      // Running the detectors would report every file as orphan -> false
       // error counts. Skip and say so explicitly (#618). Repository exposes
-      // a `moduleCount` getter — `modules` is a private Map (no .length).
+      // a `moduleCount` getter - `modules` is a private Map (no .length).
       if (r.repository.moduleCount === 0) {
-        return json({ skipped: true, findings: [], errorCount: 0, warningCount: 0, infoCount: 0, notice: "0 modules parsed — detectors skipped to avoid a false orphan FAIL. This is a parse failure (likely WASM/tree-sitter runtime), not a clean bill." });
+        return json({ skipped: true, findings: [], errorCount: 0, warningCount: 0, infoCount: 0, notice: "0 modules parsed - detectors skipped to avoid a false orphan FAIL. This is a parse failure (likely WASM/tree-sitter runtime), not a clean bill." });
       }
       return json(runDoctor(r.repository));
     }
@@ -728,7 +728,7 @@ async function handleTool(name: string, args: Record<string, unknown>) {
       // would be a false verdict from orphan detectors, and a PASS would
       // hide the failure entirely. Report UNKNOWN instead (#618).
       if (r.repository.moduleCount === 0) {
-        return json({ skipped: true, verdict: "UNKNOWN", errorCount: 0, notice: "0 modules parsed — verdict withheld. This is a parse failure (likely WASM/tree-sitter runtime), not a clean result." });
+        return json({ skipped: true, verdict: "UNKNOWN", errorCount: 0, notice: "0 modules parsed - verdict withheld. This is a parse failure (likely WASM/tree-sitter runtime), not a clean result." });
       }
       const result = runAllChecks(r.repository);
       return json({ verdict: result.errorCount === 0 ? "PASS" : "FAIL", ...result });
@@ -806,7 +806,7 @@ async function handleTool(name: string, args: Record<string, unknown>) {
     case "search": {
       const r = await doAnalyze(args);
       const idx = buildSearchIndex(r.repository);
-      // Empty index is ambiguous — a legit no-match looks identical to a
+      // Empty index is ambiguous - a legit no-match looks identical to a
       // failed parse. Surface it so consumers don't mistake a broken
       // parser for "nothing found" (#617).
       if (idx.entries.length === 0) {
@@ -814,7 +814,7 @@ async function handleTool(name: string, args: Record<string, unknown>) {
           hits: [],
           indexedFiles: 0,
           totalModules: r.repository.moduleCount,
-          notice: "No files were indexed — this is a parse failure (likely WASM/tree-sitter runtime), not a genuine empty result. Run analyze or fix the parser.",
+          notice: "No files were indexed - this is a parse failure (likely WASM/tree-sitter runtime), not a genuine empty result. Run analyze or fix the parser.",
         });
       }
       return json(search(idx, args.query as string, { limit: (args.limit as number) ?? 50 }));

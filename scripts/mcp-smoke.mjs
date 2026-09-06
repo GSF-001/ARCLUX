@@ -1,4 +1,4 @@
-// MCP stdio smoke test — JSON-RPC over stdin/stdout of `arclux mcp`.
+// MCP stdio smoke test - JSON-RPC over stdin/stdout of `arclux mcp`.
 // Verifies the exact runtime path where #616/#617/#618 were found:
 // real argument passing, schema validation, and guard verdicts as the
 // client would see them.

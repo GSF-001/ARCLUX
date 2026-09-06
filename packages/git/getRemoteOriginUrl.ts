@@ -15,7 +15,7 @@ import { execFileSync } from "node:child_process";
  *   - no `origin` remote is configured
  *
  * Same execFileSync-array pattern as getBranches.ts / detectDefaultBranch.ts
- * — no shell, no injection surface.
+ * - no shell, no injection surface.
  */
 export function getRemoteOriginUrl(cwd: string): string | null {
   try {
