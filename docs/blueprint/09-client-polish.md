@@ -647,7 +647,7 @@ export interface CharacterEntity extends GameEntity {
 
 # FASE 9 — KARAKTER ENGINEER (bikin kayak bikin kapal di repo)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai — CharacterCustom 4 preset + spawnCharacter (PR #671)
 
 ## Tujuan
 Tiap orang bisa **bikin karakter sendiri kayak bikin kapal di repo** — vessel
@@ -722,7 +722,7 @@ community→fraksi, pilot→karakter` `decisions-mmo.md:297`.
 
 # FASE 10 — HANGAR GARASI + ANIMASI DOCKING SINEMATIK FILM (FULL)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai — hangar 32 slot + bay door + docking film 3s 2-phase (PR #676)
 
 ## Tujuan
 Parkir kapal **luar & dalam kayak film**, ada garasi semua orang parkir kapal
@@ -797,7 +797,7 @@ APPROACH (<800m dari port, tekan F)
 
 # FASE 11 — BAZAAR KOMPONEN (jual SOURCE code vessel beneran, FULL)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai — 16 stall + marketplace + trade authoritative (PR #678)
 
 ## Tujuan
 Di dalam stadium ada **lapak, orang bisa jalan, jual/beli komponen kapal** —
@@ -876,7 +876,7 @@ for (let r=0; r<4; r++) for (let s=0; s<4; s++) {
 
 # FASE 12 — USER BEBAS BIKIN STADIUM + LIVING WORLD INTERAKSI (FULL)
 
-## Status: ⬜ Belum mulai
+## Status: ✅ Selesai — arclux.stadium.json + buildStadiumFromConfig + gate living world (PR #679) — 09 COMPLETE 12/12
 
 ## Tujuan
 **Semua stadium yang dibikin user bebas**, kayak Genshin — di dalam bisa
@@ -1030,32 +1030,32 @@ function buildStadiumFromConfig(cfg: StadiumConfig): THREE.Group {
 - [x] Lighting ambient+point PMREM reuse (iris 3) + HUD deck + camera FPS follow (iris 6 hud.ts + scene3d setInteriorCamera + renderer poll 30Hz)
 - [x] Verify build + tsc (build-game.mjs ✓, tsc ✓, ThreatCrush 0, 6 iris PR #664-669)
 
-## Fase 9 — Karakter repo
-- [ ] CharacterEntity + spawnCharacter()
-- [ ] CharacterCustom UI 4 preset + emblem repo
-- [ ] lineage + persistence
-- [ ] Verify build + tsc
+## Fase 9 — Karakter repo ✅
+- [x] CharacterEntity + spawnCharacter() (types.ts/world.ts CharacterEntity kind "character", vesselId, deck, spawnCharacter, persistence otomatis)
+- [x] CharacterCustom UI 4 preset + emblem repo (menu.ts overlay A-D, armor color, emblemRepo, name GSF-xxxx, ThreatCrush textContent)
+- [x] lineage + persistence (simulation.ts spawn_character → lineage recordCreation, validator accept, world spawn)
+- [x] Verify build + tsc (PR #671)
 
-## Fase 10 — Hangar + docking film
-- [ ] Hangar 32 slot InstancedMesh
-- [ ] Animasi 3 detik controllable + bay door + light sweep
-- [ ] 2-phase commit gate.ts + bridge.ts
-- [ ] Parkir luar & dalam
-- [ ] Verify build + tsc
+## Fase 10 — Hangar + docking film ✅
+- [x] Hangar 32 slot InstancedMesh (interior.ts Box 400×200×600 BackSide + 2 bay door + 32 slot 4×8 + marker glow)
+- [x] Animasi 3 detik controllable + bay door + light sweep (renderer.ts dockToHangar 3s door scale + light sin, controllable look)
+- [x] 2-phase commit gate.ts + bridge.ts (gate.ts:242 savePendingHandoff → remove → delete, simulation dock intent, validator)
+- [x] Parkir luar & dalam (VesselEntity orbit vs CharacterEntity + InstancedMesh slot, 1 draw)
+- [x] Verify build + tsc (PR #676)
 
-## Fase 11 — Bazaar
-- [ ] 16 stall promenade + proximity [E]
-- [ ] Marketplace overlay filter + preview graph/lineage
-- [ ] Trade via PlayerIntent + validator + component
-- [ ] Validasi health/usage
-- [ ] Verify build + tsc
+## Fase 11 — Bazaar ✅
+- [x] 16 stall promenade + proximity [E] (interior.ts 4×4 Box 40×30×40 + glow, walkBounds promenade)
+- [x] Marketplace overlay filter + preview graph/lineage (menu.ts bazaarOverlay All/Engine/Shield/Weapon, preview health/lineage, textContent)
+- [x] Trade via PlayerIntent + validator + component (validator trade_component, simulation transferOwnership, lineage, log trade)
+- [x] Validasi health/usage (health 0 → depleted reject, validator check)
+- [x] Verify build + tsc (PR #678)
 
-## Fase 12 — Stadium bebas + living world
-- [ ] arclux.stadium.json → buildStadiumFromConfig()
-- [ ] spawnStation + GateLink + governance
-- [ ] Interaksi proximity + trade antar stadium
-- [ ] Damage stadium → health
-- [ ] Verify build + tsc
+## Fase 12 — Stadium bebas + living world ✅
+- [x] arclux.stadium.json → buildStadiumFromConfig() (interior.ts StadiumConfig rings/habitats/docking, InstancedMesh param, preview 5s)
+- [x] spawnStation + GateLink + governance (validator spawn_station, simulation spawnStation near vessel, safeZone 1000)
+- [x] Interaksi proximity + trade antar stadium (gate.ts GateLink transactional, bridge ACK, N key overlay)
+- [x] Damage stadium → health (combat/collision → governance isInSafeZone, health via StationEntity)
+- [x] Verify build + tsc (PR #679) — 09 COMPLETE 12/12
 
 ---
 
