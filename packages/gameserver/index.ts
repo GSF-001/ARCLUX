@@ -41,4 +41,6 @@ export * from "./rateLimiter";
 export * from "./stability";
 export * from "./observability";
 export * from "./planetary/environment";
+export * from "./planetary/geography";
+export * from "./planetary/chunks";
 export * from "./transport/WebSocketTransport";
