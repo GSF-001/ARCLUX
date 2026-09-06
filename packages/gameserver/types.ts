@@ -23,7 +23,7 @@ export interface Vec3 {
 
 export type FactionId = string;
 
-export type EntityKind = "vessel" | "station";
+export type EntityKind = "vessel" | "station" | "character";
 
 /** Base identity shared by every in-world entity. */
 export interface GameEntity {
@@ -59,7 +59,15 @@ export interface StationEntity extends GameEntity {
   communityId?: string;
 }
 
-export type WorldEntity = VesselEntity | StationEntity;
+/** A pilot avatar inside Ark/stadium interior (Fase 8 iris 5, walkable). */
+export interface CharacterEntity extends GameEntity {
+  kind: "character";
+  /** Vessel induk yang dimiliki pilot ini. */
+  vesselId: string;
+  deck: "hangar" | "promenade" | "plaza" | "habitat" | "corridor";
+}
+
+export type WorldEntity = VesselEntity | StationEntity | CharacterEntity;
 
 /** Live state of a single region (a shard's world). */
 export interface RegionState {
