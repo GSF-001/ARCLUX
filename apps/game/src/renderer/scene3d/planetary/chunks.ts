@@ -1,5 +1,16 @@
-// 10.3 chunks visual — LOD cull, streaming (standalone visual, no cross-import)
-import * as THREE from "three";
+// Copyright 2026 GSF-001
+//
+// Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
+// See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
+//
+
+// planetary/chunks.ts — 10.3 visual LOD cull, streaming, toRegionId, lodForDistance
+
+// Copyright 2026 GSF-001
+//
+// Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
+// See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
+//
 function toRegionId(c: { planetId: string; x: number; z: number }): string { return `${c.planetId}:${c.x}:${c.z}`; }
 export class ChunkManager {
   private active = new Set<string>();
