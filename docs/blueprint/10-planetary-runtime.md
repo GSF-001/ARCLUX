@@ -358,6 +358,49 @@ Numpang semua:
 
 ---
 
+## 10.C — Cinematic Atmospheric & Experiential Continuity (Filtered — PLAN FINAL)
+
+> Parent `10` + `10.X` + `10.E`. Scope: `client presentation` — bukan authority baru. `No New Authority`: gak boleh ubah position/velocity/health/physics/weather/terrain/facility/persistence — cuma baca `EnvironmentalContext` → `CinematicContext` → `presentation`.
+
+**Core:** `WORLD STATE → ENVIRONMENTAL STATE → EVENT → CINEMATIC CONTEXT → (CAMERA|AUDIO|VESSEL MOTION|COCKPIT|LIGHTING|VFX) → PLAYER EXPERIENCE`. `Autoritative (planet/weather/vessel/facility) → EnvironmentalContext → Cinematic resolver → Renderer`. Gak boleh `VFX → health`.
+
+**CinematicContext (derived, gak persist):** `{ eventId, eventType (ATMOSPHERIC_ENTRY|STORM|LIGHTNING|EMERGENCY_LANDING...), phase (TRIGGER→PRE→ACTIVE→PEAK→RECOVERY→EXIT), priority, cameraMode, exposure, visibility, environmentalIntensity, audioIntensity, vesselMotion {pitch,roll,vibration}, transitionProgress, exitCondition }`
+
+**Event Sequencing:** Satu event punya `priority` (CRASH 100 > EMERGENCY 90 > ENTRY 70 > STORM 50). Storm contoh: `CLEAR → PRE-STORM (wind↑, cloud dark) → RAIN → LIGHTNING → TURBULENCE → PEAK → RAIN↓ → CLOUD BREAK → RECOVERY (wet tetap)`.
+
+**Atmospheric Flight & Turbulence (presentation, bukan physics force):** `Vessel+Wind+Density+Weather+Altitude+Velocity → TurbulenceResolver → visualPitch/Roll/Vibration/cameraShake/cockpitShake/audio`. `NORMAL→BUILDUP→ACTIVE→DECAY→NORMAL`, gak `0→MAX` instan. Sources: `windVector, gust, turbulence, weatherIntensity`.
+
+**Heat / Entry:** `ENTRY VELOCITY + DENSITY + ALTITUDE → heat glow/distortion/exposure (COLD→HEATING→PEAK→COOLING→NORMAL)` — visual, damage tetep authority sim.
+
+**Wind → Vessel:** `GLOBAL WIND FIELD (10.X §4) → CLOUD|RAIN|FOG → VESSEL cinematic motion` — gak ada wind simulator kedua.
+
+**Cloud / Cockpit / Audio / Lightning:** `CLOUD APPROACH → visibility↓ → diffuse → rain↑ → turbulence → CLOUD EXIT → terrain reveal` (continuous). `Rain → windshield droplets → lightning → cockpit flash → exposure`. `LightningEvent → cloud flash → terrain/ocean/facility/cockpit + thunder delay by distance`.
+
+**Camera Director:** `World Event → Camera Response` (`entry: stable→follow→cloud compression→reveal`, `landing: approach→touchdown→settle`, `crash: impact→displace→settle`) — `additive & bounded` (≤2° pitch/roll, exposure ≤+0.3), `priority` tentukan event, `never forced cutscene`.
+
+**Landing / Ocean / Wreck:** `APPROACH → GROUND PROXIMITY → GROUND EFFECT → TOUCHDOWN → DUST/SPRAY → SETTLE` (desert/forest/snow/wet beda via `EnvironmentalContext`). Ocean `approach → disturbance → spray → wake` — authority tentukan valid/invalid. Wreck `IMPACT→DISPLACEMENT→DEBRIS→SMOKE→SETTLE→WRECK` (persistent wreck di authority, transient flash di presentation).
+
+**Budget & Determinism:** `PROXIMITY→IMPORTANCE→COST` — `FAR (cloud mass/beacon) → MEDIUM (rain/fog) → NEAR (dust/spray) → CINEMATIC (full volumetrics)` graceful degrade, cuma sekitar pemain mahal. Determinism `planetSeed/weatherSeed/tick/chunkKey/eventId` — no uncontrolled randomness.
+
+**File (saran, 6 inti dulu, sisanya numpang):** `scene3d/cinematic/{ CinematicContext.ts, CinematicEventDirector.ts, AtmosphericFlightResolver.ts, TurbulenceResolver.ts, CinematicCameraDirector.ts, EnvironmentalAudioResolver.ts }` — `Heat/Cockpit/Impact/FacilityDiscovery` numpang dulu, pecah kalau perlu. Semua `→ THREE` visual, no gameplay authority.
+
+**Checklist `10.C` (PR, no auto-merge):**
+
+- [ ] `10.C.1` Contracts `CinematicContext/Event/Phase` (typecheck)
+- [ ] `10.C.2` Director `trigger/phase/priority/exit` (multiple events)
+- [ ] `10.C.3` Flight `wind+density+velocity+altitude → turbulence/motion/camera`
+- [ ] `10.C.4` Heat `entry→heating→peak→cooling`
+- [ ] `10.C.5` Camera `entry/landing/crash/docking` (bounded, player control intact)
+- [ ] `10.C.6` Audio `wind/rain/thunder/engine/atmosphere` sync
+- [ ] `10.C.7` Cockpit `rain/lightning/heat/cloud/turbulence` presentation-only
+- [ ] `10.C.8` Impact `impact→debris→smoke→settling→wreck`
+- [ ] `10.C.9` Facility discovery `distant→reveal→approach→hangar` (no cutscene)
+- [ ] `10.C.10` Continuity `SPACE→ORBIT→ATMOSPHERE→CLOUD→SURFACE→FACILITY` under `FAR→CINEMATIC`
+
+> **Dependency:** `10` substrate → `10.X`/`10.G`/`10.E` → `10.C` paling akhir (presentation di atas environmental). `10.C` bisa dibangun bareng `10.X` karena pakai `EnvironmentalContext` sama, tapi merge terakhir.
+
+---
+
 ## 17. Implementation Phases — Urutan Eksekusi (KAYAK 09 — TIAP FASE = PR, NO AUTO-MERGE)
 
 > Biar gak lupa besok habis A-B-C dari mana — kayak `09` ada `Fase 1-12`, `10` juga ada fase. Tiap fase punya file + checklist + dependency. No guessing.
