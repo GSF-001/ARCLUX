@@ -3,20 +3,20 @@
 // Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
-// planetary/environment.ts — 10.1 Substrate Contracts (PLAN — FINAL, zoomed).
+// planetary/environment.ts - 10.1 Substrate Contracts (PLAN - FINAL, zoomed).
 // Blueprint 10 §10.X.3-4 kasar: "EnvironmentalContext + WindState". File ini zoom
-// sampai butiran kontrak biar code 1:1 gampang — tiap field ada tipe, satuan,
+// sampai butiran kontrak biar code 1:1 gampang - tiap field ada tipe, satuan,
 // sumber, dan resolver yang bacanya. Gak ada simulasi baru, cuma kontrak
 // yang dibaca semua sistem (terrain, ocean, weather, vessel, facility).
 
 import type { Vec3 } from "../types";
 
 // ---------------------------------------------------------------------------
-// WindState — satu angin dilihat semua sistem (10.X §4)
+// WindState - satu angin dilihat semua sistem (10.X §4)
 // ---------------------------------------------------------------------------
 
 /**
- * Satu angin global per chunk — awan, hujan, kabut, debu, daun gerak bareng.
+ * Satu angin global per chunk - awan, hujan, kabut, debu, daun gerak bareng.
  * Derived deterministik dari planetSeed + tick + chunkKey (mulberry32),
  * bukan wind simulator kedua.
  */
@@ -25,20 +25,20 @@ export interface WindState {
   direction: number;
   /** Kecepatan mean (m/s). */
   speed: number;
-  /** Gust strength (0..1) — daun/branch beda fase. */
+  /** Gust strength (0..1) - daun/branch beda fase. */
   gustStrength: number;
-  /** Turbulence (0..1) — small→large scale beda respons. */
+  /** Turbulence (0..1) - small->large scale beda respons. */
   turbulence: number;
-  /** Komponen vertikal (m/s) — updraft/downdraft. */
+  /** Komponen vertikal (m/s) - updraft/downdraft. */
   verticalComponent: number;
-  /** Gradien dengan altitude (m/s per m) — low flight beda dari high. */
+  /** Gradien dengan altitude (m/s per m) - low flight beda dari high. */
   altitudeGradient: number;
-  /** Variasi lokal (0..1) — Valley A vs Valley B gak sinkron. */
+  /** Variasi lokal (0..1) - Valley A vs Valley B gak sinkron. */
   localVariation: number;
 }
 
 // ---------------------------------------------------------------------------
-// Sub-states — tiap field ada satuan & sumber authoritative
+// Sub-states - tiap field ada satuan & sumber authoritative
 // ---------------------------------------------------------------------------
 
 export type TimeOfDay = "dawn" | "day" | "dusk" | "night";
@@ -47,12 +47,12 @@ export interface SunState {
   direction: Vec3; // normalized
   elevation: number; // rad, 0 = horizon, π/2 = zenith
   intensity: number; // 0..1 (1 = noon clear, 0 = night)
-  color: string; // hex, temp 5800K → warm dusk
+  color: string; // hex, temp 5800K -> warm dusk
   atmosphericTransmission: number; // 0..1 (haze)
 }
 
 export interface AtmosphereState {
-  density: number; // 0..1 (SPACE 0 → SURFACE 1)
+  density: number; // 0..1 (SPACE 0 -> SURFACE 1)
   pressure: number; // hPa
   visibility: number; // m
   haze: number; // 0..1
@@ -82,9 +82,9 @@ export interface PrecipitationState {
 
 export interface TerrainState {
   height: number; // m (heightmap)
-  slope: number; // 0..1 (0.4 → military)
+  slope: number; // 0..1 (0.4 -> military)
   biome: "plains" | "mountain" | "desert" | "forest" | "snow" | "wetland";
-  wetness: number; // 0..1 (WET→DRYING)
+  wetness: number; // 0..1 (WET->DRYING)
   snow: number; // 0..1
 }
 
@@ -104,7 +104,7 @@ export interface LocalSurfaceState {
 }
 
 // ---------------------------------------------------------------------------
-// EnvironmentalContext — SATU sumber yang dibaca semua resolver
+// EnvironmentalContext - SATU sumber yang dibaca semua resolver
 // ---------------------------------------------------------------------------
 
 export interface EnvironmentalContext {
@@ -141,7 +141,7 @@ export interface EnvironmentalContext {
 }
 
 // ---------------------------------------------------------------------------
-// Deterministic helpers — zoom dari blueprint kasar ke presisi
+// Deterministic helpers - zoom dari blueprint kasar ke presisi
 // ---------------------------------------------------------------------------
 
 function mulberry32(seed: number): () => number {
