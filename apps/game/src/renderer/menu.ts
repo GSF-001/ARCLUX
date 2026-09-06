@@ -602,6 +602,99 @@ export function createCharacterOverlay(onSpawn: (data: CharacterCustomData) => v
   return { show, hide, dispose };
 }
 
+export interface BazaarListing {
+  componentId: string;
+  vesselId: string;
+  vesselName: string;
+  health: number;
+  usage: string;
+  seller: string;
+}
+
+export function createBazaarOverlay(onTrade: (listing: BazaarListing) => void): { show(listings: BazaarListing[]): void; hide(): void; dispose(): void } {
+  const wrap = document.createElement("div");
+  wrap.style.cssText = ["position:fixed", "inset:0", "z-index:85", "display:none", "align-items:center", "justify-content:center", "background:rgba(2,3,10,0.6)", "backdrop-filter:blur(2px)"].join(";");
+  document.body.appendChild(wrap);
+  const panel = document.createElement("div");
+  panel.style.cssText = [`width:520px`, `max-height:80vh`, `overflow-y:auto`, `padding:18px`, `background:linear-gradient(180deg,rgba(10,16,28,0.96),rgba(6,9,18,0.98))`, `border:1px solid ${colors.edge}`, `font-family:${typography.mono}`, `color:${colors.foreground}`].join(";");
+  wrap.appendChild(panel);
+  const title = document.createElement("div");
+  title.textContent = "BAZAAR — 16 LAPAK";
+  title.style.cssText = `font-family:${typography.display};font-weight:700;letter-spacing:${typography.displaySpacing};margin-bottom:12px`;
+  panel.appendChild(title);
+  const filterRow = document.createElement("div");
+  filterRow.style.cssText = "display:flex;gap:6px;margin-bottom:12px";
+  const filters = ["All", "Engine", "Shield", "Weapon"] as const;
+  let activeFilter = "All";
+  const filterBtns: HTMLButtonElement[] = [];
+  for (const f of filters) {
+    const b = document.createElement("button");
+    b.textContent = f.toUpperCase();
+    b.style.cssText = `padding:4px 10px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.muted};cursor:pointer;font-family:inherit;font-size:10px`;
+    b.addEventListener("click", () => {
+      activeFilter = f;
+      for (const x of filterBtns) x.style.borderColor = colors.edge;
+      b.style.borderColor = colors.tech;
+      renderList(currentListings);
+    });
+    filterRow.appendChild(b);
+    filterBtns.push(b);
+  }
+  filterBtns[0].style.borderColor = colors.tech;
+  panel.appendChild(filterRow);
+  const listEl = document.createElement("div");
+  listEl.style.cssText = `display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto`;
+  panel.appendChild(listEl);
+  let currentListings: BazaarListing[] = [];
+  const renderList = (list: BazaarListing[]): void => {
+    currentListings = list;
+    listEl.textContent = "";
+    const filtered = activeFilter === "All" ? list : list.filter((l) => l.componentId.toLowerCase().includes(activeFilter.toLowerCase()));
+    if (filtered.length === 0) {
+      const empty = document.createElement("div");
+      empty.textContent = "No listings";
+      empty.style.cssText = `font-size:11px;color:${colors.muted};padding:8px`;
+      listEl.appendChild(empty);
+      return;
+    }
+    for (const item of filtered) {
+      const row = document.createElement("div");
+      row.style.cssText = `border:1px solid ${colors.edge};background:rgba(6,9,18,0.5);padding:8px;font-size:11px`;
+      const head = document.createElement("div");
+      head.textContent = `${item.componentId} — ${item.vesselName}`;
+      head.style.cssText = `color:${colors.tech};font-weight:700`;
+      const meta = document.createElement("div");
+      meta.textContent = `Health ${item.health}% • ${item.usage} • Seller ${item.seller}`;
+      meta.style.cssText = `color:${colors.muted};margin-top:4px`;
+      const actions = document.createElement("div");
+      actions.style.cssText = "display:flex;gap:6px;margin-top:8px";
+      const previewBtn = document.createElement("button");
+      previewBtn.textContent = "Preview";
+      previewBtn.style.cssText = `padding:4px 8px;border:1px solid ${colors.edge};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-size:10px`;
+      previewBtn.addEventListener("click", () => {
+        // Preview: show health/graph — for now alert
+        const msg = `Preview ${item.componentId} — lineage via getLineage (health ${item.health}%)`;
+        const p = document.createElement("div");
+        p.textContent = msg;
+        p.style.cssText = `font-size:10px;color:${colors.body};margin-top:4px`;
+        row.appendChild(p);
+      });
+      const tradeBtn = document.createElement("button");
+      tradeBtn.textContent = "Beli";
+      tradeBtn.style.cssText = `padding:4px 10px;border:1px solid ${colors.tech};background:${glow.panelBg};color:${colors.tech};cursor:pointer;font-family:inherit;font-size:10px`;
+      tradeBtn.addEventListener("click", () => onTrade(item));
+      actions.append(previewBtn, tradeBtn);
+      row.append(head, meta, actions);
+      listEl.appendChild(row);
+    }
+  };
+  const show = (listings: BazaarListing[]): void => { renderList(listings); wrap.style.display = "flex"; };
+  const hide = (): void => { wrap.style.display = "none"; };
+  const dispose = (): void => wrap.remove();
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) hide(); });
+  return { show, hide, dispose };
+}
+
 function prettyKey(code: string): string {
   const map: Record<string, string> = {
     KeyW: "W", KeyS: "S", KeyA: "A", KeyD: "D", KeyQ: "Q", KeyE: "E",

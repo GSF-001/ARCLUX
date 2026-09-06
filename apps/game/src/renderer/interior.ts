@@ -23,6 +23,8 @@ export interface InteriorBuildResult {
   hangarLight: THREE.PointLight;
   hangarSlots: THREE.InstancedMesh;
   slotPositions: THREE.Vector3[];
+  bazaarStalls: THREE.Group[];
+  bazaarPositions: THREE.Vector3[];
   /** Walkable bounds for FPS collision (Box3 per corridor/promenade/plaza/habitat/hangar). */
   walkBounds: THREE.Box3[];
 }
@@ -286,6 +288,43 @@ function buildHabitats(): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
   return { groups, walkBoxes };
 }
 
+function buildBazaarStalls(): { groups: THREE.Group[]; positions: THREE.Vector3[] } {
+  const groups: THREE.Group[] = [];
+  const positions: THREE.Vector3[] = [];
+  const stallMat = new THREE.MeshStandardMaterial({
+    color: threeColor(colors.structHigh),
+    metalness: 0.72,
+    roughness: 0.4,
+    emissive: threeColor(colors.tactical),
+    emissiveIntensity: 0.35,
+  });
+  // 4 per ring × 4 ring = 16
+  for (let r = 0; r < 4; r++) {
+    const radius = 640 + r * 46;
+    const cx = -400 + r * 500;
+    for (let s = 0; s < 4; s++) {
+      const ang = (s / 4) * Math.PI * 2 + (r * 0.2);
+      const x = cx + Math.cos(ang) * (radius + 38);
+      const z = Math.sin(ang) * (radius + 38);
+      const g = new THREE.Group();
+      g.name = `bazaar-stall-${r}-${s}`;
+      const box = new THREE.Mesh(new THREE.BoxGeometry(40, 30, 40), stallMat);
+      box.position.set(x, 15, z);
+      g.add(box);
+      // Signage sprite
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: makeGlowTexture(), color: threeColor(colors.tactical), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      spr.position.set(x, 32, z);
+      spr.scale.set(22, 10, 1);
+      g.add(spr);
+      groups.push(g);
+      positions.push(new THREE.Vector3(x, 0, z));
+    }
+  }
+  return { groups, positions };
+}
+
 /**
  * Iris 1-2 builder — corridor + 4 promenade + plaza + 96 habitat (24×4).
  * Hangar + bazaar menyusul iris 3+. Return group + walkBounds buat FPS.
@@ -358,6 +397,10 @@ export function buildArkInterior(): InteriorBuildResult {
   // Walk bounds — hangar interior (besar)
   const hangarBox = new THREE.Box3(new THREE.Vector3(0, -160, -300), new THREE.Vector3(400, 40, 300));
 
+  // Fase 11 — Bazaar 16 stall (4 per ring ×4) di promenade
+  const { groups: bazaarStalls, positions: bazaarPositions } = buildBazaarStalls();
+  for (const b of bazaarStalls) g.add(b);
+
   // Iris 3: Lighting — Ambient + Point per deck + emissive reuse PMREM Fase 1
   // PMREM scene.environment tetap (reuse, bukan bikin baru). Interior cuma
   // tambah light biar gak gelap gulita pas exterior visible=false.
@@ -410,6 +453,8 @@ export function buildArkInterior(): InteriorBuildResult {
     hangarLight: bayLight,
     hangarSlots: slotInst,
     slotPositions,
+    bazaarStalls,
+    bazaarPositions,
     walkBounds: [corridorBox, ...promBoxes, plazaBox, ...habBoxes, hangarBox],
   };
 }
