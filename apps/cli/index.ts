@@ -80,17 +80,7 @@ function resolveVersion(): string {
   for (const p of candidates) {
     try {
       if (!existsSync(p)) continue;
-      const pkg = JSON.parse(readFileSync(p, "utf8"))
-  const require = createRequire(import.meta.url);
-  const candidates = [
-    // source checkout: apps/cli/index.ts -> ../../package.json (root) or ./package.json (apps/cli)
-    "../../package.json",
-    "./package.json",
-    "../../../package.json",
-  ];
-  for (const p of candidates) {
-    try {
-      const pkg = require(p);
+      const pkg = JSON.parse(readFileSync(p, "utf8"));
       if (pkg?.version) return pkg.version;
     } catch {}
   }
