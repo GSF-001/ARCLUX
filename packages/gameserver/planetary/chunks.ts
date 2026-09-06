@@ -5,7 +5,6 @@
 //
 
 // planetary/chunks.ts — 10.3 chunks streaming LOD, planetId:chunkX:chunkZ via claimRegion, Vec3 persist
-
 // Copyright 2026 GSF-001
 // 10.3 chunks — streaming LOD, cull, planetId:chunkX:chunkZ via claimRegion, Vec3 persist
 export interface ChunkKey { planetId: string; x: number; z: number; }
