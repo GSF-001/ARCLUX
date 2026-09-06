@@ -4,7 +4,7 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/surface.ts — 10.4 lerp SPACE→SURFACE, 24h lunar Kepler, GateLink 800m
+// planetary/surface.ts - 10.4 lerp SPACE->SURFACE, 24h lunar Kepler, GateLink 800m
 
 import * as THREE from "three";
 export type TimeOfDay = "dawn"|"day"|"dusk"|"night";

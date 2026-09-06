@@ -3,8 +3,8 @@
 // Licensed under the ARCLUX MMO License v1 (GSF-001) — Source-available, No Commercial Game Clone.
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
-// planetary/chunks.ts — 10.3 chunks streaming LOD, planetId:chunkX:chunkZ via claimRegion, Vec3 persist
-// planetary/chunks.ts — 10.3 visual LOD cull, streaming, toRegionId, lodForDistance
+
+// planetary/chunks.ts - 10.3 visual LOD cull, streaming, toRegionId, lodForDistance
 
 import * as THREE from "three";
 function toRegionId(c: { planetId: string; x: number; z: number }): string { return `${c.planetId}:${c.x}:${c.z}`; }

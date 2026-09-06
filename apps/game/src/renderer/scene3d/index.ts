@@ -23,6 +23,9 @@ import { createPost } from "./post";
 // Iris 1: interior geometry (corridor+promenade) ready — lazy-load DockingState wired in iris 2
 import { buildArkInterior as _buildArkInterior } from "../interior";
 void _buildArkInterior;
+// 10.x planetary barrel — ensures terrain/ocean/atmosphere/chunks/surface/facilities/night/geography wired (10.2-10.6)
+import * as _planetary from "./planetary";
+void _planetary;
 import { buildStars } from "./stars";
 import { buildNebula } from "./nebula";
 import { buildSuns, updateSuns } from "./suns";

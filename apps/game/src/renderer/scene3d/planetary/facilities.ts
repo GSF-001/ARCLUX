@@ -4,11 +4,11 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/facilities.ts — 10.5 facilities 10 types empty land, StationEntity health, clampCharacterSpeed
+// planetary/facilities.ts - 10.5 facilities 10 types empty land, StationEntity health, clampCharacterSpeed
 
 import * as THREE from "three";
-import { threeColor } from "../../ui/tokens";
-import { colors } from "../../ui/tokens";
+import { threeColor } from "../../../ui/tokens";
+import { colors } from "../../../ui/tokens";
 export const FACILITIES = ["Landing Pad","Hangar","Repair","Refit","Radar","Comms","Military","Storage","Manufacturing","Spaceport"] as const;
 export type FacilityKind = typeof FACILITIES[number];
 export interface FacilityOpts { kind: FacilityKind; position: {x:number,y:number,z:number}; communityId?: string; }
@@ -21,7 +21,7 @@ export function isInEmptyLand(pos: {x:number,z:number}, heightmap: (x:number,z:n
   const slope = slopeMap ? slopeMap(pos.x, pos.z) : 0.1;
   return canBuildOnEmptyLand(h, slope, h < -2);
 }
-// Per-kind mesh — different sizes, emissive for Spaceport/Radar
+// Per-kind mesh - different sizes, emissive for Spaceport/Radar
 export function createFacilityMesh(kind: FacilityKind, opts: FacilityOpts): THREE.Group {
   const g = new THREE.Group(); g.name = `facility-${kind}`;
   let geom: THREE.BufferGeometry, mat: THREE.Material;
@@ -36,7 +36,7 @@ export function createFacilityMesh(kind: FacilityKind, opts: FacilityOpts): THRE
   if(kind==="Landing Pad") mesh.rotation.y=0; // pad flat
   mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
   g.add(mesh);
-  // Health bar — StationEntity health 0..100
+  // Health bar - StationEntity health 0..100
   const healthBar = new THREE.Mesh(new THREE.BoxGeometry(36,2,2), new THREE.MeshBasicMaterial({color: 0x5fe0a0}));
   healthBar.position.set(opts.position.x, opts.position.y+18, opts.position.z);
   healthBar.name="healthBar";
