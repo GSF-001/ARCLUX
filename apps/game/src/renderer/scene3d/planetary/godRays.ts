@@ -159,3 +159,12 @@ export function updateGodRays(
 // import { deriveGodRayContext, createGodRaySystem, updateGodRays } from "./planetary/godRays";
 // const godRays = createGodRaySystem(); ctx.scene.add(godRays.group);
 // // di frame loop: const gctx = deriveGodRayContext(envCtx, camera.position, terrainOcclusion); updateGodRays(godRays, gctx, dt);
+
+export function isGodRayVisible(gctx: GodRayContext): boolean {
+  return gctx.sunIntensity > 0.12 && gctx.sunElevation > 0.08 && gctx.gaps > 0.08;
+}
+
+export function godRayIntensity(gctx: GodRayContext): number {
+  return gctx.sunIntensity * gctx.gaps * (1 - gctx.terrainOcclusion*0.5) * (0.4 + gctx.fogDensity*0.6);
+}
+

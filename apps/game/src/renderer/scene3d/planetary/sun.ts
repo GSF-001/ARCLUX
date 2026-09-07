@@ -96,3 +96,12 @@ export function applySunToMaterial(mat: THREE.MeshStandardMaterial, u: SunUnifor
 // WIRE NOTE: SESSION 2 wire di scene3d/index.ts:
 // import { sunUniformsFromContext, updateSunFromContext } from "./planetary/sun";
 // const u = sunUniformsFromContext(envCtx); updateSunFromContext({ sunLight, ambient, fog }, u);
+
+export function getSunExposure(u: SunUniforms): number {
+  return u.intensity * u.transmission;
+}
+
+export function isSunAvailable(u: SunUniforms): boolean {
+  return u.intensity > 0.05 && u.timeOfDay !== "night";
+}
+

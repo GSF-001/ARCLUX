@@ -105,3 +105,22 @@ export function tickVegetation(sys: VegetationSystem, ctx: EnvironmentalContext,
     }
   }
 }
+
+export function cullVegetationByDistance(sys: VegetationSystem, maxDist: number, center: {x:number,z:number}): number {
+  let culled = 0;
+  for (const inst of sys.instances) {
+    const d = Math.hypot(inst.basePos.x - center.x, inst.basePos.z - center.z);
+    const shouldShow = d < maxDist;
+    (inst.mesh as any).visible = shouldShow;
+    if (!shouldShow) culled++;
+  }
+  return culled;
+}
+
+export function vegetationBudgetForQuality(level: string): number {
+  if (level === "CINEMATIC") return 128;
+  if (level === "NEAR") return 64;
+  if (level === "MEDIUM") return 24;
+  return 8;
+}
+

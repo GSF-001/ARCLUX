@@ -80,3 +80,14 @@ export function updateLocalVolumes(
 export function getVolumeCost(mgr: LocalVolumeManager, id: string): number {
   return mgr.volumes.get(id)?.cost ?? 0;
 }
+
+export function disposeVolume(mgr: LocalVolumeManager, id: string): void {
+  mgr.volumes.delete(id);
+}
+
+export function countActiveVolumes(mgr: LocalVolumeManager): number {
+  let n = 0;
+  for (const v of mgr.volumes.values()) if (v.active) n++;
+  return n;
+}
+

@@ -87,3 +87,11 @@ export function tickLightning(sys: LightningSystem, now: number): void {
   // Flicker 2x during flash
   if (Math.random() > 0.7) sys.flashLight.intensity *= 0.6;
 }
+
+export function getLightningThreat(sys: LightningSystem, now: number): number {
+  if (!sys.lastEvent) return 0;
+  const age = now - sys.lastEvent.timestamp;
+  if (age > 5000) return 0;
+  return sys.lastEvent.intensity * Math.max(0, 1 - age/5000);
+}
+

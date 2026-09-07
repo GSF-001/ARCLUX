@@ -50,3 +50,21 @@ export function getWeatherExposure(stack: WeatherStack): number {
   if (stack.phase === "overcast") return 0.85 + stack.sunlight * 0.1;
   return 0.95 + stack.sunlight * 0.05;
 }
+
+export function lerpWeatherStack(a: WeatherStack, b: WeatherStack, t: number): WeatherStack {
+  const l = (x:number,y:number)=> x + (y-x)*t;
+  return {
+    phase: t < 0.5 ? a.phase : b.phase,
+    cloudCoverage: l(a.cloudCoverage, b.cloudCoverage),
+    cloudDensity: l(a.cloudDensity, b.cloudDensity),
+    precipitationIntensity: l(a.precipitationIntensity, b.precipitationIntensity),
+    windSpeed: l(a.windSpeed, b.windSpeed),
+    visibility: l(a.visibility, b.visibility),
+    sunlight: l(a.sunlight, b.sunlight),
+  };
+}
+
+export function isWetPhase(s: WeatherStack): boolean {
+  return s.phase === "rain" || s.phase === "storm" || s.precipitationIntensity > 0.12;
+}
+

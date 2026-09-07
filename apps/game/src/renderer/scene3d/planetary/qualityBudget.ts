@@ -75,3 +75,19 @@ export function isPersistent(effect: string): boolean {
 export function getTransientEffects(): string[] {
   return ["particles", "godRays", "fog", "splash", "flash", "spray"];
 }
+
+export function shouldAllowEffect(decision: BudgetDecision, effect: string): boolean {
+  if (effect === "godRays") return decision.allowGodRays;
+  if (effect === "particles") return decision.allowParticles;
+  if (effect === "shadows") return decision.allowShadows;
+  return decision.cost < 0.6;
+}
+
+export function adaptQualityForFps(current: QualityLevel, fps: number): QualityLevel {
+  if (fps < 28 && current === "CINEMATIC") return "NEAR";
+  if (fps < 24 && current === "NEAR") return "MEDIUM";
+  if (fps < 20) return "FAR";
+  if (fps > 55 && current === "FAR") return "MEDIUM";
+  return current;
+}
+
