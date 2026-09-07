@@ -13,4 +13,8 @@ export * from "./chunks";
 export * from "./surface";
 export * from "./facilities";
 export * from "./night";
+export * from "./sun";
+export * from "./cloudShadows";
+export * from "./godRays";
+export * from "./environmentalEvent";
 export * from "./geography";
