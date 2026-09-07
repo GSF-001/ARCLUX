@@ -95,3 +95,18 @@ export function getSunExposure(u: SunUniforms): number {
 export function isSunAvailable(u: SunUniforms): boolean {
   return u.intensity > 0.05 && u.timeOfDay !== "night";
 }
+
+/**
+ * Ambient-only application for scenes where the key directional light is
+ * owned by another system (e.g. orbital Kepler suns). Fog stays owned by
+ * the fog resolver to avoid last-writer conflicts.
+ */
+export function applySunToAmbientFog(ambient: THREE.AmbientLight | null, u: SunUniforms): void {
+  if (!ambient) return;
+  if (isNight(u)) {
+    ambient.intensity = NIGHT_AMBIENT;
+    return;
+  }
+  ambient.intensity = 0.35 + u.intensity * 0.45;
+  ambient.color.copy(u.color).multiplyScalar(0.6);
+}

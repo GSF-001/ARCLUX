@@ -39,6 +39,7 @@ import { attachNightLights, updateNightVisibility } from "./planetary/night";
 import { createGeographyMarker, NICHE_COLOR } from "./planetary/geography";
 import { createEnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
 import type { EnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
+import { createPlanetary10X, tickPlanetary10X, disposePlanetary10X } from "./planetary/wire10X";
 void _planetary;
 import { buildStars } from "./stars";
 import { buildNebula } from "./nebula";
@@ -121,6 +122,9 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   // Geography markers group
   const geographyGroup = new THREE.Group();
   ctx.scene.add(geographyGroup);
+
+  // Cinematic atmosphere layer (10.X.1-X.4) — owns sun/shadow/rain/etc systems
+  const planetary10X = createPlanetary10X(ctx.scene, planetSeed);
 
   // Environmental context (derived from server contract)
   let envContext: EnvironmentalContext | null = null;
@@ -311,6 +315,22 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       updateNightVisibility(nightGroup, envContext.timeOfDay === "night", envContext.sun.intensity);
     }
 
+    // ── CINEMATIC ATMOSPHERE TICK (10.X.1-X.4) ──
+    if (envContext) {
+      const dtX = 1 / 60;
+      tickPlanetary10X(planetary10X, ctx.scene, envContext, dtX, {
+        timeSec: envContext.worldTime / 1000 + envContext.simulationTick * 0.1,
+        anchor: { x: ctx.anchor.x, z: ctx.anchor.z },
+        cameraPos: ctx.camera
+          ? { x: ctx.camera.position.x, y: ctx.camera.position.y, z: ctx.camera.position.z }
+          : { x: 0, y: 0, z: 0 },
+        altitude: ctx.firstVesselRef ? Math.max(0, ctx.anchor.y + 10) : 0,
+        vessel: ctx.firstVesselRef,
+        ambient: ctx.ambient,
+        renderer: ctx.renderer,
+      });
+    }
+
     // Interpolasi vessel (presentation ✓, autoritas server tetap D-008).
     updateVesselInterp(ctx, now);
 
@@ -350,6 +370,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     ctx.scene.remove(terrainMesh); ctx.scene.remove(oceanMesh); ctx.scene.remove(atmoGroup);
     disposeGroup(terrainMesh as any); disposeGroup(oceanMesh as any); disposeGroup(atmoGroup);
     disposeGroup(facilitiesGroup); disposeGroup(nightGroup); disposeGroup(geographyGroup);
+    disposePlanetary10X(ctx.scene, planetary10X);
     for (const pl of ctx.planets) {
       ctx.scene.remove(pl.mesh); ctx.scene.remove(pl.atmo); if (pl.ring) ctx.scene.remove(pl.ring);
       for (const mo of pl.moons) ctx.scene.remove(mo.mesh);
