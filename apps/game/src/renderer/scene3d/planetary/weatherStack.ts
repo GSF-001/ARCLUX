@@ -4,9 +4,12 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/weatherStack.ts - 10.X.2 CLEAR/OVERCAST/RAIN/STORM coordinated + RainState + wet/puddles/runoff/reflection. Zoom dari blueprint "Weather stack CLEAR->OVERCAST->RAIN->STORM coordinated".
-
-// WIRE NOTE for SESSION 2: import { deriveWeatherStack, updateWeatherStack } from "./planetary/weatherStack" di scene3d/index.ts. Derive dari EnvironmentalContext.weather + clouds, update material wetness/puddles tiap frame.
+// planetary/weatherStack.ts - 10.X.2 coordinated weather stack.
+// Collapses authority weather, cloud, sun, and wind state into one phase
+// (clear / overcast / rain / storm) plus the scalars downstream resolvers
+// need: sunlight, visibility, precipitation. Phase transitions use hysteresis
+// so borderline density does not flicker between frames.
+// Visual-only: derives from EnvironmentalContext, never writes authority state.
 
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
 
@@ -17,44 +20,74 @@ export interface WeatherStack {
   cloudCoverage: number; // 0..1
   cloudDensity: number;
   precipitationIntensity: number; // 0..1
-  windSpeed: number;
-  visibility: number;
-  sunlight: number; // 0..1
+  windSpeed: number; // m/s
+  visibility: number; // m
+  sunlight: number; // 0..1 after cloud attenuation
 }
 
-export function deriveWeatherStack(ctx: EnvironmentalContext): WeatherStack {
+// Hysteresis bands: entering rain/storm needs more precipitation than leaving.
+const RAIN_ENTER = 0.12;
+const RAIN_EXIT = 0.05;
+const STORM_DENSITY_ENTER = 0.75;
+const STORM_DENSITY_EXIT = 0.6;
+
+function targetPhase(ctx: EnvironmentalContext, prev: WeatherStackPhase | undefined): WeatherStackPhase {
   const w = ctx.weather;
+  if (w.kind === "storm") {
+    if (prev === "storm" && ctx.clouds.density > STORM_DENSITY_EXIT) return "storm";
+    if (prev !== "storm" && ctx.clouds.density < STORM_DENSITY_ENTER) return "rain";
+    return "storm";
+  }
+  if (w.kind === "rain") {
+    if (prev === "clear" || prev === "overcast") {
+      return w.precipitationIntensity > RAIN_ENTER ? "rain" : prev;
+    }
+    if (w.precipitationIntensity < RAIN_EXIT) return "overcast";
+    return "rain";
+  }
+  if (w.kind === "overcast") return "overcast";
+  if (
+    (prev === "rain" || prev === "storm") &&
+    w.precipitationIntensity > RAIN_EXIT
+  ) {
+    return prev;
+  }
+  return "clear";
+}
+
+/**
+ * Derive the coordinated stack. Pass the previous phase to stabilize
+ * transitions; omit it for a stateless read.
+ */
+export function deriveWeatherStack(ctx: EnvironmentalContext, prevPhase?: WeatherStackPhase): WeatherStack {
   const clouds = ctx.clouds;
-  let phase: WeatherStackPhase = "clear";
-  if (w.kind === "storm") phase = "storm";
-  else if (w.kind === "rain") phase = "rain";
-  else if (w.kind === "overcast") phase = "overcast";
-  // Stabilize: avoid flicker if density borderline
+  const phase = targetPhase(ctx, prevPhase);
   const sunlight = ctx.sun.intensity * (1 - clouds.density * 0.6) * (1 - clouds.coverage * 0.3);
   return {
     phase,
     cloudCoverage: clouds.coverage,
     cloudDensity: clouds.density,
-    precipitationIntensity: w.precipitationIntensity,
+    precipitationIntensity: ctx.weather.precipitationIntensity,
     windSpeed: ctx.wind.speed,
     visibility: ctx.atmosphere.visibility,
-    sunlight,
+    sunlight: Math.max(0, sunlight),
   };
 }
 
-// Apply weather to scene: sunlight -> exposure, visibility -> fog, precipitation -> wet hint
+/** Tone-mapping exposure for the current phase. */
 export function getWeatherExposure(stack: WeatherStack): number {
-  // clear 1.0, overcast 0.85, rain 0.7, storm 0.55
   if (stack.phase === "storm") return 0.55 + stack.sunlight * 0.15;
   if (stack.phase === "rain") return 0.7 + stack.sunlight * 0.15;
   if (stack.phase === "overcast") return 0.85 + stack.sunlight * 0.1;
   return 0.95 + stack.sunlight * 0.05;
 }
 
+/** Interpolate two stacks for smooth cross-fades between context updates. */
 export function lerpWeatherStack(a: WeatherStack, b: WeatherStack, t: number): WeatherStack {
-  const l = (x:number,y:number)=> x + (y-x)*t;
+  const clamped = Math.min(1, Math.max(0, t));
+  const l = (x: number, y: number): number => x + (y - x) * clamped;
   return {
-    phase: t < 0.5 ? a.phase : b.phase,
+    phase: clamped < 0.5 ? a.phase : b.phase,
     cloudCoverage: l(a.cloudCoverage, b.cloudCoverage),
     cloudDensity: l(a.cloudDensity, b.cloudDensity),
     precipitationIntensity: l(a.precipitationIntensity, b.precipitationIntensity),
@@ -65,6 +98,5 @@ export function lerpWeatherStack(a: WeatherStack, b: WeatherStack, t: number): W
 }
 
 export function isWetPhase(s: WeatherStack): boolean {
-  return s.phase === "rain" || s.phase === "storm" || s.precipitationIntensity > 0.12;
+  return s.phase === "rain" || s.phase === "storm" || s.precipitationIntensity > RAIN_ENTER;
 }
-

@@ -4,18 +4,21 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/godRays.ts - 10.X.1 GodRayContext mandatory: mountain gap/valley/canopy/cloud gap shafts, coupled sun+fog+cloud+terrain+camera. Zoom dari blueprint "GodRayContext { sunDirection/elevation/intensity, atmosphericDensity, fogDensity, cloudDensity/coverage, terrain/vegetation occlusion, weather, visibility, cameraPosition }".
-
-// Blueprint 10.X §5 cuma "God Rays mandatory ... through mountain gaps/valleys/canopy/cloud gaps — coupled, not static overlay".
-// File ini ZOOM jadi: GodRayContext derived dari EnvironmentalContext + visibility/terrain, shafts via THREE Volumetric (cone geometry + shader-like opacity), occlusion via heightmap, gak overlay statik.
-// WIRE NOTE for SESSION 2: import { createGodRaySystem, updateGodRays } from "./planetary/godRays" di scene3d/index.ts. Create sekali, update tiap frame dengan EnvironmentalContext + cameraPosition + terrain occlusion.
+// planetary/godRays.ts - 10.X.1 volumetric light shafts.
+// Shafts appear through mountain gaps, valleys, canopy breaks, and cloud gaps.
+// Opacity couples sun, fog, cloud cover, terrain occlusion, weather, and camera
+// distance. Cone meshes approximate volumetrics without a postprocess pass.
+// Visual-only: reads EnvironmentalContext, never writes authority state.
 
 import * as THREE from "three";
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
 
-// ---------------------------------------------------------------------------
-// GodRayContext — single source, derived, gak persist
-// ---------------------------------------------------------------------------
+const SHAFT_COUNT = 6;
+const SHAFT_BASE_HEIGHT = 800;
+const SHAFT_BASE_RADIUS = 120;
+const FIELD_HALF = 1800;
+const MAX_OPACITY = 0.22;
+const VISIBILITY_THRESHOLD = 0.015;
 
 export interface GodRayContext {
   sunDirection: { x: number; y: number; z: number };
@@ -25,17 +28,22 @@ export interface GodRayContext {
   fogDensity: number; // 0..1
   cloudDensity: number;
   cloudCoverage: number;
-  terrainOcclusion: number; // 0..1 (mountain gap 0, canopy 0.8)
-  visibility: number; // m
+  terrainOcclusion: number; // 0..1 (0 = open gap, 0.8 = dense canopy)
+  visibility: number; // meters
   weatherKind: "clear" | "overcast" | "rain" | "storm";
   cameraPosition: { x: number; y: number; z: number };
-  gaps: number; // 0..1 (cloud gaps = 1 - coverage)
+  gaps: number; // 0..1 cloud gaps (1 - coverage)
 }
 
+/**
+ * Derive the shaft context from authority state.
+ * terrainOcclusion should come from a heightmap raycast when available;
+ * the default is a neutral mid value.
+ */
 export function deriveGodRayContext(
   ctx: EnvironmentalContext,
   cameraPosition: { x: number; y: number; z: number },
-  terrainOcclusion = 0.3, // default 0.3, SESSION 2 bisa raycast heightmap untuk gap
+  terrainOcclusion = 0.3,
 ): GodRayContext {
   return {
     sunDirection: ctx.sun.direction,
@@ -53,24 +61,35 @@ export function deriveGodRayContext(
   };
 }
 
-// ---------------------------------------------------------------------------
-// God ray shafts — cone geometry, opacity coupled
-// ---------------------------------------------------------------------------
-
 export interface GodRaySystem {
   group: THREE.Group;
-  shafts: THREE.Mesh[]; // 6 shafts pool
+  shafts: THREE.Mesh[];
 }
 
-export function createGodRaySystem(): GodRaySystem {
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const _sunDir = new THREE.Vector3();
+const _down = new THREE.Vector3(0, -1, 0);
+
+/** Create the pooled shaft cones. Seed keeps gap placement deterministic. */
+export function createGodRaySystem(seed = 0x609d): GodRaySystem {
   const group = new THREE.Group();
   group.name = "godRays";
   const shafts: THREE.Mesh[] = [];
-  // 6 volumetric cones (height 800, radius 120) — pool, gak alloc tiap frame
-  for (let i = 0; i < 6; i++) {
-    const geo = new THREE.ConeGeometry(120, 800, 8, 1, true);
+  const rng = mulberry32(seed);
+  for (let i = 0; i < SHAFT_COUNT; i++) {
+    const geo = new THREE.ConeGeometry(SHAFT_BASE_RADIUS, SHAFT_BASE_HEIGHT, 8, 1, true);
     const mat = new THREE.MeshBasicMaterial({
-      color: 0xfff2c0, // warm sun
+      color: 0xfff2c0,
       transparent: true,
       opacity: 0.0,
       depthWrite: false,
@@ -78,93 +97,95 @@ export function createGodRaySystem(): GodRaySystem {
       blending: THREE.AdditiveBlending,
     });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.y = 400; // cone center 400m up
-    mesh.rotation.x = Math.PI; // point down (sun -> surface)
+    mesh.position.y = SHAFT_BASE_HEIGHT / 2;
+    mesh.rotation.x = Math.PI;
     mesh.visible = false;
     mesh.name = `godRay-${i}`;
-    // Random gap offset biar shafts gak numpuk
-    (mesh as any)._gapPos = new THREE.Vector2((Math.random() - 0.5) * 1800, (Math.random() - 0.5) * 1800);
+    mesh.userData = {
+      ...mesh.userData,
+      gapX: (rng() - 0.5) * FIELD_HALF,
+      gapZ: (rng() - 0.5) * FIELD_HALF,
+    };
     group.add(mesh);
     shafts.push(mesh);
   }
   return { group, shafts };
 }
 
-/**
- * Update tiap frame: coupled sun+fog+cloud+terrain+camera, bukan overlay statik.
- * - sunIntensity <0.15 atau elevation <0.12 -> invisible (sun low/gak ada)
- * - cloudCoverage 0.9 + fog 0.6 -> opacity 0.18, clear -> 0.03
- * - terrainOcclusion 0.8 (canopy) -> opacity x0.4, gap -> x1.2
- * - visibility <2000 (storm) -> shafts lebih pendek + lebih tebal
- * - cameraPosition -> shafts orient ke sunDirection, fade dengan distance
- */
-export function updateGodRays(
-  sys: GodRaySystem,
-  gctx: GodRayContext,
-  dt: number,
-): void {
-  const sunLow = gctx.sunElevation < 0.12 || gctx.sunIntensity < 0.15;
-  const heavyCloud = gctx.cloudCoverage > 0.85 && gctx.fogDensity > 0.5;
-  if (sunLow && !heavyCloud) {
-    sys.shafts.forEach((s) => (s.visible = false));
-    return;
-  }
-
-  // Base opacity: sunIntensity 0.8 * gaps 0.4 * (1 - terrainOcclusion 0.3) * fog 0.3
-  const baseOpacity =
-    gctx.sunIntensity * 0.45 * (0.2 + gctx.gaps * 0.8) * (1 - gctx.terrainOcclusion * 0.6) * (0.3 + gctx.fogDensity * 0.7) * (0.5 + gctx.cloudDensity * 0.5);
-
-  // Visibility -> shaft length/thickness: storm visibility 2000 -> short thick, clear 10000 -> long thin
-  const visFactor = Math.min(1, gctx.visibility / 10000);
-  const shaftHeight = 400 + visFactor * 600; // 400..1000
-  const shaftRadius = 80 + (1 - visFactor) * 80; // 80..160
-
-  sys.shafts.forEach((shaft, idx) => {
-    const mat = shaft.material as THREE.MeshBasicMaterial;
-    const gapPos = (shaft as any)._gapPos as THREE.Vector2;
-
-    // Wind drift via cloud gap: gaps gerak pelan 2 units/s
-    gapPos.x = (gapPos.x + Math.cos(gctx.sunElevation) * 2 * dt * (0.5 + gctx.cloudCoverage * 0.5)) % 2000;
-    gapPos.y = (gapPos.y + Math.sin(gctx.sunElevation) * 2 * dt * (0.5 + gctx.cloudCoverage * 0.5)) % 2000;
-
-    shaft.position.x = gapPos.x;
-    shaft.position.z = gapPos.y;
-    shaft.position.y = shaftHeight / 2;
-
-    // Orient ke sun direction (shafts point dari sun)
-    const sunDir = new THREE.Vector3(gctx.sunDirection.x, gctx.sunDirection.y, gctx.sunDirection.z).normalize();
-    shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), sunDir);
-
-    // Scale via visFactor
-    shaft.scale.set(shaftRadius / 120, shaftHeight / 800, shaftRadius / 120);
-
-    // Opacity coupled + flicker halus via time
-    const flicker = 0.92 + Math.sin(Date.now() * 0.0007 + idx * 1.3) * 0.08;
-    const weatherMul = gctx.weatherKind === "storm" ? 1.3 : gctx.weatherKind === "clear" ? 0.7 : 1;
-    mat.opacity = Math.min(0.22, baseOpacity * flicker * weatherMul);
-    // Color via sun: dawn warm, day white, storm grey-yellow
-    const isWarm = gctx.sunElevation < 0.5;
-    mat.color.set(isWarm ? 0xfff2c0 : gctx.weatherKind === "storm" ? 0xd9ccaa : 0xffffff);
-
-    // Distance fade: camera jauh >800m dari shaft -> fade
-    const camDist = Math.hypot(shaft.position.x - gctx.cameraPosition.x, shaft.position.z - gctx.cameraPosition.z);
-    const distFade = camDist > 800 ? Math.max(0, 1 - (camDist - 800) / 1200) : 1;
-    mat.opacity *= distFade;
-
-    shaft.visible = mat.opacity > 0.015;
-  });
-}
-
-// WIRE NOTE: SESSION 2
-// import { deriveGodRayContext, createGodRaySystem, updateGodRays } from "./planetary/godRays";
-// const godRays = createGodRaySystem(); ctx.scene.add(godRays.group);
-// // di frame loop: const gctx = deriveGodRayContext(envCtx, camera.position, terrainOcclusion); updateGodRays(godRays, gctx, dt);
-
+/** Cheap visibility pre-check so callers can skip the full update. */
 export function isGodRayVisible(gctx: GodRayContext): boolean {
   return gctx.sunIntensity > 0.12 && gctx.sunElevation > 0.08 && gctx.gaps > 0.08;
 }
 
 export function godRayIntensity(gctx: GodRayContext): number {
-  return gctx.sunIntensity * gctx.gaps * (1 - gctx.terrainOcclusion*0.5) * (0.4 + gctx.fogDensity*0.6);
+  return (
+    gctx.sunIntensity *
+    gctx.gaps *
+    (1 - gctx.terrainOcclusion * 0.5) *
+    (0.4 + gctx.fogDensity * 0.6)
+  );
 }
 
+/**
+ * Update shafts one frame. timeSec is the deterministic clock
+ * (worldTime/1000 + tick * dt); it drives drift and shimmer.
+ */
+export function updateGodRays(
+  sys: GodRaySystem,
+  gctx: GodRayContext,
+  dt: number,
+  timeSec?: number,
+): void {
+  const now = timeSec ?? 0;
+  const sunLow = gctx.sunElevation < 0.12 || gctx.sunIntensity < 0.15;
+  const heavyCloud = gctx.cloudCoverage > 0.85 && gctx.fogDensity > 0.5;
+  if (sunLow && !heavyCloud) {
+    for (const s of sys.shafts) s.visible = false;
+    return;
+  }
+
+  const baseOpacity =
+    gctx.sunIntensity *
+    0.45 *
+    (0.2 + gctx.gaps * 0.8) *
+    (1 - gctx.terrainOcclusion * 0.6) *
+    (0.3 + gctx.fogDensity * 0.7) *
+    (0.5 + gctx.cloudDensity * 0.5);
+
+  const visFactor = Math.min(1, gctx.visibility / 10000);
+  const shaftHeight = 400 + visFactor * 600;
+  const shaftRadius = 80 + (1 - visFactor) * 80;
+  const weatherMul = gctx.weatherKind === "storm" ? 1.3 : gctx.weatherKind === "clear" ? 0.7 : 1;
+  const isWarm = gctx.sunElevation < 0.5;
+
+  _sunDir.set(gctx.sunDirection.x, gctx.sunDirection.y, gctx.sunDirection.z).normalize();
+
+  sys.shafts.forEach((shaft, idx) => {
+    const mat = shaft.material as THREE.MeshBasicMaterial;
+    const gapDrift = 0.5 + gctx.cloudCoverage * 0.5;
+    let gapX = (shaft.userData["gapX"] as number) + Math.cos(gctx.sunElevation) * 2 * dt * gapDrift;
+    let gapZ = (shaft.userData["gapZ"] as number) + Math.sin(gctx.sunElevation) * 2 * dt * gapDrift;
+    gapX = ((gapX % 2000) + 2000) % 2000 - 1000;
+    gapZ = ((gapZ % 2000) + 2000) % 2000 - 1000;
+    shaft.userData["gapX"] = gapX;
+    shaft.userData["gapZ"] = gapZ;
+
+    shaft.position.x = gapX;
+    shaft.position.z = gapZ;
+    shaft.position.y = shaftHeight / 2;
+    shaft.quaternion.setFromUnitVectors(_down, _sunDir);
+    shaft.scale.set(shaftRadius / SHAFT_BASE_RADIUS, shaftHeight / SHAFT_BASE_HEIGHT, shaftRadius / SHAFT_BASE_RADIUS);
+
+    const flicker = 0.92 + Math.sin(now * 0.7 + idx * 1.3) * 0.08;
+    let opacity = Math.min(MAX_OPACITY, baseOpacity * flicker * weatherMul);
+    mat.color.set(isWarm ? 0xfff2c0 : gctx.weatherKind === "storm" ? 0xd9ccaa : 0xffffff);
+
+    const camDist = Math.hypot(
+      shaft.position.x - gctx.cameraPosition.x,
+      shaft.position.z - gctx.cameraPosition.z,
+    );
+    if (camDist > 800) opacity *= Math.max(0, 1 - (camDist - 800) / 1200);
+    mat.opacity = opacity;
+    shaft.visible = opacity > VISIBILITY_THRESHOLD;
+  });
+}

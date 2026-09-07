@@ -4,28 +4,66 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/qualityBudget.ts - 10.X.4 Quality FAR->CINEMATIC graceful degrade + Budget proximity->importance->cost + determinism planetSeed+tick+chunkKey + persistence boundary (transient vs persistent). Zoom dari blueprint "Quality FAR->CINEMATIC graceful degrade + Budget proximity->importance->cost + determinism seeding + persistence boundary".
-
-// WIRE NOTE for SESSION 2: import { deriveQualityLevel, getBudget, isPersistent } from "./planetary/qualityBudget" di scene3d/index.ts. Decide per volume whether to spawn high-res god rays etc.
-
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+// planetary/qualityBudget.ts - 10.X.4 quality and budget policy.
+// Distance plus volume cost selects one of four quality levels with graceful
+// degradation; the budget decision gates expensive effects (particles, god
+// rays, shadows). Deterministic jitter keeps handoff and reconnect stable.
+// The persistence boundary declares which effects survive a region handoff
+// and which the client regenerates. Pure logic: no rendering, no authority.
 
 export type QualityLevel = "FAR" | "MEDIUM" | "NEAR" | "CINEMATIC";
 
 export const QUALITY_COST: Record<QualityLevel, number> = {
-  FAR: 0.15, // scattering/coverage only
-  MEDIUM: 0.35, // rain/fog/shadow
-  NEAR: 0.65, // dust/spray
-  CINEMATIC: 1.0, // volumetrics/high-res god rays
+  FAR: 0.15,
+  MEDIUM: 0.35,
+  NEAR: 0.65,
+  CINEMATIC: 1.0,
 };
 
+const CINEMATIC_DIST = 80;
+const NEAR_DIST = 300;
+const MEDIUM_DIST = 1200;
+const DOWNGRADE_COST = 0.3;
+const SEVERE_DOWNGRADE_COST = 0.15;
+
 export function deriveQualityLevel(distance: number, volumeCost: number): QualityLevel {
-  // distance 0..80 -> CINEMATIC, 80..300 -> NEAR, 300..1200 -> MEDIUM, >1200 -> FAR
-  // volumeCost 0..1 modulates (low cost -> drop one level)
-  const raw: QualityLevel = distance < 80 ? "CINEMATIC" : distance < 300 ? "NEAR" : distance < 1200 ? "MEDIUM" : "FAR";
-  if (volumeCost < 0.3 && raw === "CINEMATIC") return "NEAR";
-  if (volumeCost < 0.15 && raw === "NEAR") return "MEDIUM";
+  const raw: QualityLevel =
+    distance < CINEMATIC_DIST
+      ? "CINEMATIC"
+      : distance < NEAR_DIST
+        ? "NEAR"
+        : distance < MEDIUM_DIST
+          ? "MEDIUM"
+          : "FAR";
+  if (volumeCost < DOWNGRADE_COST && raw === "CINEMATIC") return "NEAR";
+  if (volumeCost < SEVERE_DOWNGRADE_COST && raw === "NEAR") return "MEDIUM";
   return raw;
+}
+
+/**
+ * Stable variant that keeps the previous level inside a hysteresis band,
+ * so borderline distances do not oscillate between levels each frame.
+ */
+export function deriveQualityLevelStable(
+  distance: number,
+  volumeCost: number,
+  prev: QualityLevel,
+): QualityLevel {
+  const next = deriveQualityLevel(distance, volumeCost);
+  const order: QualityLevel[] = ["FAR", "MEDIUM", "NEAR", "CINEMATIC"];
+  const diff = order.indexOf(next) - order.indexOf(prev);
+  if (Math.abs(diff) > 1) return next;
+  if (diff === 1) {
+    const margin =
+      prev === "FAR" ? MEDIUM_DIST * 0.9 : prev === "MEDIUM" ? NEAR_DIST * 0.9 : CINEMATIC_DIST * 0.9;
+    if (distance > margin) return prev;
+  }
+  if (diff === -1) {
+    const margin =
+      prev === "CINEMATIC" ? CINEMATIC_DIST * 1.1 : prev === "NEAR" ? NEAR_DIST * 1.1 : MEDIUM_DIST * 1.1;
+    if (distance < margin) return prev;
+  }
+  return next;
 }
 
 export interface BudgetDecision {
@@ -36,11 +74,7 @@ export interface BudgetDecision {
   allowShadows: boolean;
 }
 
-export function getBudget(
-  distance: number,
-  volumeCost: number,
-  importance: number, // 0..1 (landing 1, facility 0.7, distant 0.2)
-): BudgetDecision {
+export function getBudget(distance: number, volumeCost: number, importance: number): BudgetDecision {
   const quality = deriveQualityLevel(distance, volumeCost);
   const cost = QUALITY_COST[quality] * (0.5 + importance * 0.5) * (0.3 + volumeCost * 0.7);
   return {
@@ -50,30 +84,6 @@ export function getBudget(
     allowGodRays: quality === "CINEMATIC" || quality === "NEAR",
     allowShadows: quality !== "FAR",
   };
-}
-
-// Determinism: planetSeed+tick+chunkKey+position -> same quality, no uncontrolled randomness
-export function deterministicJitter(planetSeed: number, tick: number, chunkKey: string, pos: { x: number; z: number }): number {
-  let h = 2166136261;
-  const s = `${planetSeed}:${chunkKey}:${Math.floor(tick / 30)}:${Math.floor(pos.x / 100)}:${Math.floor(pos.z / 100)}`;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return (h >>> 0) / 4294967296; // 0..1
-}
-
-// Persistence boundary: persistent vs transient
-export function isPersistent(effect: string): boolean {
-  // Persistent: weather/facility/terrain/vessel/events — survive handoff/reconnect
-  const persistent = ["weather", "facility", "terrain", "vessel", "facilityState", "chunk"];
-  // Transient: particles/god rays/fog/splash/flash — regenerated after handoff
-  const transient = ["particles", "godRays", "fog", "splash", "flash", "spray", "dust"];
-  if (persistent.some((p) => effect.includes(p))) return true;
-  if (transient.some((t) => effect.includes(t))) return false;
-  return false; // default transient
-}
-
-// Handoff/regeneration hint: SESSION 2 calls this on reconnect to know what to regenerate
-export function getTransientEffects(): string[] {
-  return ["particles", "godRays", "fog", "splash", "flash", "spray"];
 }
 
 export function shouldAllowEffect(decision: BudgetDecision, effect: string): boolean {
@@ -91,3 +101,35 @@ export function adaptQualityForFps(current: QualityLevel, fps: number): QualityL
   return current;
 }
 
+/** Deterministic 0..1 jitter from seed, tick quantum, chunk, and cell. */
+export function deterministicJitter(
+  planetSeed: number,
+  tick: number,
+  chunkKey: string,
+  pos: { x: number; z: number },
+): number {
+  let h = 2166136261;
+  const s = `${planetSeed}:${chunkKey}:${Math.floor(tick / 30)}:${Math.floor(pos.x / 100)}:${Math.floor(pos.z / 100)}`;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return (h >>> 0) / 4294967296;
+}
+
+const PERSISTENT_EFFECTS = new Set(["weather", "facility", "terrain", "vessel", "facilityState", "chunk"]);
+const TRANSIENT_EFFECTS = new Set(["particles", "godRays", "fog", "splash", "flash", "spray", "dust"]);
+
+/**
+ * Persistence boundary: persistent effects survive handoff and reconnect,
+ * transient effects are regenerated by the client.
+ */
+export function isPersistent(effect: string): boolean {
+  if (PERSISTENT_EFFECTS.has(effect)) return true;
+  if (TRANSIENT_EFFECTS.has(effect)) return false;
+  for (const p of PERSISTENT_EFFECTS) if (effect.startsWith(p)) return true;
+  for (const t of TRANSIENT_EFFECTS) if (effect.startsWith(t)) return false;
+  return false;
+}
+
+/** Effects the client must regenerate after handoff or reconnect. */
+export function getTransientEffects(): string[] {
+  return ["particles", "godRays", "fog", "splash", "flash", "spray"];
+}

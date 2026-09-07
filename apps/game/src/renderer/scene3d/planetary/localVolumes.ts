@@ -4,13 +4,19 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/localVolumes.ts - 10.X.4 Local effect volumes around player/landing/facility (rain/vegetation/dust/wake/fog/god rays/particles), distant = low cost. Zoom dari blueprint "Local effect volumes around player/landing/facility (rain/vegetation/dust/wake/fog/god rays/particles), distant = low cost".
-
-// WIRE NOTE for SESSION 2: import { createLocalVolumeManager, updateLocalVolumes } from "./planetary/localVolumes" di scene3d/index.ts. Manager per player/facility, update tiap frame dengan player pos + facility pos.
+// planetary/localVolumes.ts - 10.X.4 local effect volumes.
+// Effects are only simulated at full cost near the player, landing site, or
+// facility; distant volumes decay to a cheap share. The frame loop reads
+// each volume cost to decide which resolvers tick at full rate.
+// Pure manager logic: no authority state, no rendering.
 
 import * as THREE from "three";
 
 export type VolumeKind = "player" | "facility" | "landing";
+
+const IMPORTANCE: Record<VolumeKind, number> = { player: 1.0, landing: 0.9, facility: 0.7 };
+const FAR_MULTIPLIER = 2;
+const FAR_TIMEOUT_SEC = 5;
 
 export interface LocalVolume {
   id: string;
@@ -18,12 +24,15 @@ export interface LocalVolume {
   center: THREE.Vector3;
   radius: number; // 80..300
   active: boolean;
-  cost: number; // 0..1
+  cost: number; // 0..1 effect budget share
+  farTime: number; // seconds spent beyond deactivation range
 }
 
 export interface LocalVolumeManager {
   volumes: Map<string, LocalVolume>;
 }
+
+const _toPlayer = new THREE.Vector3();
 
 export function createLocalVolumeManager(): LocalVolumeManager {
   return { volumes: new Map() };
@@ -38,7 +47,7 @@ export function ensureVolume(
 ): LocalVolume {
   let v = mgr.volumes.get(id);
   if (!v) {
-    v = { id, kind, center: new THREE.Vector3(center.x, center.y, center.z), radius, active: true, cost: 0 };
+    v = { id, kind, center: new THREE.Vector3(center.x, center.y, center.z), radius, active: true, cost: 0, farTime: 0 };
     mgr.volumes.set(id, v);
   } else {
     v.center.set(center.x, center.y, center.z);
@@ -49,11 +58,9 @@ export function ensureVolume(
 }
 
 /**
- * Update: distant volumes -> low cost, near -> full. Cost via distance + kind importance.
- * - player volume always cost 1 if active (near)
- * - facility 200m radius cost 0.8 within 80m, 0.2 beyond 200m
- * - landing transient cost 1 during touchdown, 0.1 after
- * SESSION 2 reads v.cost to decide whether to tick rain/vegetation/dust/wake per volume.
+ * Recompute every volume cost from player distance. Full cost inside 40% of
+ * the radius, fading to a floor beyond the edge. Volumes far outside twice
+ * the radius for over 5 seconds deactivate until re-ensured.
  */
 export function updateLocalVolumes(
   mgr: LocalVolumeManager,
@@ -61,17 +68,19 @@ export function updateLocalVolumes(
   dt: number,
 ): void {
   for (const v of mgr.volumes.values()) {
-    const dist = v.center.distanceTo(new THREE.Vector3(playerPos.x, playerPos.y, playerPos.z));
-    // Cost = importance * distanceFactor
-    const importance = v.kind === "player" ? 1.0 : v.kind === "landing" ? 0.9 : 0.7;
-    const distFactor = dist < v.radius * 0.4 ? 1 : dist < v.radius ? 1 - (dist - v.radius * 0.4) / (v.radius * 0.6) * 0.6 : 0.15;
+    _toPlayer.set(playerPos.x, playerPos.y, playerPos.z);
+    const dist = v.center.distanceTo(_toPlayer);
+    const importance = IMPORTANCE[v.kind];
+    let distFactor: number;
+    if (dist < v.radius * 0.4) distFactor = 1;
+    else if (dist < v.radius) distFactor = 1 - ((dist - v.radius * 0.4) / (v.radius * 0.6)) * 0.6;
+    else distFactor = 0.15;
     v.cost = Math.max(0, Math.min(1, importance * distFactor));
-    // Auto deactivate if far > 2*radius for 5s (SESSION 2 can cull)
-    if (dist > v.radius * 2) {
-      (v as any)._farTime = ((v as any)._farTime ?? 0) + dt;
-      if ((v as any)._farTime > 5) v.active = false;
+    if (dist > v.radius * FAR_MULTIPLIER) {
+      v.farTime += dt;
+      if (v.farTime > FAR_TIMEOUT_SEC) v.active = false;
     } else {
-      (v as any)._farTime = 0;
+      v.farTime = 0;
       v.active = true;
     }
   }
@@ -90,4 +99,3 @@ export function countActiveVolumes(mgr: LocalVolumeManager): number {
   for (const v of mgr.volumes.values()) if (v.active) n++;
   return n;
 }
-
