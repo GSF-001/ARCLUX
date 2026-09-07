@@ -91,3 +91,12 @@ export function tickOcean(
   }
   // Micro-ripples hint: state.waveFrequency -> ocean material would update uTime, SESSION 2 reads state
 }
+
+export function getOceanReflectionStrength(state: OceanFrameState, sunIntensity: number): number {
+  return state.reflection * (0.8 + sunIntensity * 0.2);
+}
+
+export function shouldShowWake(state: OceanFrameState, speed: number): boolean {
+  return speed > 2.5 && state.roughness < 0.85;
+}
+

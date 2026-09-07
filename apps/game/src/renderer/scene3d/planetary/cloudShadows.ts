@@ -117,3 +117,14 @@ export function getCloudShadowOpacity(sys: CloudShadowSystem): number {
 // import { createCloudShadowSystem, tickCloudShadows } from "./planetary/cloudShadows";
 // const cloudShadows = createCloudShadowSystem(); ctx.scene.add(cloudShadows.group);
 // // di frame loop: tickCloudShadows(cloudShadows, envCtx, dt);
+
+export function getShadowIntensityAt(sys: CloudShadowSystem, pos: {x:number,z:number}): number {
+  const op = (sys as any)._lastOpacity ?? 0;
+  let minDist = Infinity;
+  for (const p of sys.planes) {
+    const d = Math.hypot(p.position.x - pos.x, p.position.z - pos.z);
+    minDist = Math.min(minDist, d);
+  }
+  return minDist < 2000 ? op * (1 - minDist/2000) : 0;
+}
+

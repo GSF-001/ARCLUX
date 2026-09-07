@@ -52,3 +52,12 @@ export function tickFog(sys: FogSystem, state: FogState, sunColor: THREE.Color):
   sys.lastState = state;
   // God-ray feed hint: SESSION 2 bisa baca state.density untuk godRays fogDensity
 }
+
+export function getFogVisibility(state: FogState): number {
+  return state.distance * (1 - state.density * 0.5);
+}
+
+export function fogDensityForGodRay(state: FogState): number {
+  return state.density * 0.7 + state.valleyFactor * 0.15 + state.entryHaze * 0.2;
+}
+

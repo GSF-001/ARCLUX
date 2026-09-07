@@ -102,3 +102,12 @@ export function tickRain(sys: RainSystem, state: RainState, dt: number): void {
   sys.lastPuddle = state.puddleLevel;
   // Ocean ripples hint: SESSION 2 bisa baca state.intensity untuk ocean.ts micro-ripples
 }
+
+export function isWetEnough(state: RainState, threshold = 0.15): boolean {
+  return state.wetness > threshold || state.puddleLevel > threshold;
+}
+
+export function rainOpacity(state: RainState): number {
+  return Math.min(0.65, state.intensity * 0.78);
+}
+
