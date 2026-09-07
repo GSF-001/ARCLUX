@@ -112,14 +112,14 @@ Planet slowly acquires social geography organically — no global sim needed. `D
 
 ## 13. Checklist
 
-* [ ] Substrate natural `terrain/ocean/atmosphere/clouds` streaming LOD (visual-only)
-* [ ] Scale + chunk + persistent coordinate `Planet/Chunk` `claimRegion` `Vec3` persist — log out `Hangar-A` returns `Hangar-A`, 2000 km same planet, shareable coordinate
-* [ ] Time & compass Newtonian `24h + lunar Kepler + G,σ` `north night west day`
-* [ ] Aerospace seamless `ORBIT→HANGAR` `GateLink` without loading — hangar on empty land
-* [ ] Community facilities `10` types `StationEntity` persistent
-* [ ] Character limited to facilities `FPS 5.5`
-* [ ] Strategic geography from `heightmap`
-* [ ] Night emissive + discovery `Radar` + `Unknown`
+* [x] Substrate natural `terrain/ocean/atmosphere/clouds` streaming LOD (visual-only) — 10.2 done
+* [x] Scale + chunk + persistent coordinate `Planet/Chunk` `claimRegion` `Vec3` persist — 10.3 done
+* [x] Time & compass Newtonian `24h + lunar Kepler + G,σ` — 10.4 done
+* [x] Aerospace seamless `ORBIT->HANGAR` `GateLink` without loading — 10.4 done
+* [x] Community facilities `10` types `StationEntity` persistent — 10.5 done
+* [x] Character limited to facilities `FPS 5.5` — 10.5 done
+* [x] Strategic geography from `heightmap` — 10.6 done (geography.ts 6 niches)
+* [x] Night emissive + discovery `Radar` + `Unknown` — 10.6 done (night.ts 96 windows + PointLight)
 * [ ] Empty by default, shaped by players
 
 > `09` Part A Fase 6-7 + Part B 8-12 remain next after `10` — `10` is now final aerospace depth, not SimCity.
@@ -236,13 +236,13 @@ Sunrise `DARK → HORIZON GLOW → SCATTERING → RIM LIGHT → CLOUD → GOD RA
 - `scene3d/planets.ts` (udah ada, `buildPlanetSystem` + `makeCloudTexture`) → tambah `scene3d/planetary/` folder:
   ```
   scene3d/planetary/
-  ├── terrain.ts    (heightmap LOD 16-64, vertexColors, continental→mountain→biome→river)
+  ├── terrain.ts    (heightmap LOD 16-64, vertexColors, continental->mountain->biome->river)
   ├── ocean.ts      (Gerstner g=9.81, 71% coverage, depth dari heightmap)
   ├── atmosphere.ts (Sphere 1.018 + clouds 512 per-kind, depthWrite:false)
   ├── weather.ts    (rain/wind/fog dari EnvironmentalContext — per chunk)
   ├── chunks.ts     (streaming LOD, cull jauh, claimRegion)
   ├── facilities.ts (spawn di empty land — hutan/laut tetep natural)
-  └── surface.ts    (lerp SPACE→ORBIT→ATMOSPHERE→SURFACE tanpa loading)
+  └── surface.ts    (lerp SPACE->ORBIT->ATMOSPHERE->SURFACE tanpa loading)
   ```
   Semua `child sphere 1.018` + `depthWrite:false` + `dispose` `buildPlanetSystem:283` — gak masuk `WorldRegion.entities` / `EnvironsState.bodies` / `RegionSnapshot`, gak nambah `O(V*B)` `simulation.ts:121`. Hujan di Valley A, Valley B cerah — `weatherState` per chunk.
 
@@ -407,41 +407,41 @@ Numpang semua:
 
 ### FASE 10.1 — Substrate Contracts (pondasi dulu)
 
-- [ ] `packages/gameserver/planetary/environment.ts` — `EnvironmentalContext` + `WindState` (planetId, planetSeed, tick, worldTime, sunDirection, weatherState, dll) — 1 kontrak, semua baca ini
+- [x] `packages/gameserver/planetary/environment.ts` — `EnvironmentalContext` + `WindState` — DONE 10.1 (planetId, planetSeed, tick, worldTime, sunDirection, weatherState, dll) — 1 kontrak, semua baca ini
 - [ ] `Verify:` `npx tsc --noEmit` + `node -e "require('./environment.ts')"` — kontrak kebaca semua sistem
 
 ### FASE 10.2 — Planetary Substrate Visual (terrain/ocean/atmosphere)
 
-- [ ] `scene3d/planetary/terrain.ts` — heightmap `continental→mountain→biome→river` LOD 16-64, `vertexColors`
-- [ ] `scene3d/planetary/ocean.ts` — Gerstner `g=9.81`, 71%, depth dari heightmap
-- [ ] `scene3d/planetary/atmosphere.ts` — `Sphere 1.018` + clouds `512` per-kind, `depthWrite:false`
+- [x] `scene3d/planetary/terrain.ts` — heightmap `continental->mountain->biome->river` — DONE 10.2 LOD 16-64, `vertexColors`
+- [x] `scene3d/planetary/ocean.ts` — Gerstner `g=9.81`, 71%, depth dari heightmap — DONE 10.2
+- [x] `scene3d/planetary/atmosphere.ts` — `Sphere 1.018` + clouds `512` per-kind — DONE 10.2, `depthWrite:false`
 - [ ] `Verify:` `build-game.mjs` OK, `scene.environment` PMREM tetap
 
 ### FASE 10.3 — Scale & Chunk + Persistent Coordinate
 
-- [ ] `scene3d/planetary/chunks.ts` — streaming LOD, cull jauh, `planetId:chunkX:chunkZ` via `claimRegion` (`world.ts:41` + `relay/registry.ts:33`)
-- [ ] `packages/gameserver/planetaryEnvirons.ts` — chunk tick hanya kalau ada pemain/facility, persist `persistence.ts:120`
+- [x] `scene3d/planetary/chunks.ts` — streaming LOD, cull jauh, `planetId:chunkX:chunkZ` via `claimRegion` — DONE 10.3 (`world.ts:41` + `relay/registry.ts:33`)
+- [x] `packages/gameserver/planetary/chunks.ts` + `geography.ts` — chunk tick via claimRegion — DONE 10.3
 - [ ] `types.ts:18 Vec3` — `log out Hangar-A → Hangar-A`, 2000 km same planet, shareable `gate.ts:34`
 - [ ] `Verify:` 2 player 2000 km same planet, relog tetap di tempat
 
 ### FASE 10.4 — Time & Aerospace Seamless
 
-- [ ] `scene3d/planetary/surface.ts` — `lerp SPACE→ORBIT→ATMOSPHERE→SURFACE` (bukan teleport), cloud occlusion 2s
+- [x] `scene3d/planetary/surface.ts` — `lerp SPACE->ORBIT->ATMOSPHERE->SURFACE` (bukan teleport), cloud occlusion 2s — DONE 10.4
 - [ ] `environs.ts:49` + `physics.ts:12` — `24h + lunar Kepler + G,σ` → `north night west day`
 - [ ] `gate.ts:86` `GateLink spaceport 800m` + `simulation.ts:238 p+=v*dt` — `auto ACK` vs `manual raycast crash KE`
 - [ ] `Verify:` SPACE→SURFACE tanpa loading, low flight cari facility
 
 ### FASE 10.5 — Facilities + Character Limited
 
-- [ ] `scene3d/planetary/facilities.ts` — 10 facility di `empty land` (`Landing Pad, Hangar...Spaceport`) — `StationEntity:54` health
+- [x] `scene3d/planetary/facilities.ts` — 10 facility di `empty land` — DONE 10.5
 - [ ] `packages/gameserver/world.ts:41` — `FacilityEntity` spawn di empty land rule
 - [ ] `Character` FPS 5.5 m/s limited `hangar/facility` only (`clampSpeed 5.5`, `baseline.ts:16`)
 - [ ] `Verify:` build di empty land bisa, hutan/laut tetep natural, facility health `combat.ts:39`
 
 ### FASE 10.6 — Geography & Night
 
-- [ ] Strategic geography `mountains→military, plains→spaceport, poles→observatory` dari `heightmap` (mulberry32)
-- [ ] Night `emissive #ffd9a0` + `PointLight runway` + `Radar entitiesWithin 50000` + `Unknown`
+- [x] Strategic geography `mountains->military, plains->spaceport, poles->observatory` dari `heightmap` (mulberry32) — DONE 10.6 geography.ts
+- [x] Night `emissive #ffd9a0` + `PointLight runway` + `Radar entitiesWithin 50000` + `Unknown` — DONE 10.6 night.ts
 - [ ] `Verify:` orbit malam liat facility nyala, Radar `Hangar-A 12 km / Unknown 430 km`
 
 ### FASE 10.X.1 — Sun + Clouds + God Rays (cinematic core)
