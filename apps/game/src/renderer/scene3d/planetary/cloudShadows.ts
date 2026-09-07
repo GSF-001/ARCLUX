@@ -4,32 +4,51 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/cloudShadows.ts - 10.X.1 CLOUD -> MOVING SHADOW -> SURFACE: self-shadow + edge-lit + forest darkens. Zoom dari blueprint "SUN -> CLOUD -> MOVING SHADOW -> SURFACE (forest darkens under cloud)".
-
-// Blueprint 10.X §5 cuma "Clouds self-shadow, edge-lit, sunrise/sunset bright. SUN -> CLOUD -> MOVING SHADOW -> SURFACE".
-// File ini ZOOM jadi: shadow plane 4000m, drift via WindState, density -> opacity, sunElevation -> shadow length, forest darkens.
-// WIRE NOTE for SESSION 2: import { createCloudShadowSystem, tickCloudShadows } from "./planetary/cloudShadows" di scene3d/index.ts. Create sekali di init, tick tiap frame dengan EnvironmentalContext.wind + clouds + sun.
+// planetary/cloudShadows.ts - 10.X.1 moving cloud shadows.
+// A small pool of dark translucent planes drifts with the shared wind field,
+// dimming terrain and vegetation where clouds block the sun.
+// Visual-only: reads EnvironmentalContext, never writes authority state.
 
 import * as THREE from "three";
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
 
-// ---------------------------------------------------------------------------
-// Cloud shadow system — visual-only, 1 plane per chunk, no physics
-// ---------------------------------------------------------------------------
+const PLANE_COUNT = 4;
+const PLANE_SIZE = 4000;
+const SHADOW_Y = 0.15;
+const MAX_OPACITY = 0.28;
+const VISIBILITY_THRESHOLD = 0.02;
 
 export interface CloudShadowSystem {
-  group: THREE.Group; // add ke ctx.scene
-  planes: THREE.Mesh[]; // 1 plane per chunk (pool 4)
+  group: THREE.Group;
+  planes: THREE.Mesh[];
   baseOpacity: number;
+  lastOpacity: number;
 }
 
-export function createCloudShadowSystem(): CloudShadowSystem {
+export interface CloudShadowPlaneUserData {
+  offsetX: number;
+  offsetY: number;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Create the pooled shadow quads. Seed keeps placement deterministic. */
+export function createCloudShadowSystem(seed = 0x10c10d): CloudShadowSystem {
   const group = new THREE.Group();
   group.name = "cloudShadows";
   const planes: THREE.Mesh[] = [];
-  // 4 shadow quads (4000x4000) dengan texture noise, pool
-  for (let i = 0; i < 4; i++) {
-    const geo = new THREE.PlaneGeometry(4000, 4000);
+  const rng = mulberry32(seed);
+  for (let i = 0; i < PLANE_COUNT; i++) {
+    const geo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE);
     const mat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
@@ -39,92 +58,94 @@ export function createCloudShadowSystem(): CloudShadowSystem {
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.rotation.x = -Math.PI / 2;
-    mesh.position.y = 0.15; // 15cm di atas terrain biar gak z-fight
+    mesh.position.y = SHADOW_Y;
     mesh.visible = false;
     mesh.name = `cloudShadow-${i}`;
-    // Simpan offset biar drift gak sinkron
-    (mesh as any)._offset = new THREE.Vector2(Math.random() * 4000, Math.random() * 4000);
+    const userData: CloudShadowPlaneUserData = {
+      offsetX: rng() * PLANE_SIZE,
+      offsetY: rng() * PLANE_SIZE,
+    };
+    mesh.userData = { ...mesh.userData, ...userData };
     group.add(mesh);
     planes.push(mesh);
   }
-  return { group, planes, baseOpacity: 0.0 };
+  return { group, planes, baseOpacity: 0.0, lastOpacity: 0 };
+}
+
+function planeOffset(plane: THREE.Mesh): CloudShadowPlaneUserData {
+  return plane.userData as CloudShadowPlaneUserData;
 }
 
 /**
- * Tick tiap frame: drift via WindState + opacity via cloudDensity/coverage + sunElevation.
- * - wind.direction/speed -> offset uv
- * - cloudDensity 0..1 -> opacity 0..0.28
- * - sunElevation <0.2 rad -> shadow panjang + opacity turun 40% (sun low = soft)
- * - timeOfDay night -> invisible
+ * Advance shadows one frame.
+ * @param timeSec deterministic clock (worldTime/1000 + tick * dt), never Date.now
+ * @param anchor world position the planes follow (defaults to origin)
  */
 export function tickCloudShadows(
   sys: CloudShadowSystem,
   ctx: EnvironmentalContext,
   dt: number,
+  timeSec?: number,
+  anchor?: { x: number; z: number },
 ): void {
-  const isNight = ctx.timeOfDay === "night" || ctx.sun.intensity < 0.05;
-  if (isNight) {
-    sys.planes.forEach((p) => (p.visible = false));
+  const now = timeSec ?? ctx.worldTime / 1000 + ctx.simulationTick * 0.1;
+  const night = ctx.timeOfDay === "night" || ctx.sun.intensity < 0.05;
+  if (night) {
+    for (const p of sys.planes) p.visible = false;
+    sys.lastOpacity = 0;
     return;
   }
   const wind = ctx.wind;
   const clouds = ctx.clouds;
   const sun = ctx.sun;
 
-  // Opacity target: density 0.8 + coverage 0.7 -> 0.26, clear -> 0.02
-  const targetOpacity = Math.min(0.28, clouds.density * 0.22 + clouds.coverage * 0.12);
-  // Sun low = shadow soft + stretch: elevation 0.2 -> 1, 1.1 -> 0.6
+  const targetOpacity = Math.min(MAX_OPACITY, clouds.density * 0.22 + clouds.coverage * 0.12);
   const elevationFactor = 1.4 - Math.min(1.0, Math.max(0, sun.elevation)) * 0.6;
   const opacity = targetOpacity * elevationFactor;
+  sys.lastOpacity = opacity;
 
-  // Drift speed: wind.speed 2..10 m/s -> 6..30 units/s di plane
   const speed = wind.speed * 3.0;
   const dirX = Math.cos(wind.direction);
   const dirZ = Math.sin(wind.direction);
+  const ax = anchor?.x ?? 0;
+  const az = anchor?.z ?? 0;
 
   sys.planes.forEach((plane, idx) => {
     const mat = plane.material as THREE.MeshBasicMaterial;
-    const offset = (plane as any)._offset as THREE.Vector2;
+    const offset = planeOffset(plane);
 
-    // Drift + turbulence + localVariation biar Valley A vs B gak sinkron
-    const turb = 1 + wind.turbulence * 0.4 * Math.sin(Date.now() * 0.0003 + idx);
-    offset.x = (offset.x + dirX * speed * turb * dt * (0.8 + wind.localVariation * 0.4)) % 4000;
-    offset.y = (offset.y + dirZ * speed * turb * dt * (0.8 + wind.localVariation * 0.4)) % 4000;
+    const turb = 1 + wind.turbulence * 0.4 * Math.sin(now * 0.3 + idx * 1.7);
+    const drift = 0.8 + wind.localVariation * 0.4;
+    offset.offsetX = (offset.offsetX + dirX * speed * turb * dt * drift) % PLANE_SIZE;
+    offset.offsetY = (offset.offsetY + dirZ * speed * turb * dt * drift) % PLANE_SIZE;
 
-    // Position plane di atas player (center 0,0 untuk sekarang, SESSION 2 nanti ikutin player pos)
-    plane.position.x = offset.x - 2000;
-    plane.position.z = offset.y - 2000;
+    plane.position.x = ax + offset.offsetX - PLANE_SIZE / 2;
+    plane.position.z = az + offset.offsetY - PLANE_SIZE / 2;
 
-    // Scale shadow length via sun elevation (low sun = shadow panjang)
     const stretch = sun.elevation < 0.4 ? 1 + (0.4 - sun.elevation) * 1.8 : 1;
     plane.scale.set(stretch, 1, 1);
-    plane.rotation.z = wind.direction; // shadow arah angin
+    plane.rotation.z = wind.direction;
 
     mat.opacity = opacity * (0.85 + wind.gustStrength * 0.15);
-    plane.visible = opacity > 0.02;
+    plane.visible = opacity > VISIBILITY_THRESHOLD;
   });
-
-  // Forest darkens hint: SESSION 2 bisa baca opacity di frame loop untuk tint vegetation
-  (sys as any)._lastOpacity = opacity;
 }
 
-/** Helper buat vegetation/terrain yang mau darkens saat shadow lewat — baca dari system. */
+/** Current shadow strength for vegetation and terrain tinting. */
 export function getCloudShadowOpacity(sys: CloudShadowSystem): number {
-  return (sys as any)._lastOpacity ?? 0;
+  return sys.lastOpacity;
 }
 
-// WIRE NOTE: SESSION 2
-// import { createCloudShadowSystem, tickCloudShadows } from "./planetary/cloudShadows";
-// const cloudShadows = createCloudShadowSystem(); ctx.scene.add(cloudShadows.group);
-// // di frame loop: tickCloudShadows(cloudShadows, envCtx, dt);
-
-export function getShadowIntensityAt(sys: CloudShadowSystem, pos: {x:number,z:number}): number {
-  const op = (sys as any)._lastOpacity ?? 0;
+/** Shadow strength at a world position, fading with distance to the quad edge. */
+export function getShadowIntensityAt(sys: CloudShadowSystem, pos: { x: number; z: number }): number {
+  const op = sys.lastOpacity;
+  if (op <= 0) return 0;
   let minDist = Infinity;
   for (const p of sys.planes) {
+    if (!p.visible) continue;
     const d = Math.hypot(p.position.x - pos.x, p.position.z - pos.z);
-    minDist = Math.min(minDist, d);
+    if (d < minDist) minDist = d;
   }
-  return minDist < 2000 ? op * (1 - minDist/2000) : 0;
+  if (!Number.isFinite(minDist) || minDist >= PLANE_SIZE / 2) return 0;
+  return op * (1 - minDist / (PLANE_SIZE / 2));
 }
-
