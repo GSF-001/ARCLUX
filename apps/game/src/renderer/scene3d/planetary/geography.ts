@@ -4,25 +4,17 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/geography.ts - 10.6 client visual hints for strategic geography (mountain/plains/polar/coastal/valley). Reads height/slope/biome from terrain.ts + server geography resolver.
-
-// Client visual - gak duplikat server logic, cuma hint warna/icon + sharing position.
-
 import * as THREE from "three";
 import type { GeographySample, GeographyNiche } from "../../../../../../packages/gameserver/planetary/geography";
-import { analyzeGeography } from "../../../../../../packages/gameserver/planetary/geography";
-
-// ---------------------------------------------------------------------------
-// Visual hint - color per niche (HUD/minimap)
-// ---------------------------------------------------------------------------
+import { analyzeGeography, suggestFacilityKind, latitudeFromPosition } from "../../../../../../packages/gameserver/planetary/geography";
 
 export const NICHE_COLOR: Record<GeographyNiche, number> = {
-  mountain_military: 0x6b7280, // slate - mountain
-  plains_spaceport: 0x5fe0a0, // green - plains
-  desert_remote: 0xd9a86c, // sand - desert
-  polar_observatory: 0x9be8ff, // ice - polar
-  coastal: 0x4da6ff, // blue - coastal
-  valley_hidden: 0x2f6b4a, // dark green - valley
+  mountain_military: 0x6b7280,
+  plains_spaceport: 0x5fe0a0,
+  desert_remote: 0xd9a86c,
+  polar_observatory: 0x9be8ff,
+  coastal: 0x4da6ff,
+  valley_hidden: 0x2f6b4a,
   generic: 0x8a8f98,
 };
 
@@ -36,7 +28,16 @@ export const NICHE_LABEL: Record<GeographyNiche, string> = {
   generic: "Generic",
 };
 
-/** Buat marker kecil di terrain untuk debug/visual hint (sphere 4m, color niche). */
+export const NICHE_ICON: Record<GeographyNiche, string> = {
+  mountain_military: "▲",
+  plains_spaceport: "⬢",
+  desert_remote: "⬡",
+  polar_observatory: "⬔",
+  coastal: "≋",
+  valley_hidden: "⬓",
+  generic: "·",
+};
+
 export function createGeographyMarker(sample: GeographySample, neighborHeights?: number[]): THREE.Mesh {
   const analysis = analyzeGeography(sample, neighborHeights);
   const geo = new THREE.SphereGeometry(4, 8, 8);
@@ -44,16 +45,45 @@ export function createGeographyMarker(sample: GeographySample, neighborHeights?:
     color: NICHE_COLOR[analysis.niche],
     emissive: NICHE_COLOR[analysis.niche],
     emissiveIntensity: 0.6,
+    roughness: 0.6,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(sample.position.x, sample.height + 6, sample.position.z);
   mesh.name = `geography-${analysis.niche}`;
-  mesh.userData = { niche: analysis.niche, score: analysis.score, reason: analysis.reason };
+  mesh.userData = { niche: analysis.niche, score: analysis.score, reason: analysis.reason, sample };
   return mesh;
 }
 
-/** HUD string: "Mountain - Military (0.82) - h=420 slope=0.52". */
+export function createGeographyCluster(samples: GeographySample[], neighborMap?: Map<string, number[]>): THREE.Group {
+  const group = new THREE.Group();
+  group.name = "geography-cluster";
+  for (const s of samples) {
+    const key = `${s.position.x}:${s.position.z}`;
+    const neigh = neighborMap?.get(key);
+    const marker = createGeographyMarker(s, neigh);
+    group.add(marker);
+  }
+  return group;
+}
+
 export function formatGeographyHud(sample: GeographySample, neighborHeights?: number[]): string {
   const a = analyzeGeography(sample, neighborHeights);
   return `${NICHE_LABEL[a.niche]} (${a.score.toFixed(2)}) - ${a.reason}`;
+}
+
+export function suggestForPosition(planetSeed: number, sample: GeographySample, neighbors?: number[]): string {
+  return suggestFacilityKind(planetSeed, sample.position, sample, neighbors);
+}
+
+export function geographyOverlayColor(niche: GeographyNiche, alpha: number): string {
+  const hex = NICHE_COLOR[niche].toString(16).padStart(6, "0");
+  const a = Math.round(alpha * 255).toString(16).padStart(2, "0");
+  return `#${hex}${a}`;
+}
+
+export function projectGeographyList(samples: GeographySample[]): Array<{ label: string; niche: GeographyNiche; score: number; lat: number }> {
+  return samples.map(s => {
+    const a = analyzeGeography(s);
+    return { label: NICHE_LABEL[a.niche], niche: a.niche, score: a.score, lat: latitudeFromPosition(s.position) };
+  }).sort((a, b) => b.score - a.score);
 }

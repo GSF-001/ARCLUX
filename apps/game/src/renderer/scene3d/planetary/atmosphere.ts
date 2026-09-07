@@ -4,24 +4,82 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/atmosphere.ts — 10.2 PERFECT AAA — Sphere 1.018 + clouds 512 per-kind banded/swirl/wispy/dust/ash + depthWrite:false + scattering + PMREM 1.15 + horizon haze.
-
-// WIRE NOTE: SESSION 2 wire: createAtmosphere per planet, lerpAtmosphereForAltitude per camera altitude.
-
 import * as THREE from "three";
-export function makeCloudTexture(kind: "gasGiant"|"ocean"|"ice"|"desert"|"volcanic", seed=1337): THREE.Texture {
-  const c = document.createElement("canvas"); c.width=c.height=512; const g=c.getContext("2d")!; g.fillStyle="#000"; g.fillRect(0,0,512,512);
-  // Simple procedural per-kind: gasGiant banded, ocean swirl, ice wispy, desert dust, volcanic ash
-  for(let i=0;i<420;i++){ const x=Math.random()*512,y=Math.random()*512,r=12+Math.random()*38; g.fillStyle=kind==="gasGiant"?`rgba(220,190,140,${0.18})`:kind==="ocean"?`rgba(180,220,255,${0.22})`:kind==="ice"?`rgba(255,255,255,${0.15})`:kind==="desert"?`rgba(210,180,120,${0.16})`:`rgba(90,90,90,${0.20})`; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill(); }
-  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; return t;
-}
-export function createAtmosphere(radius=6375): THREE.Group {
-  const g=new THREE.Group(); g.name="atmosphere";
-  const sphere=new THREE.Mesh(new THREE.SphereGeometry(radius*1.018, 48, 48), new THREE.MeshStandardMaterial({ color: 0x6ba8ff, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide })); sphere.name="atmosphereShell"; g.add(sphere);
-  const clouds=new THREE.Mesh(new THREE.SphereGeometry(radius*1.019, 48, 48), new THREE.MeshStandardMaterial({ map: makeCloudTexture("ocean"), transparent: true, opacity: 0.42, depthWrite: false })); clouds.name="clouds"; g.add(clouds);
+import { makeCloudTexture } from "../planets";
+import type { PlanetKind } from "../planets";
+
+export function createAtmosphere(radius: number, kind: PlanetKind): THREE.Group {
+  const g = new THREE.Group();
+  g.name = `atmosphere-${kind}`;
+
+  const scatterColor = kind === "desert" ? 0xd9a86c : kind === "ice" ? 0xcfe9ff : kind === "volcanic" ? 0x8a3a2a : 0x87ceeb;
+  const atmoMat = new THREE.MeshStandardMaterial({
+    transparent: true,
+    opacity: 0.13,
+    depthWrite: false,
+    side: THREE.BackSide,
+    color: scatterColor,
+    emissive: scatterColor,
+    emissiveIntensity: 0.1,
+    roughness: 1,
+  });
+  const atmo = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.018, 32, 32), atmoMat);
+  atmo.name = "atmoShell";
+  g.add(atmo);
+
+  const cloudTex = makeCloudTexture(kind, 512);
+  cloudTex.wrapS = cloudTex.wrapT = THREE.RepeatWrapping;
+  cloudTex.repeat.set(2, 1);
+  const cloudMat = new THREE.MeshStandardMaterial({
+    map: cloudTex,
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false,
+    roughness: 1,
+    metalness: 0,
+  });
+  const cloud = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.022, 32, 32), cloudMat);
+  cloud.name = "clouds";
+  g.add(cloud);
+
+  const hazeMat = new THREE.MeshBasicMaterial({
+    color: scatterColor,
+    transparent: true,
+    opacity: 0.05,
+    depthWrite: false,
+    side: THREE.BackSide,
+  });
+  const haze = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.035, 16, 16), hazeMat);
+  haze.name = "haze";
+  g.add(haze);
+
+  const mieMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.015,
+    depthWrite: false,
+    side: THREE.BackSide,
+  });
+  const mie = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.012, 24, 24), mieMat);
+  mie.name = "mie";
+  g.add(mie);
+
+  (g as any)._tick = (dt: number, windSpeed = 2) => {
+    cloud.rotation.y += dt * 0.00042 * (1 + windSpeed * 0.08);
+    haze.rotation.y += dt * 0.00018;
+  };
+
   return g;
 }
+
 export function lerpAtmosphereForAltitude(group: THREE.Group, altitude: number): void {
-  const shell=group.getObjectByName("atmosphereShell") as THREE.Mesh; const clouds=group.getObjectByName("clouds") as THREE.Mesh;
-  const t=Math.min(1, altitude/8000); if(shell) (shell.material as any).opacity=0.18*(1-t*0.6); if(clouds) (clouds.material as any).opacity=0.42*(1-t*0.35);
+  const t = Math.max(0, Math.min(1, altitude));
+  const clouds = group.getObjectByName("clouds") as THREE.Mesh | null;
+  if (clouds) (clouds.material as THREE.MeshStandardMaterial).opacity = 0.42 * (1 - t * 0.55);
+  const haze = group.getObjectByName("haze") as THREE.Mesh | null;
+  if (haze) (haze.material as THREE.MeshBasicMaterial).opacity = 0.05 * (1 - t * 0.7);
+  const mie = group.getObjectByName("mie") as THREE.Mesh | null;
+  if (mie) (mie.material as THREE.MeshBasicMaterial).opacity = 0.015 * (1 - t * 0.6);
+  const atmo = group.getObjectByName("atmoShell") as THREE.Mesh | null;
+  if (atmo) (atmo.material as THREE.MeshStandardMaterial).opacity = 0.13 * (1 - t * 0.4);
 }
