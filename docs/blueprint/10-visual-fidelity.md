@@ -423,3 +423,67 @@ Sinematik C6-C10 (klaim: 5 resolver + wire):
 Cara verifikasi tiap kotak: baca file + `tsc` + smoke perilaku
 (pola smoke yang sudah ada) + tulis HASILnya di PR. Kotak centang
 tanpa ketiga itu = belum centang.
+
+## 8. UI Visual Fidelity (audit + blueprint)
+
+Hasil audit read-only seluruh UI existing (`hud.ts`, `menu.ts`,
+`landing.ts`, `tokens.ts`, overlay character/stadium/bazaar,
+`CockpitResponseResolver.ts`, `index.html`). Tidak ada file diubah
+saat audit.
+
+### 8.1 Yang sudah bagus — JANGAN disentuh strukturnya
+
+- `tokens.ts`: satu sumber warna/tipografi/glow + konverter
+  CSS↔THREE. Fondasi identitas, hanya boleh DITAMBAH (§8.3 U1).
+- Grammar layout HUD: kiri TAC, kanan VESSEL, bawah slot, atas
+  region. Pindah satu panel saja = merusak identitas.
+- Disiplin XSS (`textContent`, hash-guard update 10Hz).
+- Konsep landing CCTV + live stats + persist settings menu.
+
+### 8.2 Gap terverifikasi (8 temuan)
+
+- V1. Pengecatan flat: palet punya depth, eksekusi flat (bar/slot/
+  stat fill polos, glow single-layer).
+- V2. Compositing liar: blur backdrop 2/3/6/12px tanpa skala,
+  panel numpuk di atas bloom tanpa isolasi (risiko washout).
+- V3. Landing langgar token: hardcode `#eaf0ff` + font stack +
+  `@import` Google Fonts yang DIBLOKIR CSP (`default-src 'self'`)
+  -> font landing fallback diam-diam.
+- V4. Overlay kasta dua: character/stadium/bazaar = kotak tengah
+  generik, tanpa corner bracket taktis ala HUD.
+- V5. Animasi generik: semua `0.15s ease` + `translateY(-2px)`;
+  tidak ada motion token.
+- V6. KABEL MATI KOKPIT (kritis): `CockpitResponseResolver`
+  menghitung droplet/flash/vignette/shake -> hasilnya DIBUANG
+  (`applyCockpitToOverlay` nulis objek tak terbaca, tidak ada
+  overlay yang render). Efek hujan/flash/heat di kaca = TIDAK
+  TERLIHAT hari ini. Plus `Date.now` di dalamnya.
+- V7. Time-bomb perf: `backdrop-filter: blur()` fullscreen di atas
+  canvas WebGL (landing + 3 overlay + menu).
+- V8. HUD target pulse + scanline pakai `Date.now` inline (kosmetik,
+  tapi tidak deterministik).
+
+### 8.3 Fase eksekusi (satu fase = satu PR + ceklist)
+
+- [ ] **U1 Token** (`ui/tokens.ts` SAJA): tambah `motion`
+      (durasi/easing), glow berlapis, skala z-index, skala blur.
+      Verify: grep nol nilai motion/glow/z di luar token.
+- [ ] **U2 HUD** (`hud.ts`): glow lapis, bar gradien, corner
+      bracket, ganti `Date.now` pulse -> jam tick. Layout JANGAN
+      pindah. Verify: screenshot HUD + fps guard.
+- [ ] **U3 Overlay kit** (`menu.ts`): satu builder panel (corner +
+      header + footer) untuk character/stadium/bazaar. Isi form
+      tetap. Verify: screenshot 3 overlay + `tsc 0`.
+- [ ] **U4 Cockpit overlay** (file BARU `cockpitOverlay.ts`,
+      canvas 2D): droplet, flash, vignette, cloudDim, shake —
+      konsumenin state V6 yang kebuang + bunuh `Date.now`.
+      Ini jawaban "mentok DOM". Verify: screenshot hujan/flash
+      di kaca + fps guard (canvas 0.5x).
+- [ ] **U5 Landing fix** (`landing.ts`): buang `@import`, self-host
+      font (kontrak token), token-ify hardcode. Verify: nol error
+      CSP di console + screenshot.
+- [ ] **U6 Motion** (semua file UI): transisi ad-hoc -> 
+      `tokens.motion`. Verify: grep nol `0.15s ease` sisa.
+- [ ] **Budget global**: blur hanya panel <50% layar; animasi
+      transform/opacity only; DOM tetap 10Hz hash-guard.
+      Verify: tidak ada frame drop vs baseline di skenario sama.
