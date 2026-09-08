@@ -12,6 +12,12 @@ import { colors, threeColor } from "../../ui/tokens";
 import type { VesselEntity } from "../../../../../packages/gameserver/types";
 import type { SceneContext } from "./bootstrap";
 import { makeGlowTexture } from "./bootstrap";
+import {
+  makeHullAlbedo,
+  makeNormalMapFromNoise,
+  makeRoughnessMap,
+  textureSizeForPreset,
+} from "./materials";
 
 /** local meters → render units (§2.5). */
 export const LOCAL_SCALE = 1 / 90000;
@@ -32,29 +38,44 @@ export function ensureEntry(ctx: SceneContext, id: string, build: () => THREE.Gr
 }
 
 /** AAA+ vessel: fuselage + canopy + delta wings + nacelles + weapons + shield. */
-export function buildVessel(): THREE.Group {
+export function buildVessel(texSize = 256): THREE.Group {
   const g = new THREE.Group();
 
-  // --- AAA+ Studio materials (PBR, pantul env map Fase 1) ---
+  // --- 10.V M1.2: material anti-plastik (tekstur prosedural seeded,
+  // dibuat SEKALI saat build, di-cache di userData.mats) ---
   const hullMat = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.hull), metalness: 0.78, roughness: 0.28,
+    color: threeColor(colors.hull), metalness: 0.78,
+    map: makeHullAlbedo(colors.hull, 0xA11CE, texSize),
+    roughnessMap: makeRoughnessMap(0xB0A7, 0.45, 0.7, texSize),
+    roughness: 1.0,
     emissive: threeColor("#0a1424"), emissiveIntensity: 0.45,
   });
   const hullHighMat = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.hullHigh), metalness: 0.72, roughness: 0.32,
+    color: threeColor(colors.hullHigh), metalness: 0.72,
+    map: makeHullAlbedo(colors.hullHigh, 0xC11C, texSize),
+    roughnessMap: makeRoughnessMap(0xB1B2, 0.45, 0.7, texSize),
+    roughness: 1.0,
   });
   const accentMat = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.structHigh), metalness: 0.75, roughness: 0.3,
+    color: threeColor(colors.structHigh), metalness: 0.75,
+    map: makeHullAlbedo(colors.structHigh, 0xACC3, texSize),
+    roughnessMap: makeRoughnessMap(0xACC4, 0.4, 0.6, texSize),
+    roughness: 1.0,
+    // Neon taktis itu tipis, bukan lampu sorot — emissive aksen 0.35.
+    emissive: threeColor(colors.structHigh), emissiveIntensity: 0.35,
   });
   const cockpitMat = new THREE.MeshPhysicalMaterial({
-    color: threeColor("#a8d8ff"), metalness: 0.05, roughness: 0.08,
+    color: threeColor("#a8d8ff"), metalness: 0.05, roughness: 0.15,
     transmission: 0.82, thickness: 1.2, ior: 1.45, transparent: true, opacity: 0.92,
     envMapIntensity: 1.4,
   });
   const engineMetalMat = new THREE.MeshStandardMaterial({
     color: threeColor("#1a2535"), metalness: 0.85, roughness: 0.35,
+    normalMap: makeNormalMapFromNoise(0xE461, texSize, 1.5),
     emissive: threeColor(colors.glowEngine), emissiveIntensity: 0.55,
   });
+  // Cache material refs SEKALI (dipakai D1 damage visuals, tanpa traverse).
+  g.userData.mats = { hullMat, hullHighMat, accentMat, cockpitMat, engineMetalMat };
 
   // Fuselage utama — tapered box (studio hard-surface)
   const fuselage = new THREE.Mesh(new THREE.BoxGeometry(18, 10, 52), hullMat);
@@ -170,7 +191,7 @@ export function buildVessel(): THREE.Group {
 
 /** Catat posisi target render (dipanggil renderRegion per snapshot). */
 export function updateVessel(ctx: SceneContext, v: VesselEntity): void {
-  const grp = ensureEntry(ctx, v.id, () => buildVessel(), ctx.vessels);
+  const grp = ensureEntry(ctx, v.id, () => buildVessel(ctx.settings.textureSize ?? textureSizeForPreset(ctx.settings.preset)), ctx.vessels);
   const p = clampLocal(new THREE.Vector3(v.position.x, v.position.y, v.position.z), ctx.anchor);
   ctx.cur.set(v.id, p);
   if (!ctx.prev.has(v.id)) ctx.prev.set(v.id, p.clone());

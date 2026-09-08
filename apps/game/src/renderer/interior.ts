@@ -11,6 +11,41 @@
 import * as THREE from "three";
 import { colors, threeColor } from "../ui/tokens";
 import { makeGlowTexture } from "./scene3d/bootstrap";
+import { makeHullAlbedo, makeRoughnessMap } from "./scene3d/materials";
+
+/**
+ * 10.V M1.4 — 3 material SHARED untuk seluruh interior (jangan bikin
+ * material per-room: draw call + VRAM jebol). Material emissive identitas
+ * (amber strip, window warm, habitat warm) DIPERTAHANKAN apa adanya.
+ */
+export interface InteriorMaterials {
+  wall: THREE.MeshStandardMaterial;
+  floor: THREE.MeshStandardMaterial;
+  trim: THREE.MeshStandardMaterial;
+}
+
+export function createInteriorMaterials(texSize = 256): InteriorMaterials {
+  const wall = new THREE.MeshStandardMaterial({
+    color: threeColor(colors.struct), metalness: 0.72,
+    map: makeHullAlbedo(colors.struct, 0x1A11, texSize),
+    roughnessMap: makeRoughnessMap(0x1A12, 0.5, 0.7, texSize),
+    roughness: 1.0,
+    emissive: threeColor("#0a1424"), emissiveIntensity: 0.32,
+  });
+  const floor = new THREE.MeshStandardMaterial({
+    color: threeColor("#0e1a2e"), metalness: 0.4,
+    map: makeHullAlbedo("#0e1a2e", 0xF100, texSize),
+    roughnessMap: makeRoughnessMap(0xF101, 0.8, 0.95, texSize),
+    roughness: 1.0,
+  });
+  const trim = new THREE.MeshStandardMaterial({
+    color: threeColor(colors.structHigh), metalness: 0.74,
+    map: makeHullAlbedo(colors.structHigh, 0x7E1A, texSize),
+    roughnessMap: makeRoughnessMap(0x7E1B, 0.5, 0.7, texSize),
+    roughness: 1.0,
+  });
+  return { wall, floor, trim };
+}
 
 export interface InteriorBuildResult {
   group: THREE.Group;
@@ -33,23 +68,14 @@ export interface InteriorBuildResult {
  * Corridor spine — Box(4200,80,80) sepanjang keel, reuse material Fase 3.
  * Iris 1: panel lines + emissive strip + 8 window strips (warm #ffd9a0).
  */
-function buildCorridor(): { group: THREE.Group; walkBox: THREE.Box3 } {
+function buildCorridor(kit: InteriorMaterials): { group: THREE.Group; walkBox: THREE.Box3 } {
   const g = new THREE.Group();
   g.name = "ark-corridor";
 
-  // Shell — hollow feeling via dark interior + amber frame
-  const shellMat = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.struct),
-    metalness: 0.72,
-    roughness: 0.42,
-    emissive: threeColor("#0a1424"),
-    emissiveIntensity: 0.32,
-  });
-  const shellHigh = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.structHigh),
-    metalness: 0.74,
-    roughness: 0.36,
-  });
+  // Shell + trim + floor = material shared M1.4. Amber + window warm
+  // adalah identitas (emissive) — dipertahankan, bukan plastik.
+  const shellMat = kit.wall;
+  const shellHigh = kit.trim;
   const amber = new THREE.MeshStandardMaterial({
     color: threeColor(colors.tactical),
     emissive: threeColor(colors.tactical),
@@ -86,10 +112,10 @@ function buildCorridor(): { group: THREE.Group; walkBox: THREE.Box3 } {
     g.add(win2);
   }
 
-  // Floor — walkable, slight metal
+  // Floor — walkable, roughness TINGGI (0.8+, anti-lantai-kaca-kantor).
   const floor = new THREE.Mesh(
     new THREE.BoxGeometry(4190, 2, 78),
-    new THREE.MeshStandardMaterial({ color: threeColor("#0e1a2e"), metalness: 0.4, roughness: 0.85 }),
+    kit.floor,
   );
   floor.position.set(0, -39, 0);
   g.add(floor);
@@ -107,15 +133,11 @@ function buildCorridor(): { group: THREE.Group; walkBox: THREE.Box3 } {
  * Promenade 4 ring — walkway melingkar di tiap ring (radius 640-760 reuse
  * Fase 3.5), guard rail + hazard stripe, 96 windows warm tetap.
  */
-function buildPromenades(): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
+function buildPromenades(kit: InteriorMaterials): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
   const groups: THREE.Group[] = [];
   const walkBoxes: THREE.Box3[] = [];
 
-  const steelHigh = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.structHigh),
-    metalness: 0.74,
-    roughness: 0.36,
-  });
+  const steelHigh = kit.trim;
   const amber = new THREE.MeshStandardMaterial({
     color: threeColor(colors.tactical),
     emissive: threeColor(colors.tactical),
@@ -128,10 +150,10 @@ function buildPromenades(): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
     const radius = 640 + r * 46;
     const cx = -400 + r * 500;
 
-    // Walkway — torus walkable (reuse torus, thickness 18)
+    // Walkway — torus walkable (lantai shared, roughness tinggi).
     const walkway = new THREE.Mesh(
       new THREE.TorusGeometry(radius, 18, 12, 64),
-      new THREE.MeshStandardMaterial({ color: threeColor("#0e1a2e"), metalness: 0.38, roughness: 0.88 }),
+      kit.floor,
     );
     walkway.rotation.x = Math.PI / 2;
     walkway.position.set(cx, 0, 0);
@@ -168,14 +190,10 @@ function buildPromenades(): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
   return { groups, walkBoxes };
 }
 
-function buildPlaza(): { group: THREE.Group; walkBox: THREE.Box3 } {
+function buildPlaza(kit: InteriorMaterials): { group: THREE.Group; walkBox: THREE.Box3 } {
   const g = new THREE.Group();
   g.name = "ark-plaza";
-  const steelHigh = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.structHigh),
-    metalness: 0.74,
-    roughness: 0.36,
-  });
+  const steelHigh = kit.trim;
   const amber = new THREE.MeshStandardMaterial({
     color: threeColor(colors.tactical),
     emissive: threeColor(colors.tactical),
@@ -185,7 +203,7 @@ function buildPlaza(): { group: THREE.Group; walkBox: THREE.Box3 } {
   // Plaza central — Cylinder(400,400,20,48) di tengah hull, tempat kumpul
   const deck = new THREE.Mesh(
     new THREE.CylinderGeometry(400, 400, 20, 48),
-    new THREE.MeshStandardMaterial({ color: threeColor("#0e1a2e"), metalness: 0.45, roughness: 0.82 }),
+    kit.floor,
   );
   deck.position.set(0, -10, 0);
   g.add(deck);
@@ -228,14 +246,10 @@ function buildPlaza(): { group: THREE.Group; walkBox: THREE.Box3 } {
   return { group: g, walkBox };
 }
 
-function buildHabitats(): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
+function buildHabitats(kit: InteriorMaterials): { groups: THREE.Group[]; walkBoxes: THREE.Box3[] } {
   const groups: THREE.Group[] = [];
   const walkBoxes: THREE.Box3[] = [];
-  const steelHigh = new THREE.MeshStandardMaterial({
-    color: threeColor(colors.structHigh),
-    metalness: 0.74,
-    roughness: 0.36,
-  });
+  const steelHigh = kit.trim;
   const habitatMat = new THREE.MeshStandardMaterial({
     color: threeColor(colors.structHigh),
     metalness: 0.72,
@@ -329,29 +343,35 @@ function buildBazaarStalls(): { groups: THREE.Group[]; positions: THREE.Vector3[
  * Iris 1-2 builder — corridor + 4 promenade + plaza + 96 habitat (24×4).
  * Hangar + bazaar menyusul iris 3+. Return group + walkBounds buat FPS.
  */
-export function buildArkInterior(): InteriorBuildResult {
+export function buildArkInterior(texSize = 256): InteriorBuildResult {
   const g = new THREE.Group();
   g.name = "ark-interior-iris2";
 
-  const { group: corridor, walkBox: corridorBox } = buildCorridor();
+  // 10.V M1.4 — SATU kit shared untuk seluruh interior.
+  const kit = createInteriorMaterials(texSize);
+
+  const { group: corridor, walkBox: corridorBox } = buildCorridor(kit);
   g.add(corridor);
 
-  const { groups: promenades, walkBoxes: promBoxes } = buildPromenades();
+  const { groups: promenades, walkBoxes: promBoxes } = buildPromenades(kit);
   for (const pr of promenades) g.add(pr);
 
-  const { group: plaza, walkBox: plazaBox } = buildPlaza();
+  const { group: plaza, walkBox: plazaBox } = buildPlaza(kit);
   g.add(plaza);
 
-  const { groups: habitats, walkBoxes: habBoxes } = buildHabitats();
+  const { groups: habitats, walkBoxes: habBoxes } = buildHabitats(kit);
   for (const h of habitats) g.add(h);
 
   // Fase 10 — Hangar Bay 32 slot (hull tengah, 400×200×600)
   const hangarGroup = new THREE.Group();
   hangarGroup.name = "ark-hangar";
-  const hangarMat = new THREE.MeshStandardMaterial({ color: threeColor(colors.struct), metalness: 0.7, roughness: 0.45 });
+  // SATU clone yang dibenarkan: BackSide adalah property material, tidak
+  // bisa berbagi dengan wall yang FrontSide. Selain side, isinya sama —
+  // tekstur + roughness sama (tetap anti-plastik).
+  const hangarMat = kit.wall.clone();
+  hangarMat.side = THREE.BackSide;
   const hangarShell = new THREE.Mesh(new THREE.BoxGeometry(400, 200, 600), hangarMat);
   hangarShell.position.set(200, -60, 0);
-  (hangarShell.material as THREE.MeshStandardMaterial).side = THREE.BackSide;
   hangarGroup.add(hangarShell);
   // Bay door — 2 panel
   const doorL = new THREE.Mesh(new THREE.BoxGeometry(200, 180, 8), new THREE.MeshStandardMaterial({ color: threeColor(colors.structHigh), metalness: 0.75 }));
@@ -366,8 +386,7 @@ export function buildArkInterior(): InteriorBuildResult {
   hangarGroup.add(bayLight);
   // 32 slot — 4×8 grid, tiap Box(60,20,80) + marker amber
   const slotGeom = new THREE.BoxGeometry(60, 2, 80);
-  const slotMat = new THREE.MeshStandardMaterial({ color: threeColor("#0e1a2e"), metalness: 0.5 });
-  const slotInst = new THREE.InstancedMesh(slotGeom, slotMat, 32);
+  const slotInst = new THREE.InstancedMesh(slotGeom, kit.floor, 32);
   const dummy = new THREE.Object3D();
   const slotPositions: THREE.Vector3[] = [];
   for (let i = 0; i < 32; i++) {
