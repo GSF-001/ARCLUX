@@ -65,6 +65,16 @@ Kesenjangan (diakui eksplisit, bukan disembunyikan):
   `cosmicEvent`. Lihat §6.
 - F8. Tinggi gelombang di mesh + momen "masuk badai kayak film"
   belum dijahit jadi satu beat sinematik. Lihat §6.
+- F9. Chunk server vs chunk client tidak nyambung: Blueprint 10 §5
+  nyuruh chunk di-tick + persist via `claimRegion`
+  (`world.ts` + `relay/registry.ts`); realitanya chunking yang jalan
+  adalah streaming visual client + persist `Vec3`, sementara
+  `claimRegion` yang hidup adalah vessel-handoff (barang beda).
+  Pilih satu, jujur: (a) bangun chunk-tick server beneran
+  (`planetId:chunkX:chunkZ` aktif hanya bila ada pemain/fasilitas,
+  state di `persistence.ts`), atau (b) revisi blueprint: nyatakan
+  chunking = client-side streaming + persist koordinat. Jangan
+  klaim (a) sambil menjalankan (b).
 
 ## 2. Gap fidelity per layer (ini yang bikin "kentang")
 
@@ -207,18 +217,80 @@ Verify: komposisi 6 target (§5) dinilai per screenshot.
   prosedural, ekonomi full, microdetail tanah (lumut/ranting/
   kerikil — kamera tidak pernah ke sana).
 
-## 4. Fase eksekusi (satu fase = satu PR, wired, verified)
+## 4. Fase eksekusi (satu fase = satu PR + ceklist, wired, verified)
 
-- **F0 Correctness** — tutup F1–F8 §1. Kecil, dulu. Tanpa ini
-  klaim DONE tidak jujur.
-- **A1 Vegetation** (§2.2) — pembunuh kartun #1.
-- **A2 Terrain+rock** (§2.1 + §2.3).
-- **A3 Water+shore+dust** (§2.4 + §2.5 + sebagian §2.8).
-- **A4 Sky+night+grade** (§2.6 + §2.7 + §2.11 + §2.12).
-- Setiap fase: file mapping eksplisit (pola Blueprint 10 §14),
-  verify = screenshot komposisi §5 + `tsc 0` + build + fps guard.
-  Dilarang: rewrite arsitektur, ShaderMaterial full-custom,
-  file sprawl (satu wire per layer).
+Aturan main: tiap fase di bawah ini dikerjain sampai centang SEMUA
+kotaknya baru PR. Klaim tanpa centang = belum DONE. File mapping
+eksplisit pola Blueprint 10 §14. Dilarang: rewrite arsitektur,
+ShaderMaterial full-custom, file sprawl (satu wire per layer).
+
+### F0 Correctness (tutup gap kejujuran dulu)
+
+Scope: F1–F9 §1 + backlog verifikasi §7.
+File: `vesselState.ts`, `simulation.ts`, `index.ts` (hook),
+`environment.ts` (F6/F7), `ocean.ts`+`wireX/G` (F8),
+keputusan F9 (code atau revisi blueprint).
+
+- [ ] F1: `landingOutcome()` dipanggil saat settle + log `crash_impact`
+- [ ] F2: jarak petir dari posisi strike beneran, bukan 2800
+- [ ] F3: tag `ADRIFT` kapal orang lain di daftar kontak
+- [ ] F4: massa+radius per planet dari environs (`g` bervariasi)
+- [ ] F6: waktu lokal longitude + interpolasi batas chunk
+- [ ] F7: overlay anomali->cuaca + `chunkKey` di payload anomali
+- [ ] F8: amplitudo mesh ikut state + trigger STORM per chunk vessel
+- [ ] F9: putuskan chunk-server vs revisi blueprint, eksekusi
+- [ ] F5: SEMUA backlog §7 berubah jadi verified (cek per file)
+- [ ] Verify: `tsc 0` + build + smoke tiap item di atas
+
+### A1 Vegetation (pembunuh kartun #1)
+
+Scope: §2.2. File: `vegetation.ts` (+ `wireX` bila perlu),
+tidak sentuh kontrak.
+
+- [ ] Pinus cross-plane + rumput instanced blade
+- [ ] Kanopi icosahedron + noise (prioritas udara, bukan batang)
+- [ ] Bark/leaf canvas texture (pola `makeCloudTexture`)
+- [ ] Rumput -> material kena cahaya (bunuh Basic flat)
+- [ ] Sway phased + wetness tetap jalan (regresi dilarang)
+- [ ] Verify: screenshot forest flight before/after + draw call
+      dihitung + fps guard
+
+### A2 Terrain + rock (§2.1 + §2.3)
+
+Scope: material + strata + scatter. File: `terrain.ts`
+(+ resolver/fungsi baru seperlunya, arsitektur tetap).
+
+- [ ] Tekstur prosedural per-biome (albedo/normal/roughness)
+- [ ] Strata tebing berdasar slope/altitude
+- [ ] Scatter kerikil/boulder instanced + cull existing
+- [ ] Wet/snow response numpang state yang sudah ada
+- [ ] Verify: screenshot ridge + cliff dekat/jauh + fps guard
+
+### A3 Water + shore + dust (§2.4 + §2.5 + sebagian §2.8)
+
+Scope: air hidup + pantai gradasi + debu 4 fase ber-badan.
+File: `ocean.ts`, `oceanSystem.ts`, `coastal.ts`,
+`emergencyLanding.ts` (dust), `rain.ts` (streak/splash).
+
+- [ ] Foam texture + fresnel (`onBeforeCompile`, BUKAN ShaderMaterial)
+- [ ] Shoreline `WET SAND -> FOAM -> SHALLOW -> OPEN` tanpa seam
+- [ ] Amplitudo mesh ikut state badai + whitecap ∝ wind (F8)
+- [ ] Debu 4 fase per permukaan (desert/forest/wet/snow)
+- [ ] Rain streaks + splash + ripple puddle/ocean
+- [ ] Verify: screenshot low-pass ombak + ocean storm + GIF dust
+      + fps guard
+
+### A4 Sky + night + grade (§2.6 + §2.7 + §2.11 + §2.12)
+
+Scope: langit + bulan + post murah. File: `atmosphere.ts`,
+`sun.ts`, `fog.ts`, `lightning.ts` (flash consumer), composer.
+
+- [ ] Awan fbm (ganti generator blob) + edge-lit + storm darkening
+- [ ] Sunset ramp 3-stop + horizon haze + limb orbit
+- [ ] Moonlight directional biru + disk + moon glint di air
+- [ ] Flash petir menerangi terrain/ocean/facility + thunder delay
+- [ ] Vignette + night grade (TAA/SSAO/DOF DITOLAK di fase ini)
+- [ ] Verify: 6 komposisi §5 lulus screenshot + fps guard
 
 ## 5. Acceptance (6 komposisi — lulus semua baru DONE)
 
@@ -278,3 +350,76 @@ Spec:
 - Keluar sel: recovery normal (wet tetap — numpang G2).
 Verify: fly-through: cerah -> gelap -> flash+shake+spray ->
 cerah; whitecap skala ikut angin; tidak ada pop.
+
+## 7. Gap implementasi sisi session 1 (fakta + backlog verifikasi)
+
+Aturan bagian ini: hanya yang terverifikasi ditulis sebagai fakta;
+sisanya ditulis sebagai backlog cek (F5), BUKAN vonis. Tujuannya
+satu: tidak ada klaim DONE yang berdiri di atas file yang belum
+dibaca ulang.
+
+### 7.1 Fakta terverifikasi
+
+- G1. Tick C6-C10 di-merge dengan `cinematic: null,
+  turbulence: null` (terbaca di `index.ts` saat itu) — response
+  jalan tanpa input core. SUDAH DIPERBAIKI: dilipat ke `wireC`,
+  sekarang disuapi konteks + turbulensi hidup. File resolver
+  session 1 tidak diubah.
+- G2. Commit berlabel "full enrich"/"super detail" berisi helper
+  kecil (terverifikasi: diff 128 baris). Pelajaran proses, bukan
+  tuduhan: label PR wajib sebanding isi diff. Aturan §4 berlaku
+  untuk semua pihak.
+- G3. Centang [x] checklist blueprint (§13/§17) dibuat di atas
+  item yang belum diverifikasi baris-per-baris. Backlog §7.2
+  adalah cara melunasinya.
+
+### 7.2 Backlog verifikasi F5 (per file — centang = dibaca + dites)
+
+Riwayat tiap file: versi proto TERBUKTI punya cacat X, versi baru
+MENGKLAIM Y. Sampai dibaca ulang, status = UNVERIFIED.
+
+Substrate (klaim: rewrite AAA):
+
+- [ ] `planetary/terrain.ts` — klaim FBM+erosi+LOD; cek: deterministik
+      per-koordinat? seam antar-chunk? LOD beneran streaming?
+- [ ] `planetary/ocean.ts` — klaim 4 Gerstner; cek: Gerstner beneran
+      (displace XZ) atau sinus-Z? foam hidup? preservasi base?
+- [ ] `planetary/atmosphere.ts` — klaim scattering; cek: scattering
+      fisik atau gradien + konstanta? `depthWrite:false` utuh?
+- [ ] `planetary/chunks.ts` (+ server) — klaim LOD + hybrid mesh;
+      cek: bug jarak indeks-vs-pos? planetId hardcode? frustum cull?
+- [ ] `planetary/surface.ts` — klaim Kepler + GateLink; cek: Kepler
+      beneran atau sudut linear? threshold magic terdokumentasi?
+- [ ] `planetary/facilities.ts` — klaim 10 geometri distinct; cek:
+      masih ada fallback kotak? aturan empty-land dobel otoritas?
+- [ ] `planetary/geography.ts` — cek: import server-ke-client masih
+      ada? marker LOD/cull?
+- [ ] `planetary/night.ts` — cek: draw-call per facility? traverse
+      per-tick?
+
+Gaps G1-G4 (klaim: state machine + zona + river + continuity):
+
+- [ ] `planetary/environmentalEvent.ts` — fase `landing`/`post`
+      tercapai? `startedAt` reset? mist tidak nol-mati?
+- [ ] `planetary/coastal.ts` — bug arah (windSpeed sebagai sudut)?
+      drift unbounded? baca `EnvironmentalContext` sekarang?
+- [ ] `planetary/hydrological.ts` — quad hanyut selamanya?
+      recycle? `river->ocean` beneran ketemu?
+- [ ] `planetary/atmosphericContinuity.ts` — konflik tulis fog
+      dengan sun/fog resolver? `dt` dipakai?
+
+Sinematik C6-C10 (klaim: 5 resolver + wire):
+
+- [ ] `EnvironmentalAudioResolver.ts` — sync wind/rain/thunder,
+      delay thunder = jarak/343?
+- [ ] `CockpitResponseResolver.ts` — presentation-only murni?
+- [ ] `ImpactPresentation.ts` — rantai impact->wreck utuh?
+      transient vs persistent dipisah?
+- [ ] `FacilityDiscovery.ts` — `AtmosphericReveal.ts` (blueprint
+      C.9 minta) ada atau tidak?
+- [ ] `CinematicBudget.ts` — hysteresis? kompatibel qualityBudget?
+- [ ] `wireG.ts` — tick signature konsisten? tidak tulis authority?
+
+Cara verifikasi tiap kotak: baca file + `tsc` + smoke perilaku
+(pola smoke yang sudah ada) + tulis HASILnya di PR. Kotak centang
+tanpa ketiga itu = belum centang.
