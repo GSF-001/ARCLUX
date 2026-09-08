@@ -42,6 +42,7 @@ import type { EnvironmentalContext } from "../../../../../packages/gameserver/pl
 import { createPlanetary10X, tickPlanetary10X, disposePlanetary10X } from "./planetary/wire10X";
 import { createPlanetary10G, tickPlanetary10G, disposePlanetary10G } from "./planetary/wire10G";
 import { createEmergency10X, tickEmergency10X, disposeEmergency10X } from "./planetary/wire10E";
+import { createCinematicC6C10, tickCinematicC6C10, disposeCinematicC6C10 } from "./cinematic/wireC6C10";
 void _planetary;
 import { buildStars } from "./stars";
 import { buildNebula } from "./nebula";
@@ -131,6 +132,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
 
   // Emergency landing visuals (10.E) — renders the authoritative flag
   const emergency10X = createEmergency10X(ctx.scene);
+  const cinematicC6C10 = createCinematicC6C10();
 
   // Environmental context (derived from server contract)
   let envContext: EnvironmentalContext | null = null;
@@ -341,6 +343,16 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
         cameraPos: ctx.camera ? { x: ctx.camera.position.x, y: ctx.camera.position.y, z: ctx.camera.position.z } : { x: 0, y: 0, z: 0 },
         altitude: ctx.firstVesselRef ? Math.max(0, ctx.anchor.y + 10) : 0,
       });
+      tickCinematicC6C10(cinematicC6C10, ctx.scene, envContext, {
+        timeSec: envContext.worldTime / 1000 + envContext.simulationTick * 0.1,
+        cinematic: null,
+        turbulence: null,
+        distanceToLightning: 2800,
+        vesselVelocity: ctx.firstVesselRef ? Math.hypot(ctx.firstVesselRef.velocity.x, ctx.firstVesselRef.velocity.z) : 0,
+        cameraPos: { x: ctx.camera ? ctx.camera.position.x : 0, z: ctx.camera ? ctx.camera.position.z : 0 },
+        anchor: { x: ctx.anchor.x, z: ctx.anchor.z },
+        dt: dtX,
+      });
     }
 
     // ── EMERGENCY LANDING TICK (10.E) ──
@@ -401,6 +413,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     disposePlanetary10X(ctx.scene, planetary10X);
     disposePlanetary10G(ctx.scene, planetary10G);
     disposeEmergency10X(ctx.scene, emergency10X);
+    disposeCinematicC6C10(ctx.scene, cinematicC6C10);
     for (const pl of ctx.planets) {
       ctx.scene.remove(pl.mesh); ctx.scene.remove(pl.atmo); if (pl.ring) ctx.scene.remove(pl.ring);
       for (const mo of pl.moons) ctx.scene.remove(mo.mesh);
