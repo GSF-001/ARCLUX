@@ -120,6 +120,12 @@ export function initHud(container?: HTMLElement): Hud {
       if (v) {
         const faction = player.faction ?? "NEUTRAL";
         const factionColor = factionColorFor(faction);
+        const emerg = (player as VesselEntity).emergency?.state;
+        const engineColor = emerg ? colors.danger : colors.tech;
+        const engineLabel =
+          emerg === "crashed" ? "0% — CRASHED" :
+          emerg === "falling" ? "0% — FALLING" :
+          emerg === "adrift" ? "0% — ADRIFT" : "100% — NOMINAL";
         const html = [
           `<div style="font-family:${typography.display};font-size:${typography.sizes.title};font-weight:700;letter-spacing:${typography.displaySpacing};color:${colors.foreground};text-transform:uppercase">${esc(model?.name ?? "VESSEL")} <span style="font-family:${typography.mono};color:${colors.muted};font-size:${typography.sizes.micro};font-weight:400">${esc(log2(player.id))}</span></div>`,
           `<div style="font-size:${typography.sizes.data};font-weight:400;color:${factionColor};text-shadow:${glow.textTactical};margin-top:2px">${esc(faction.toUpperCase())} // PILOT</div>`,
@@ -127,6 +133,7 @@ export function initHud(container?: HTMLElement): Hud {
           `DEFENSE  <span style='color:${colors.tech}'>${model?.defense != null ? Math.round(model.defense) : "—"}</span>`,
           `WEAPONS  <span style='color:${colors.tech}'>${model?.weapons != null ? Math.round(model.weapons) : "—"}</span>`,
           `SPEED  <span style='color:${colors.body}'>${Math.round(mag(player.velocity) ?? 0)} m/s</span>`,
+          `ENGINE <span style='color:${engineColor}'>${engineLabel}</span>`,
           `HASH  <span style='color:${colors.muted}'>${esc(player.stateHash?.slice(0, 10) ?? "—")}</span>`,
         ].join("<br>");
         fadeOnChange("vessel", q('[data-hud="right"]'), html);

@@ -16,6 +16,7 @@
 import { checkComponent, type AuthorizationContext } from "../universe/license";
 import type { VesselEntity, PlayerIntent, WorldEntity } from "./types";
 import { WorldRegion, distanceBetween } from "./world";
+import { hullOf, ADRIFT_BELOW } from "./vesselState";
 
 export type ValidatorDecision = "accept" | "reject";
 
@@ -115,7 +116,25 @@ function validateMove(
   if (typeof to.x !== "number" || typeof to.y !== "number" || typeof to.z !== "number") {
     return { decision: "reject", reason: "move requires numeric x/y/z target" };
   }
+  // 10.E: dead engines cannot thrust — adrift/falling/crashed vessels hold position.
+  const blocked = flightBlocked(entity);
+  if (blocked) return { decision: "reject", reason: blocked };
   return { decision: "accept" };
+}
+
+/**
+ * 10.E flight gate. Crashed wrecks need Repair-by-commit; hull-critical
+ * vessels are adrift with engines offline. Returns the reject reason, if any.
+ */
+function flightBlocked(entity: WorldEntity): string | undefined {
+  if (entity.kind !== "vessel") return undefined;
+  if (entity.emergency?.state === "crashed") {
+    return "vessel crashed — repair required before flight";
+  }
+  if (hullOf(entity.vessel) < ADRIFT_BELOW) {
+    return "engines offline — hull critical (adrift)";
+  }
+  return undefined;
 }
 
 function validateDock(
@@ -128,6 +147,9 @@ function validateDock(
   if (!station || station.kind !== "station") {
     return { decision: "reject", reason: "dock requires a valid station target" };
   }
+  // 10.E: wrecks cannot dock under their own power.
+  const blocked = flightBlocked(entity);
+  if (blocked) return { decision: "reject", reason: blocked };
   // Must be close enough to dock.
   if (distanceBetween(entity, station) > station.safeZoneRadius * 2) {
     return { decision: "reject", reason: "out of docking range" };
@@ -157,6 +179,10 @@ function validateAttack(
   const weaponType = intent.payload?.weapon as string | undefined;
   if (!targetId) return { decision: "reject", reason: "attack requires targetId" };
   if (!weaponType) return { decision: "reject", reason: "attack requires weapon" };
+
+  // 10.E: adrift vessels run silent — weapons locked with engines.
+  const blocked = flightBlocked(attacker);
+  if (blocked) return { decision: "reject", reason: blocked };
 
   const target = region.get(targetId);
   if (!target) return { decision: "reject", reason: `unknown target: ${targetId}` };

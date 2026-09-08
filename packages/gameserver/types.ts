@@ -48,6 +48,24 @@ export interface VesselEntity extends GameEntity {
   stateHash: string;
   /** Per-subsystem cooldown remaining (ticks). */
   cooldowns: Record<string, number>;
+  /**
+   * Emergency flight status (10.E). Absent means nominal. Persisted through
+   * RegionSnapshot like any other entity field; cleared on full repair.
+   */
+  emergency?: VesselEmergency;
+}
+
+/**
+ * Persisted emergency state (10.E: ADRIFT -> FALLING -> CRASHED).
+ * Derived deterministically each tick from hull integrity, velocity, and
+ * planet proximity — never set by clients.
+ */
+export interface VesselEmergency {
+  state: "adrift" | "falling" | "crashed";
+  /** Region tick when this state was entered. */
+  updatedTick: number;
+  /** Machine-readable cause (e.g. "hull<10", "gravity-capture", "settled"). */
+  cause: string;
 }
 
 /** A station — a protected social/economic anchor (02-station). */

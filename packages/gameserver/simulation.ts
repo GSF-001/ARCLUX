@@ -33,6 +33,14 @@ import { recordCreation } from "./lineage";
 import { computeRecall } from "./teleport";
 import { clampSpeed } from "./physics";
 import { recordTickTrace } from "./observability";
+import {
+  hullOf,
+  nextEmergencyState,
+  applyGravity,
+  ADRIFT_DAMPING,
+  FALL_SPEED_MAX,
+  type VesselState,
+} from "./vesselState";
 
 export interface SimulationOptions {
   /** Region the server owns. */
@@ -297,7 +305,13 @@ export class SimulationEngine {
 
   private integratePhysics(): void {
     // Newtonian F=ma — live. Damping 0.02 + solarWind/anomaly via environs.
+    // 10.E: vessels in emergency states integrate through the emergency
+    // machine (drift decay / gravity fall / grounded) instead of free flight.
+    const planetPos = this.nearestPlanetPosition();
     for (const e of this.region["entities"].values()) {
+      if (e.kind === "vessel") {
+        if (this.stepEmergency(e, planetPos) !== "nominal") continue;
+      }
       const drag = 0.02;
       const ax = -e.velocity.x * drag;
       const ay = -e.velocity.y * drag;
@@ -309,6 +323,44 @@ export class SimulationEngine {
       e.position.y += e.velocity.y * this.dt;
       e.position.z += e.velocity.z * this.dt;
     }
+  }
+
+  /** Nearest planet center for gravity capture, if environs are present. */
+  private nearestPlanetPosition(): Vec3 | undefined {
+    if (!this.environs) return undefined;
+    for (const b of getBodiesArray(this.environs)) {
+      if (b.kind === "planet") return { ...b.position };
+    }
+    return undefined;
+  }
+
+  /**
+   * 10.E emergency step: advance the persisted flag, integrate drift/fall,
+   * ground wrecks. Returns the effective state; non-nominal vessels skip
+   * free-flight integration. Transitions are logged for replay.
+   */
+  private stepEmergency(v: VesselEntity, planetPos: Vec3 | undefined): VesselState {
+    const { state, changed, cause } = nextEmergencyState(v, planetPos, this.region.tick);
+    if (changed) {
+      if (state === "nominal") delete v.emergency;
+      else v.emergency = { state, updatedTick: this.region.tick, cause };
+      this.log(`emergency_${state}`, v.id, { hull: Math.round(hullOf(v.vessel) * 10) / 10, cause });
+    }
+    if (state === "crashed") {
+      v.velocity = { x: 0, y: 0, z: 0 };
+      return state;
+    }
+    if (state === "falling" && planetPos) {
+      v.velocity = applyGravity(v.position, v.velocity, planetPos, this.dt);
+    } else if (state === "adrift") {
+      const damp = Math.max(0, 1 - ADRIFT_DAMPING * this.dt);
+      v.velocity = { x: v.velocity.x * damp, y: v.velocity.y * damp, z: v.velocity.z * damp };
+    }
+    v.velocity = clampSpeed(v.velocity, state === "falling" ? FALL_SPEED_MAX : 500);
+    v.position.x += v.velocity.x * this.dt;
+    v.position.y += v.velocity.y * this.dt;
+    v.position.z += v.velocity.z * this.dt;
+    return state;
   }
 
   private decrementCooldowns(): void {

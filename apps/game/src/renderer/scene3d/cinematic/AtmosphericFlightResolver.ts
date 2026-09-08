@@ -6,7 +6,7 @@
 
 // cinematic/AtmosphericFlightResolver.ts - 10.C Atmospheric Flight & Turbulence: Vessel+Wind+Density+Weather+Altitude+Velocity -> TurbulenceResolver -> visualPitch/Roll/Vibration/cameraShake. Zoom dari blueprint 10.C Atmospheric Flight & Turbulence.
 
-// WIRE NOTE for SESSION 2: import { resolveAtmosphericFlight } from "./cinematic/AtmosphericFlightResolver" di scene3d/index.ts frame loop, apply ke vessel mesh + camera.
+// Resolved via the cinematic tick — see wire10X/wire10G wiring.
 
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
 

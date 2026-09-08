@@ -6,7 +6,7 @@
 
 // planetary/hydrological.ts - 10.G G4 Hydrological Continuity: MOUNTAIN->STREAM->RIVER->LAKE->COAST->OCEAN.
 
-// WIRE NOTE for SESSION 2: import { getRiverFlow, createRiverSystem, tickRiver } from "./planetary/hydrological" di scene3d/index.ts. Flow via heightmap gradient.
+// Wired via planetary/wire10G — ticked per frame from EnvironmentalContext.
 
 import * as THREE from "three";
 
