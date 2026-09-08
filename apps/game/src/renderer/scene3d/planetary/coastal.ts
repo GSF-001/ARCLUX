@@ -6,7 +6,7 @@
 
 // planetary/coastal.ts - 10.G G3 Coastal Transition: LAND->WET SHORE->SHALLOW->OPEN OCEAN + foam/spray/shoreline mist.
 
-// Wired via planetary/wire10G — ticked per frame from EnvironmentalContext.
+// Wired via planetary/wireG — ticked per frame from EnvironmentalContext.
 
 import * as THREE from "three";
 

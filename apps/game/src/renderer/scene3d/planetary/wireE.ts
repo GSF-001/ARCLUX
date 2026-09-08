@@ -4,7 +4,7 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/wire10E.ts - 10.E single wiring point.
+// planetary/wireE.ts - 10.E single wiring point.
 // Renders the authoritative emergency flag from each vessel snapshot
 // (ADRIFT pulse, FALLING heat, LANDING dust phases, CRASHED smoke).
 // State comes from the server; the client only positions and animates.

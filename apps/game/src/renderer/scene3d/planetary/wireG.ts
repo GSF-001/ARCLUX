@@ -4,7 +4,7 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/wire10G.ts - 10.G Gaps Closed single wiring point.
+// planetary/wireG.ts - 10.G Gaps Closed single wiring point.
 // Owns EnvironmentalEvent, Coastal, Hydrological, Atmospheric Continuity systems
 // and advances them from the one EnvironmentalContext. Visual-only.
 

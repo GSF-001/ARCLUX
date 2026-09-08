@@ -4,7 +4,7 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/wire10X.ts - 10.X.1-X.4 single wiring point.
+// planetary/wireX.ts - 10.X.1-X.4 single wiring point.
 // Owns every cinematic atmosphere system (sun, cloud shadows, god rays,
 // weather stack, rain, lightning, fog, vegetation, ocean wake, volumes,
 // budget) and advances them from the one EnvironmentalContext the scene

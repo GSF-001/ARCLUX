@@ -6,7 +6,7 @@
 
 // planetary/environmentalEvent.ts - 10.G G1-G2 Continuous Environmental Event + Weather Accumulation: CLEAR->PRE->STORM->LANDING->POST->RECOVERY + WET->DRAINING->DRYING.
 
-// Wired via planetary/wire10G — ticked per frame from EnvironmentalContext.
+// Wired via planetary/wireG — ticked per frame from EnvironmentalContext.
 
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
 
