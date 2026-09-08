@@ -474,11 +474,57 @@ saat audit.
 - [ ] **U3 Overlay kit** (`menu.ts`): satu builder panel (corner +
       header + footer) untuk character/stadium/bazaar. Isi form
       tetap. Verify: screenshot 3 overlay + `tsc 0`.
-- [ ] **U4 Cockpit overlay** (file BARU `cockpitOverlay.ts`,
-      canvas 2D): droplet, flash, vignette, cloudDim, shake —
-      konsumenin state V6 yang kebuang + bunuh `Date.now`.
-      Ini jawaban "mentok DOM". Verify: screenshot hujan/flash
-      di kaca + fps guard (canvas 0.5x).
+- [ ] **U4 Cockpit presentation — High-Fidelity Cockpit Presentation**
+      (technology selected per effect after rendering-path audit;
+      BUKAN "canvas 2D untuk semua"). Status tiap klaim ditandai:
+      `[FACT]` terverifikasi di code, `[DESIGN]` keputusan desain,
+      `[TARGET]` budget yang wajib diukur.
+      - [FACT] Rantai composer aktual: RenderPass -> UnrealBloomPass
+        -> OutputPass (`scene3d/post.ts`, `three/addons`, tanpa dep
+        baru, CSP-aman). Overlay DOM duduk DI ATAS canvas dan tidak
+        pernah kena bloom/tone-mapping.
+      - [FACT] `updateCamera` menulis ulang position+lookAt tiap frame
+        di semua mode (`scene3d/camera.ts`) — offset kamera hanya aman
+        dipasang SESUDAH update (pola `wireC` sekarang).
+      - [FACT] Lima output kokpit mati hari ini: droplet, flash,
+        vignette, `hudShake`, `exposureOffset` dihitung
+        `CockpitResponseResolver` tapi tidak dibaca siapa-siapa.
+      - [FACT] Akumulasi `toneMappingExposure` (baca-tambah,
+        upstream-reset tiap frame) sudah berjalan (`wireX` set base,
+        `wireC` tambah offset).
+      - [DESIGN] Satu `CockpitGradePass` (ShaderPass, antara Bloom
+        dan Output): uniform flash + heat + dim. Flash di ruang
+        linear HDR -> filmic rolloff + bloom = terbaca cahaya;
+        versi DOM = putih flat. Alasan per efek: flash/heat/dim
+        BUTUH shader (alasan di atas); droplet = canvas 2D overlay
+        di bawah HUD (stamp per-partikel murah 0.5x; refraksi
+        transmission = overkill, deferred); hudShake = DOM
+        transform root HUD (gratis, tidak berantem kamera);
+        exposure = lipat ke akumulasi existing; vessel motion =
+        milik 10C, jangan dobel.
+      - [DESIGN] Compositing akhir: Scene -> Bloom -> CockpitGrade
+        -> Output -> canvas -> droplet-canvas -> HUD.
+        `wireC` = satu-satunya sumber update uniform (sudah pegang
+        konteks + turbulensi hidup). Hapus helper mati
+        `applyCockpitToOverlay`; bunuh `Date.now` di resolver
+        (pola `timeSec` seperti flight resolver).
+      - [DESIGN] File: BARU `cockpitGradePass.ts` + `cockpitOverlay.ts`
+        (canvas droplet, lifecycle create/tick/dispose aman);
+        numpang `post.ts` (sisip pass) + `bootstrap.ts` (+1 field
+        ctx) + `wireC.ts` (umpan uniform) + `hud.ts` (expose root)
+        + `quality.ts` (gating). Otoritas nol (semua baca state ada).
+      - [DESIGN] Gating tidak boleh langgar kontrak sinematik di LOW:
+        pass mati + fallback DOM flash + kokpit kering = degradasi
+        yang SAH (kontrak: panduan RENDER, bukan efek wajib).
+        MEDIUM: pass nyala, droplet 0.5x. HIGH+: full.
+      - [TARGET] +1 fullscreen pass ~0.5ms @1080p ikut
+        resolutionScale; droplet update hanya saat basah (>0.02).
+        Angka ini TARGET ukur, BUKAN fakta — verifikasi di
+        hardware/profile yang ditentukan + fps guard per tier.
+      - [ ] Verify: smoke assert uniform ter-update + canvas ada
+        piksel non-transparan + urutan pass
+        `[render, bloom, cockpit, output]` + screenshot
+        storm/flash/heat + fps guard.
 - [ ] **U5 Landing fix** (`landing.ts`): buang `@import`, self-host
       font (kontrak token), token-ify hardcode. Verify: nol error
       CSP di console + screenshot.
