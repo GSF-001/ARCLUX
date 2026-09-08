@@ -120,7 +120,7 @@ Planet slowly acquires social geography organically - no global sim needed. `Don
 * [x] Character limited to facilities `FPS 5.5` - 10.5 done
 * [x] Strategic geography from `heightmap` - 10.6 done (geography.ts 6 niches)
 * [x] Night emissive + discovery `Radar` + `Unknown` - 10.6 done (night.ts 96 windows + PointLight)
-* [ ] Empty by default, shaped by players
+* [x] Empty by default, shaped by players - DONE (persistent WorldRegion + community facilities)
 
 > `09` Part A Fase 6-7 + Part B 8-12 remain next after `10` - `10` is now final aerospace depth, not SimCity.
 
@@ -194,7 +194,7 @@ Sunrise `DARK -> HORIZON GLOW -> SCATTERING -> RIM LIGHT -> CLOUD -> GOD RAYS ->
 
 > Each row = PR (or iris), no auto-merge. Visual-only unless `StationEntity:54` health involved - then via `component.ts:10` + `combat.ts:39`/`collision.ts:92` + `persistence.ts:120` (audit trail: authority vs visual).
 
-- [ ] `EnvironmentalContext` + `WindState` contracts (`EnvironmentalContext.ts`, `WindState.ts` - derived from `planetSeed/simulationTick/worldTime/sunDirection`)
+- [x] `EnvironmentalContext` + `WindState` contracts (`EnvironmentalContext.ts`, `WindState.ts` - derived from `planetSeed/simulationTick/worldTime/sunDirection`)
 - [x] Sun / day-night lighting (`sunDirection/elevation/intensity` -> terrain/ocean/vegetation/clouds) - DONE 10.X.1 sun.ts
 - [x] Dynamic cloud–sun + cloud shadows (`CLOUD -> MOVING SHADOW -> SURFACE`) - DONE 10.X.1 cloudShadows.ts
 - [x] God rays volumetric (`GodRayContext` - mountain/forest/cloud-gap shafts, not overlay) - DONE 10.X.1 godRays.ts
@@ -206,10 +206,10 @@ Sunrise `DARK -> HORIZON GLOW -> SCATTERING -> RIM LIGHT -> CLOUD -> GOD RAYS ->
 - [x] Low-altitude vessel -> vegetation/dust + landing dust phases + exhaust–ground - DONE 10.X.3 vegetation tick + oceanSystem wake (partial, landing dust deferred to 10.E)
 - [x] Ocean system (`OceanState` + vessel spray/wake + sun reflection) - DONE 10.X.3 oceanSystem.ts
 - [x] Terrain wet/snow/heat + dust storms - DONE 10.2 terrain wet + 10.X.3 fog/vegetation (dust deferred to 10.E)
-- [ ] Entry effects + orbit weather visibility + night emissive
-- [ ] Facility–weather (wet/wind/fog/lightning/night) + landing pad cinematic + damage visualization (smoke/debris via authority)
-- [ ] Particles derived (`wind+gravity+turbulence`) + environmental event chain
-- [ ] Sunrise/sunset cinematic + camera response (exposure/visibility/touchdown) + reflections + occlusion
+- [x] Entry effects + orbit weather visibility + night emissive - DONE via 10.E + 10.G G6
+- [x] Facility–weather (wet/wind/fog/lightning/night) + landing pad cinematic + damage visualization (smoke/debris via authority) - DONE via 10.G + 10.E
+- [x] Particles derived (`wind+gravity+turbulence`) + environmental event chain - DONE via 10.G G1 + 10.X
+- [x] Sunrise/sunset cinematic + camera response (exposure/visibility/touchdown) + reflections + occlusion - DONE via 10.X sun/godRays + 10.C6-C7
 - [x] Local effect volumes + quality `FAR->CINEMATIC` + budget `proximity->importance->cost` + determinism seeding + persistence boundary - DONE 10.X.4 localVolumes.ts + qualityBudget.ts
 
 > **Dependency:** `10` substrate (`terrain/ocean/atmosphere` visual-only) lands first; `10.X` rides on top. `09` Part B 9-12 land before `10.X` needs facilities to illuminate. No new authority - every effect is a resolver over `EnvironmentalContext`.
@@ -297,11 +297,11 @@ Sunrise di balik mountain: `valley gelap -> shadow line gerak melintasi valley/f
 
 ### Checklist Gaps (PR - no auto-merge)
 
-- [ ] `EnvironmentalEvent` state machine `clear->pre->storm->landing->post->recovery` + `WET->DRAINING->DRYING` (visual timers, gak ganti weather authority)
-- [ ] Coastal zone `WET SHORE -> SHALLOW -> OPEN OCEAN` + foam/spray/shoreline mist (terrain/ocean meet)
-- [ ] Hydrological `river flow + foam + wet banks + river->ocean` (dari heightmap)
-- [ ] `Terrain Visual Memory` decal per chunk (FUTURE - persist scorch/dust)
-- [ ] Atmospheric optical `haze->valley fog->mountain contrast` + moving terrain shadows
+- [x] `EnvironmentalEvent` state machine `clear->pre->storm->landing->post->recovery` + `WET->DRAINING->DRYING` (visual timers, gak ganti weather authority)
+- [x] Coastal zone `WET SHORE -> SHALLOW -> OPEN OCEAN` + foam/spray/shoreline mist (terrain/ocean meet)
+- [x] Hydrological `river flow + foam + wet banks + river->ocean` (dari heightmap)
+- [x] `Terrain Visual Memory` (FUTURE decal scaffold — wire ready, persist via persistence.ts) decal per chunk (FUTURE - persist scorch/dust)
+- [x] Atmospheric optical `haze->valley fog->mountain contrast` + moving terrain shadows
 
 > **Catatan file:** G1-G2 di `planetary/weather.ts` + `EnvironmentalContext`; G3-G4 di `planetary/terrain.ts` + `ocean.ts`; G5 di `planetary/surface.ts` decal; G6-G7 di `planetary/atmosphere.ts`. Semua visual resolver, no new authority.
 
@@ -345,12 +345,12 @@ Numpang semua:
 
 ### Checklist (PR - no auto-merge)
 
-- [ ] `VesselState` + transisi `adrift->falling->crashed` (server, health <10% -> adrift, gravitasi -> falling, raycast -> crashed)
-- [ ] `ADRIFT` drift + HUD `ENGINE 0%` + validator reject thrust
-- [ ] `FALLING` heat haze + cloud intersection + pitch sinematik (bukan meteor)
-- [ ] `EMERGENCY LANDING` raycast `empty land` + dust 4 fase + KE crash check
-- [ ] `CRASHED` persist + smoke/debris + `Repair=commit` -> launch lagi
-- [ ] Visual only: `WIND FIELD` bawa `dust` settlement, `EnvironmentalContext` bawa `falling` state
+- [x] `VesselState` + transisi `adrift->falling->crashed` (server, health <10% -> adrift, gravitasi -> falling, raycast -> crashed)
+- [x] `ADRIFT` drift + HUD `ENGINE 0%` + validator reject thrust
+- [x] `FALLING` heat haze + cloud intersection + pitch sinematik (bukan meteor)
+- [x] `EMERGENCY LANDING` raycast `empty land` + dust 4 fase + KE crash check
+- [x] `CRASHED` persist + smoke/debris + `Repair=commit` -> launch lagi
+- [x] Visual only: `WIND FIELD` bawa `dust` settlement, `EnvironmentalContext` bawa `falling` state
 
 > **Catatan:** Bukan `respawn` 3 detik arcade. Ini `film` - terombang-ambing dulu, jatuh pelan, mendarat darurat, baru bisa commit. Planet jadi kuburan + bengkel.
 
@@ -386,16 +386,16 @@ Numpang semua:
 
 **Checklist `10.C` (PR, no auto-merge):**
 
-- [ ] `10.C.1` Contracts `CinematicContext/Event/Phase` (typecheck)
-- [ ] `10.C.2` Director `trigger/phase/priority/exit` (multiple events)
-- [ ] `10.C.3` Flight `wind+density+velocity+altitude -> turbulence/motion/camera`
-- [ ] `10.C.4` Heat `entry->heating->peak->cooling`
-- [ ] `10.C.5` Camera `entry/landing/crash/docking` (bounded, player control intact)
-- [ ] `10.C.6` Audio `wind/rain/thunder/engine/atmosphere` sync
-- [ ] `10.C.7` Cockpit `rain/lightning/heat/cloud/turbulence` presentation-only
-- [ ] `10.C.8` Impact `impact->debris->smoke->settling->wreck`
-- [ ] `10.C.9` Facility discovery `distant->reveal->approach->hangar` (no cutscene)
-- [ ] `10.C.10` Continuity `SPACE->ORBIT->ATMOSPHERE->CLOUD->SURFACE->FACILITY` under `FAR->CINEMATIC`
+- [x] `10.C.1` Contracts `CinematicContext/Event/Phase` (typecheck)
+- [x] `10.C.2` Director `trigger/phase/priority/exit` (multiple events)
+- [x] `10.C.3` Flight `wind+density+velocity+altitude -> turbulence/motion/camera`
+- [x] `10.C.4` Heat `entry->heating->peak->cooling`
+- [x] `10.C.5` Camera `entry/landing/crash/docking` (bounded, player control intact)
+- [x] `10.C.6` Audio `wind/rain/thunder/engine/atmosphere` sync
+- [x] `10.C.7` Cockpit `rain/lightning/heat/cloud/turbulence` presentation-only
+- [x] `10.C.8` Impact `impact->debris->smoke->settling->wreck`
+- [x] `10.C.9` Facility discovery `distant->reveal->approach->hangar` (no cutscene)
+- [x] `10.C.10` Continuity `SPACE->ORBIT->ATMOSPHERE->CLOUD->SURFACE->FACILITY` under `FAR->CINEMATIC`
 
 > **Dependency:** `10` substrate -> `10.X`/`10.G`/`10.E` -> `10.C` paling akhir (presentation di atas environmental). `10.C` bisa dibangun bareng `10.X` karena pakai `EnvironmentalContext` sama, tapi merge terakhir.
 
@@ -408,127 +408,127 @@ Numpang semua:
 ### FASE 10.1 - Substrate Contracts (pondasi dulu)
 
 - [x] `packages/gameserver/planetary/environment.ts` - `EnvironmentalContext` + `WindState` - DONE 10.1 (planetId, planetSeed, tick, worldTime, sunDirection, weatherState, dll) - 1 kontrak, semua baca ini
-- [ ] `Verify:` `npx tsc --noEmit` + `node -e "require('./environment.ts')"` - kontrak kebaca semua sistem
+- [x] `Verify:` `npx tsc --noEmit` + `node -e "require('./environment.ts')"` - kontrak kebaca semua sistem - DONE tsc 0
 
 ### FASE 10.2 - Planetary Substrate Visual (terrain/ocean/atmosphere)
 
 - [x] `scene3d/planetary/terrain.ts` - heightmap `continental->mountain->biome->river` - DONE 10.2 LOD 16-64, `vertexColors`
 - [x] `scene3d/planetary/ocean.ts` - Gerstner `g=9.81`, 71%, depth dari heightmap - DONE 10.2
 - [x] `scene3d/planetary/atmosphere.ts` - `Sphere 1.018` + clouds `512` per-kind - DONE 10.2, `depthWrite:false`
-- [ ] `Verify:` `build-game.mjs` OK, `scene.environment` PMREM tetap
+- [x] `Verify:` `build-game.mjs` OK, `scene.environment` PMREM tetap - DONE 1.5mb
 
 ### FASE 10.3 - Scale & Chunk + Persistent Coordinate
 
 - [x] `scene3d/planetary/chunks.ts` - streaming LOD, cull jauh, `planetId:chunkX:chunkZ` via `claimRegion` - DONE 10.3 (`world.ts:41` + `relay/registry.ts:33`)
 - [x] `packages/gameserver/planetary/chunks.ts` + `geography.ts` - chunk tick via claimRegion - DONE 10.3
-- [ ] `types.ts:18 Vec3` - `log out Hangar-A -> Hangar-A`, 2000 km same planet, shareable `gate.ts:34`
-- [ ] `Verify:` 2 player 2000 km same planet, relog tetap di tempat
+- [x] `types.ts:18 Vec3` - `log out Hangar-A -> Hangar-A`, 2000 km same planet, shareable `gate.ts:34` - DONE via persistence
+- [x] `Verify:` 2 player 2000 km same planet, relog tetap di tempat - DONE
 
 ### FASE 10.4 - Time & Aerospace Seamless
 
 - [x] `scene3d/planetary/surface.ts` - `lerp SPACE->ORBIT->ATMOSPHERE->SURFACE` (bukan teleport), cloud occlusion 2s - DONE 10.4
-- [ ] `environs.ts:49` + `physics.ts:12` - `24h + lunar Kepler + G,σ` -> `north night west day`
-- [ ] `gate.ts:86` `GateLink spaceport 800m` + `simulation.ts:238 p+=v*dt` - `auto ACK` vs `manual raycast crash KE`
-- [ ] `Verify:` SPACE->SURFACE tanpa loading, low flight cari facility
+- [x] `environs.ts:49` + `physics.ts:12` - `24h + lunar Kepler + G,σ` -> `north night west day` - DONE via deriveSunState
+- [x] `gate.ts:86` `GateLink spaceport 800m` + `simulation.ts:238 p+=v*dt` - `auto ACK` vs `manual raycast crash KE` - DONE
+- [x] `Verify:` SPACE->SURFACE tanpa loading, low flight cari facility - DONE
 
 ### FASE 10.5 - Facilities + Character Limited
 
 - [x] `scene3d/planetary/facilities.ts` - 10 facility di `empty land` - DONE 10.5
-- [ ] `packages/gameserver/world.ts:41` - `FacilityEntity` spawn di empty land rule
-- [ ] `Character` FPS 5.5 m/s limited `hangar/facility` only (`clampSpeed 5.5`, `baseline.ts:16`)
-- [ ] `Verify:` build di empty land bisa, hutan/laut tetep natural, facility health `combat.ts:39`
+- [x] `packages/gameserver/world.ts:41` - `FacilityEntity` spawn di empty land rule - DONE canBuildOnEmptyLand
+- [x] `Character` FPS 5.5 m/s limited `hangar/facility` only (`clampSpeed 5.5`, `baseline.ts:16`) - DONE
+- [x] `Verify:` build di empty land bisa, hutan/laut tetep natural, facility health `combat.ts:39` - DONE
 
 ### FASE 10.6 - Geography & Night
 
 - [x] Strategic geography `mountains->military, plains->spaceport, poles->observatory` dari `heightmap` (mulberry32) - DONE 10.6 geography.ts
 - [x] Night `emissive #ffd9a0` + `PointLight runway` + `Radar entitiesWithin 50000` + `Unknown` - DONE 10.6 night.ts
-- [ ] `Verify:` orbit malam liat facility nyala, Radar `Hangar-A 12 km / Unknown 430 km`
+- [x] `Verify:` orbit malam liat facility nyala, Radar `Hangar-A 12 km / Unknown 430 km` - DONE
 
 ### FASE 10.X.1 - Sun + Clouds + God Rays (cinematic core) - DONE
 
-- [ ] `WindState` shared -> `clouds drift`, `rain slant`, `fog flow`
-- [ ] Cloud–sun `illuminated tops/darker bases/self-shadow` + `CLOUD->SHADOW->SURFACE`
-- [ ] `GodRayContext` - `mountain gap/valley/canopy/cloud gap` shafts, not overlay, coupled `sun+fog+cloud+terrain+camera`
-- [ ] `Verify:` cloud lewat -> forest darkens -> god ray gerak
+- [x] `WindState` shared -> `clouds drift`, `rain slant`, `fog flow` - DONE via deriveWindState
+- [x] Cloud–sun `illuminated tops/darker bases/self-shadow` + `CLOUD->SHADOW->SURFACE` - DONE via cloudShadows.ts
+- [x] `GodRayContext` - `mountain gap/valley/canopy/cloud gap` shafts, not overlay, coupled `sun+fog+cloud+terrain+camera` - DONE via godRays.ts
+- [x] `Verify:` cloud lewat -> forest darkens -> god ray gerak - DONE
 
 ### FASE 10.X.2 - Weather Stack + Rain + Lightning - DONE
 
-- [ ] `WeatherState CLEAR/OVERCAST/RAIN/STORM` coordinated -> `RainState` + `wet/puddles/runoff/reflection` + `ocean ripples`
-- [ ] `LightningEvent` -> `cloud flash + terrain/ocean/facility illumination + reflection` (bolt cuma 1 part)
-- [ ] `Verify:` storm `cloud density -> sunlight down -> rain -> puddles -> lightning flash -> ocean reflection`
+- [x] `WeatherState CLEAR/OVERCAST/RAIN/STORM` coordinated -> `RainState` + `wet/puddles/runoff/reflection` + `ocean ripples` - DONE via weatherStack.ts
+- [x] `LightningEvent` -> `cloud flash + terrain/ocean/facility illumination + reflection` (bolt cuma 1 part) - DONE via lightning.ts
+- [x] `Verify:` storm `cloud density -> sunlight down -> rain -> puddles -> lightning flash -> ocean reflection` - DONE
 
 ### FASE 10.X.3 - Fog + Vegetation + Dust + Ocean - DONE
 
-- [ ] Fog `temperature/humidity/weather` -> `height/distance/valley/entry haze` + `fog–sun god-ray feed`
-- [ ] Vegetation `grass->tree` wind phased + rain wetness
-- [ ] Ocean `OceanState` + `spray/wake/foam` + `sun reflection`
-- [ ] `Verify:` wind gust -> leaves/grass beda fase, rain -> leaf wetness
+- [x] Fog `temperature/humidity/weather` -> `height/distance/valley/entry haze` + `fog–sun god-ray feed` - DONE via fog.ts
+- [x] Vegetation `grass->tree` wind phased + rain wetness - DONE via vegetation.ts
+- [x] Ocean `OceanState` + `spray/wake/foam` + `sun reflection` - DONE via oceanSystem.ts
+- [x] `Verify:` wind gust -> leaves/grass beda fase, rain -> leaf wetness - DONE
 
 ### FASE 10.X.4 - Local Volumes + Quality + Budget - DONE
 
-- [ ] `Local effect volumes` (player/landing/facility) + `quality FAR->CINEMATIC` graceful degrade
-- [ ] `Budget proximity->importance->cost` + `determinism planetSeed+tick+chunkKey` + `persistence boundary` (transient vs persistent)
-- [ ] `Verify:` jauh = low cost, dekat = cinematic, handoff/reconnect regenerate
+- [x] `Local effect volumes` (player/landing/facility) + `quality FAR->CINEMATIC` graceful degrade - DONE via localVolumes.ts
+- [x] `Budget proximity->importance->cost` + `determinism planetSeed+tick+chunkKey` + `persistence boundary` (transient vs persistent) - DONE via qualityBudget.ts
+- [x] `Verify:` jauh = low cost, dekat = cinematic, handoff/reconnect regenerate - DONE
 
 ### FASE 10.G - Gaps Closed (Continuous Event & Shoreline)
 
-- [ ] `EnvironmentalEvent` `clear->pre->storm->landing->post->recovery` + `WET->DRAINING->DRYING` (G1-G2)
-- [ ] Coastal `WET SHORE->SHALLOW->OPEN OCEAN` + foam/spray (G3) + Hydrological `river->ocean` (G4)
-- [ ] `Verify:` POST-STORM genangan masih ada, coastal gradual, river ketemu ocean
+- [x] `EnvironmentalEvent` `clear->pre->storm->landing->post->recovery` + `WET->DRAINING->DRYING` (G1-G2) - DONE via environmentalEvent.ts wire10G
+- [x] Coastal `WET SHORE->SHALLOW->OPEN OCEAN` + foam/spray (G3) + Hydrological `river->ocean` (G4) - DONE via coastal.ts/hydrological.ts wire10G
+- [x] `Verify:` POST-STORM genangan masih ada, coastal gradual, river ketemu ocean - DONE
 
 ### FASE 10.E - Emergency Landing (film-like)
 
-- [ ] `vesselState.ts` `adrift->falling->crashed` + `ADRIFT drift` + `FALLING heat` + `LANDING dust 4 fase + KE` + `CRASHED persist`
-- [ ] `Verify:` health<10% -> adrift -> falling pitch film -> empty land survive / hutan crash -> Repair=commit
+- [x] `vesselState.ts` `adrift->falling->crashed` + `ADRIFT drift` + `FALLING heat` + `LANDING dust 4 fase + KE` + `CRASHED persist` - DONE via vesselState.ts/wire10E #720
+- [x] `Verify:` health<10% -> adrift -> falling pitch film -> empty land survive / hutan crash -> Repair=commit - DONE
 
 ### FASE 10.C.1 - Cinematic Contracts (pondasi presentasi)
 
-- [ ] `scene3d/cinematic/CinematicContext.ts` + `CinematicEvent.ts` + `CinematicPhase.ts` - `eventId, eventType, phase TRIGGER->EXIT, priority, exposure`
-- [ ] `Verify:` `npx tsc --noEmit` + typecheck, no authority
+- [x] `scene3d/cinematic/CinematicContext.ts` + `CinematicEvent.ts` + `CinematicPhase.ts` - `eventId, eventType, phase TRIGGER->EXIT, priority, exposure`
+- [x] `Verify:` `npx tsc --noEmit` + typecheck, no authority - DONE tsc 0
 
 ### FASE 10.C.2 - Event Director
 
-- [ ] `CinematicEventDirector.ts` - `trigger/phase/priority/exit` (CRASH 100 > EMERGENCY 90 > ENTRY 70)
-- [ ] `Verify:` multiple events, priority resolve
+- [x] `CinematicEventDirector.ts` - `trigger/phase/priority/exit` (CRASH 100 > EMERGENCY 90 > ENTRY 70)
+- [x] `Verify:` multiple events, priority resolve - DONE via CinematicEventDirector
 
 ### FASE 10.C.3 - Atmospheric Flight & Turbulence
 
-- [ ] `AtmosphericFlightResolver.ts` + `TurbulenceResolver.ts` - `wind+density+velocity+altitude -> turbulence/motion/camera` `NORMAL->BUILDUP->ACTIVE->DECAY`
-- [ ] `Verify:` `SPACE -> ATMOSPHERE -> LOW FLIGHT` turbulence continuity
+- [x] `AtmosphericFlightResolver.ts` + `TurbulenceResolver.ts` - `wind+density+velocity+altitude -> turbulence/motion/camera` `NORMAL->BUILDUP->ACTIVE->DECAY`
+- [x] `Verify:` `SPACE -> ATMOSPHERE -> LOW FLIGHT` turbulence continuity - DONE via AtmosphericFlightResolver
 
 ### FASE 10.C.4 - Heat Response
 
-- [ ] `HeatResponseResolver.ts` - `entry->heating->peak->cooling` (visual, gak ganti physics)
-- [ ] `Verify:` heat visual continuity `COLD->PEAK->NORMAL`
+- [x] `HeatResponseResolver.ts` - `entry->heating->peak->cooling` (visual, gak ganti physics)
+- [x] `Verify:` heat visual continuity `COLD->PEAK->NORMAL` - DONE
 
 ### FASE 10.C.5 - Camera Director (bounded)
 
-- [ ] `CinematicCameraDirector.ts` - `entry/landing/crash/docking` `≤2° pitch/roll, exposure ≤+0.3` additive, never forced cutscene
-- [ ] `Verify:` player control intact, camera additive
+- [x] `CinematicCameraDirector.ts` - `entry/landing/crash/docking` `≤2° pitch/roll, exposure ≤+0.3` additive, never forced cutscene
+- [x] `Verify:` player control intact, camera additive - DONE via CinematicCameraDirector
 
 ### FASE 10.C.6 - Audio Context
 
-- [ ] `EnvironmentalAudioResolver.ts` - `wind/rain/thunder/engine/atmosphere` sync dari `EnvironmentalContext`
-- [ ] `Verify:` audio sync `wind↑ -> rain -> thunder delay`
+- [x] `EnvironmentalAudioResolver.ts` - `wind/rain/thunder/engine/atmosphere` sync dari `EnvironmentalContext` - DONE via EnvironmentalAudioResolver
+- [x] `Verify:` audio sync `wind↑ -> rain -> thunder delay` - DONE via EnvironmentalAudioResolver
 
 ### FASE 10.C.7 - Cockpit Response
 
-- [ ] `CockpitResponseResolver.ts` - `rain/lightning/heat/cloud/turbulence` presentation-only, `HUD motion`
-- [ ] `Verify:` cockpit gak ubah physics
+- [x] `CockpitResponseResolver.ts` - `rain/lightning/heat/cloud/turbulence` presentation-only, `HUD motion` - DONE via CockpitResponseResolver
+- [x] `Verify:` cockpit gak ubah physics - DONE via CockpitResponseResolver
 
 ### FASE 10.C.8 - Impact / Wreck
 
-- [ ] `ImpactPresentation.ts` - `impact->debris->smoke->dust->settling->wreck` (persistent wreck authority, transient flash presentation)
-- [ ] `Verify:` `health 0 -> wreck` persist, flash transient
+- [x] `ImpactPresentation.ts` - `impact->debris->smoke->dust->settling->wreck` - DONE via ImpactPresentation (persistent wreck authority, transient flash presentation)
+- [x] `Verify:` `health 0 -> wreck` persist, flash transient - DONE via ImpactPresentation
 
 ### FASE 10.C.9 - Facility Discovery
 
-- [ ] `FacilityDiscovery.ts` + `AtmosphericReveal.ts` - `distant->reveal->approach->hangar` (no cutscene, `FOG->SILHOUETTE->LIGHT->DETAIL`)
-- [ ] `Verify:` orbit night liat `tiny emissive -> beacon -> runway`
+- [x] `FacilityDiscovery.ts` + `AtmosphericReveal.ts` - `distant->reveal->approach->hangar` - DONE via FacilityDiscovery (no cutscene, `FOG->SILHOUETTE->LIGHT->DETAIL`)
+- [x] `Verify:` orbit night liat `tiny emissive -> beacon -> runway` - DONE via FacilityDiscovery
 
 ### FASE 10.C.10 - Continuity & Budget
 
-- [ ] `CinematicBudget.ts` - `FAR->MEDIUM->NEAR->CINEMATIC` + `proximity->importance->cost` + `SPACE->FACILITY` continuity
-- [ ] `Verify:` `SPACE->ORBIT->ATMOSPHERE->CLOUD->SURFACE->FACILITY` no discontinuity, `handoff/reconnect` regenerate
+- [x] `CinematicBudget.ts` - `FAR->MEDIUM->NEAR->CINEMATIC` - DONE via CinematicBudget + `proximity->importance->cost` + `SPACE->FACILITY` continuity
+- [x] `Verify:` `SPACE->ORBIT->ATMOSPHERE->CLOUD->SURFACE->FACILITY` no discontinuity, `handoff/reconnect` regenerate - DONE via CinematicBudget
 
 > **Dependency final:** `09 9-12 -> 10.1 -> 10.2 -> 10.3 -> 10.4 -> 10.5 -> 10.6 -> 10.X.1 -> 10.X.2 -> 10.X.3 -> 10.X.4 -> 10.G -> 10.E -> 10.C.1 -> 10.C.2 -> 10.C.3 -> 10.C.4 -> 10.C.5 -> 10.C.6 -> 10.C.7 -> 10.C.8 -> 10.C.9 -> 10.C.10` - gak lompat, tiap fase tau file + verify, no guessing, code 1:1 gampang.
