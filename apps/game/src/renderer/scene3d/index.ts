@@ -40,6 +40,7 @@ import { createGeographyMarker, NICHE_COLOR } from "./planetary/geography";
 import { createEnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
 import type { EnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
 import { createPlanetary10X, tickPlanetary10X, disposePlanetary10X } from "./planetary/wire10X";
+import { createPlanetary10G, tickPlanetary10G, disposePlanetary10G } from "./planetary/wire10G";
 void _planetary;
 import { buildStars } from "./stars";
 import { buildNebula } from "./nebula";
@@ -125,6 +126,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
 
   // Cinematic atmosphere layer (10.X.1-X.4) — owns sun/shadow/rain/etc systems
   const planetary10X = createPlanetary10X(ctx.scene, planetSeed);
+  const planetary10G = createPlanetary10G(ctx.scene);
 
   // Environmental context (derived from server contract)
   let envContext: EnvironmentalContext | null = null;
@@ -329,6 +331,12 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
         ambient: ctx.ambient,
         renderer: ctx.renderer,
       });
+      tickPlanetary10G(planetary10G, ctx.scene, envContext, dtX, {
+        timeSec: envContext.worldTime / 1000 + envContext.simulationTick * 0.1,
+        anchor: { x: ctx.anchor.x, z: ctx.anchor.z },
+        cameraPos: ctx.camera ? { x: ctx.camera.position.x, y: ctx.camera.position.y, z: ctx.camera.position.z } : { x: 0, y: 0, z: 0 },
+        altitude: ctx.firstVesselRef ? Math.max(0, ctx.anchor.y + 10) : 0,
+      });
     }
 
     // Interpolasi vessel (presentation ✓, autoritas server tetap D-008).
@@ -371,6 +379,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     disposeGroup(terrainMesh as any); disposeGroup(oceanMesh as any); disposeGroup(atmoGroup);
     disposeGroup(facilitiesGroup); disposeGroup(nightGroup); disposeGroup(geographyGroup);
     disposePlanetary10X(ctx.scene, planetary10X);
+    disposePlanetary10G(ctx.scene, planetary10G);
     for (const pl of ctx.planets) {
       ctx.scene.remove(pl.mesh); ctx.scene.remove(pl.atmo); if (pl.ring) ctx.scene.remove(pl.ring);
       for (const mo of pl.moons) ctx.scene.remove(mo.mesh);

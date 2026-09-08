@@ -4,7 +4,7 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// planetary/environmentalEvent.ts - 10.G G1-G2 Continuous Environmental Event + Weather Accumulation: CLEAR->PRE->STORM->LANDING->POST->RECOVERY + WET->DRAINING->DRYING. Zoom dari blueprint G1-G2.
+// planetary/environmentalEvent.ts - 10.G G1-G2 Continuous Environmental Event + Weather Accumulation: CLEAR->PRE->STORM->LANDING->POST->RECOVERY + WET->DRAINING->DRYING.
 
 // WIRE NOTE for SESSION 2: import { deriveEnvironmentalEvent, tickEnvironmentalEvent } from "./planetary/environmentalEvent" di scene3d/index.ts. Derive dari EnvironmentalContext, tick per frame untuk puddle/vegetation mist.
 
@@ -15,38 +15,66 @@ export type EventPhase = "clear" | "pre" | "storm" | "landing" | "post" | "recov
 export interface EnvironmentalEvent {
   eventId: string;
   phase: EventPhase;
-  startedAt: number; // ms
+  startedAt: number;
+  updatedAt: number;
   weatherKind: "clear" | "overcast" | "rain" | "storm";
   windSpeed: number;
-  puddle: number; // 0..1 WET->DRAINING->DRYING
-  vegetationWet: number; // 0..1
-  mist: number; // 0..1 POST-STORM mist
+  intensity: number;
+  puddle: number;
+  vegetationWet: number;
+  mist: number;
+  drainage: number;
 }
+
+function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
 
 export function deriveEnvironmentalEvent(ctx: EnvironmentalContext, now: number, prev: EnvironmentalEvent | null): EnvironmentalEvent {
   const kind = ctx.weather.kind;
   const wind = ctx.wind.speed;
   const intensity = ctx.weather.precipitationIntensity;
-  // Phase machine: clear -> pre (cloud 0.5+ wind 6+) -> storm (rain/storm) -> landing (if vessel near) -> post (genangan) -> recovery -> clear
+  const isLanding = (ctx.vesselState?.altitude ?? 9999) < 180 && (ctx.vesselState?.velocity ? Math.hypot(ctx.vesselState.velocity.x, ctx.vesselState.velocity.z) < 40 : false);
   let phase: EventPhase = prev?.phase ?? "clear";
-  if (kind === "clear" && intensity < 0.1) {
-    phase = prev?.phase === "post" || prev?.phase === "recovery" ? "recovery" : "clear";
-    if (prev && now - prev.startedAt > 180000) phase = "clear"; // 3min recovery -> clear
-  } else if (kind === "overcast" && wind > 6) {
+  const age = prev ? now - prev.startedAt : 0;
+  if (kind === "clear" && intensity < 0.06) {
+    if (prev?.phase === "storm") phase = "post";
+    else if (prev?.phase === "post" && age > 45000) phase = "recovery";
+    else if (prev?.phase === "recovery" && age > 180000) phase = "clear";
+    else if (prev?.phase !== "post" && prev?.phase !== "recovery") phase = "clear";
+  } else if (kind === "overcast" && wind > 6.2 && intensity < 0.18) {
     phase = "pre";
   } else if (kind === "rain" || kind === "storm") {
-    phase = "storm";
+    phase = isLanding ? "landing" : "storm";
   }
-  // Puddle/mist derived: WET->DRAINING->DRYING (post storm puddle surut 0.015/sec)
+  if (prev?.phase === "landing" && !isLanding && phase !== "storm") phase = "post";
   let puddle = prev?.puddle ?? 0;
-  if (phase === "storm") puddle = Math.min(1, puddle + intensity * 0.02);
-  else if (phase === "post" || phase === "recovery") puddle = Math.max(0, puddle - 0.008);
-  const vegetationWet = Math.min(1, puddle * 0.6 + intensity * 0.4);
-  const mist = phase === "post" ? Math.min(1, puddle * 0.5 + 0.2) : phase === "recovery" ? puddle * 0.3 : 0;
+  if (phase === "storm" || phase === "landing") puddle = clamp01(puddle + intensity * 0.022);
+  else if (phase === "post") puddle = clamp01(puddle - 0.006);
+  else if (phase === "recovery") puddle = clamp01(puddle - 0.011);
+  else puddle = clamp01(puddle - 0.003);
+  const drainage = phase === "post" ? 0.28 + puddle * 0.42 : phase === "recovery" ? 0.12 + puddle * 0.22 : 0;
+  const vegetationWet = clamp01(puddle * 0.58 + intensity * 0.42 + (phase === "post" ? 0.12 : 0));
+  const mist = phase === "post" ? clamp01(puddle * 0.48 + 0.18) : phase === "recovery" ? puddle * 0.32 : phase === "landing" ? 0.22 + intensity * 0.28 : 0;
   const eventId = prev?.eventId ?? `evt-${ctx.planetId}-${Math.floor(now / 60000)}`;
-  return { eventId, phase, startedAt: prev?.startedAt ?? now, weatherKind: kind, windSpeed: wind, puddle, vegetationWet, mist };
+  const startedAt = prev && prev.phase === phase ? prev.startedAt : now;
+  return { eventId, phase, startedAt, updatedAt: now, weatherKind: kind, windSpeed: wind, intensity, puddle, vegetationWet, mist, drainage };
+}
+
+export function tickEnvironmentalEvent(prev: EnvironmentalEvent, ctx: EnvironmentalContext, now: number, dt: number): EnvironmentalEvent {
+  const derived = deriveEnvironmentalEvent(ctx, now, prev);
+  const lerp = 1 - Math.exp(-dt * 1.8);
+  return {
+    ...derived,
+    puddle: prev.puddle + (derived.puddle - prev.puddle) * lerp,
+    vegetationWet: prev.vegetationWet + (derived.vegetationWet - prev.vegetationWet) * lerp,
+    mist: prev.mist + (derived.mist - prev.mist) * lerp,
+    drainage: prev.drainage + (derived.drainage - prev.drainage) * lerp,
+  };
 }
 
 export function isPostStorm(event: EnvironmentalEvent): boolean {
   return event.phase === "post" || event.phase === "recovery";
+}
+
+export function isWetSurface(event: EnvironmentalEvent): boolean {
+  return event.puddle > 0.18 || event.vegetationWet > 0.32;
 }
