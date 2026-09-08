@@ -533,3 +533,547 @@ saat audit.
 - [ ] **Budget global**: blur hanya panel <50% layar; animasi
       transform/opacity only; DOM tetap 10Hz hash-guard.
       Verify: tidak ada frame drop vs baseline di skenario sama.
+
+---
+
+# ADENDUM MMORPG-GRADE (docs-only, belum implementasi)
+
+> Status bagian §9–§17: **SPEC, bukan klaim.** Acuan kualitas: EVE
+> Online — stylish tactical neon, bukan arcade. Tiap kotak di bawah
+> WAJIB mencantumkan: file exact, fungsi, pola, budget ms, fallback
+> tier LOW, dan cara verifikasi. Aturan besi: **no screenshot =
+> tidak jadi.** Bagian U4 (§8.3) SUDAH final — di sini hanya
+> direferensi, tidak diubah. Aturan §4 tetap berlaku: satu fase =
+> satu PR + semua kotak centang + `tsc 0` + build + smoke.
+
+## 9. Sistem tekstur & material (A) — bunuh plastik
+
+Fakta hari ini: `vessels.ts` pakai flat color + metalness/roughness
+tunggal per part (`hullMat`, `hullHighMat`, `engineMetalMat`,
+`accentMat`, `canopy` Physical); `stations.ts` 2 warna flat +
+1 beacon; `interior.ts` reuse material Fase 3. Hasilnya "plastik":
+pantulan seragam di seluruh permukaan, tidak ada panel yang matte
+dan panel yang aus. Resep EVE: metal MATTE + roughness bervariasi
++ emissive tipis sebagai aksen, BUKAN chrome mengkilat semua.
+
+Anti-plastik recipe (berlaku untuk semua item di §9):
+
+1. Albedo tidak pernah flat: noise ±8% + panel lines + edge wear.
+2. Roughness SELALU bervariasi 0.35–0.75 antar panel (satu angka
+   untuk seluruh hull = plastik, dilarang).
+3. Normal micro dari noise (bukan geometri) — murah, bunuh
+   "permukaan licin sempurna".
+4. Emissive hanya aksen (strip/lampu/jendela), tidak pernah
+   menerangi seluruh badan.
+
+### Fase M1 — Material kit + re-material (satu PR)
+
+- [ ] **M1.1 Texture kit prosedural** — BARU
+      `apps/game/src/renderer/scene3d/materials.ts`: fungsi
+      `makeHullAlbedo(base, seed)`, `makeRoughnessMap(seed, lo, hi)`,
+      `makeNormalMapFromNoise(seed)`, `makePanelLines(w, h, seed)`.
+      Pola: canvas 2D seperti `makeCloudTexture`/`makeGlowTexture`
+      yang sudah ada di `bootstrap.ts`. RNG pakai `scene3d/rng.ts`
+      yang sudah ada (seeded) — JANGAN `Math.random` (tekstur harus
+      stabil antar load). Budget: one-time ~50–200ms saat load di
+      HIGH (boleh di splash/loading, BUKAN di frame gameplay);
+      0ms/frame. Fallback LOW: kit tetap ada tapi resolusi turun
+      (lihat M1.5). Verify: screenshot 4 tile tekstur + catat waktu
+      generate (console.time) + `tsc 0`.
+- [ ] **M1.2 Vessel re-material** — sentuh
+      `apps/game/src/renderer/scene3d/vessels.ts` SAJA (fungsi build
+      yang sudah ada, baris ~36–140): `hullMat`/`hullHighMat` dapat
+      albedo+roughnessMap M1.1 (roughness 0.45–0.7 bervariasi per
+      part), `engineMetalMat` roughness 0.35 + normal micro,
+      `accentMat` tetap emissive tapi intensity turun ke 0.8–1.0
+      (sekarang "menyala" — neon taktis itu tipis, bukan lampu
+      sorot), `canopy` Physical roughness 0.08 -> 0.15 + clearcoat
+      tetap (kaca kokpit butuh cacat dikit biar bukan cermin).
+      Pola: material dibuat SEKALI saat build, disimpan di
+      `group.userData.mats` (jangan bikin material per frame —
+      itu leak). Budget: 0ms/frame tambahan (tekstur di-upload
+      sekali). Fallback LOW: roughnessMap/normal dimatikan,
+      albedo 128px, sisanya flat + vertex color. Verify: screenshot
+      hangar close-up before/after + `renderer.info.memory.textures`
+      + fps guard adegan hangar (§17).
+- [ ] **M1.3 Station re-material** — sentuh
+      `apps/game/src/renderer/scene3d/stations.ts` (fungsi
+      `buildStation`): hub dapat panel-lines albedo + roughness
+      0.5–0.7, ring dapat stripe emissive tipis (numpang warna
+      `colors.stationRing`), beacon dipertahankan. Pola sama seperti
+      M1.2 (material sekali saat build). Budget: 0ms/frame.
+      Fallback LOW: flat seperti sekarang (itu SUDAH tampilan LOW).
+      Verify: screenshot station orbit before/after + fps guard.
+- [ ] **M1.4 Interior kit** — sentuh
+      `apps/game/src/renderer/interior.ts`: lantai roughness TINGGI
+      (0.8, anti-lantai-kaca-kantor), dinding panel albedo M1.1,
+      amber strip + window warm existing DIPERTAHANKAN intensitasnya
+      (itu identitas, bukan plastik). Pola: 3 material shared untuk
+      seluruh interior (jangan per-room material baru — draw call +
+      VRAM jebol). Budget: 0ms/frame. Fallback LOW: 1 material
+      dinding + 1 lantai. Verify: screenshot corridor/plaza
+      before/after + hitung material count via
+      `renderer.info.memory` + fps guard interior (§17).
+- [ ] **M1.5 VRAM guard + tier gating** — sentuh
+      `apps/game/src/renderer/scene3d/quality.ts` (+ field di
+      `settings.ts` bila perlu, tidak bikin settings baru):
+      resolusi tekstur 512 HIGH / 256 MEDIUM / 128 LOW; LOW boleh
+      mematikan normal map total. Anggaran VRAM TEKSTUR (di luar
+      framebuffer): HIGH ≤48MB, MEDIUM ≤24MB, LOW ≤8MB. Cara hitung:
+      512² RGBA = 1MB, jadi HIGH ≈ 30–40 tile max. Verify: catat
+      `renderer.info.memory.textures` + estimasi MB di PR + fps
+      guard 3 tier adegan hangar.
+- [ ] **M1.6 Recipe check** — tiap PR material wajib lolos 4 aturan
+      anti-plastik di atas (reviewer centang manual). Verify:
+      screenshot macro 1 panel hull: terlihat noise + panel line,
+      tidak licin sempurna.
+
+## 10. Weapon VFX (B) — ganti ledakan generik
+
+Fakta hari ini: `scene3d/explosions.ts` = SATU ledakan generik untuk
+semua sebab mati (5 burst sprite orange 0.8s + shield flash putih
+0.2s + 30 sparks garis 0.3s + 12 debris kotak 2s). Blueprint 01 §10
+menuntut 5 archetype visual (Projectile/Beam/Missile/Drone/Area
+Effect) + taxonomy impact (shield flash, sparks, electrical, smoke,
+subsystem shutdown, directional impact, debris, controlled
+explosion). Satu ledakan untuk semua senjata = arcade, bukan EVE.
+
+Bahasa visual per senjata (final, jangan diutak-atik tiap PR):
+
+| Archetype | Tracer/proyektil | Muzzle | Impact khas |
+|---|---|---|---|
+| Projectile | garis-garis ramping cyan/amber per faksi, panjang ∝ kecepatan | flash 60ms + puff kecil | sparks kuning + puff |
+| Beam | quad kontinu + bloom spike + shimmer panas | glow charge 200ms SEBELUM tembak (telegraph) | titik panas putih + smoke tipis |
+| Missile | badan kecil + engine glow + trail asap spiral tipis | asap tebal 300ms | ledakan area kecil + debris |
+| Drone | kecil + blink navigasi (numpang pola nav-blink) | — (launch tube puff) | sparks kecil |
+| Area | ring shockwave mengembang + flash | charge glow | flash + debris + smoke |
+
+### Fase W1 — Weapon kit (satu PR, `explosions.ts` dipecah, bukan dihapus)
+
+- [ ] **W1.1 Weapon kit** — BARU
+      `apps/game/src/renderer/scene3d/weapons.ts`: fungsi
+      `spawnProjectileTracer(ctx, from, to, tint)`,
+      `spawnBeam(ctx, from, to, width, heat)`,
+      `spawnMissile(ctx, from, dir, tint)` (trail asap spiral),
+      `spawnMuzzle(ctx, hardpointPos, kind)`,
+      `spawnImpact(ctx, pos, kind, surface)` dengan
+      `kind = shield|sparks|electrical|smoke|directional`,
+      `spawnShockwave(ctx, pos, radius)`. Pola: OBJECT POOL per jenis
+      (pre-alloc, reuse — pola sama seperti rain streak pool di
+      `rain.ts`; dilarang `new Geometry` per tembakan di frame
+      panas). Jitter visual boleh non-deterministik (itu presentasi,
+      bukan authority — hasil damage tetap milik sim). Budget:
+      update pool ≤0.8ms/frame HIGH di adegan duel; pool cap:
+      tracer ≤64, beam ≤8, missile ≤12, partikel impact ≤200.
+      Fallback LOW: tracer + flash saja (no smoke, no debris, no
+      shockwave). Verify: GIF tiap archetype 3 detik + hitung draw
+      call duel + fps guard adegan perang (§17).
+- [ ] **W1.2 Muzzle per hardpoint** — sentuh
+      `apps/game/src/renderer/scene3d/vessels.ts` (mountL/R baris
+      ~139+): tiap mount dapat socket posisi (disimpan di
+      `userData.mounts`), `weapons.spawnMuzzle` dipanggil di socket
+      itu. Beam: charge-glow 200ms dulu (telegraph — pemain lihat
+      "mau ditembak", itu EVE). Budget: muzzle ≤0.1ms (sprite 1–2).
+      Fallback LOW: flash sprite saja. Verify: screenshot freeze
+      frame muzzle + beam charge + fps guard.
+- [ ] **W1.3 Impact taxonomy** — sentuh `weapons.ts` (BARU, W1.1) +
+      baca state shield dari sim (read-only): shield = flash biru +
+      sprite heksagonal-ish (canvas, bukan geometri baru); sparks =
+      garis kuning (reuse pola sparks existing); electrical = garis
+      zigzag ungu 150ms; smoke = sprite abu ikut `WindState`
+      (numpang pola spray advect); directional = cone searah datang.
+      Budget: impact ≤0.3ms (pool, auto-recycle ≤1s). Fallback LOW:
+      flash saja. Verify: screenshot tiap jenis impact + fps guard.
+- [ ] **W1.4 Ledakan besar + wreck hook** — pecah
+      `apps/game/src/renderer/scene3d/explosions.ts`:
+      `spawnExplosion` existing jadi `spawnExplosionLarge` ( dipakai
+      missile + kill), tambah `spawnControlledExplosion` (kecil,
+      untuk subsystem — dipakai §11), dan hook persistent wreck
+      (carcass diserahkan ke §16 R1.2 — transient vs persistent
+      DIPISAH, pola `ImpactPresentation.ts`: transient = partikel
+      yang hilang, persistent = mesh yang tinggal). Otoritas nol
+      (semua baca event mati yang sudah ada). Budget: large ≤0.5ms
+      sesaat, debris existing 2s dipertahankan. Fallback LOW: burst
+      2 sprite + flash (itu tampilan LOW yang sah). Verify: video
+      kill full 2s + screenshot carcass sisa + fps guard.
+
+## 11. Damage → visual mapping (C) — luka terbaca di mata
+
+Blueprint 01 §11: subsystem damage (ENGINE/NAVIGATION/WEAPONS/
+DEFENSE/REACTOR) memengaruhi world-state DAN representasi visual
+(rantai `DEFENSE 48% -> shield instability -> visual flicker`).
+Fakta hari ini: rantai itu PUTUS di visual — `vessels.ts` NOL
+damage visual, HUD kanan VESSEL cuma bar. Kapal 10% dan 100% terlihat
+SAMA. Itu tidak MMORPG-grade.
+
+Level final (berlaku untuk semua subsystem): `OK (>0.6)` /
+`DAMAGED (0.25–0.6)` / `DISABLED (<0.25)` / `DEPLETED (=0, khusus
+REACTOR/ammo)`. Tiga level terakhir WAJIB beda di mata TANPA baca
+angka HUD.
+
+### Fase D1 — Damage kit (satu PR)
+
+- [ ] **D1.1 Damage resolver** — BARU
+      `apps/game/src/renderer/scene3d/damage.ts`: tipe
+      `DamageVisualState { engine, nav, weapons, defense, reactor }`
+      (0..1, read-only dari sim) + `resolveDamageVisuals(health)`
+      -> level per subsystem. Murni fungsi (testable tanpa THREE).
+      Verify: unit/smoke assert tiap batas level + `tsc 0`.
+- [ ] **D1.2 Apply ke vessel** — sentuh
+      `apps/game/src/renderer/scene3d/vessels.ts` + BARU `damage.ts`
+      (D1.1): `applyDamageVisuals(group, state)` dengan material refs
+      di-cache di `userData.mats` SEKALI saat build (numpang M1.2).
+      DILARANG traverse per frame (pelajaran `night.ts`, backlog
+      §7.2). Tabel visual per subsystem:
+      ENGINE -> engine glow flicker + smoke knalpot + trail
+      putus-putus; WEAPONS -> mount hangus (tint gelap) + muzzle
+      redup; DEFENSE -> shield flicker instability + retak emissive;
+      REACTOR -> dim global lampu kapal + heat glow; NAV ->
+      nav-blink mati + label TAC kuning. Budget: apply hanya saat
+      level BERUBAH (event, bukan per frame) + flicker ≤0.2ms.
+      Fallback LOW: tint + HUD saja (no smoke/api). Verify:
+      screenshot 5 subsystem × 3 level (15 shot, boleh kolase) +
+      fps guard.
+- [ ] **D1.3 Asap + api** — sentuh `damage.ts` (D1.1) + numpang pool
+      `weapons.ts` (W1.1): smoke = sprite abu pool ≤24, advect ikut
+      `WindState` di atmosfer (pola spray); api = 2–3 sprite additive
+      flicker 8–12Hz pakai JAM TICK (`timeSec`, pola flight resolver
+      — BUKAN `Date.now`, pelajaran V8). Budget: ≤0.5ms HIGH.
+      Fallback LOW: mati total (tint D1.2 sudah cukup). Verify: GIF
+      kapal DAMAGED 5 detik + fps guard.
+- [ ] **D1.4 Deformasi murah + bekas luka** — sentuh `vessels.ts`:
+      DISABLED = skew/scale nacelle 3–5° + 1 panel disembunyikan
+      (hide mesh spesifik — murah, permanen sampai repair);
+      scar = dark patch decal (plane + MultiplyBlending, 1–3 per
+      kapal). DILARANG vertex surgery per frame (cost + risiko).
+      Budget: 0ms/frame (one-time saat level berubah). Fallback LOW:
+      scar saja. Verify: screenshot DISABLED vs OK + fps guard
+      (harus NOL delta).
+- [ ] **D1.5 HUD subsystem** — sentuh
+      `apps/game/src/renderer/hud.ts`: bar gradien + ikon status per
+      subsystem (OK/DAMAGED/DISABLED/DEPLETED), flicker CSS saat
+      DAMAGED + blink merah saat DISABLED (motion numpang token U6,
+      DOM 10Hz hash-guard tetap). Layout JANGAN pindah (§8.1).
+      Verify: screenshot HUD tiap level + grep NOL `Date.now` baru.
+
+## 12. Post chain penuh (D) — grade + touch, U4 direferensi
+
+Fakta hari ini (`post.ts`): `RenderPass -> UnrealBloomPass
+(1.15/0.45/0.65) -> OutputPass`. U4 (§8.3, FINAL) menyisipkan SATU
+`CockpitGradePass` (ShaderPass: flash + heat + dim) ANTARA Bloom dan
+Output, plus droplet-canvas + hudShake DOM. Bagian ini MENAMBAH 2
+pass di sekitarnya — spec U4 tidak ditulis ulang di sini.
+
+Urutan composer FINAL (jangan dibolak-balik — alasannya teknis):
+
+```
+Render -> Bloom -> Grade (§12) -> CockpitGrade (U4)
+  -> FinalTouch (§12) -> Output
+```
+
+Kenapa: grade di ruang linear HDR SEBELUM Output (tone-map butuh
+gambar yang sudah di-mood); kokpit DI ATAS grade (kaca kokpit
+mewarnai dunia yang sudah jadi, bukan sebaliknya); touch
+(vignette/grain/CA) PALING AKHIR sebelum encode (itu cacat lensa +
+film, bukan cahaya dunia).
+
+### Fase P1 — Grade + touch (satu PR, U4 disentuh HANYA di wiring urutan)
+
+- [ ] **P1.1 Grade pass** — BARU
+      `apps/game/src/renderer/scene3d/gradePass.ts`: SATU ShaderPass
+      uniform `mood (clear|dusk|storm|night) + weatherMix` dibaca
+      dari `EnvironmentalContext` via `wireX`/`wireC` (pola U4:
+      `wireC` satu-satunya sumber update). Numpang akumulasi
+      exposure existing (jangan bikin exposure kedua). Budget:
+      ~0.4ms @1080p ikut resolutionScale. Fallback LOW: pass mati,
+      mood diabaikan (tampilan LOW yang sah). Verify: screenshot 6
+      komposisi §5 grade on/off + fps delta per pass.
+- [ ] **P1.2 Final touch pass** — BARU
+      `apps/game/src/renderer/scene3d/finalTouchPass.ts`: vignette +
+      grain halus (hash-based, uniform `timeSec` — BUKAN `Date.now`)
+      + chromatic aberration radial tipis (tepi saja, <1.5px @1080p,
+      zona tengah STERIL — teks TAC tidak boleh beleber). SATU pass
+      gabungan biar hemat (3 pass terpisah = boros bandwidth).
+      Budget: ~0.4ms @1080p. Fallback LOW: mati total. Verify:
+      screenshot crop tepi 200% (CA terlihat tapi tipis) + grain
+      tidak merusak teks + fps guard.
+- [ ] **P1.3 Wiring urutan + gating** — sentuh
+      `apps/game/src/renderer/scene3d/post.ts` (rakit urutan final +
+      expose `setGradeEnabled`/`setTouchEnabled`) +
+      `apps/game/src/renderer/scene3d/quality.ts` (gating: LOW =
+      Render->Output saja + fallback DOM flash U4; MEDIUM = +Bloom
+      low + Grade; HIGH+ = full). Budget total post: LOW ~0ms,
+      MEDIUM ~1ms, HIGH ~1.5ms @1080p. Verify: assert urutan pass
+      `[render, bloom, grade, cockpit, touch, output]` di smoke +
+      screenshot per tier + fps guard 3 tier.
+- [ ] **P1.4 Night grade** — numpang `gradePass.ts` (P1.1), BUKAN pass
+      baru: exposure turun + blue lift saat malam (baca `moonState`/
+      sun elevation yang sudah ada, pola §2.11). Verify: screenshot
+      night facility grade on/off.
+
+## 13. Cahaya & bayangan (E) — bunuh cahaya datar
+
+Fakta hari ini: `suns.ts` = 1 DirectionalLight (2.2×massRatio) + 1
+AmbientLight (0.5) — itu definisi "datar": tidak ada arah, tidak ada
+pantul, tidak ada titik gelap. Shadowmap beneran TIDAK ADA (yang ada
+cuma `shadowPlane` fake di `atmosphericContinuity.ts` + blob circle
+di `facilities.ts`). Interior hangar cuma 1 PointLight. Langkah EVE:
+sedikit lampu TAPI berarah + kontras, bukan banyak lampu.
+
+Keputusan eksplisit: SHADOW MAP beneran DITOLAK untuk fase ini
+KECUALI 1 spotlight 512px di hangar interior (alasan: cost +
+acne di skala game-unit + LOD §0 butir 5). Bayangan = blob/AO
+murah di mana-mana, shadowmap = 1 titik pamer saja.
+
+### Fase L1 — Lighting rig (satu PR)
+
+- [ ] **L1.1 Key/fill/rim** — sentuh
+      `apps/game/src/renderer/scene3d/suns.ts` (+ `bootstrap.ts`
+      untuk field ctx): key = directional existing (warm, ikut sun
+      elevation); fill = HemisphereLight (sky/ground — INI yang
+      bikin rumput §2.2 + hull merespons langit, bukan cuma
+      matahari); rim = directional biru redup 0.3 dari belakang
+      (siluet kapal pecah dari background gelap — trik EVE paling
+      murah). 3 lampu statis, 0ms tambahan yang berarti. Fallback
+      LOW: key + ambient saja (seperti sekarang). Verify: screenshot
+      vessel against-dark before/after + fps guard (harus ~NOL delta).
+- [ ] **L1.2 Contact shadow + AO murah** — sentuh `vessels.ts` +
+      `planetary/facilities.ts`: blob disc radial-gradient (canvas,
+      pola `makeGlowTexture`) di bawah vessel/facility, opacity ∝
+      altitude (lepas landas = bayangan memudar — storytelling
+      gratis); interior: AO strip = dark gradient plane di sudut
+      koridor/plaza (numpang `interior.ts`). Budget: 1 draw call per
+      blob, ~0ms. Fallback LOW: blob saja, AO mati. Verify:
+      screenshot landing + hangar before/after.
+- [ ] **L1.3 Fasilitas kaya** — sentuh
+      `apps/game/src/renderer/scene3d/planetary/night.ts` (numpang
+      yang sudah ada: 96 windows + PointLight runway): runway edge
+      lights instanced (1 draw call), window intensity noise +
+      10% jendela mati acak seeded (dihuni, bukan pola), beacon pulse
+      pakai `timeSec`. Traverse di-cache SEKALI (pelajaran §7.2 —
+      jangan traverse per tick). Budget: ≤0.2ms. Fallback LOW:
+      emissive statis seperti sekarang. Verify: screenshot night
+      facility before/after + light count `renderer.info` + fps guard.
+- [ ] **L1.4 Interior kaya** — sentuh
+      `apps/game/src/renderer/interior.ts`: corridor strip existing
+      + plaza downlights + hangar 3-point (`hangarLight` existing +
+      2 fill redup) + 1–2 lampu RUSAK flicker (storytelling, bukan
+      bug — didokumentasikan di code comment); bazaar stall glow
+      warna-warni redup (numpang H1.1 §14). Cap lampu: interior ≤6
+      point total di HIGH (forward renderer: tiap point nambah cost
+      SEMUA shader). Fallback LOW: 2 point saja. Verify: screenshot
+      corridor/plaza/hangar/bazaar + light count + fps guard.
+- [ ] **L1.5 Flash consumer** — sentuh `planetary/lightning.ts`
+      (PointLight `FLASH_RANGE` yang SUDAH ADA dipakai beneran) +
+      `suns.ts`: `flashLevel` -> boost directional sesaat + trigger
+      point (§2.9 F2 dibayar di sini). Verify: frame flash gunung
+      ke-reveal (kriteria §2.9) + fps guard.
+
+## 14. Dunia hidup (F) — interior bernyawa, Ark tetap, planet final
+
+Doktrin §3: DITOLAK NPC/fauna dan kota prosedural. "Hidup" di sini
+= lampu + crowd SIMPLE + mesin bergerak + traffic cahaya. Bukan
+simulasi orang. Kamera tidak pernah ngobrol — tapi ruangan yang
+lampunya mati total dan koridor yang sepi = mati.
+
+### Fase H1 — Dunia hidup (satu PR, `ark.ts` hanya re-material)
+
+- [ ] **H1.1 Lampu animasi interior** — sentuh `interior.ts`: advert
+      board scan (emissive offset jalan pakai `timeSec`), koridor
+      strip pulse halus 0.5Hz, bazaar stall glow gantian (cap: update
+      emissiveIntensity ≤8 material/frame — murah, bukan per-lampu
+      traverse). Budget: ≤0.1ms. Fallback LOW: statis. Verify: GIF
+      5 detik plaza + fps guard.
+- [ ] **H1.2 Crowd simple** — BARU
+      `apps/game/src/renderer/scene3d/crowd.ts`: agen = capsule
+      low-poly 2–3 warna (crew/merchant/guard) + waypoint loop di
+      promenade/plaza (12–24 agen HIGH, 6 MEDIUM, 0 LOW dengan
+      fallback billboard jauh). BUKAN AI: posisi = fungsi
+      `timeSec` (deterministik, 0 state, 0 authority). Pola:
+      InstancedMesh per warna (3 draw call total). Budget: ≤0.5ms.
+      Fallback LOW: NOL agen (ruangan "sepi jam malam" = sah).
+      Verify: GIF interior 10 detik + fps guard + screenshot jauh
+      (billboard terbaca sebagai orang).
+- [ ] **H1.3 Mesin bergerak** — sentuh `interior.ts`: hangar door
+      cycle (`hangarDoors` existing DIDIPAKAI akhirnya — open/close
+      8 detik loop saat docking mode), kipas ventilasi putar,
+      crane hangar geser 2m loop, conveyor bazaar texture-offset
+      jalan. Semua fungsi `timeSec`, semua 0 authority. Budget:
+      ≤0.1ms (transform doang). Fallback LOW: pintu saja. Verify:
+      GIF hangar door cycle + fps guard.
+- [ ] **H1.4 Ark dipertahankan + glow hidup** — sentuh
+      `apps/game/src/renderer/scene3d/ark.ts` MINIMAL: animasi NPV
+      yang ada JANGAN DIUBAH (regresi dilarang — tulis test/smoke
+      yang mengunci perilaku existing sebelum PR ini); yang boleh
+      ditambah: engine glow pulse + nav-blink + re-material M1.3.
+      Verify: smoke perilaku NPV lama lolos + screenshot Ark
+      before/after (harus "sama tapi lebih kaya", bukan beda kapal).
+- [ ] **H1.5 City lights final** — sentuh `planetary/night.ts`:
+      kriteria FINAL = per-window intensity noise + 10% mati (L1.3)
+      + runway amber + orbit readability (dari orbit malam: facility
+      = cluster cahaya hangat di atas terrain gelap, BUKAN titik
+      putih tunggal). Verify: screenshot orbit night + descend
+      sequence 3 frame (orbit -> approach -> runway).
+- [ ] **H1.6 Traffic malam** — BARU (numpang `night.ts`): moving
+      light dots di runway/facility road = InstancedMesh kecil loop
+      bolak-balik (fungsi `timeSec`, 1 draw call, ≤16 dots). Ini
+      "kendaraan" tanpa model kendaraan — dari kokpit malam yang
+      terlihat cuma lampunya (doktrin §0 butir 1). Budget: ~0ms.
+      Fallback LOW: mati. Verify: GIF 5 detik + fps guard.
+- [ ] **H1.7 Vegetasi/ocean final pass** — definisi FINAL (numpang
+      A1/A3/A4, bukan kerjaan baru): vegetasi = kanopi + sway +
+      wetness + hemisphere response (ceklist A1 SEMUA centang);
+      ocean = foam texture + fresnel + whitecap ∝ wind + moon glint
+      (ceklist A3 + P1.4 centang). H1.7 = audit silang, bukan code:
+      buka tiap kotak A1/A3/A4, buktikan di screenshot. Verify:
+      kolase forest-flight + ocean-storm + night-ocean.
+
+## 15. UI bar MMORPG (G) — acuan EVE, lampaui
+
+EVE bukan "panel cantik" — EVE = tiap panel punya DEPTH (lapis),
+MOTION (karakter), dan SUARA (klik/scan berdenging). Ditambah NPE
+(new-player experience): pemain baru 5 menit pertama harus bisa
+terbang-tembak-dock TANPA baca wiki. Dan zero-placeholder rule:
+yang belum ada datanya DISEMBUNYIKAN dengan empty-state taktis,
+bukan "coming soon".
+
+Suara: synth WebAudio kecil di file existing (bukan mp3 — CSP
+`default-src 'self'` + size, pelajaran V3). Default ON volume 0.15,
+ada toggle di settings.
+
+### Fase U7–U12 (boleh 2 PR: U7–U9 satu, U10–U12 satu)
+
+- [ ] **U7 Tactical windows kit** — sentuh
+      `apps/game/src/renderer/menu.ts` (builder panel U3 DIPAKAI,
+      bukan builder baru): jendela target-info, fleet, directory/
+      scan, combat-log. Tiap jendela = corner bracket + header +
+      scan-in animation (opacity + slide 120ms, token U6) + suara
+      scan (U9). Isi baca state existing (read-only). Verify:
+      screenshot 4 jendela + rekaman open/scan + `tsc 0`.
+- [ ] **U8 Transisi global** — sentuh semua file UI (numpang token
+      motion U6): open/close/scan/pindah-mode (landing->cockpit =
+      boot sequence 600ms: fade + scanline + blip). DILARANG animasi
+      layout (width/height/top — itu jank; transform/opacity only,
+      budget §8.3). Verify: rekaman 3 transisi + fps guard (NOL
+      frame drop vs baseline).
+- [ ] **U9 Suara UI** — sentuh
+      `apps/game/src/renderer/audio.ts` (existing, tambah fungsi
+      synth `uiBlip/scanConfirm/alarmSoft`, WebAudio osc 30–80ms,
+      TANPA file baru) + toggle di settings. UX: klik = blip,
+      lock = confirm, damage = alarmSoft (JANGAN alarm keras tiap
+      hit — itu bikin mute permanen). Verify: test manual 3 suara
+      + toggle off = sunyi total + `tsc 0`.
+- [ ] **U10 Tutorial/NPE** — BARU overlay di `menu.ts` (atau file
+      baru `apps/game/src/renderer/npe.ts` bila `menu.ts` >500
+      baris — cegah file sprawl §4): 5 langkah (move -> lock ->
+      fire -> dock -> hangar), step dibaca dari state game beneran
+      (langkah centang OTOMATIS saat pemain melakukannya, bukan
+      tombol "next"), skippable, flag `npeDone` persist. Veteran
+      tidak pernah diganggu (flag cek SEKALI saat boot). Verify:
+      test fresh-profile 5 menit sampai hangar + screenshot tiap
+      step.
+- [ ] **U11 Landing page redesign** — sentuh
+      `apps/game/src/renderer/landing.ts`: hero = CCTV live existing
+      + stats live + 2 CTA (Terbang / Lanjut) + strip 3 kartu fitur
+      (data live semua); numpang U5 (buang `@import`, token-ify).
+      Zero-placeholder: slot tanpa data DISEMBUNYIKAN, bukan
+      "coming soon". Verify: screenshot + NOL error CSP + test 3
+      resolusi (1080p/768p/360p).
+- [ ] **U12 Zero-placeholder rule global** — semua file
+      `apps/game/src`: `grep -rin "lorem\|coming soon\|placeholder\|todo("`
+      = NOL hasil; tiap daftar kosong = empty-state taktis
+      ("NO CONTACTS — widen scan", "NO WRECKS in range") bukan
+      kotak kosong. Verify: output grep ditempel di PR.
+
+## 16. Planetary visual gaps 10 + 01 (H) — sistem jalan, presentasi mati
+
+Cross-check `docs/blueprint/10-planetary-runtime.md` +
+`docs/blueprint/01-spatial-ux.md`: yang di bawah ini SISTEMNYA
+sudah centang [x] tapi MATANYA belum ada. Tiap item =
+presentasi-only, otoritas tidak berubah.
+
+- [ ] **R1.1 Discovery reveal** — sentuh
+      `apps/game/src/renderer/scene3d/cinematic/FacilityDiscovery.ts`
+      (+ `AtmosphericReveal.ts` BILA backlog §7.2 membuktikan dia
+      tidak ada — cek dulu, jangan bikin dobel) + `hud.ts`: saat
+      facility pertama ter-radar (Radar `entitiesWithin 50000`
+      existing): ping ring mengembang + label fade-in + suara scan
+      (U9). Blueprint 10 §11 "descend -> runway -> hangar feels
+      inhabited" butuh momen "ketemu" — ini momennya. Verify:
+      video discover 5 detik + fps guard.
+- [ ] **R1.2 Wreckage visual** — sentuh `vessels.ts` (varian carcass:
+      gelap + panel hilang + tilt, reuse D1.4) + `damage.ts` (smoke
+      tipis persistent) + `hud.ts` (plaque arsip: nama, battle,
+      recovered — data dari `04-wreckage-history.md`, read-only):
+      wreck = carcass + smoke tipis + beacon SOS blink + plaque
+      saat dekat. Blueprint 01 §18 "tetap dapat ditemukan fisik".
+      Verify: screenshot wreck dekat/jauh + plaque + fps guard.
+- [ ] **R1.3 Cosmic event visual** — sentuh
+      `apps/game/src/renderer/scene3d/cosmic.ts` +
+      `scene3d/nebula.ts` + `gradePass.ts` (P1.1): solar wind =
+      sky tint aurora-ish + radio crackle (audio existing);
+      anomaly gravity = particle drift + HUD warning + grade shift
+      (LENS DITOLAK — cost; drift + grade sudah "terasa" tanpa
+      postur mahal). Numpang overlay F7 (§6): cuaca yang ke-flip
+      storm OLEH anomali dapat tint ungu-hijau tipis (satu dunia,
+      §0 butir 3). Verify: screenshot anomali vs normal + fps guard.
+- [ ] **R1.4 Geography readability** — sentuh
+      `planetary/geography.ts` (6 niches existing) + `hud.ts` (TAC):
+      tiap niche = tint terrain beda + ikon TAC + label saat
+      di-scan ("chokepoint", "bay", "ridge"...). Blueprint 10 §10
+      "terrain creates opportunity" — opportunity yang tidak
+      TERLIHAT = tidak ada. Verify: screenshot TAC overlay 6 niche.
+- [ ] **R1.5 Bahasa transisi orbit↔surface** — sentuh `camera.ts` +
+      grade + audio: SATU bahasa untuk 3 transisi: GateLink jump =
+      flash + streak; entry atmosfer = heat glow (numpang Heat
+      resolver C-session-1) + shake; docking hangar = iris wipe
+      (fade lingkaran, DOM 300ms, murah). Pemain harus TAHU dia
+      pindah lapisan TANPA baca teks. Verify: GIF 3 transisi + fps
+      guard.
+- [ ] **R1.6 Coastal/hydro final visual** — sentuh `coastal.ts` +
+      `hydrological.ts` + `atmosphericContinuity.ts` (numpang A3):
+      foam line + river glint (sun glint path existing) + mist
+      post-storm tidak nol-mati (bug G-§7.2 bila terbukti).
+      Verify: screenshot shoreline + river + post-storm mist.
+
+## 17. Definition of Done MMORPG-grade (I) — kapan boleh klaim DONE
+
+Sembilan komposisi (6 lama §5 + 3 baru). SEMUA lulus baru DONE.
+Tiap komposisi = SATU dunia bereaksi (aturan §5), bukan efek
+sendiri-sendiri.
+
+Komposisi baru:
+
+7. `fleet battle` — 3+ vessel + beam + tracer + impact + 1 kill
+   (large explosion + carcass) + damage smoke di penyintas.
+8. `living interior` — plaza: crowd + stall glow + advert scan +
+   hangar door open + 1 lampu rusak flicker.
+9. `hangar hero` — vessel textured close-up + contact shadow + rim
+   light + engineer crowd 2 agen + grade on.
+
+### Guard angka (ukur, bukan klaim)
+
+- [ ] **I.1 FPS guard per tier per adegan** — 9 komposisi × 3 tier.
+      Target @1080p hardware referensi (tulis spek di PR, contoh:
+      discrete 2021+ / integrated dilarang jadi patokan HIGH):
+      LOW ≥30, MEDIUM ≥45, HIGH ≥60 (p95 selama 10 detik, overlay
+      `?profile` atau `stats` existing). Adegan sepi (orbit) HARUS
+      ≥60 di semua tier — kalau orbit saja drop, itu bug, bukan
+      "berat". Verify: tabel 27 angka di PR.
+- [ ] **I.2 VRAM + draw call guard** — `renderer.info.memory`
+      (geometries/textures) per adegan: textures ≤8MB LOW / ≤24MB
+      MEDIUM / ≤48MB HIGH (aturan M1.5); draw calls ≤150 LOW /
+      ≤250 MEDIUM / ≤400 HIGH; lights: interior ≤6 point HIGH / ≤2
+      LOW (aturan L1.4). Verify: tabel di PR + screenshot `?profile`.
+- [ ] **I.3 Aturan screenshot** — tiap kotak Verify di §9–§16 =
+      minimal 1 screenshot/GIF + 1 angka fps, tersimpan
+      `docs/shots/<fase>-<adegan>-<tier>.png` (GIF `.gif`), nama
+      ditempel di PR. **No screenshot = tidak jadi** (kotak dianggap
+      belum centang walau code-nya merge). Reviewer menolak PR tanpa
+      shots. Kolase before/after untuk semua item "re-material /
+      re-light" (M1.2–M1.4, L1.1–L1.4, P1.1).
+- [ ] **I.4 Regression lock** — PR §9–§16 wajib: `tsc 0` + build +
+      smoke + sway/wetness/NP V-animasi lama tetap jalan (kunci §7
+      G1 + §14 H1.4) + NOL `Date.now` visual baru (pelajaran V8) +
+      NOL ShaderMaterial full-custom baru (aturan §4) + NOL file
+      sprawl (satu wire per layer).
