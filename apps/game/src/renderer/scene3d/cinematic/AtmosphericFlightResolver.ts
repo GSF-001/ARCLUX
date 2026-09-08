@@ -4,58 +4,109 @@
 // See LICENSE-MMO in the repo root. SPDX: LicenseRef-ARCLUX-MMO.
 //
 
-// cinematic/AtmosphericFlightResolver.ts - 10.C Atmospheric Flight & Turbulence: Vessel+Wind+Density+Weather+Altitude+Velocity -> TurbulenceResolver -> visualPitch/Roll/Vibration/cameraShake. Zoom dari blueprint 10.C Atmospheric Flight & Turbulence.
-
-// Resolved via the cinematic tick — see wire10X/wire10G wiring.
+// cinematic/AtmosphericFlightResolver.ts - 10.C.3 flight turbulence.
+// Couples vessel, wind, air density, weather, altitude, and velocity into
+// presentation-only motion: visual pitch/roll (bounded), vibration, and
+// camera shake. Turbulence builds and decays through phases instead of
+// snapping, and output is smoothed toward targets so frames stay stable.
+// Presentation only: never a physics force.
 
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import { MOTION_MAX_DEG } from "./CinematicContext";
 
 export interface FlightTurbulence {
-  pitch: number; // deg -2..2
-  roll: number; // deg -2..2
+  pitch: number; // degrees, bounded to +/-MOTION_MAX_DEG
+  roll: number; // degrees, bounded to +/-MOTION_MAX_DEG
   vibration: number; // 0..1
   cameraShake: number; // 0..1
   phase: "NORMAL" | "BUILDUP" | "ACTIVE" | "DECAY";
+  intensity: number; // 0..1 raw source energy
 }
 
+const ENTER_BUILDUP = 0.55;
+const ENTER_ACTIVE = 0.7;
+const LEAVE_ACTIVE = 0.4;
+const LEAVE_DECAY = 0.15;
+const RESET_NORMAL = 0.1;
+
+const PHASE_GAIN: Record<FlightTurbulence["phase"], number> = {
+  ACTIVE: 1,
+  BUILDUP: 0.6,
+  DECAY: 0.35,
+  NORMAL: 0.15,
+};
+
+function nextPhase(
+  prev: FlightTurbulence["phase"],
+  intensity: number,
+): FlightTurbulence["phase"] {
+  switch (prev) {
+    case "NORMAL":
+      return intensity > ENTER_BUILDUP ? "BUILDUP" : "NORMAL";
+    case "BUILDUP":
+      if (intensity > ENTER_ACTIVE) return "ACTIVE";
+      if (intensity < LEAVE_DECAY) return "DECAY";
+      return "BUILDUP";
+    case "ACTIVE":
+      return intensity < LEAVE_ACTIVE ? "DECAY" : "ACTIVE";
+    case "DECAY":
+      if (intensity > ENTER_ACTIVE) return "ACTIVE";
+      if (intensity > ENTER_BUILDUP) return "BUILDUP";
+      return intensity < LEAVE_DECAY ? "NORMAL" : "DECAY";
+  }
+}
+
+/**
+ * Resolve turbulence for one frame.
+ * @param timeSec deterministic clock for oscillation (never Date.now)
+ * @param prev previous output for rate smoothing (omit on first call)
+ */
 export function resolveAtmosphericFlight(
   envCtx: EnvironmentalContext,
-  altitude: number, // m 0..8000
-  velocity: number, // m/s
+  altitude: number,
+  velocity: number,
   prevPhase: FlightTurbulence["phase"] = "NORMAL",
   dt: number,
+  timeSec?: number,
+  prev?: FlightTurbulence,
 ): FlightTurbulence {
+  const now = timeSec ?? envCtx.worldTime / 1000 + envCtx.simulationTick * 0.1;
   const wind = envCtx.wind;
-  const density = envCtx.atmosphere.density; // 0..1 (SPACE 0 -> SURFACE 1)
+  const density = envCtx.atmosphere.density;
   const weatherInt = envCtx.weather.precipitationIntensity;
-  // Source: windVector + gust + turbulence + weatherIntensity
+
   const windContrib = wind.speed * 0.04 * (0.5 + wind.gustStrength * 0.5) * density;
   const turbContrib = wind.turbulence * 0.6 * density;
   const weatherContrib = weatherInt * 0.5 * density;
-  const altitudeContrib = altitude < 1500 ? (1 - altitude / 1500) * 0.3 : 0; // low -> more
+  const altitudeContrib = altitude < 1500 ? (1 - altitude / 1500) * 0.3 : 0;
   const speedContrib = Math.min(0.3, velocity * 0.002);
-  const intensity = Math.min(1, windContrib + turbContrib + weatherContrib + altitudeContrib + speedContrib);
+  const gustWave = 0.5 + 0.5 * Math.sin(now * 0.9 + wind.direction);
+  const intensity = Math.min(
+    1,
+    (windContrib + turbContrib + weatherContrib + altitudeContrib + speedContrib) *
+      (0.7 + 0.6 * gustWave * wind.gustStrength),
+  );
 
-  // Phase: NORMAL->BUILDUP->ACTIVE->DECAY->NORMAL, gak 0->MAX instan
-  let phase = prevPhase;
-  if (intensity > 0.55 && prevPhase === "NORMAL") phase = "BUILDUP";
-  else if (intensity > 0.7 && prevPhase === "BUILDUP") phase = "ACTIVE";
-  else if (intensity < 0.4 && prevPhase === "ACTIVE") phase = "DECAY";
-  else if (intensity < 0.15 && prevPhase === "DECAY") phase = "NORMAL";
-  else if (intensity < 0.1) phase = "NORMAL";
+  const phase = nextPhase(prevPhase, intensity);
+  const gain = PHASE_GAIN[phase];
+  const targetPitch = Math.sin(now * 1.1 + wind.direction) * intensity * 1.2 * gain;
+  const targetRoll = Math.cos(now * 1.3 + wind.direction * 1.7) * intensity * 0.9 * gain;
+  const targetVibration = Math.min(1, intensity * 0.6 * gain);
+  const targetShake = Math.min(1, intensity * 0.4 * gain);
 
-  // Visual pitch/roll bounded <=2deg, vibration 0..1
-  const phaseMul = phase === "ACTIVE" ? 1 : phase === "BUILDUP" ? 0.6 : phase === "DECAY" ? 0.35 : 0.15;
-  const pitch = Math.sin(Date.now() * 0.001 + wind.direction) * intensity * 1.2 * phaseMul;
-  const roll = Math.cos(Date.now() * 0.0012 + wind.direction) * intensity * 0.9 * phaseMul;
-  const vibration = intensity * 0.6 * phaseMul;
-  const cameraShake = intensity * 0.4 * phaseMul;
+  // Rate smoothing: approach targets at ~6/s so motion never snaps.
+  const k = prev ? Math.min(1, dt * 6) : 1;
+  const smooth = (to: number, from: number | undefined): number =>
+    from === undefined ? to : from + (to - from) * k;
+  const pitch = Math.max(-MOTION_MAX_DEG, Math.min(MOTION_MAX_DEG, smooth(targetPitch, prev?.pitch)));
+  const roll = Math.max(-MOTION_MAX_DEG, Math.min(MOTION_MAX_DEG, smooth(targetRoll, prev?.roll)));
 
   return {
-    pitch: Math.max(-2, Math.min(2, pitch)),
-    roll: Math.max(-2, Math.min(2, roll)),
-    vibration: Math.min(1, vibration),
-    cameraShake: Math.min(1, cameraShake),
+    pitch,
+    roll,
+    vibration: smooth(targetVibration, prev?.vibration),
+    cameraShake: smooth(targetShake, prev?.cameraShake),
     phase,
+    intensity,
   };
 }

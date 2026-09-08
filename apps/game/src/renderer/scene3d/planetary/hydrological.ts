@@ -6,7 +6,7 @@
 
 // planetary/hydrological.ts - 10.G G4 Hydrological Continuity: MOUNTAIN->STREAM->RIVER->LAKE->COAST->OCEAN.
 
-// Wired via planetary/wire10G — ticked per frame from EnvironmentalContext.
+// Wired via planetary/wireG — ticked per frame from EnvironmentalContext.
 
 import * as THREE from "three";
 
