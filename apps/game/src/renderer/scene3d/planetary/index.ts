@@ -31,3 +31,4 @@ export * from "./hydrological";
 export * from "./atmosphericContinuity";
 export * from "./emergencyLanding";
 export * from "./wire10X";
+export * from "./wire10G";
