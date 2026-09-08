@@ -57,6 +57,14 @@ Kesenjangan (diakui eksplisit, bukan disembunyikan):
 - F5. Belum verifikasi baris-per-baris: terrain/ocean/atmosphere
   pasca-rewrite, detail enrich G, 5 resolver C6-C10. Statusnya
   "klaim DONE", harus jadi "verified DONE".
+- F6. Waktu lokal belum ikut longitude: `timeOfDay` global dari jam
+  dunia, padahal Blueprint 10 §6 nuntut barat-siang-timur-malam di
+  planet ribuan km. Lihat §6.
+- F7. Cuaca ↔ anomali kosmik belum nyambung: dua sistem jalan
+  sendiri-sendiri, padahal Blueprint 10 §14 nyuruh cuaca numpang di
+  `cosmicEvent`. Lihat §6.
+- F8. Tinggi gelombang di mesh + momen "masuk badai kayak film"
+  belum dijahit jadi satu beat sinematik. Lihat §6.
 
 ## 2. Gap fidelity per layer (ini yang bikin "kentang")
 
@@ -201,7 +209,7 @@ Verify: komposisi 6 target (§5) dinilai per screenshot.
 
 ## 4. Fase eksekusi (satu fase = satu PR, wired, verified)
 
-- **F0 Correctness** — tutup F1–F5 §1. Kecil, dulu. Tanpa ini
+- **F0 Correctness** — tutup F1–F8 §1. Kecil, dulu. Tanpa ini
   klaim DONE tidak jujur.
 - **A1 Vegetation** (§2.2) — pembunuh kartun #1.
 - **A2 Terrain+rock** (§2.1 + §2.3).
@@ -220,3 +228,53 @@ Tiap komposisi: seluruh sistem bereaksi sebagai SATU dunia
 (hujan -> basah -> refleksi -> runoff -> sungai -> laut;
 angin -> awan -> hujan -> pohon -> rumput -> debu).
 Bukan 20 efek cantik yang berdiri sendiri.
+
+## 6. Variasi spasial cuaca, waktu & laut badai (temuan lanjutan)
+
+Satu planet ribuan kilometer TIDAK boleh satu cuaca, satu waktu.
+Momen "masuk awan gelap kayak film — petir, angin, ombak — keluar
+cerah" harus terjadi ALAMI dari sistem, bukan di-trigger manual.
+
+### F6 — Waktu matahari lokal ikut longitude (Blueprint 10 §6)
+
+Masalah: `timeOfDay` + elevasi matahari global dari jam dunia.
+Di planet besar, barat siang sementara timur malam.
+Spec: jam matahari lokal = `worldTime + offset(longitude)`.
+Konvensi skala eksplisit: `METERS_PER_HOUR` (meter game per jam
+matahari, 1 konstanta bernama, bukan magic number).
+`deriveSunState` + `createEnvironmentalContext` terima opsional
+`position` -> hitung waktu lokal; tanpa posisi = fallback global
+(kompatibel mundur, tidak merusak pemanggil lama).
+Otoritas tidak berubah (waktu tetap derivasi murni).
+Verify: dua konteks tick sama, X beda jauh -> `timeOfDay` +
+elevasi beda; batas siang/malam kontinu, tidak patah per chunk
+(interpolasi antar chunk, bukan step).
+
+### F7 — Anomali kosmik menggerakkan cuaca (Blueprint 10 §14)
+
+Masalah: `cosmicEvent` (solarWind + anomaly gravity, sudah jalan
+di sim per tick) dan cuaca (seed sendiri) tidak saling kenal.
+Blueprint nyuruh cuaca numpang di anomali yang sama.
+Spec: overlay murni `applyAnomalyToWeather(weather, anomaly)`:
+anomali badai yang mencakup chunk mendorong `kind` ke storm
+(`max` arah badai, tidak pernah melemahkan badai yang sudah ada);
+payload anomali dapat `chunkKey`/posisi supaya cakupannya jelas.
+Batas otoritas utuh: anomali = authority, cuaca visual = derivasi.
+Verify: tick anomali -> chunk target flip ke storm deterministik,
+selesai -> pulih; chunk lain tidak kena.
+
+### F8 — Laut badai + beat sinematik "masuk badai"
+
+Masalah: state ombak (`waveAmplitude` ikut angin) ada, tapi tinggi
+gelombang di mesh + respons vessel belum dijahit jadi satu momen.
+Spec:
+- Mesh ocean: amplitudo vertex ikut `OceanFrameState.waveAmplitude`
+  (kerjaan visual A3), whitecap coverage ∝ wind.
+- Vessel masuk sel badai (kind cuaca di chunk vessel berubah
+  clear->storm): Turbulence ACTIVE + spray + flash + cockpit shake
+  + audio — SEMUA sistem itu sudah ke-wire; yang ditambah hanya
+  deteksi transisi per chunk vessel -> trigger STORM director
+  (pola sama seperti trigger emergency yang sudah ada).
+- Keluar sel: recovery normal (wet tetap — numpang G2).
+Verify: fly-through: cerah -> gelap -> flash+shake+spray ->
+cerah; whitecap skala ikut angin; tidak ada pop.
