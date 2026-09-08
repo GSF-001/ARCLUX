@@ -13,6 +13,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { SceneContext } from "./bootstrap";
+import { createCockpitGradePass } from "./cockpitGradePass";
 
 /** Rakit composer di atas renderer+scene+camera ctx (bloom 1.15/0.45/0.65). */
 export function createPost(ctx: SceneContext): void {
@@ -22,8 +23,12 @@ export function createPost(ctx: SceneContext): void {
   composer.addPass(renderPass);
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(ctx.width, ctx.height), 1.15, 0.45, 0.65);
   composer.addPass(bloomPass);
+  // 10.V U4: CockpitGrade ANTARA Bloom dan Output (flash kena filmic+bloom).
+  const cockpitPass = createCockpitGradePass();
+  composer.addPass(cockpitPass);
   const outputPass = new OutputPass(); // menangani tone mapping di akhir
   composer.addPass(outputPass);
   ctx.composer = composer;
   ctx.bloomPass = bloomPass;
+  ctx.cockpitPass = cockpitPass;
 }

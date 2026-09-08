@@ -55,6 +55,7 @@ import { clampLocal, ensureEntry, updateVessel, updateVesselInterp } from "./ves
 import { buildStation } from "./stations";
 import { disposeExplosions, spawnExplosion, updateExplosions } from "./explosions";
 import { applyQuality } from "./quality";
+import type { CockpitOverlay } from "../cockpitOverlay";
 
 export type { CameraMode };
 
@@ -69,6 +70,8 @@ export interface Scene3D {
   removeGroup(g: THREE.Group): void;
   /** Iris 6: FPS interior camera follow local pos */
   setInteriorCamera(pos: { x: number; y: number; z: number }, yaw: number, pitch: number): void;
+  /** 10.V U4: daftarkan overlay droplet + HUD root (sekali saat boot). */
+  setCockpitPresentation(overlay: CockpitOverlay | null, hudRoot: HTMLElement | null): void;
   dispose(): void;
 }
 
@@ -78,7 +81,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   const height = target?.clientHeight ?? 600;
   const DPR = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
 
-  const bootSettings: GameSettings = settings ?? { preset: "ULTRA", fpsCap: 0, resolutionScale: 1, pixelRatio: 2, antialias: true, bloom: "high", shadowQuality: "high", nebulaDensity: 12, starBodies: 3, planetCount: 9, planetDetail: 48, beltDensity: 8000, vesselDetail: 3, toneMapping: "ACES" } as GameSettings;
+  const bootSettings: GameSettings = settings ?? { preset: "ULTRA", fpsCap: 0, resolutionScale: 1, pixelRatio: 2, antialias: true, bloom: "high", shadowQuality: "high", nebulaDensity: 12, starBodies: 3, planetCount: 9, planetDetail: 48, beltDensity: 8000, vesselDetail: 3, toneMapping: "ACES", textureSize: 512 } as GameSettings;
   const ctx: SceneContext = createBase(target, width, height, DPR, bootSettings);
 
   // ── PLANETARY SURFACE (10.1-10.6) ──
@@ -135,6 +138,14 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
 
   // Cinematic presentation layer (10.C full) — core + response, one wire
   const cinematicC = createCinematicC();
+
+  // 10.V U4: handle presentasi kokpit (diregistrasi renderer.ts saat boot).
+  let cockpitOverlay: CockpitOverlay | null = null;
+  let cockpitHudRoot: HTMLElement | null = null;
+  const setCockpitPresentation = (overlay: CockpitOverlay | null, hudRoot: HTMLElement | null): void => {
+    cockpitOverlay = overlay;
+    cockpitHudRoot = hudRoot;
+  };
 
   // Environmental context (derived from server contract)
   let envContext: EnvironmentalContext | null = null;
@@ -360,6 +371,11 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
         anchor: { x: ctx.anchor.x, z: ctx.anchor.z },
         distanceToLightning: 2800,
         renderer: ctx.renderer,
+        // 10.V U4: presentasi kokpit hidup dari state yang sama.
+        cockpitPass: ctx.cockpitPass ?? undefined,
+        cockpitOverlay,
+        hudRoot: cockpitHudRoot ?? undefined,
+        cockpitDroplets: (ctx.settings.preset ?? "HIGH") !== "LOW",
       });
     }
 
@@ -461,6 +477,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     addGroup: (g: THREE.Group) => ctx.scene.add(g),
     removeGroup: (g: THREE.Group) => ctx.scene.remove(g),
     setInteriorCamera,
+    setCockpitPresentation,
     dispose,
   };
 }

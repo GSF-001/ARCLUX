@@ -27,6 +27,7 @@ export function deriveCockpitState(
   turbulence: FlightTurbulence | null,
   distanceToLightning: number,
   dt: number,
+  timeSec: number,
 ): CockpitState {
   const rainInt = env.weather.precipitationIntensity;
   const cloudDense = env.clouds.density;
@@ -40,9 +41,11 @@ export function deriveCockpitState(
   const heatVignette = clamp01(heat * 0.52 + (env.terrain.height < 20 ? 0 : 0));
   const cloudDim = clamp01(cloudDense * 0.42 + haze * 0.22 + (env.clouds.coverage > 0.6 ? 0.12 : 0));
   const turbShake = turbulence ? turbulence.cameraShake * 0.7 : 0;
+  // 10.V U4: jam tick deterministik (timeSec), BUKAN Date.now (pelajaran V8).
+  // Shake digabungkan lalu dijepit ±3px di konsumen (wireC) — DOM transform.
   const hudShake = {
-    x: Math.sin(Date.now() * 0.009) * turbShake * 1.8 + flashIntensity * 0.6,
-    y: Math.cos(Date.now() * 0.011) * turbShake * 1.2 + heatVignette * 0.4,
+    x: Math.sin(timeSec * 9.0) * turbShake * 1.8 + flashIntensity * 0.6,
+    y: Math.cos(timeSec * 11.0) * turbShake * 1.2 + heatVignette * 0.4,
   };
   const exposureOffset = clamp01(flashIntensity * 0.28 + heatVignette * 0.12 + (1 - scattering) * 0.06);
   void dt;
@@ -61,9 +64,4 @@ export function tickCockpit(prev: CockpitState, next: CockpitState, dt: number):
     hudShake: { x: lerp(prev.hudShake.x, next.hudShake.x, a), y: lerp(prev.hudShake.y, next.hudShake.y, a) },
     exposureOffset: lerp(prev.exposureOffset, next.exposureOffset, a),
   };
-}
-
-export function applyCockpitToOverlay(overlay: { opacity: number; flash: number }, state: CockpitState): void {
-  overlay.opacity = state.dropletOpacity * 0.82 + state.cloudDim * 0.12;
-  overlay.flash = state.flashIntensity;
 }
