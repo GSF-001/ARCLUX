@@ -6,7 +6,7 @@
 
 // cinematic/CinematicContext.ts - 10.C CinematicContext derived, gak persist: eventId/eventType/phase/priority/cameraMode/exposure/visibility/vesselMotion. Zoom dari blueprint 10.C core.
 
-// WIRE NOTE for SESSION 2: import { deriveCinematicContext } from "./cinematic/CinematicContext" di scene3d/index.ts. Derive per frame dari EnvironmentalContext + event.
+// Resolved via the cinematic tick — see wire10X/wire10G wiring.
 
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
 

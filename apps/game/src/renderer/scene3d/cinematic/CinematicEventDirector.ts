@@ -6,7 +6,7 @@
 
 // cinematic/CinematicEventDirector.ts - 10.C Event Director: trigger/phase/priority/exit (CRASH 100 > EMERGENCY 90 > ENTRY 70). Zoom dari blueprint 10.C Event Sequencing.
 
-// WIRE NOTE for SESSION 2: import { CinematicEventDirector } from "./cinematic/CinematicEventDirector" di scene3d/index.ts. Director per scene, tick per frame.
+// Resolved via the cinematic tick — see wire10X/wire10G wiring.
 
 import type { CinematicContext, CinematicEventType, CinematicPhase } from "./CinematicContext";
 import { deriveCinematicContext } from "./CinematicContext";

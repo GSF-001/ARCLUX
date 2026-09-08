@@ -6,7 +6,7 @@
 
 // planetary/coastal.ts - 10.G G3 Coastal Transition: LAND->WET SHORE->SHALLOW->OPEN OCEAN + foam/spray/shoreline mist.
 
-// WIRE NOTE for SESSION 2: import { getCoastalZone, createCoastalSystem, tickCoastal } from "./planetary/coastal" di scene3d/index.ts. Get zone per position, tick spray via storm.
+// Wired via planetary/wire10G — ticked per frame from EnvironmentalContext.
 
 import * as THREE from "three";
 

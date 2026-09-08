@@ -41,6 +41,7 @@ import { createEnvironmentalContext } from "../../../../../packages/gameserver/p
 import type { EnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
 import { createPlanetary10X, tickPlanetary10X, disposePlanetary10X } from "./planetary/wire10X";
 import { createPlanetary10G, tickPlanetary10G, disposePlanetary10G } from "./planetary/wire10G";
+import { createEmergency10X, tickEmergency10X, disposeEmergency10X } from "./planetary/wire10E";
 void _planetary;
 import { buildStars } from "./stars";
 import { buildNebula } from "./nebula";
@@ -127,6 +128,9 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   // Cinematic atmosphere layer (10.X.1-X.4) — owns sun/shadow/rain/etc systems
   const planetary10X = createPlanetary10X(ctx.scene, planetSeed);
   const planetary10G = createPlanetary10G(ctx.scene);
+
+  // Emergency landing visuals (10.E) — renders the authoritative flag
+  const emergency10X = createEmergency10X(ctx.scene);
 
   // Environmental context (derived from server contract)
   let envContext: EnvironmentalContext | null = null;
@@ -339,6 +343,22 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       });
     }
 
+    // ── EMERGENCY LANDING TICK (10.E) ──
+    {
+      const vessel = ctx.firstVesselRef;
+      const local = vessel ? ctx.vessels.get(vessel.id)?.position : undefined;
+      tickEmergency10X(
+        emergency10X,
+        vessel,
+        local ? { x: local.x, y: local.y, z: local.z } : { x: 0, y: 0, z: 0 },
+        1 / 60,
+        envContext ? envContext.worldTime / 1000 + envContext.simulationTick * 0.1 : performance.now() / 1000,
+        envContext
+          ? { direction: envContext.wind.direction, speed: envContext.wind.speed }
+          : { direction: 0, speed: 0 },
+      );
+    }
+
     // Interpolasi vessel (presentation ✓, autoritas server tetap D-008).
     updateVesselInterp(ctx, now);
 
@@ -380,6 +400,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     disposeGroup(facilitiesGroup); disposeGroup(nightGroup); disposeGroup(geographyGroup);
     disposePlanetary10X(ctx.scene, planetary10X);
     disposePlanetary10G(ctx.scene, planetary10G);
+    disposeEmergency10X(ctx.scene, emergency10X);
     for (const pl of ctx.planets) {
       ctx.scene.remove(pl.mesh); ctx.scene.remove(pl.atmo); if (pl.ring) ctx.scene.remove(pl.ring);
       for (const mo of pl.moons) ctx.scene.remove(mo.mesh);

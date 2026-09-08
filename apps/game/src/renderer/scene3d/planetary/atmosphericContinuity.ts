@@ -6,7 +6,7 @@
 
 // planetary/atmosphericContinuity.ts - 10.G G6-G7 Atmospheric Continuity (Orbit limb->High cloud->Low haze->Surface fog) + Terrain Sun Moving Shadows.
 
-// WIRE NOTE for SESSION 2: import { deriveAtmosphericContinuity, tickAtmosphere, tickTerrainShadows } from "./planetary/atmosphericContinuity" di scene3d/index.ts.
+// Wired via planetary/wire10G — ticked per frame from EnvironmentalContext.
 
 import * as THREE from "three";
 import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
