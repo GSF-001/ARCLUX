@@ -58,6 +58,8 @@ import { deriveBudgetState, type BudgetState } from "./CinematicBudget";
 import type { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import type { CockpitOverlay } from "../../cockpitOverlay";
 import { updateCockpitGradePass } from "../cockpitGradePass";
+import { updateFinalTouchPass } from "../finalTouchPass";
+import { updateGradePass } from "../gradePass";
 
 export interface CinematicCTickOpts {
   timeSec: number; // deterministic clock
@@ -74,6 +76,10 @@ export interface CinematicCTickOpts {
   cockpitOverlay?: CockpitOverlay | null;
   hudRoot?: HTMLElement | null;
   cockpitDroplets?: boolean;
+  /** 10.V P1: grade + touch diumpan wireC juga (pola U4, satu sumber). */
+  gradePass?: ShaderPass | null;
+  touchPass?: ShaderPass | null;
+  touchAspect?: number;
 }
 
 export interface CinematicCFrame {
@@ -226,6 +232,11 @@ export function tickCinematicC(
   // frame SEBELUM tick ini (index.ts), jadi += di sini tidak drift.
   if (opts.cockpitPass && opts.cockpitPass.enabled) {
     updateCockpitGradePass(opts.cockpitPass, sys.cockpit);
+  }
+  // 10.V P1: grade mood + final touch (jam tick deterministik).
+  if (opts.gradePass && opts.gradePass.enabled) updateGradePass(opts.gradePass, env);
+  if (opts.touchPass && opts.touchPass.enabled) {
+    updateFinalTouchPass(opts.touchPass, opts.timeSec, opts.touchAspect ?? 16 / 9);
   }
   if (opts.renderer) {
     opts.renderer.toneMappingExposure = opts.renderer.toneMappingExposure + sys.cockpit.exposureOffset;

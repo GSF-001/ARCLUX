@@ -31,6 +31,10 @@ export function applyQuality(ctx: SceneContext, s: GameSettings): void {
   // 10.V U4 gating: LOW = pass mati + fallback DOM flash + kokpit kering
   // (degradasi sah). Droplet flag dibaca call-site via ctx.settings.
   if (ctx.cockpitPass) ctx.cockpitPass.enabled = s.preset !== "LOW";
+  // 10.V P1.3 gating: LOW = Render->Output saja; MEDIUM = +Bloom low +
+  // Grade; HIGH+ = full. Budget post: LOW ~0ms, MEDIUM ~1ms, HIGH ~1.5ms.
+  if (ctx.gradePass) ctx.gradePass.enabled = s.preset !== "LOW";
+  if (ctx.touchPass) ctx.touchPass.enabled = s.preset === "HIGH" || s.preset === "ULTRA" || s.preset === "CINEMATIC";
   if (s.toneMapping === "AGX") renderer.toneMapping = THREE.AgXToneMapping;
   else if (s.toneMapping === "REINHARD") renderer.toneMapping = THREE.ReinhardToneMapping;
   else renderer.toneMapping = THREE.ACESFilmicToneMapping;

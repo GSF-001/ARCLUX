@@ -376,6 +376,10 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
         cockpitOverlay,
         hudRoot: cockpitHudRoot ?? undefined,
         cockpitDroplets: (ctx.settings.preset ?? "HIGH") !== "LOW",
+        // 10.V P1: grade + touch.
+        gradePass: ctx.gradePass ?? undefined,
+        touchPass: ctx.touchPass ?? undefined,
+        touchAspect: ctx.width / Math.max(1, ctx.height),
       });
     }
 
