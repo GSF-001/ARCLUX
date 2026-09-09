@@ -1077,3 +1077,37 @@ Komposisi baru:
       G1 + §14 H1.4) + NOL `Date.now` visual baru (pelajaran V8) +
       NOL ShaderMaterial full-custom baru (aturan §4) + NOL file
       sprawl (satu wire per layer).
+
+## 18. Mode kamera (EVE-style — kokpit SATU view, bukan penjara)
+
+Koreksi doktrin: kamera UTAMA = luar (orbit), bukan kokpit. Kokpit =
+satu view yang bisa di-switch. Urutan cycle tombol V (EVE-style):
+
+1. `ORBIT` (DEFAULT) — kamera luar: kapal sendiri + semua objek
+   sekitar. Ini rumah pemain.
+2. `COCKPIT` — first-person instrumen. U4 (droplet/flash/vignette/
+   shake) HANYA nyala di sini. Di luar kokpit U4 mati total (0 cost).
+3. `TACTICAL` — top-down + overlay TAC (numpang U7).
+4. `CINEMATIC` — direktor C-session-1 ambil alih (offset aditif
+   berbatas, pola wireC existing).
+5. `FREE` — kamera bebas debug/jelajah.
+
+### Fase K1 — Mode kamera + V-cycle (satu PR)
+
+- [ ] **K1.1 Mode COCKPIT** — sentuh `scene3d/camera.ts`: kamera di
+      posisi canopy + look ikut heading + FOV 70 (rasa kecepatan).
+      U4 membaca mode ini (overlay + pass enabled hanya saat COCKPIT).
+      Verify: screenshot kokpit vs orbit (satu adegan, dua rasa).
+- [ ] **K1.2 V-cycle** — sentuh `renderer/input.ts`: KeyV = next mode
+      (mayat #9: key direncanain, handler GAK ADA — hidupin beneran,
+      bukan stub). HUD tampilkan nama mode 1.5 detik (numpang U2).
+      Konflik KeyF (nembak + interior) DIPERBAIKI di PR ini juga
+      (satu tombol satu aksi — pisahkan: F = interior, J/klik = tembak).
+      Verify: tekan V 5x = 5 mode berurutan + grep NOL dobel-listener.
+- [ ] **K1.3 ORBIT default** — `camera.ts`: boot = ORBIT + jarak default
+      baca ukuran kapal (jangan hardcode — kapal user beda-beda).
+      Verify: fresh boot = kapal keliatan penuh + sekitarnya.
+- [ ] **K1.4 Senjata per kamera** — ORBIT: W1/D1/P1 kerja penuh;
+      COCKPIT: U4 + HUD; TACTICAL: U7 overlay + grade; CINEMATIC:
+      director + touch; FREE: semua nyala (debug). Verify: matriks
+      5 kamera × efek di PR (tabel, bukan klaim).
