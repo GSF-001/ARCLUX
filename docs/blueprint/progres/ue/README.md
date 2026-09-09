@@ -14,6 +14,7 @@
 | 1 | `01-assets.md` | Pengerahan aset: multi-fungsi, biome, monumen prosedural, POI, FPS tether, ledger gudang | Pas beli/naro aset |
 | 2 | `02-asset-pipeline.md` | Badan/otak, manifest, cap 5/30, crafting queue, lifecycle 30-hari + decay karat, gotong-royong, infrastruktur | Pas bangun pipeline user-content |
 | 3 | `03-implementasi.md` | PETA TEKNIK: file MMO apa disentuh/tidak, layer apa masuk UE, langkah + checkpoint + jalan pulang | DI BUKA TERUS selama ngoding UE |
+| 4 | `04-graphics.md` | SPESIFIKASI GRAFIS: rendering, tier 4K, subsistem, aliran aset, anggaran, acceptance | Pegangan insinyur grafis + artis |
 
 ## Kompas satu baris per dokumen
 
