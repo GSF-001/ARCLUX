@@ -48,7 +48,7 @@ repo-user/.arclux/assets/<nama>/
 | Kelas | Cap aktif | Contoh |
 |---|---|---|
 | Besar | 5 | hangar, rumah, kastil kecil, kapal-badan |
-| Kecil | 20 | peti, lampu, patung, stall, monolit mini |
+| Kecil | 30 | peti, lampu, patung, stall, monolit mini |
 
 - Bebas pindah/susun ulang dalam cap (move se-region = re-deploy
   singkat; lintas region = rakit ulang penuh §3).
@@ -82,6 +82,45 @@ restart tidak reset). 1 slot rakit per pemain (+1 tier veteran).
   RERUNTUHAN/puing (tetap POI, pola 04 — kehancuran = konten).
 - Loop penuh: bangun → klaim → monumen → reruntuhan → sejarah.
   NOL yang terbuang — bahkan lapuk pun jadi isi dunia.
+
+### Usang, lumut & karat — aset hidup, bukan patung (FINAL)
+
+Berdiri ≠ abadi. Semua aset/badan kapal punya USIA PAKAI yang
+berjalan saat TIDAK DIGUNAKAN (validator: `lastActiveTick` per aset,
+otoritas server — client tidak bisa memalsukan umur):
+
+| Tahap | Pemicu | Visual (numpang rel EXISTING) | Efek |
+|---|---|---|---|
+| BERSIH | dipakai/dirawat | normal | penuh |
+| BERDEBU | 30 hari tak aktif | tint kusam + lumut tepi (aset karat/lumut gudang!) | -5% (peringatan HUD) |
+| BERKARAT | 60 hari tak aktif | rust patch D1.4 + roughness naik (M1 map digeser!) | -15% + subsystem flicker (D1.2) |
+| RUSAK | 90 hari tak aktif | scar penuh + panel hilang (D1.4) | NONAKTIF sampai repair |
+
+- Aktivitas me-reset timer: terbang, pindah, repair, atau BERSIHKAN
+  (aksi murah 5 menit — pelaut merawat kapal; pajangan berdebu).
+- Hangar TIDAK melindungi (keputusan FINAL — besi diam = besi mati).
+- Repair = commit (pola 02 §12 EXISTING: biaya + waktu + station) —
+  BUKAN tombol gratis. Kapal hancur = rebuild dari source vessel
+  (aturan lama, tetap).
+- Aset karat/lumut yang DIBELI = tekstur tahap BERDEBU/BERKARAT
+  (gudang sudah kaya — tinggal tempel ke stage, NOL kerja art baru).
+- Monumen klaim (§4 atas) KEBAL usang tahap RUSAK (sejarah tidak
+  boleh mati total) tapi tetap BERLUMUT visual (tua = wibawa —
+  lumut monumen = FITUR, bukan bug).
+
+### Gotong-royong — bangun bareng pake aset sendiri (FINAL)
+
+Pemain/komunitas boleh deploy aset SENDIRI (masuk cap sendiri §2)
+di radius proyek komunitas (flag site PUBLIC, radius 2km):
+
+- Bantu bangun = aset nempel di site orang, milik TETAP milikmu
+  (registry tidak pindah — beda dengan klaim 30-hari §4).
+- Site owner bisa ENDORSE (plakat "dibangun bersama X, Y, Z" —
+  reputasi 06, bukan bayaran).
+- Batas: 1 pemain max 5 aset per site orang (anti-aneksasi:
+  bantu ≠ jajah).
+- Cabut kapan saja (aset kembali ke cap-mu, site berlubang —
+  konsekuensi sosial, bukan hukuman sistem).
 
 ## 5. Konten: infrastruktur SAJA (ARCLUX aman)
 
