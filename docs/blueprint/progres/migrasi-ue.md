@@ -187,9 +187,35 @@ konverter CSS↔THREE) menjadi:
 | R1 gaps | ⬜ antri | Per item | Presentasi-only TETAP |
 | F0/F6–F8 sim | ⬜ antri | TIDAK DI-PORT (server tetap) | UE baca hasilnya saja |
 
+## 7A. Peta port SELURUH blueprint 01–10.V (bukan cuma 10.V)
+
+Prinsip per blueprint: **otoritas + aturan main TETAP di server,
+presentasi + interaksi PORT ke UE.** Tidak ada blueprint yang pindah
+utuh — tiap blueprint dibelah dua.
+
+| Blueprint | TETAP server (JANGAN port) | PORT ke UE | Catatan port |
+|---|---|---|---|
+| 01 Spatial UX | Orbit Kepler, environs, collision, region/shard, gate handoff | Camera modes → UE Camera; tactical overview → UMG; marker/waypoint → Actor + UMG; abstraction zoom → Level streaming per skala | World Partition = streaming CLIENT saja, authority region tetap server (§8 slice 6) |
+| 02 Station | Station entity, permission, safe-zone, trade/lineage, evolution, economy | StationActor + fasilitas sebagai sub-Actor; bazaar → UMG + stall Actor; Navigation/Security Center → UMG | Harga/currency TIDAK PERNAH dihitung client |
+| 03 Combat | Validator checklist, damage per-subsystem, ceiling, fingerprint, replay | Weapon VFX (W1) → Niagara; impact → VFX + camera kick; combat-log → UMG | Angka damage dari snapshot SAJA |
+| 04 Wreckage | Wreckage Archive, provenance destruction/recovery | Carcass Actor + smoke persistent + beacon SOS + plaque UMG | Transient vs persistent DIPISAH (pola ImpactPresentation) |
+| 05 Vessel Design | Validation pipeline, baseline gate, canonical model, moderation | Mesh import pipeline (glTF/FBX → SM_*); dashboard 3D TETAP WEB (creator tool, bukan UE); UE render HASIL validasi | Repo→vessel tidak lewat UE |
+| 06 Community | Entity community, roles, access keys, governance 20 event, multisig, reputasi | Panel sosial/chat/guild → UMG; waypoint share → marker; lockdown = state baca | Akses ditolak = server yang menolak, UE menampilkan |
+| 07 Capabilities | Batas 2 induk, 3 aktivasi, 11 cek, provenance | VFX aktivasi per capability + telegraph UI; mount hangus → material | Aktivasi selalu "no capability" sampai server daftar (pelajaran MATI) |
+| 08 Persistent World | Snapshot region, lineage persist, event log, incident, repair cost, perang persisten | Veteran/history → UMG journal; wreck/HoF → Actor + UI | Restart server = UE re-sync snapshot, BUKAN reset |
+| 09 Client Polish | Aturan authoritative (Fase 1–12 logic) | PMREM→Lumen; SFX→MetaSounds; interior→Level; NPE→UMG; hangar film→Sequencer | Fase 9/12 repo-ingest TETAP server |
+| 10 Planetary | Sim tick, chunk authority, environment derivasi, emergency, sinematik trigger | PlanetaryReader + StormDirector + semua VFX planeter (tabel §7) | Otoritas nol (doktrin §0 butir 3) |
+| 10.V Fidelity | (spesifikasi — bukan code) | Tabel §7 per fase | Baris ⬜ DILARANG port |
+
+Konsekuensi: UE client pada akhirnya me-render SELURUH game (terbang,
+tempur, stasiun, interior, sosial, ekonomi-UI, sejarah) — tapi TIDAK
+MENENTUKAN apa-pun. Checklist port per blueprint dicatat di
+`Docs/PORT-10V.md` (diperluas jadi `Docs/PORT-BLUEPRINT.md` saat slice 3).
+
 Aturan: baris ⬜ = DILARANG mulai port-nya. Port = tiap baris ✅ +
-`Docs/PORT-10V.md` dicentang + screenshot BANDED (browser vs UE,
-adegan SAMA — dua client harus mirip, itu acceptance port).
+screenshot BANDED (browser vs UE, adegan SAMA — dua client harus mirip,
+itu acceptance port). Luasan §7A berlaku sama: tiap sel PORT butuh gate
+slice-nya (§8).
 
 ## 8. Slice eksekusi + gate (stop-or-go)
 
