@@ -13,6 +13,7 @@
 
 import { initScene3D, type Scene3D } from "./scene3d/index";
 import { initHud, type Hud } from "./hud";
+import { createCockpitOverlay } from "./cockpitOverlay";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
 import { initAudio, type AudioHandle } from "./audio";
@@ -53,6 +54,10 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   const settings = loadSettings();
   const scene = initScene3D(undefined, settings);
   const hud = initHud();
+  // 10.V U4: overlay droplet + HUD shake diregistrasi sekali ke scene;
+  // wireC mengumpan keduanya tiap frame dari CockpitState hidup.
+  const cockpitOverlay = createCockpitOverlay();
+  scene.setCockpitPresentation(cockpitOverlay, hud.root);
   const net = connectNet(opts?.serverUrl);
   const audio = initAudio();
   const input = initInput({
@@ -327,6 +332,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     window.removeEventListener("keydown", onKeyDown);
     scene.dispose();
     hud.dispose();
+    cockpitOverlay.dispose();
     menu.dispose();
     audio.dispose();
     try { bazaarOverlay.dispose(); } catch {}

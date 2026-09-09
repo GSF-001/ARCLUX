@@ -55,6 +55,11 @@ import {
   type DiscoverySystem,
 } from "./FacilityDiscovery";
 import { deriveBudgetState, type BudgetState } from "./CinematicBudget";
+import type { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import type { CockpitOverlay } from "../../cockpitOverlay";
+import { updateCockpitGradePass } from "../cockpitGradePass";
+import { updateFinalTouchPass } from "../finalTouchPass";
+import { updateGradePass } from "../gradePass";
 
 export interface CinematicCTickOpts {
   timeSec: number; // deterministic clock
@@ -66,6 +71,15 @@ export interface CinematicCTickOpts {
   anchor?: { x: number; z: number };
   distanceToLightning?: number;
   renderer?: THREE.WebGLRenderer;
+  /** 10.V U4: wireC = satu-satunya sumber update presentasi kokpit. */
+  cockpitPass?: ShaderPass | null;
+  cockpitOverlay?: CockpitOverlay | null;
+  hudRoot?: HTMLElement | null;
+  cockpitDroplets?: boolean;
+  /** 10.V P1: grade + touch diumpan wireC juga (pola U4, satu sumber). */
+  gradePass?: ShaderPass | null;
+  touchPass?: ShaderPass | null;
+  touchAspect?: number;
 }
 
 export interface CinematicCFrame {
@@ -210,9 +224,39 @@ export function tickCinematicC(
   );
   sys.cockpit = tickCockpit(
     sys.cockpit,
-    deriveCockpitState(env, active, flight, distLightning, dt),
+    deriveCockpitState(env, active, flight, distLightning, dt, opts.timeSec),
     dt,
   );
+  // 10.V U4: lima output mati kini hidup — SATU sumber update (wireC).
+  // Urutan akumulasi aman: wireX sudah set base exposure absolut tiap
+  // frame SEBELUM tick ini (index.ts), jadi += di sini tidak drift.
+  if (opts.cockpitPass && opts.cockpitPass.enabled) {
+    updateCockpitGradePass(opts.cockpitPass, sys.cockpit);
+  }
+  // 10.V P1: grade mood + final touch (jam tick deterministik).
+  if (opts.gradePass && opts.gradePass.enabled) updateGradePass(opts.gradePass, env);
+  if (opts.touchPass && opts.touchPass.enabled) {
+    updateFinalTouchPass(opts.touchPass, opts.timeSec, opts.touchAspect ?? 16 / 9);
+  }
+  if (opts.renderer) {
+    opts.renderer.toneMappingExposure = opts.renderer.toneMappingExposure + sys.cockpit.exposureOffset;
+  }
+  if (opts.cockpitOverlay) {
+    opts.cockpitOverlay.tick(
+      { dropletOpacity: sys.cockpit.dropletOpacity, flashIntensity: sys.cockpit.flashIntensity },
+      opts.timeSec,
+      {
+        gradePassActive: opts.cockpitPass?.enabled ?? false,
+        dropletsEnabled: opts.cockpitDroplets ?? true,
+      },
+    );
+  }
+  if (opts.hudRoot) {
+    // Shake DOM ±3px jepit (gratis, compositor; tidak berantem kamera).
+    const sx = Math.max(-3, Math.min(3, sys.cockpit.hudShake.x));
+    const sy = Math.max(-3, Math.min(3, sys.cockpit.hudShake.y));
+    opts.hudRoot.style.transform = `translate3d(${sx.toFixed(2)}px,${sy.toFixed(2)}px,0)`;
+  }
   for (const [id, entry] of sys.impacts) {
     entry.state = tickImpact(entry.state, nowMs, dt);
     updateImpactSystem(entry.sys, entry.state, dt);

@@ -80,6 +80,11 @@ export interface SceneContext {
   // --- post.ts ---
   composer: import("three/examples/jsm/postprocessing/EffectComposer.js").EffectComposer | null;
   bloomPass: import("three/examples/jsm/postprocessing/UnrealBloomPass.js").UnrealBloomPass | null;
+  /** 10.V U4 — grade pass kokpit (Bloom -> CockpitGrade -> Output). */
+  cockpitPass: import("three/examples/jsm/postprocessing/ShaderPass.js").ShaderPass | null;
+  /** 10.V P1 — grade mood + final touch (urutan POST_PASS_ORDER). */
+  gradePass: import("three/examples/jsm/postprocessing/ShaderPass.js").ShaderPass | null;
+  touchPass: import("three/examples/jsm/postprocessing/ShaderPass.js").ShaderPass | null;
   pmrem: THREE.PMREMGenerator | null;
   pmremTarget: THREE.WebGLRenderTarget | null;
   envFrame: number;
@@ -141,7 +146,7 @@ export function createBase(target: HTMLElement | null, width: number, height: nu
     rand: mulberry32(nebulaSeed),
     settings,
     camera: null, camMode: "follow", lookYaw: 0, lookPitch: 0,
-    composer: null, bloomPass: null,
+    composer: null, bloomPass: null, cockpitPass: null, gradePass: null, touchPass: null,
     pmrem,
     pmremTarget: null, envFrame: 0,
     nebulaTex: null, nebulaSprites: [],

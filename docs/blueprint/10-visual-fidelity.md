@@ -568,7 +568,7 @@ Anti-plastik recipe (berlaku untuk semua item di §9):
 
 ### Fase M1 — Material kit + re-material (satu PR)
 
-- [ ] **M1.1 Texture kit prosedural** — BARU
+- [x] **M1.1 Texture kit prosedural** — BARU
       `apps/game/src/renderer/scene3d/materials.ts`: fungsi
       `makeHullAlbedo(base, seed)`, `makeRoughnessMap(seed, lo, hi)`,
       `makeNormalMapFromNoise(seed)`, `makePanelLines(w, h, seed)`.
@@ -580,7 +580,7 @@ Anti-plastik recipe (berlaku untuk semua item di §9):
       0ms/frame. Fallback LOW: kit tetap ada tapi resolusi turun
       (lihat M1.5). Verify: screenshot 4 tile tekstur + catat waktu
       generate (console.time) + `tsc 0`.
-- [ ] **M1.2 Vessel re-material** — sentuh
+- [x] **M1.2 Vessel re-material** — sentuh
       `apps/game/src/renderer/scene3d/vessels.ts` SAJA (fungsi build
       yang sudah ada, baris ~36–140): `hullMat`/`hullHighMat` dapat
       albedo+roughnessMap M1.1 (roughness 0.45–0.7 bervariasi per
@@ -596,7 +596,7 @@ Anti-plastik recipe (berlaku untuk semua item di §9):
       albedo 128px, sisanya flat + vertex color. Verify: screenshot
       hangar close-up before/after + `renderer.info.memory.textures`
       + fps guard adegan hangar (§17).
-- [ ] **M1.3 Station re-material** — sentuh
+- [x] **M1.3 Station re-material** — sentuh
       `apps/game/src/renderer/scene3d/stations.ts` (fungsi
       `buildStation`): hub dapat panel-lines albedo + roughness
       0.5–0.7, ring dapat stripe emissive tipis (numpang warna
@@ -604,7 +604,7 @@ Anti-plastik recipe (berlaku untuk semua item di §9):
       M1.2 (material sekali saat build). Budget: 0ms/frame.
       Fallback LOW: flat seperti sekarang (itu SUDAH tampilan LOW).
       Verify: screenshot station orbit before/after + fps guard.
-- [ ] **M1.4 Interior kit** — sentuh
+- [x] **M1.4 Interior kit** — sentuh
       `apps/game/src/renderer/interior.ts`: lantai roughness TINGGI
       (0.8, anti-lantai-kaca-kantor), dinding panel albedo M1.1,
       amber strip + window warm existing DIPERTAHANKAN intensitasnya
@@ -614,7 +614,7 @@ Anti-plastik recipe (berlaku untuk semua item di §9):
       dinding + 1 lantai. Verify: screenshot corridor/plaza
       before/after + hitung material count via
       `renderer.info.memory` + fps guard interior (§17).
-- [ ] **M1.5 VRAM guard + tier gating** — sentuh
+- [x] **M1.5 VRAM guard + tier gating** — sentuh
       `apps/game/src/renderer/scene3d/quality.ts` (+ field di
       `settings.ts` bila perlu, tidak bikin settings baru):
       resolusi tekstur 512 HIGH / 256 MEDIUM / 128 LOW; LOW boleh

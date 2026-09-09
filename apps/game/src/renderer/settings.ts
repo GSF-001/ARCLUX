@@ -29,6 +29,7 @@ export interface GameSettings {
   beltDensity: number; // 0..10000 asteroids
   vesselDetail: number; // 1..3 (LOD §22)
   toneMapping: "ACES" | "AGX" | "REINHARD";
+  textureSize: number; // 128 | 256 | 512 — resolusi tile tekstur (10.V M1.5)
 
   // Audio (audio.ts konsumen)
   masterVolume: number; // 0..1
@@ -78,6 +79,7 @@ export function defaultSettings(): GameSettings {
     beltDensity: 8000,
     vesselDetail: 3,
     toneMapping: "ACES",
+    textureSize: 512,
 
     masterVolume: 0.85,
     sfxVolume: 0.7,
@@ -115,6 +117,7 @@ const PRESETS: Record<QualityPreset, () => Partial<GameSettings>> = {
     beltDensity: 2000,
     vesselDetail: 1,
     toneMapping: "REINHARD",
+    textureSize: 128,
   }),
   MEDIUM: () => ({
     fpsCap: 60,
@@ -130,6 +133,7 @@ const PRESETS: Record<QualityPreset, () => Partial<GameSettings>> = {
     beltDensity: 4000,
     vesselDetail: 2,
     toneMapping: "ACES",
+    textureSize: 256,
   }),
   HIGH: () => ({
     fpsCap: 120,
@@ -145,6 +149,7 @@ const PRESETS: Record<QualityPreset, () => Partial<GameSettings>> = {
     beltDensity: 6000,
     vesselDetail: 3,
     toneMapping: "ACES",
+    textureSize: 512,
   }),
   ULTRA: () => ({
     ...defaultSettings(),
@@ -163,6 +168,7 @@ const PRESETS: Record<QualityPreset, () => Partial<GameSettings>> = {
     beltDensity: 10000,
     vesselDetail: 3,
     toneMapping: "AGX",
+    textureSize: 512,
   }),
 };
 

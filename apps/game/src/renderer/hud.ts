@@ -21,12 +21,14 @@ export interface Hud {
   /** Iris 6: interior deck HUD (F walks, deck name, pos). */
   setInterior(deck: string, pos: { x: number; y: number; z: number }): void;
   clearInterior(): void;
+  /** 10.V U4: root #arclux-hud untuk shake transform (DOM, compositor). */
+  root: HTMLElement | null;
   dispose(): void;
 }
 
 export function initHud(container?: HTMLElement): Hud {
   const root = container ?? (typeof document !== "undefined" ? document.body : null);
-  if (!root) return { update: () => {}, setTick: () => {}, setInterior: () => {}, clearInterior: () => {}, dispose: () => {} };
+  if (!root) return { update: () => {}, setTick: () => {}, setInterior: () => {}, clearInterior: () => {}, root: null, dispose: () => {} };
 
   const el = document.createElement("div");
   el.id = "arclux-hud";
@@ -203,7 +205,7 @@ export function initHud(container?: HTMLElement): Hud {
 
   const dispose = () => { if (el.parentElement) el.parentElement.removeChild(el); };
 
-  return { update, setTick, setInterior, clearInterior, dispose };
+  return { update, setTick, setInterior, clearInterior, root: el, dispose };
 }
 
 function factionColorFor(faction: string): string {
