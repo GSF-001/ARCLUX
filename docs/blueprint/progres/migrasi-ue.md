@@ -251,6 +251,29 @@ slice-nya (§8).
 - Larangan: ubah server demi UE, Replication untuk state MMO, port
   fase ⬜, convert otomatis, Schneeball-scope (1 slice = 1 gate).
 
+## 4K. Resolusi 4K (final — referensi, bukan duplikasi)
+
+Doktrin (final, tidak didiskusikan lagi): **game menyediakan langit,
+hardware user yang memilih.** UI tajam 4K SELALU (UMG DPI-scale,
+vektor — nol alasan blur). Scene punya tier sampai CINEMATIC yang
+tidak minta maaf. GPU kentang turun sendiri — bukan urusan game
+nurunin kualitas. Patah = urusan hardware user, BUKAN alasan
+menurunkan target visual.
+
+- Render: CINEMATIC = native 4K + TSR Quality + Lumen + VSM +
+  Niagara full. HIGH = 1440p + TSR Balanced. MEDIUM = 1080p +
+  TSR Performance. LOW = 1080p + Lumen off + Niagara hemat
+  (tampilan LOW yang sah, pola gating 10.V P1.3).
+- UI: UMG 100% DPI-aware, font SDF (tajam semua resolusi), HUD
+  update hanya saat state berubah (pelajaran DOM 10Hz).
+- Tekstur: master 4K (T_*), streaming pool ikut VRAM (aturan M1.5
+  diskalakan: HIGH ≤3GB pool, MEDIUM ≤1.5GB, LOW ≤768MB).
+- Verify: banded screenshot 4K browser-CINEMATIC vs UE-CINEMATIC
+  (§7) + tabel fps per tier (aturan I.1, hardware referensi ditulis).
+- Anti-duplikasi: resep visual (roughness, bahasa senjata, mood)
+  TIDAK ditulis ulang di sini — baca 10.V. Dokumen ini HANYA
+  menambah: target resolusi + mesin UE yang mengeksekusinya.
+
 ## 10. Kembali ke 10.V (perintah aktif)
 
 Dokumen ini DIKUNCI sampai 10.V DONE. Eksekusi lanjut: L1 → W1 → D1 →
