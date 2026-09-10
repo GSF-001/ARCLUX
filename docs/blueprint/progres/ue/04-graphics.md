@@ -155,6 +155,55 @@ zona tengah steril untuk keterbacaan teks taktis).
 LOW menonaktifkan seluruh pass kecuali Render→Output (dengan
 fallback kilat DOM + kokpit kering sebagai degradasi yang sah).
 
+### 4.9. Dunia reaktif (prinsip: dunia yang diam saat kapal lewat adalah museum)
+
+4.9.1. Setiap kapal/stasiun menyiarkan SATU medan gangguan
+(posisi + kecepatan + ukuran + ketinggian). Seluruh sistem
+reaktif di bawah membaca sumber yang sama; komputasi per
+pohon/per gelombang DILARANG (satu uniform, banyak pembaca).
+4.9.2. Pembaca wajib (intensitas = fungsi kedekatan, kecepatan,
+dan ukuran sumber):
+
+| Pembaca | Respons | Implementasi UE |
+|---|---|---|
+| Air laut | riak dan pecah ombak saat lintas rendah | water plugin + masker gangguan |
+| Vegetasi | rebah mengikuti arah downwash | material wind + uniform gangguan |
+| Debu/pasir | beterbangan (menumpang VFX badai §4.4) | Niagara |
+| Bendera/banner | berkibar | cloth sederhana / shader vertex |
+| Lampu gantung | berayun | pendulum prosedural |
+| Props ringan | bergetar | shader vertex ambang batas |
+| Audio | gemuruh lintas (efek Doppler) | MetaSounds, gain dari jarak/kecepatan |
+
+4.9.3. Reaksi BUKAN damage (damage memerlukan niat — lihat
+`02-asset-pipeline.md` §10). Kapal parkir = tenang; formasi
+lintas rendah = badai buatan. Baseline klien web (apps/game):
+debu + goyang vegetasi dasar; versi brutal (ombak pecah,
+badai pasir, kain berkibar, Doppler) pada Klien UE.
+4.9.4. Anggaran: medan gangguan ≤0,1 ms/frame untuk disiarkan;
+pembaca menumpang pada pass/shader yang sudah ada (NOL draw
+call baru untuk reaktivitas murni).
+
+### 4.10. Visual konstruksi dan destruksi
+
+4.10.1. Setiap tahap antrean crafting (`02-asset-pipeline.md`
+§3) memiliki representasi visual: crate + drone (kecil),
+scaffold + crane (struktur), site konstruksi (besar), drydock
++ las (capital). Scaffold adalah eye candy SEKALIGUS target
+raid (gameplay gratis — tidak boleh dilewati sebagai loading
+murahan).
+4.10.2. Visual kerusakan menumpang pipeline damage/decay yang
+sudah ada pada klien web (D1 + tahap usang): mulus →
+hangus/penyok → jebol → puing. Perang dan pelapukan adalah
+SATU mesin render dengan sebab berbeda.
+4.10.3. Tambal lapangan (§10 pipeline) divisualkan sebagai las
+kasar yang DIPERTAHANKAN (bekas perang = kehormatan, bukan
+cacat yang disembunyikan). Puing hasil kehancuran tetap
+dirender sebagai POI salvage hingga meluruh.
+4.10.4. Ghost penempatan (hijau = sah, merah = ditolak) dan
+panduan pendaratan (hijau/merah saat approach) menggunakan
+bahasa visual yang SAMA (satu grammar validitas di seluruh
+permainan).
+
 ## 5. Aliran aset (gatekeeper, bukan impor langsung)
 
 5.1. Format masukan pipeline: glTF 2.0 / GLB (scene, data biner, dan
@@ -217,6 +266,10 @@ hangar hero) lulus pada tiap tier beserta tangkapan layar banded
 di luar pass yang ditetapkan; NOL file sprawl (satu wire per layer).
 8.4. Regression lock: perilaku lama (sway, wetness, animasi NPV,
 mount, discovery) tetap lolos uji perilaku.
+8.5. Dunia reaktif (§4.9) dan visual konstruksi/destruksi (§4.10)
+lulus pada tiap tier: lintas rendah memicu respons pembaca yang
+terukur; scaffold tampil pada setiap kelas antrean; empat tahap
+kerusakan terbedakan secara visual pada browser dan UE.
 
 ## 9. Referensi dokumen
 

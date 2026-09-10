@@ -149,3 +149,93 @@ di radius proyek komunitas (flag site PUBLIC, radius 2km):
 5. Marketplace aset (ikut ekonomi 02/06).
 - Acceptance: submit → scaffold → jadi → 30 hari → monumen →
   2 tahun → reruntuhan. Satu loop penuh, tercatat di ledger.
+
+## 8. Repo ke game ke tangan pemain (FINAL)
+
+8.1. Pemain TIDAK PERNAH menyentuh repo. Repo adalah dapur;
+palet build dalam game adalah meja saji. Aliran wajib:
+
+```
+REPO → VALIDATOR → STAGING → PALET BUILD → GHOST → ANTREAN → DUNIA
+```
+
+8.2. Dua jalur aset (FINAL):
+- JALUR KILAT (pakai sendiri di klaim sendiri): pemeriksaan
+  otomatis mesin saja (format, skala, jebakan) → langsung muncul
+  di palet pribadi. Tanpa antre kurator.
+- JALUR PUBLIK (masuk pool dunia untuk PCG dan pemain lain):
+  tambah afinitas biome + formulir penempatan + persetujuan
+  kurasi (contoh: kapal pemain yang disetujui menjadi wreck-POI).
+8.3. Formulir penempatan wajib per aset/kit: jejak kaki (radius
+meter), tinggi, kelas besar/kecil, afinitas biome (biome,
+kemiringan maksimum, kedekatan air), fungsi (dekor, bangunan,
+landasan, lampu), dan titik snap (untuk modular). Tanpa
+formulir = DITOLAK pada validator.
+8.4. Penempatan WYSIWYG (FINAL): pemain memilih aset dari palet
+→ ghost transparan mengikuti kursor (HIJAU = sah, MERAH =
+menabrak/lereng curam/zona larang) → konfirmasi → posisi ghost
+ADALAH posisi final. Tidak ada penempatan misterius.
+8.5. Zonasi dan klaim: dunia menampilkan zona bangun (hijau =
+boleh, merah = lindung: spawn, POI, jalan, milik orang).
+Klaim standar 100×100 m via claim beacon, tercatat di server.
+Fondasi meratakan tanah otomatis (sistem, bukan pemain
+mengeruk manual).
+8.6. Aturan pantai (FINAL): bangunan WAJIB di atas garis pasang
+(server menolak yang terendam berdasarkan topografi); dermaga
+BOLEH menjorok ke laut HANYA dari parts kelas dock/piling;
+garis pantai 10 m adalah milik publik (tidak dapat diklaim —
+matahari terbenam tidak boleh dipagar).
+
+## 9. Kepemilikan ringan (FINAL)
+
+9.1. Kepemilikan adalah CATATAN INVISIBLE di server (anti-troll
+dan anti-sengketa), BUKAN gameplay administrasi. Pemain bermain,
+bukan mengurus dokumen. Sertifikat berbentuk dokumen/item yang
+terlihat pemain DITOLAK (keputusan FINAL — birokrasi membunuh
+kesenangan; penolakan dicatat agar tidak diusulkan ulang).
+9.2. Dua tier klaim:
+- PATOK (marking): empat patok sudut = klaim sementara MURAH.
+  Tenggat 7 hari WAJIB ada bangunan berdiri; kosong seminggu =
+  HANGUS otomatis kembali ke tanah negara (anti tukang kapling).
+- SERTIFIKAT (record server, invisible): berlaku setelah ada
+  bangunan; mengikuti lifecycle 30-hari §4 (mati = ditelan bumi
+  → aset kembali milik ARCLUX → puing 1–2 tahun).
+9.3. Alih kepemilikan OTOMATIS tanpa admin: patok hangus +
+pemain lain membangun pertama di titik tersebut = record
+tercetak atas nama pembangun baru. Otoritas tunggal +
+timestamp saklek = sengketa mustahil struktural.
+9.4. Anti-serakah: maksimum petak per pemain (misalnya 3,
+tunable); koridor umum (jalan, spawn, garis pantai §8.6) tidak
+dapat diklaim; klaim hidup selama pemilik AKTIF (login/
+aktivitas) — mati suri = countdown berjalan.
+9.5. Status tanah hanya dua: tanah negara (wilderness, bebas
+dijelajah, dilarang bangun) dan tanah klaim. Tidak ada status
+ketiga.
+
+## 10. Perang dan repair (FINAL)
+
+10.1. Setiap aset memiliki HP (dari kelas ukuran + tier
+material). Sumber damage: senjata kapal (W1), tabrakan fisik
+(kapal menabrak base = keduanya rusak), dan sabotase darat.
+Lewat saja TIDAK merusak — kerusakan memerlukan NIAT (tembak
+atau tabrak). Visual kerusakan menumpang pipeline damage/d decay
+yang sudah ada (mulus → hangus/penyok → jebol → puing).
+10.2. Hancur ≠ hilang. Hancur = menjadi PUING. Puing dapat
+di-salvage menjadi scrap (rampasan perang yang sah) atau
+diperbaiki kembali (di bawah). Aturan perang tipis: zona aman
+hanya spawn + pemain baru 7 hari; selebihnya medan perang
+kapan saja; HP diskala agar kehancuran memerlukan serangan
+sungguhan (kesal boleh, griefing jangan).
+10.3. Mode repair pada palet build: arahkan ke bagian rusak
+(disorot merah pada ghost) → konfirmasi → masuk antrean
+seperti membangun, namun LEBIH CEPAT dan LEBIH MURAH (pecahan
+biaya bangun, skala dengan persentase rusak).
+10.4. Dua tier repair: TAMBAL LAPANGAN (cepat, murah, HP
+kembali 70%, visual las kasar dipertahankan sebagai tanda
+kehormatan) dan RESTORASI PENUH (antrean seperti bangun baru,
+100%). Puing dapat direpair kembali (makin hancur makin mahal).
+Teman dapat membantu repair (gotong-royong §4, Tubagus 5 orang).
+Regenerasi otomatis DITOLAK — stakes membuat perang bermakna.
+10.5. Ringkasan lifecycle penuh (satu baris): bangun = antre,
+hancur = jadi puing, perbaiki = antre lebih murah, ditinggal =
+bumi menelan.
