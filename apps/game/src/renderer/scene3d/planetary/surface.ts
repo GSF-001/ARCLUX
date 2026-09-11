@@ -8,8 +8,10 @@ import * as THREE from "three";
 
 export type TimeOfDay = "dawn" | "day" | "dusk" | "night";
 
-export function timeOfDayFromMs(ms: number): TimeOfDay {
-  const h = (ms % 86400000) / 3600000;
+export function timeOfDayFromMs(ms: number, lonDeg = 0): TimeOfDay {
+  // F6: local solar hour follows longitude (15° = 1 hour); default 0 =
+  // legacy global behavior for callers without position.
+  const h = ((((ms % 86400000) / 3600000 + lonDeg / 15) % 24) + 24) % 24;
   if (h < 5 || h > 19) return "night";
   if (h < 7) return "dawn";
   if (h > 17) return "dusk";

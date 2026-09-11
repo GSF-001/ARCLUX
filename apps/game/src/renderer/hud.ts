@@ -165,9 +165,13 @@ export function initHud(container?: HTMLElement): Hud {
       for (const e of region.entities.values()) {
         if (!player || e.id === player.id) continue;
         const d = player ? dist(player.position, e.position) : 0;
+        // F3: other vessels carry their emergency flag — adrift/falling/
+        // crashed contacts are tagged, never silent.
+        const eEmerg = e.kind === "vessel" ? (e as VesselEntity).emergency?.state : undefined;
+        const eTag = eEmerg ? ` <span style="color:${colors.danger}">⚠ ${eEmerg.toUpperCase()}</span>` : "";
         const tag = e.kind === "vessel" ? `▸ VSL ${esc(log2(e.id))}` : `◈ STN ${esc((e as StationEntity).name ?? log2(e.id))}`;
         const dcol = e.kind === "station" ? colors.ok : colors.tactical;
-        vacuum.push(`${tag} <span style="color:${dcol}">${formatDist(d)}</span>`);
+        vacuum.push(`${tag}${eTag} <span style="color:${dcol}">${formatDist(d)}</span>`);
       }
       const html = vacuum.length ? vacuum.join("<br>") : `<span style="color:${colors.empty}">NO CONTACTS</span>`;
       fadeOnChange("target", q('[data-hud="left"]'), html);

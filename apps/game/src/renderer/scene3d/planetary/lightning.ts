@@ -141,3 +141,26 @@ export function getLightningThreat(sys: LightningSystem, now: number): number {
   if (age > THREAT_WINDOW_MS) return 0;
   return sys.lastEvent.intensity * Math.max(0, 1 - age / THREAT_WINDOW_MS);
 }
+
+/**
+ * F2: real strike distance for audio/exposure resolvers. Fresh (<8s)
+ * strike → true camera-to-strike distance; stale/missing → documented
+ * fallback (the old hardcoded 2800, now a named constant).
+ */
+export const STALE_STRIKE_DISTANCE = 2800;
+const STRIKE_FRESH_MS = 8000;
+
+export function strikeDistanceTo(
+  cam: { x: number; y: number; z: number },
+  lastEvent: LightningEvent | null,
+  nowMs: number,
+  fallback = STALE_STRIKE_DISTANCE,
+): number {
+  if (!lastEvent) return fallback;
+  const age = nowMs - lastEvent.timestamp;
+  if (age < 0 || age > STRIKE_FRESH_MS) return fallback;
+  const dx = cam.x - lastEvent.position.x;
+  const dy = cam.y - lastEvent.position.y;
+  const dz = cam.z - lastEvent.position.z;
+  return Math.hypot(dx, Math.hypot(dy, dz));
+}

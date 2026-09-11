@@ -14,7 +14,7 @@ import type { VesselEntity } from "../../../../../../packages/gameserver/types";
 import { deriveEnvironmentalEvent, tickEnvironmentalEvent, type EnvironmentalEvent } from "./environmentalEvent";
 import { getCoastalZone, createCoastalSystem, tickCoastal, type CoastalSystem } from "./coastal";
 import { getRiverFlow, createRiverSystem, tickRiver, type RiverSystem } from "./hydrological";
-import { deriveAtmosphericContinuity, tickAtmosphere, tickTerrainShadows, createShadowPlane, type AtmosphericContinuity } from "./atmosphericContinuity";
+import { deriveAtmosphericContinuity, tickTerrainShadows, createShadowPlane, type AtmosphericContinuity } from "./atmosphericContinuity";
 
 export interface Planetary10GTickOpts {
   timeSec: number;
@@ -30,7 +30,6 @@ export interface Planetary10G {
   river: RiverSystem;
   shadowPlane: THREE.Mesh;
   continuity: AtmosphericContinuity | null;
-  fog: THREE.FogExp2 | null;
 }
 
 export function createPlanetary10G(scene: THREE.Scene): Planetary10G {
@@ -43,8 +42,7 @@ export function createPlanetary10G(scene: THREE.Scene): Planetary10G {
   scene.add(coastal.shallowPlane);
   river.flowMeshes.forEach(m => scene.add(m));
   scene.add(river.waterfallPoints);
-  const fog = (scene as any).fog as THREE.FogExp2 | undefined ?? null;
-  return { event: null, coastal, river, shadowPlane, continuity: null, fog: fog ?? null };
+  return { event: null, coastal, river, shadowPlane, continuity: null };
 }
 
 export function tickPlanetary10G(sys: Planetary10G, scene: THREE.Scene, env: EnvironmentalContext, dt: number, opts: Planetary10GTickOpts): void {
@@ -54,13 +52,10 @@ export function tickPlanetary10G(sys: Planetary10G, scene: THREE.Scene, env: Env
   sys.event = next;
   const cont = deriveAtmosphericContinuity(env, opts.altitude, env.sun.elevation);
   sys.continuity = cont;
-  const fog = (scene as any).fog as THREE.FogExp2 | undefined ?? sys.fog;
-  if (fog) {
-    const fsys = { fog } as { fog: THREE.FogExp2 };
-    tickAtmosphere(fsys, cont, dt);
-    sys.fog = fog;
-  }
-  tickTerrainShadows(sys.shadowPlane, cont, env.sun.direction);
+  // F5: scene.fog HANYA ditulis tickFog (wireX, dari FogState). Tulis ganda
+  // di sini (tickAtmosphere) vs sana = rebutan per frame — dimatikan di sini,
+  // kontribusi haze/valley sudah masuk deriveFogState.
+  tickTerrainShadows(sys.shadowPlane, cont, env.sun.direction, dt);
   const height = env.terrain.height;
   const slope = env.terrain.slope;
   const distToCoast = Math.abs(height) * 18 + (env.ocean.depth < -4 ? 12 : 180);

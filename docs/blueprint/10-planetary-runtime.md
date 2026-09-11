@@ -51,6 +51,12 @@ PLANET (thousands km)
 ```
 
 * **Chunking:** `regionId = planetId:chunkX:chunkZ` distributed via `WorldRegion:41` `relay/registry.ts:33` `claimRegion` - only chunks with players or facilities are ticked; world state for all chunks stays persistent in `persistence.ts:120`.
+
+> ERRATUM F9 (10.V F0, 2026-09-11, mengikat): paragraf chunking di atas
+> DINYATAKAN KELIRU. Fakta terverifikasi: `claimRegion` = handoff shard
+> vessel (bukan tick chunk); chunking yang berjalan = streaming + LOD sisi
+> klien + persist koordinat. Chunk-tick server beneran = opsi (a) yang
+> DITUNDA ke fase MMO-server. Lihat `10-visual-fidelity.md` §4 F9.
 * **Persistent Coordinate:** `position Vec3{x,y,z}` `types.ts:18` stored in `RegionSnapshot:79` `RegionState:65` `Map` - logging out in `Planet-07 / Region-A / Hangar-A` returns to the same `Hangar-A`; `Player A ↔2000 km↔ Player B` are on the same planet, different locations. Coordinates are shareable (`gate.ts:34` `position`) for rendezvous. Spawn is at the chosen facility, not a global `0,0,0`.
 * **Empty Land Rule:** community facilities may only be placed on **empty land** (`ARCLUX` limits buildable area, `forest/ocean` stay natural) - `hutan/laut` remain, `hangar` is built where land is empty.
 
@@ -113,7 +119,7 @@ Planet slowly acquires social geography organically - no global sim needed. `Don
 ## 13. Checklist
 
 * [x] Substrate natural `terrain/ocean/atmosphere/clouds` streaming LOD (visual-only) - 10.2 done
-* [x] Scale + chunk + persistent coordinate `Planet/Chunk` `claimRegion` `Vec3` persist - 10.3 done
+* [x] Scale + chunk + persistent coordinate `Planet/Chunk` `Vec3` persist - 10.3 done (F9 erratum: `claimRegion` DICABUT dari baris ini — handoff shard, bukan tick chunk)
 * [x] Time & compass Newtonian `24h + lunar Kepler + G,σ` - 10.4 done
 * [x] Aerospace seamless `ORBIT->HANGAR` `GateLink` without loading - 10.4 done
 * [x] Community facilities `10` types `StationEntity` persistent - 10.5 done
@@ -419,8 +425,8 @@ Numpang semua:
 
 ### FASE 10.3 - Scale & Chunk + Persistent Coordinate
 
-- [x] `scene3d/planetary/chunks.ts` - streaming LOD, cull jauh, `planetId:chunkX:chunkZ` via `claimRegion` - DONE 10.3 (`world.ts:41` + `relay/registry.ts:33`)
-- [x] `packages/gameserver/planetary/chunks.ts` + `geography.ts` - chunk tick via claimRegion - DONE 10.3
+- [x] `scene3d/planetary/chunks.ts` - streaming LOD, cull jauh, `planetId:chunkX:chunkZ` - DONE 10.3 (F9 erratum: frasa "via `claimRegion`" DICABUT — streaming klien, bukan tick server)
+- [x] `packages/gameserver/planetary/chunks.ts` + `geography.ts` - matematika kunci + helper chunk - DONE 10.3 (F9 erratum: frasa "chunk tick via claimRegion" DICABUT — tanpa loop tick)
 - [x] `types.ts:18 Vec3` - `log out Hangar-A -> Hangar-A`, 2000 km same planet, shareable `gate.ts:34` - DONE via persistence
 - [x] `Verify:` 2 player 2000 km same planet, relog tetap di tempat - DONE
 

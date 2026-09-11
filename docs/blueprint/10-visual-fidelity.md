@@ -231,16 +231,50 @@ File: `vesselState.ts`, `simulation.ts`, `index.ts` (hook),
 `environment.ts` (F6/F7), `ocean.ts`+`wireX/G` (F8),
 keputusan F9 (code atau revisi blueprint).
 
-- [ ] F1: `landingOutcome()` dipanggil saat settle + log `crash_impact`
-- [ ] F2: jarak petir dari posisi strike beneran, bukan 2800
-- [ ] F3: tag `ADRIFT` kapal orang lain di daftar kontak
-- [ ] F4: massa+radius per planet dari environs (`g` bervariasi)
-- [ ] F6: waktu lokal longitude + interpolasi batas chunk
-- [ ] F7: overlay anomali->cuaca + `chunkKey` di payload anomali
-- [ ] F8: amplitudo mesh ikut state + trigger STORM per chunk vessel
-- [ ] F9: putuskan chunk-server vs revisi blueprint, eksekusi
-- [ ] F5: SEMUA backlog §7 berubah jadi verified (cek per file)
-- [ ] Verify: `tsc 0` + build + smoke tiap item di atas
+- [x] F1: `landingOutcome()` dipanggil saat settle + log `crash_impact`
+  (VERIFIED F0: `simulation.stepEmergency` vonis tiap falling→crashed dari
+  kinematika asli + log verdict/KE/budget; terrain unknown = konservatif
+  tercatat eksplisit; smoke-f0 5/5)
+- [x] F2: jarak petir dari posisi strike beneran, bukan 2800
+  (VERIFIED F0: `strikeDistanceTo` baca `lastEvent.position` strike segar
+  <8s; basi/hilang = fallback bernama `STALE_STRIKE_DISTANCE`; smoke 3/3)
+- [x] F3: tag `ADRIFT` kapal orang lain di daftar kontak
+  (VERIFIED F0: HUD target list + `discoverViaRadar`/`formatRadarHud`
+  passthrough `[ADRIFT]`/`[FALLING]`/`[CRASHED]`; smoke 2/2)
+- [x] F4: massa+radius per planet dari environs (`g` bervariasi)
+  (VERIFIED F0: `nearestPlanetBody` mengoper massa asli ke `applyGravity`;
+  `surfaceGravity` Bumi 9.82 / Mars 3.71; smoke 3/3)
+- [x] F6: waktu lokal longitude + interpolasi batas chunk
+  (VERIFIED F0: `localHour` + `chunkLonDeg`; `positionXZ` kontinu antar
+  chunk, fallback tengah-chunk error <5 detik; barat vs timur terbukti
+  beda; smoke 6/6)
+- [x] F7: overlay anomali->cuaca + `chunkKey` di payload anomali
+  (VERIFIED F0: payload bawa `chunkKey` deterministik; overlay storm
+  reversibel; generator murni `generateCosmicEventsForTick` identik
+  server==client nol bandwidth; smoke 3/3)
+- [x] F8: amplitudo mesh ikut state + trigger STORM per chunk vessel
+  (VERIFIED F0: `_tick(dt,windDir,ampScale)` + `stormAmpScale` dari
+  `ocean.waveAmplitude` live, jepit 0.3..3; trigger per chunk vessel
+  mengalir via overlay F7 → kind chunk; smoke 3/3)
+- [x] F9: putuskan chunk-server vs revisi blueprint, eksekusi
+  (DIPUTUSKAN F0: opsi (b) — chunking = streaming client + persist
+  koordinat; `claimRegion` tetap handoff shard; erratum ditulis di
+  Blueprint 10 §5 + di bawah)
+- [x] F5: SEMUA backlog §7 berubah jadi verified (cek per file)
+  (VERIFIED F0: 18/18 dibaca + tsc + smoke; 2 FIX: dispose saat unload
+  chunk, tulis fog tunggal;   temuan diteruskan ke A2/A3/L1 di bawah)
+- [x] Verify: `tsc 0` + build + smoke tiap item di atas
+  (`tsc -p apps/game` 0 + server standalone 0 + `build-game.mjs` OK +
+  `smoke-f0.ts` 25/25, 0 FAIL)
+
+> ERRATUM F9 (2026-09-11, mengikat): klaim "chunk di-tick server via
+> `claimRegion`" di Blueprint 10 §5 DINYATAKAN KELIRU. Fakta:
+> `packages/gameserver/planetary/chunks.ts` = matematika kunci + helper
+> (tanpa loop tick); `claimRegion` (`relay/registry.ts:24`) = handoff
+> shard vessel (dipakai `bridge.ts:88` saja). Chunking yang berjalan =
+> streaming + LOD sisi klien (`apps/game/.../planetary/chunks.ts`) +
+> persist koordinat. Opsi (a) (chunk-tick server beneran) DITUNDA ke
+> fase MMO-server; sampai saat itu tidak boleh ada klaim (a).
 
 ### A1 Vegetation (pembunuh kartun #1)
 
@@ -378,47 +412,74 @@ dibaca ulang.
 Riwayat tiap file: versi proto TERBUKTI punya cacat X, versi baru
 MENGKLAIM Y. Sampai dibaca ulang, status = UNVERIFIED.
 
-Substrate (klaim: rewrite AAA):
+Substrate (hasil verifikasi F0 — centang = dibaca + tsc + smoke):
 
-- [ ] `planetary/terrain.ts` — klaim FBM+erosi+LOD; cek: deterministik
-      per-koordinat? seam antar-chunk? LOD beneran streaming?
-- [ ] `planetary/ocean.ts` — klaim 4 Gerstner; cek: Gerstner beneran
-      (displace XZ) atau sinus-Z? foam hidup? preservasi base?
-- [ ] `planetary/atmosphere.ts` — klaim scattering; cek: scattering
-      fisik atau gradien + konstanta? `depthWrite:false` utuh?
-- [ ] `planetary/chunks.ts` (+ server) — klaim LOD + hybrid mesh;
-      cek: bug jarak indeks-vs-pos? planetId hardcode? frustum cull?
-- [ ] `planetary/surface.ts` — klaim Kepler + GateLink; cek: Kepler
-      beneran atau sudut linear? threshold magic terdokumentasi?
-- [ ] `planetary/facilities.ts` — klaim 10 geometri distinct; cek:
-      masih ada fallback kotak? aturan empty-land dobel otoritas?
-- [ ] `planetary/geography.ts` — cek: import server-ke-client masih
-      ada? marker LOD/cull?
-- [ ] `planetary/night.ts` — cek: draw-call per facility? traverse
-      per-tick?
+- [x] `planetary/terrain.ts` — VERIFIED + 2 temuan → A2: (1) `mountainNoise`
+      pakai `rnd()` sekuensial per-vertex (bukan fungsi posisi) → bentuk
+      berubah saat LOD ganti + diskontinu di batas chunk; (2) `detail`
+      pakai `hashPos` indeks LOKAL → pola berulang per chunk. Erosi
+      hidrolik sederhana ASLI. `getSlopeAt` bagi 40 (magic, dicatat).
+- [x] `planetary/ocean.ts` — VERIFIED + koreksi klaim: "4 Gerstner"
+      KELIRU — realitanya sinus-Z (tanpa displace XZ); Gerstner beneran
+      = backlog A3. Foam hidup YA, `basePositions` preserved YA.
+      F8: `_tick` kini terima `ampScale` live.
+- [x] `planetary/atmosphere.ts` — VERIFIED + koreksi klaim: "scattering"
+      = cangkang artistik + konstanta, bukan fisika. `depthWrite:false`
+      UTUH di 4 lapis.
+- [x] `planetary/chunks.ts` (+ server) — VERIFIED + 1 FIX: streaming LOD
+      ASLI (load/unload per jarak); planetId hardcode "planet-07"
+      (demo, dicatat); jarak pakai origin chunk (bias ≤2000m, minor);
+      ocean chunk statis; UNLOAD BOCOR GPU → DIPERBAIKI (dispose).
+      Server `chunks.ts` = matematika + helper, tanpa loop tick (F9).
+- [x] `planetary/surface.ts` — VERIFIED + koreksi klaim: "Kepler"
+      KELIRU — realitanya sudut linear + fase seed; Kepler beneran =
+      backlog (bukan F0). GateLink/approach/raycastCrash ASLI.
+      Threshold magic inline (dicatat, bukan diblokir).
+- [x] `planetary/facilities.ts` — VERIFIED + catatan: 10 kind eksplisit
+      (primitif berbeda, bukan 10 pahatan); fallback kotak default ADA;
+      empty-land HANYA klien (tanpa pasangan server — otoritas
+      penempatan = fase UE).
+- [x] `planetary/geography.ts` — VERIFIED: import server = pola kontrak
+      shared (sama seperti environment), BUKAN pelanggaran; marker tanpa
+      LOD/cull (minor, dicatat).
+- [x] `planetary/night.ts` — VERIFIED + 2 temuan → L1.3: 96 mesh
+      individual per facility (≈109 draw call) + traverse per-frame.
+      Radar + format HUD kini bawa tag darurat (F3).
 
-Gaps G1-G4 (klaim: state machine + zona + river + continuity):
+Gaps G1-G4 (hasil verifikasi F0):
 
-- [ ] `planetary/environmentalEvent.ts` — fase `landing`/`post`
-      tercapai? `startedAt` reset? mist tidak nol-mati?
-- [ ] `planetary/coastal.ts` — bug arah (windSpeed sebagai sudut)?
-      drift unbounded? baca `EnvironmentalContext` sekarang?
-- [ ] `planetary/hydrological.ts` — quad hanyut selamanya?
-      recycle? `river->ocean` beneran ketemu?
-- [ ] `planetary/atmosphericContinuity.ts` — konflik tulis fog
-      dengan sun/fog resolver? `dt` dipakai?
+- [x] `planetary/environmentalEvent.ts` — VERIFIED PASS: fase `landing`/
+      `post` tercapai, `startedAt` reset saat fase ganti, mist non-nol
+      di post/recovery/landing.
+- [x] `planetary/coastal.ts` — VERIFIED PASS: urutan argumen benar
+      (tidak ada bug sudut), drift dibatasi (wrap ±140/±40), baca env
+      via argumen. `Math.random` hanya init/transient (dicatat).
+- [x] `planetary/hydrological.ts` — VERIFIED PASS: quad terbungkus
+      ±60 (tidak hanyut), recycle YA, `river->ocean` ketemu via tint.
+- [x] `planetary/atmosphericContinuity.ts` — VERIFIED + 1 FIX BESAR:
+      KONFLIK TULIS fog terbukti (`tickFog` wireX vs `tickAtmosphere`
+      wireG menulis `scene.fog` yang sama per frame) → DIPERBAIKI
+      (penulis tunggal: `tickFog`; `tickAtmosphere` deprecated).
+      `tickTerrainShadows` kini basis-dt.
 
-Sinematik C6-C10 (klaim: 5 resolver + wire):
+Sinematik C6-C10 (hasil verifikasi F0):
 
-- [ ] `EnvironmentalAudioResolver.ts` — sync wind/rain/thunder,
-      delay thunder = jarak/343?
-- [ ] `CockpitResponseResolver.ts` — presentation-only murni?
-- [ ] `ImpactPresentation.ts` — rantai impact->wreck utuh?
-      transient vs persistent dipisah?
-- [ ] `FacilityDiscovery.ts` — `AtmosphericReveal.ts` (blueprint
-      C.9 minta) ada atau tidak?
-- [ ] `CinematicBudget.ts` — hysteresis? kompatibel qualityBudget?
-- [ ] `wireG.ts` — tick signature konsisten? tidak tulis authority?
+- [x] `EnvironmentalAudioResolver.ts` — VERIFIED PASS: sync
+      wind/rain/thunder dari env; delay thunder = jarak/343.
+- [x] `CockpitResponseResolver.ts` — VERIFIED PASS: presentation-only
+      murni, tanpa `Date.now`. Catatan: divisor flash 4200 vs audio
+      6000 (inkonsistensi minor, dicatat).
+- [x] `ImpactPresentation.ts` — VERIFIED PASS: rantai impact->wreck
+      6 fase utuh, wreck persisten. Catatan: `debrisCount` 6–24 vs
+      10 debris dibangun (minor, dicatat).
+- [x] `FacilityDiscovery.ts` — VERIFIED: fase + threshold asli;
+      `AtmosphericReveal.ts` (blueprint C.9) DINYATAKAN TIDAK ADA —
+      discovery jalan tanpanya; pembuatan = backlog (bukan F0).
+- [x] `CinematicBudget.ts` — VERIFIED: hysteresis via
+      `continuityProgress` ADA. Catatan: sistem budget ganda
+      (CinematicBudget vs qualityBudget) — unifikasi = backlog.
+- [x] `wireG.ts` — VERIFIED PASS: signature konsisten dengan wireX;
+      nol tulis otoritas (visual saja).
 
 Cara verifikasi tiap kotak: baca file + `tsc` + smoke perilaku
 (pola smoke yang sudah ada) + tulis HASILnya di PR. Kotak centang

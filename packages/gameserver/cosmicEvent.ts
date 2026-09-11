@@ -24,6 +24,21 @@ export interface CosmicEvent {
 }
 
 export function generateCosmicEvents(state: EnvironsState, regionId: string, tick: number): CosmicEvent[] {
+  // Planet namespace for anomaly chunk coverage (F7): first planet body,
+  // deterministic fallback when the region owns no planet.
+  let planetId = "planet-07";
+  for (const b of state.bodies.values()) {
+    if (b.kind === "planet") { planetId = b.id; break; }
+  }
+  return generateCosmicEventsForTick(regionId, tick, planetId);
+}
+
+/**
+ * Pure deterministic generator (F7): identical output for identical
+ * (regionId, tick, planetId) on server AND client — zero bandwidth.
+ * The client regenerates the same anomaly overlay locally.
+ */
+export function generateCosmicEventsForTick(regionId: string, tick: number, planetId: string): CosmicEvent[] {
   const out: CosmicEvent[] = [];
   // mulberry32 seeded by tick+regionId — deterministic, cross-env identical
   const rng = createSeedRng(Math.imul(tick, 0x9e3779b9) ^ (regionId.length * 0x6d2b79f5));
@@ -50,7 +65,12 @@ export function generateCosmicEvents(state: EnvironsState, regionId: string, tic
     const anomalyMass = 1e24 * (0.5 + rng.fract());
     const rAnomaly = 5e10 + rng.fract() * 5e10;
     const a = computeAnomalyAccel(anomalyMass, rAnomaly);
-    out.push({ id: `cosmic:${tick}:anomaly`, tick, kind: "anomaly_gravity", severity: Math.floor(Math.min(100, a * 1e6)), regionId, payload: { mass_kg: anomalyMass, distance_m: rAnomaly, accel_mps2: a } });
+    // F7: deterministic chunk coverage — the anomaly storm cell covers ONE
+    // chunk (±6 around origin); consumers flip that chunk's weather to storm.
+    // Draws happen AFTER all shared draws, so existing sequences are untouched.
+    const cx = Math.floor(rng.fract() * 13) - 6;
+    const cz = Math.floor(rng.fract() * 13) - 6;
+    out.push({ id: `cosmic:${tick}:anomaly`, tick, kind: "anomaly_gravity", severity: Math.floor(Math.min(100, a * 1e6)), regionId, payload: { mass_kg: anomalyMass, distance_m: rAnomaly, accel_mps2: a, chunkKey: `${planetId}:${cx}:${cz}` } });
   }
   return out;
 }

@@ -35,22 +35,31 @@ export function deriveAtmosphericContinuity(ctx: EnvironmentalContext, cameraAlt
   return { haze: Math.min(1, haze), valleyFog: Math.min(1, valleyFog), mountainContrast: Math.min(1, mountainContrast), shadowProgress, horizonGlow: Math.min(1, horizonGlow), entryHaze: Math.min(1, entryHaze) };
 }
 
+/**
+ * @deprecated F5: TIDAK DIPAKAI — scene.fog dimiliki tickFog (fog.ts,
+ * wireX). Dua penulis = rebutan per frame. Dipertahankan agar import
+ * lama tidak patah; jangan panggil dari wire.
+ */
 export function tickAtmosphere(sys: { fog: THREE.FogExp2 }, cont: AtmosphericContinuity, dt: number): void {
   const target = 0.00008 + cont.haze * 0.00022 + cont.valleyFog * 0.00013 + cont.entryHaze * 0.00008;
   sys.fog.density += (target - sys.fog.density) * Math.min(1, dt * 1.4);
   sys.fog.color.setHSL(0.58 + cont.horizonGlow * 0.06, 0.22 + cont.haze * 0.18, 0.72 + cont.horizonGlow * 0.08);
 }
 
-export function tickTerrainShadows(shadowPlane: THREE.Mesh, cont: AtmosphericContinuity, sunDirection: { x: number; y: number; z: number }): void {
+export function tickTerrainShadows(shadowPlane: THREE.Mesh, cont: AtmosphericContinuity, sunDirection: { x: number; y: number; z: number }, dt = 1 / 60): void {
+  // F5: lerp dibasiskan dt (frame-rate independent) — konstanta lama 0.12/0.08
+  // = implisit 60fps.
+  const k = Math.min(1, dt * 7.2);
   const mat = shadowPlane.material as THREE.MeshBasicMaterial;
   const base = cont.mountainContrast * 0.18 * (1 - cont.shadowProgress * 0.42);
   const valleyBoost = cont.valleyFog * 0.04;
   const target = Math.min(0.24, base + valleyBoost);
-  mat.opacity += (target - mat.opacity) * 0.12;
+  mat.opacity += (target - mat.opacity) * k;
   shadowPlane.visible = mat.opacity > 0.02;
   const drift = 1200 * (1 - cont.shadowProgress);
-  shadowPlane.position.x += (sunDirection.x * drift - shadowPlane.position.x) * 0.08;
-  shadowPlane.position.z += (sunDirection.z * drift - shadowPlane.position.z) * 0.08;
+  const kp = Math.min(1, dt * 4.8);
+  shadowPlane.position.x += (sunDirection.x * drift - shadowPlane.position.x) * kp;
+  shadowPlane.position.z += (sunDirection.z * drift - shadowPlane.position.z) * kp;
   shadowPlane.rotation.y = Math.atan2(sunDirection.z, sunDirection.x) * 0.12;
 }
 

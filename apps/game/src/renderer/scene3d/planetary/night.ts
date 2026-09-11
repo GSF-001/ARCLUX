@@ -123,6 +123,7 @@ export interface RadarContact {
   distance: number; // m
   position: { x: number; y: number; z: number };
   unknown: boolean; // >30km atau health rendah -> Unknown
+  emergency?: string; // F3: status darurat kapal lain (adrift/falling/crashed)
 }
 
 export interface RadarDiscovery {
@@ -139,14 +140,14 @@ export interface RadarDiscovery {
  */
 export function discoverViaRadar(
   origin: { x: number; y: number; z: number },
-  entities: Array<{ id: string; kind: string; position: { x: number; y: number; z: number }; health?: number }>,
+  entities: Array<{ id: string; kind: string; position: { x: number; y: number; z: number }; health?: number; emergency?: string }>,
 ): RadarDiscovery {
   const contacts: RadarContact[] = entities.map((e) => {
     const dx = e.position.x - origin.x;
     const dz = e.position.z - origin.z;
     const dist = Math.hypot(dx, Math.hypot(e.position.y - origin.y, dz));
     const unknown = dist > 30000 || (e.health ?? 100) < 20;
-    return { id: e.id, kind: unknown ? "Unknown" : e.kind, distance: dist, position: e.position, unknown };
+    return { id: e.id, kind: unknown ? "Unknown" : e.kind, distance: dist, position: e.position, unknown, emergency: e.emergency };
   });
   contacts.sort((a, b) => a.distance - b.distance);
   // Batasi 12 terdekat biar UI gak spam
@@ -158,10 +159,10 @@ export function discoverViaRadar(
   };
 }
 
-/** Format radar untuk HUD: "Hangar-A 12 km / Unknown 430 km". */
+/** Format radar untuk HUD: "Hangar-A 12 km / Unknown 430 km". F3: tag darurat menempel. */
 export function formatRadarHud(d: RadarDiscovery): string {
   if (d.contacts.length === 0) return "No contacts within 50km";
   return d.contacts
-    .map((c) => `${c.kind} ${c.id.slice(0, 6)} ${(c.distance / 1000).toFixed(c.distance > 10000 ? 0 : 1)} km${c.unknown ? " ?" : ""}`)
+    .map((c) => `${c.kind} ${c.id.slice(0, 6)} ${(c.distance / 1000).toFixed(c.distance > 10000 ? 0 : 1)} km${c.unknown ? " ?" : ""}${c.emergency && c.emergency !== "nominal" ? ` [${c.emergency.toUpperCase()}]` : ""}`)
     .join(" / ");
 }

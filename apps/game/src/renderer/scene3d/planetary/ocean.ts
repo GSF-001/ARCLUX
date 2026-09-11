@@ -49,7 +49,9 @@ export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpe
   let t = 0;
   const basePositions = new Float32Array(pos.array as ArrayLike<number>);
 
-  (mesh as any)._tick = (dt: number, windDir = 0) => {
+  (mesh as any)._tick = (dt: number, windDir = 0, ampScale = 1) => {
+    // F8: ampScale scales live storm amplitude (state-driven, default 1 =
+    // creation-time wind). Foam follows the SCALED crest (whitecap ∝ wind).
     t += dt;
     const p = geom.attributes.position as THREE.BufferAttribute;
     const col = geom.attributes.color as THREE.BufferAttribute;
@@ -64,9 +66,9 @@ export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpe
         const wx = w.dirX * cosD - w.dirZ * sinD;
         const wz = w.dirX * sinD + w.dirZ * cosD;
         const phase = ox * w.k * wx + oz * w.k * wz - w.omega * t * (0.7 + wi * 0.15);
-        const h = Math.sin(phase) * w.amp;
+        const h = Math.sin(phase) * w.amp * ampScale;
         y += h;
-        if (wi < 2) foamAcc += Math.max(0, Math.cos(phase)) * w.amp * 0.12;
+        if (wi < 2) foamAcc += Math.max(0, Math.cos(phase)) * w.amp * ampScale * 0.12;
       }
       y += Math.sin(ox * 0.005 + t * 0.3) * 0.7;
       p.setZ(i, y);
@@ -84,6 +86,17 @@ export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpe
   };
 
   return mesh;
+}
+
+/**
+ * F8: live storm scale for `_tick` ampScale. Mesh base amps assume
+ * creation windSpeed 6 dry air (0.9 + 6×0.32); state amplitude is divided
+ * by the same base so calm seas shrink and storms grow the mesh.
+ */
+export const OCEAN_MESH_BASE_AMPLITUDE = 0.9 + 6 * 0.32;
+
+export function stormAmpScale(waveAmplitude: number): number {
+  return Math.max(0.3, Math.min(3, waveAmplitude / OCEAN_MESH_BASE_AMPLITUDE));
 }
 
 export function oceanDepthForHeightmap(heightmap: Float32Array, seaLevel = 0): Float32Array {
