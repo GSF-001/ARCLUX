@@ -153,5 +153,71 @@ klaim murah). Zonasi = wewenang dunia (pola 02 §8).
 4. Bounty + HQ + tabel eskalasi.
 5. Polisi pemain: rekrutmen + pangkat + log + komando.
 6. Ekonomi kota penuh (pasar + hunian + outskirts).
+7. Kriminal lanjutan: Hull ID + pencurian + ponsel/771 + pasar gelap (§9).
+8. Distrik + upkeep kota + audio kota (§10), dengan onboarding §11.
 - Acceptance per lapis: kejahatan → record → kejar → tangkap →
   tahan → (bebas/rampas) tercatat ujung-ke-ujung di log server.
+
+## 9. Kriminal lanjutan (FINAL — baru, sesi ini)
+
+9.1. Hull ID (NIK kapal): tiap kapal tercatat (ID akun pemilik +
+nomor lambung) di registry server. Tanpa ID = tanpa kepemilikan
+yang dapat dibela.
+9.2. Tiga pintu pencurian (gaya main, bukan class): GAS (paksa —
+cepat, berisik, alarm + wanted spike), BAYANG (sunyi — lambat,
+memanfaatkan rute patroli yang terlihat), MULUT (kecoh —
+pengalihan + koneksi). Alat, bukan skill tree: pemain baru
+langsung BISA, mastery di gaya.
+9.3. Empat tahap lacak-vs-bungkam: CURI (chip nyala → blip kasar +
+delay ala `lastSeen`, bukan GPS presisi) → KABUR → BUNGKAM
+(temukan chip via isyarat dunia + matikan 3 tahap: tiap tahap =
+detik + suara = risiko) → BERSIH (jual utuh / pretelin /
+palsukan ID). Tier chip mengikuti kelas kapal (sipil = mudah,
+dinas/militer = berlapis).
+9.4. Chop shop + forgery: bongkar = crafting terbalik (komponen
+curian harga miring); ID palsu = forgery vs verifikasi polisi
+(kawin §2.5). Lolos = kapal "bersih"; ketahuan = kasus ganda.
+9.5. Ponsel diegetik + 771: tiap pemain berponsel (kontak, share
+koordinat misi, kontak pasar gelap invite-only). 771 = hotline
+polisi (lapor → dispatch → patrol terdekat menerima ping).
+9.6. Pasar gelap: vendor tanpa papan, lokasi berputar, akses via
+reputasi/invite; dagangan = senjata, komponen curian, ID palsu.
+Penggerebekan = event (lokasi bocor = pindah). Mesin = stall
+biasa + flag hidden + akses gated.
+
+## 10. Distrik dan atmosfer kota (FINAL — baru, sesi ini)
+
+10.1. Kontras distrik (aturan visual + audio, bukan selera):
+
+| | Kumuh | Utama |
+|---|---|---|
+| Cahaya | neon bocor, kedip, hangat-kotor | terang dingin, stabil, megah |
+| Suara | bark NPC, musik stall, tetes pipa | pengumuman dinas, langkah rapi |
+| Kepadatan | kabel ruwet, sampah, alley | plaza lega, patrol rapi |
+| Usia visual | asap, lumut, karat (decay ON) | kinclong (upkeep ON) |
+
+10.2. Lampu kedip = tier RUSAK pada sistem repair: pemain dapat
+memperbaiki lampu distrik (upkeep kota, dibayar dinas) —
+pemeliharaan kota adalah pekerjaan, bukan latar.
+10.3. Set aset Bumi vs Mars DIBEDAKAN di ledger (bukan beli dobel):
+Bumi = terminal decay (kota mati, karat final); Mars = maintained
++ neon. Satu gudang, dua nyawa (afinitas planet + biome pada
+manifest 02 §1).
+10.4. Ambient bark NPC: sapaan lewat (audio + teks), non-fisik,
+flag zona dewasa-IMPLISIT. Prinsip rating: gelap boleh, vulgar
+jangan (whitelist 02 §5 tetap berlaku — tutup pintu + fade).
+10.5. Audio kota = separuh "hidup": Doppler kendaraan/drone,
+musik stall, dengung neon, tetes pipa (slice audio bersama W1).
+
+## 11. Prinsip onboarding kriminal (FINAL — baru, sesi ini)
+
+11.1. Mudah dipahami, sulit dikuasai, TANPA tutorial panjang.
+Dunia yang mengajar, bukan teks.
+11.2. Grammar warna dipakai ulang di mana-mana (sama dengan ghost
+hijau/merah 02 §8): MERAH = terlihat, KUNING = diburu, HIJAU =
+bersih. Sekali paham di satu sistem = paham di semua.
+11.3. Hint satu baris, maksimum tiga kali seumur hidup per situasi
+(contoh: "ALARM BUNYI — KABUR."). Setelah itu dunia diam.
+11.4. Kegagalan pertama murah: target awal = kapal murahan, hukuman
+ringan, chip mudah. Kurva sulit = heat kota + chip berlapis +
+patroli (sistem, bukan teks).

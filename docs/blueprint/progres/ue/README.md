@@ -28,6 +28,8 @@
   `03-implementasi.md` §4. Gagal gate = STOP, bukan lanjut.
 - "Hukum/kota gimana?" → `05-hukum-kota.md` (wanted, polisi, prison,
   bounty — eksekusi fase UE, bukan sekarang).
+- "Maling/ponsel/pasar gelap gimana?" → `05-hukum-kota.md` §9 + §11
+  (Hull ID, 3 pintu, ponsel/771, onboarding tanpa tutorial).
 
 ## Aturan folder (dilindungi creative director)
 
