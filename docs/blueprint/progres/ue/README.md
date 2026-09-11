@@ -15,6 +15,7 @@
 | 2 | `02-asset-pipeline.md` | Badan/otak, manifest, cap 5/30, crafting queue, lifecycle 30-hari + decay karat, gotong-royong, infrastruktur | Pas bangun pipeline user-content |
 | 3 | `03-implementasi.md` | PETA TEKNIK: file MMO apa disentuh/tidak, layer apa masuk UE, langkah + checkpoint + jalan pulang | DI BUKA TERUS selama ngoding UE |
 | 4 | `04-graphics.md` | SPESIFIKASI GRAFIS: rendering, tier 4K, subsistem, aliran aset, anggaran, acceptance | Pegangan insinyur grafis + artis |
+| 5 | `05-hukum-kota.md` | HUKUM & KOTA: 3 dunia (Bumi mati/Mars hidup/Space transit), wanted 0–5, polisi pemain (rekrutmen+pangkat), NPC pelengkap, prison ship + jailbreak, bounty, ekonomi Mars, phasing | Pas bangun layer hukum di UE |
 
 ## Kompas satu baris per dokumen
 
@@ -25,6 +26,8 @@
 - "User submit apa?" → `02-asset-pipeline.md` §1 (manifest).
 - "Udah bener belum?" → gate di `00-migrasi.md` §8 + checkpoint di
   `03-implementasi.md` §4. Gagal gate = STOP, bukan lanjut.
+- "Hukum/kota gimana?" → `05-hukum-kota.md` (wanted, polisi, prison,
+  bounty — eksekusi fase UE, bukan sekarang).
 
 ## Aturan folder (dilindungi creative director)
 
