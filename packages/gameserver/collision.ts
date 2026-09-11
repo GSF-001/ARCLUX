@@ -61,7 +61,7 @@ function impactAngleFactor(vessel: VesselEntity, body: SystemBody): number {
 }
 
 /** Mass of a vessel, mirroring simulation's convention (`vessel.mass ?? 5e6`). */
-function vesselMass(vessel: VesselEntity): number {
+export function vesselMass(vessel: VesselEntity): number {
   return (vessel as unknown as { vessel?: { mass?: number } }).vessel?.mass ?? MASS_REF;
 }
 

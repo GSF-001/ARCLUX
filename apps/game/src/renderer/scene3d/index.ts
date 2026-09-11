@@ -30,7 +30,7 @@ import {
   getSlopeAt,
   type TerrainOpts,
 } from "./planetary/terrain";
-import { createOceanMesh, oceanDepthForHeightmap } from "./planetary/ocean";
+import { createOceanMesh, oceanDepthForHeightmap, stormAmpScale } from "./planetary/ocean";
 import { createAtmosphere, lerpAtmosphereForAltitude } from "./planetary/atmosphere";
 import { ChunkManager, updateChunks } from "./planetary/chunks";
 import { lerpSpaceToSurface, canAutoLand, raycastCrash } from "./planetary/surface";
@@ -39,7 +39,9 @@ import { attachNightLights, updateNightVisibility } from "./planetary/night";
 import { createGeographyMarker, NICHE_COLOR } from "./planetary/geography";
 import { createEnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
 import type { EnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
+import { generateCosmicEventsForTick } from "../../../../../packages/gameserver/cosmicEvent";
 import { createPlanetary10X, tickPlanetary10X, disposePlanetary10X } from "./planetary/wireX";
+import { strikeDistanceTo } from "./planetary/lightning";
 import { createPlanetary10G, tickPlanetary10G, disposePlanetary10G } from "./planetary/wireG";
 import { createEmergency10X, tickEmergency10X, disposeEmergency10X } from "./planetary/wireE";
 import { createCinematicC, tickCinematicC, disposeCinematicC } from "./cinematic/wireC";
@@ -154,6 +156,13 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
 
   function updateEnvironmentalContext(): void {
     planetTick++;
+    // F7: anomaly overlay regenerated deterministically (same function +
+    // same inputs as the server — zero bandwidth). Demo mapping:
+    // regionId = planetId until snapshot sync carries the authoritative id.
+    const anomalyChunks = generateCosmicEventsForTick("planet-07", planetTick, "planet-07")
+      .filter((e) => e.kind === "anomaly_gravity")
+      .map((e) => (e.payload["chunkKey"] as string | undefined) ?? "")
+      .filter((k) => k.length > 0);
     envContext = createEnvironmentalContext({
       planetId: "planet-07",
       planetSeed,
@@ -162,6 +171,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       worldTime,
       terrainHeight: 0,
       oceanDepth: -10,
+      anomalyChunks,
     });
   }
   updateEnvironmentalContext();
@@ -239,7 +249,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       if (envContext) {
         // Update ocean wind from EnvironmentalContext
         const windDir = envContext.wind.direction;
-        (oceanMesh as any)._tick?.(1 / 60, windDir);
+        // F8: mesh amplitude follows live storm state (calm shrinks, storm grows).
+        (oceanMesh as any)._tick?.(1 / 60, windDir, stormAmpScale(envContext.ocean.waveAmplitude));
         // Update atmosphere cloud drift
         (atmoGroup as any)._tick?.(1 / 60, envContext.wind.speed);
         // Night visibility
@@ -324,8 +335,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     updateExplosions(ctx);
 
     // ── PLANETARY TICK (10.2-10.6) ──
-    // Ocean wave animation
-    (oceanMesh as any)._tick?.(1 / 60, envContext?.wind.direction ?? 0);
+    // Ocean wave animation (F8: amplitude follows live storm state)
+    (oceanMesh as any)._tick?.(1 / 60, envContext?.wind.direction ?? 0, envContext ? stormAmpScale(envContext.ocean.waveAmplitude) : 1);
     // Atmosphere cloud drift
     (atmoGroup as any)._tick?.(1 / 60, envContext?.wind.speed ?? 2);
     // Cloud group opacity based on altitude
@@ -369,7 +380,13 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
         camera: ctx.camera ?? undefined,
         cameraPosXZ: { x: camX, z: camZ },
         anchor: { x: ctx.anchor.x, z: ctx.anchor.z },
-        distanceToLightning: 2800,
+        // F2: real camera-to-strike distance (fresh <8s) — stale/missing
+        // falls back to STALE_STRIKE_DISTANCE inside strikeDistanceTo.
+        distanceToLightning: strikeDistanceTo(
+          { x: camX, y: ctx.camera ? ctx.camera.position.y : 0, z: camZ },
+          planetary10X.lightning.lastEvent,
+          envContext.worldTime / 1000 + envContext.simulationTick * 0.1,
+        ),
         renderer: ctx.renderer,
         // 10.V U4: presentasi kokpit hidup dari state yang sama.
         cockpitPass: ctx.cockpitPass ?? undefined,

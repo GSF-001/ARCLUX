@@ -85,11 +85,44 @@ export function deriveTerrainState(height: number, slope: number, wetness: numbe
   return { height, slope: Math.min(1, slope), biome, wetness, snow: height > 300 ? Math.min(1, (height - 300) / 250) : 0, erosion: Math.min(1, slope * 0.7 + Math.abs(height) * 0.00012), fertility: wetness * (1 - slope * 0.6) };
 }
 
-export function createEnvironmentalContext(opts: { planetId: string; planetSeed: number; chunkKey: string; simulationTick: number; worldTime: number; terrainHeight?: number; oceanDepth?: number; gravity?: number }): EnvironmentalContext {
+// --- F6: local solar time follows longitude (Blueprint 10 §6) ---
+/** Chunk size in meters (mirrors chunkFor default — single convention). */
+export const CHUNK_SIZE_M = 2000;
+/** Planet circumference in meters (default Earth-like; per-planet override = future). */
+export const PLANET_CIRCUMFERENCE_M = 40075000;
+
+/**
+ * Longitude (degrees, -180..180) of a chunk CENTER parsed from
+ * `planetId:x:z`. Unparseable key → 0 (prime meridian, documented).
+ */
+export function chunkLonDeg(chunkKey: string): number {
+  const parts = chunkKey.split(":");
+  const x = parseInt(parts[parts.length - 2], 10);
+  if (Number.isNaN(x)) return 0;
+  return (((x + 0.5) * CHUNK_SIZE_M) / PLANET_CIRCUMFERENCE_M) * 360 - 180;
+}
+
+/** Local solar hour 0..24 from world clock + longitude (15° = 1 hour). */
+export function localHour(worldTimeMs: number, lonDeg: number): number {
+  return (((worldTimeMs / 3600000 + lonDeg / 15) % 24) + 24) % 24;
+}
+
+export function createEnvironmentalContext(opts: { planetId: string; planetSeed: number; chunkKey: string; simulationTick: number; worldTime: number; terrainHeight?: number; oceanDepth?: number; gravity?: number; positionXZ?: { x: number; z: number }; anomalyChunks?: string[] }): EnvironmentalContext {
   const sun = deriveSunState(opts.planetSeed, opts.worldTime);
   const weather = deriveWeatherState(opts.planetSeed, opts.simulationTick, opts.chunkKey);
+  // F7: anomaly overlay — a cosmic anomaly covering this chunk pushes its
+  // weather to storm. Reversible: empty list = derived weather untouched.
+  if (opts.anomalyChunks && opts.anomalyChunks.indexOf(opts.chunkKey) !== -1) {
+    weather.kind = "storm";
+  }
   const wind = deriveWindState(opts.planetSeed, opts.simulationTick, opts.chunkKey);
-  const hour = (opts.worldTime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000);
+  // F6: exact longitude when the caller knows sub-chunk position
+  // (continuous across chunk borders — the "interpolasi"); otherwise the
+  // chunk-center longitude (step error < 5 solar seconds at 2km chunks).
+  const lonDeg = opts.positionXZ
+    ? (opts.positionXZ.x / PLANET_CIRCUMFERENCE_M) * 360 - 180
+    : chunkLonDeg(opts.chunkKey);
+  const hour = localHour(opts.worldTime, lonDeg);
   const timeOfDay: TimeOfDay = hour < 5 || hour > 19 ? "night" : hour < 7 ? "dawn" : hour > 17 ? "dusk" : "day";
   const height = opts.terrainHeight ?? 0; const slope = Math.min(1, Math.abs(height) / 750);
   const terrain = deriveTerrainState(height, slope, weather.precipitationIntensity * 0.62);

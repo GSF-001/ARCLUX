@@ -7,6 +7,7 @@
 import * as THREE from "three";
 import { createHeightmap, heightmapToGeometry } from "./terrain";
 import { createOceanMesh, oceanDepthForHeightmap } from "./ocean";
+import { disposeGroup } from "../bootstrap";
 
 function toRegionId(c: { planetId: string; x: number; z: number }): string { return `${c.planetId}:${c.x}:${c.z}`; }
 
@@ -64,7 +65,8 @@ export function updateChunks(manager: ChunkManager, center: { x: number; z: numb
   const { toLoad, toUnload } = manager.update(center);
   for (const id of toUnload) {
     const o = scene.getObjectByName(id);
-    if (o) scene.remove(o);
+    // F5: unload WAJIB dispose — remove tanpa dispose = bocor GPU tiap travel.
+    if (o) { scene.remove(o); disposeGroup(o as THREE.Group); }
   }
   for (const k of toLoad) {
     const id = toRegionId(k);

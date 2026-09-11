@@ -22,7 +22,7 @@ import { validateIntent, type ValidatorContext } from "./validator";
 import { applyCombatIntent } from "./combat";
 import type { EnvironsState } from "./environs";
 import { integrateEnvirons, getBodiesArray } from "./environs";
-import { checkCollisions } from "./collision";
+import { checkCollisions, vesselMass } from "./collision";
 import { computeThermal } from "./thermics";
 import { canActivate, activateCapability } from "./capability";
 import { assertNotPaused, isInSafeZone } from "./governance";
@@ -37,6 +37,8 @@ import {
   hullOf,
   nextEmergencyState,
   applyGravity,
+  landingOutcome,
+  impactSpeedOf,
   ADRIFT_DAMPING,
   FALL_SPEED_MAX,
   type VesselState,
@@ -308,9 +310,10 @@ export class SimulationEngine {
     // 10.E: vessels in emergency states integrate through the emergency
     // machine (drift decay / gravity fall / grounded) instead of free flight.
     const planetPos = this.nearestPlanetPosition();
+    const planetMass = this.nearestPlanetBody()?.mass ?? 5.972e24;
     for (const e of this.region["entities"].values()) {
       if (e.kind === "vessel") {
-        if (this.stepEmergency(e, planetPos) !== "nominal") continue;
+        if (this.stepEmergency(e, planetPos, planetMass) !== "nominal") continue;
       }
       const drag = 0.02;
       const ax = -e.velocity.x * drag;
@@ -325,13 +328,18 @@ export class SimulationEngine {
     }
   }
 
-  /** Nearest planet center for gravity capture, if environs are present. */
-  private nearestPlanetPosition(): Vec3 | undefined {
+  /** Nearest planet body for gravity capture, with real mass (F4). */
+  private nearestPlanetBody(): { pos: Vec3; mass: number } | undefined {
     if (!this.environs) return undefined;
     for (const b of getBodiesArray(this.environs)) {
-      if (b.kind === "planet") return { ...b.position };
+      if (b.kind === "planet") return { pos: { ...b.position }, mass: b.mass };
     }
     return undefined;
+  }
+
+  /** Nearest planet center for gravity capture, if environs are present. */
+  private nearestPlanetPosition(): Vec3 | undefined {
+    return this.nearestPlanetBody()?.pos;
   }
 
   /**
@@ -339,19 +347,42 @@ export class SimulationEngine {
    * ground wrecks. Returns the effective state; non-nominal vessels skip
    * free-flight integration. Transitions are logged for replay.
    */
-  private stepEmergency(v: VesselEntity, planetPos: Vec3 | undefined): VesselState {
+  private stepEmergency(v: VesselEntity, planetPos: Vec3 | undefined, planetMass = 5.972e24): VesselState {
+    const wasFalling = v.emergency?.state === "falling";
     const { state, changed, cause } = nextEmergencyState(v, planetPos, this.region.tick);
     if (changed) {
       if (state === "nominal") delete v.emergency;
       else v.emergency = { state, updatedTick: this.region.tick, cause };
       this.log(`emergency_${state}`, v.id, { hull: Math.round(hullOf(v.vessel) * 10) / 10, cause });
     }
+    // F1: settle is MEASURED, not assumed — touchdown verdict from real
+    // impact kinematics via landingOutcome() + crash_impact log. Terrain is
+    // unknown server-side, so the verdict is conservative (treated as
+    // occupied ground, budget ×0.4) and the log says so explicitly.
+    if (changed && state === "crashed" && wasFalling) {
+      const speed = impactSpeedOf(v.velocity);
+      const verdict = landingOutcome({
+        mass: vesselMass(v),
+        speed,
+        verticalSpeed: v.velocity.y,
+        slope: 0,
+        onEmptyLand: false,
+      });
+      this.log("crash_impact", v.id, {
+        verdict: verdict.verdict,
+        kineticEnergy: Math.round(verdict.kineticEnergy),
+        budget: Math.round(verdict.budget),
+        impactSpeed: Math.round(speed * 10) / 10,
+        terrain: "unknown-conservative",
+      });
+    }
     if (state === "crashed") {
       v.velocity = { x: 0, y: 0, z: 0 };
       return state;
     }
     if (state === "falling" && planetPos) {
-      v.velocity = applyGravity(v.position, v.velocity, planetPos, this.dt);
+      // F4: real planet mass from environs — Mars pulls less than Earth.
+      v.velocity = applyGravity(v.position, v.velocity, planetPos, this.dt, planetMass);
     } else if (state === "adrift") {
       const damp = Math.max(0, 1 - ADRIFT_DAMPING * this.dt);
       v.velocity = { x: v.velocity.x * damp, y: v.velocity.y * damp, z: v.velocity.z * damp };

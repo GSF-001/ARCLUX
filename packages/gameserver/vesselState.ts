@@ -35,6 +35,15 @@ export const GRAVITY_SCALE = 0.00008;
 /** Newtonian gravitational constant. */
 export const GRAVITY_G = 6.6743e-11;
 
+/**
+ * Surface gravity g = GM/r² (m/s²) for a planet body. F4: Earth 9.81,
+ * Mars-like 3.71 — varies per planet from environs mass+radius.
+ */
+export function surfaceGravity(massKg: number, radiusM: number): number {
+  const r = Math.max(1e6, radiusM);
+  return (GRAVITY_G * massKg) / (r * r);
+}
+
 export interface VesselStateInfo {
   state: VesselState;
   health: number; // 0..100 hull aggregate
@@ -55,6 +64,11 @@ export function hullOf(vessel: VesselModel): number {
 
 function speedOf(v: Vec3): number {
   return Math.hypot(v.x, v.y, v.z);
+}
+
+/** Impact speed of a vessel (exported for settle-verdict logging, F1). */
+export function impactSpeedOf(v: Vec3): number {
+  return speedOf(v);
 }
 
 function distanceTo(a: Vec3, b: Vec3): number {
@@ -131,6 +145,7 @@ export function nextEmergencyState(
 /**
  * Newtonian gravity step toward a planet center with light drag and a fall
  * clamp. Pure: returns the new velocity, mutates nothing.
+ * F4: planetMass threaded from environs (default Earth) — Mars pulls less.
  */
 export function applyGravity(
   pos: Vec3,
