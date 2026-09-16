@@ -139,6 +139,8 @@ export function createTerrainMesh(seed: number, lod = 32, size = 4000, chunkX = 
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0.04, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geom, mat);
   mesh.rotation.x = -Math.PI / 2;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   (mesh as any)._heightmap = h;
   (mesh as any)._lod = lod;
   (mesh as any)._size = size;

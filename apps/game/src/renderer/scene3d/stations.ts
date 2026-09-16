@@ -32,8 +32,12 @@ export function buildStation(texSize = 256): THREE.Group {
     emissive: threeColor(colors.stationRing), emissiveIntensity: 0.3,
   });
   const hub = new THREE.Mesh(new THREE.IcosahedronGeometry(80, 1), hubMat);
+  hub.castShadow = true;
+  hub.receiveShadow = true;
   const ring = new THREE.Mesh(new THREE.TorusGeometry(190, 20, 14, 64), ringMat);
   ring.rotation.x = 1.5;
+  ring.castShadow = true;
+  ring.receiveShadow = true;
   const beacon = new THREE.Sprite(new THREE.SpriteMaterial({
     map: makeGlowTexture(), color: threeColor(colors.glowStation), transparent: true, opacity: 0.85,
     blending: THREE.AdditiveBlending, depthWrite: false,

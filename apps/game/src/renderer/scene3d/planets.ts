@@ -173,6 +173,8 @@ export function buildPlanetSystem(ctx: SceneContext, count: number, detail: numb
       metalness: spec.metalness,
     });
     const mesh = new THREE.Mesh(geom, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     scene.add(mesh);
 
     // Atmosfer (ATMOSPHERIC §2.2) — rim glow
@@ -211,6 +213,8 @@ export function buildPlanetSystem(ctx: SceneContext, count: number, detail: numb
       const ringGeom = new THREE.RingGeometry(radius * 1.6, radius * 2.6, 96);
       ring = new THREE.Mesh(ringGeom, ringMat);
       ring.rotation.x = -Math.PI / 2 + 0.12;
+      ring.castShadow = true;
+      ring.receiveShadow = true;
       mesh.add(ring);
     }
 
@@ -221,6 +225,8 @@ export function buildPlanetSystem(ctx: SceneContext, count: number, detail: numb
         new THREE.SphereGeometry(radius * 0.18, 16, 16),
         new THREE.MeshStandardMaterial({ color: threeColor(colors.struct), roughness: 1, metalness: 0.1 })
       );
+      moonMesh.castShadow = true;
+      moonMesh.receiveShadow = true;
       scene.add(moonMesh);
       moons.push({
         mesh: moonMesh,

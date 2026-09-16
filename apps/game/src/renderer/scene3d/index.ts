@@ -57,6 +57,7 @@ import { clampLocal, ensureEntry, updateVessel, updateVesselInterp } from "./ves
 import { buildStation } from "./stations";
 import { disposeExplosions, spawnExplosion, updateExplosions } from "./explosions";
 import { applyQuality } from "./quality";
+import { createLighting, updateLighting, updateQualityLighting, disposeLighting, type LightingState } from "./lighting";
 import type { CockpitOverlay } from "../cockpitOverlay";
 
 export type { CameraMode };
@@ -154,6 +155,9 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   let planetTick = 0;
   const worldTime = Date.now();
 
+  // L1 Lighting state
+  let lightingState: LightingState | null = null;
+
   function updateEnvironmentalContext(): void {
     planetTick++;
     // F7: anomaly overlay regenerated deterministically (same function +
@@ -179,6 +183,10 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   // Rakit sesuai urutan file lama (konsumsi rand deterministik dipertahankan).
   ctx.camera = createCamera(width, height);
   createPost(ctx);
+
+  // L1 Lighting init
+  lightingState = createLighting(ctx, bootSettings);
+
   buildStars(ctx);
   buildNebula(ctx, 9);
   buildSuns(ctx, 1);
@@ -295,15 +303,90 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
         }
       }
 
-      // Directional light follows sun
-      const sunDir = envContext ? new THREE.Vector3(
-        Math.cos((worldTime % 86400000) / 86400000 * Math.PI * 2),
-        Math.sin((worldTime % 86400000) / 86400000 * Math.PI * 2) * 0.6,
-        0.2
-      ).normalize() : new THREE.Vector3(0, 1, 0);
-      // Update scene ambient light intensity based on time of day
-      const sunIntensity = envContext ? envContext.sun.intensity : 0.5;
-      if (ctx.ambient) ctx.ambient.intensity = 0.3 + sunIntensity * 0.7;
+// Directional light follows sun (LEGACY - replaced by L1 Lighting)
+    if (ctx.firstVesselRef) {
+      const anchor = ctx.anchor;
+      const chunkCenter = { x: anchor.x, z: anchor.z };
+
+      // Position planet at anchor (follow player)
+      terrainMesh.position.set(anchor.x, -10, anchor.z);
+      oceanMesh.position.set(anchor.x, -10, anchor.z);
+      atmoGroup.position.set(anchor.x, 0, anchor.z);
+
+      // Update chunks around player
+      updateChunks(chunkManager, chunkCenter, ctx.scene, (dist) => dist < 8000 ? 32 : 16);
+
+      // Lerp atmosphere for altitude (surface approach)
+      const altitude = Math.max(0, Math.min(1, (anchor.y + 10) / 100));
+      lerpAtmosphereForAltitude(atmoGroup, altitude);
+      lerpSpaceToSurface(altitude, cloudGroup as any, terrainGroup, atmosphereGroup as any);
+
+      // Update environmental context per tick
+      if (planetTick % 60 === 0) updateEnvironmentalContext();
+      if (envContext) {
+        // Update ocean wind from EnvironmentalContext
+        const windDir = envContext.wind.direction;
+        // F8: mesh amplitude follows live storm state (calm shrinks, storm grows).
+        (oceanMesh as any)._tick?.(1 / 60, windDir, stormAmpScale(envContext.ocean.waveAmplitude));
+        // Update atmosphere cloud drift
+        (atmoGroup as any)._tick?.(1 / 60, envContext.wind.speed);
+        // Night visibility
+        const isNight = envContext.timeOfDay === "night";
+        updateNightVisibility(nightGroup, isNight, envContext.sun.intensity);
+      }
+
+      // Spawn facilities on empty land if none exist
+      if (facilitiesGroup.children.length === 0) {
+        const facilityPositions = [
+          { kind: "Spaceport" as const, x: 2000, z: 2000 },
+          { kind: "Hangar" as const, x: -1500, z: 1000 },
+          { kind: "Radar" as const, x: 3000, z: -500 },
+          { kind: "Military" as const, x: -2000, z: -2000 },
+          { kind: "Landing Pad" as const, x: 1000, z: -1500 },
+          { kind: "Storage" as const, x: -800, z: 2500 },
+          { kind: "Repair" as const, x: 2500, z: -2000 },
+          { kind: "Manufacturing" as const, x: -1000, z: -3000 },
+          { kind: "Comms" as const, x: 500, z: 3000 },
+          { kind: "Refit" as const, x: -3000, z: 500 },
+        ];
+        for (const f of facilityPositions) {
+          const h = (terrainMesh as any)._heightmap
+            ? 0 // simplified — terrain.ts getSlopeAt would need chunk coords
+            : 0;
+          const canBuild = canBuildOnEmptyLand(h, 0.1, h < -2);
+          if (canBuild) {
+            const mesh = createFacilityMesh(f.kind, { kind: f.kind, position: { x: f.x, y: 0, z: f.z } });
+            facilitiesGroup.add(mesh);
+            // Attach night lights
+            attachNightLights(mesh, { kind: f.kind, position: { x: f.x, y: 0, z: f.z }, health: 100 });
+            nightGroup.add(mesh);
+            // Geography marker
+            const marker = createGeographyMarker({
+              height: h, slope: 0.1, biome: "plains", latitude: 0,
+              distToCoast: 5000, forestDensity: 0, wetness: 0,
+              position: { x: f.x, y: 0, z: f.z },
+            }, [h]);
+            marker.position.set(f.x, h + 6, f.z);
+            geographyGroup.add(marker);
+          }
+        }
+      }
+
+      // L1 Lighting update
+      if (lightingState && envContext) {
+        const vesselPos = ctx.firstVesselRef ? new THREE.Vector3(
+          ctx.firstVesselRef.position.x,
+          ctx.firstVesselRef.position.y,
+          ctx.firstVesselRef.position.z
+        ) : null;
+        updateLighting(ctx, lightingState, ctx.anchor, vesselPos, {
+          sun: { intensity: envContext.sun.intensity, elevation: envContext.sun.elevation, color: envContext.sun.color },
+          timeOfDay: envContext.timeOfDay,
+          atmosphere: { density: envContext.atmosphere.density }
+        }, ctx.settings, 1/60);
+        updateQualityLighting(lightingState, ctx.settings, ctx.renderer);
+      }
+    }
     }
   };
 
@@ -345,6 +428,21 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     // Night update every 2s
     if (envContext && Math.floor(t / 2000) !== Math.floor((t - 1 / 60 * 1000) / 2000)) {
       updateNightVisibility(nightGroup, envContext.timeOfDay === "night", envContext.sun.intensity);
+    }
+
+    // ── L1 LIGHTING TICK (per frame) ──
+    if (lightingState && envContext && ctx.firstVesselRef) {
+      const vesselPos = new THREE.Vector3(
+        ctx.firstVesselRef.position.x,
+        ctx.firstVesselRef.position.y,
+        ctx.firstVesselRef.position.z
+      );
+      updateLighting(ctx, lightingState, ctx.anchor, vesselPos, {
+        sun: { intensity: envContext.sun.intensity, elevation: envContext.sun.elevation, color: envContext.sun.color },
+        timeOfDay: envContext.timeOfDay,
+        atmosphere: { density: envContext.atmosphere.density }
+      }, ctx.settings, 1/60);
+      updateQualityLighting(lightingState, ctx.settings, ctx.renderer);
     }
 
     // ── CINEMATIC ATMOSPHERE TICK (10.X.1-X.4) ──
@@ -460,6 +558,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     disposePlanetary10G(ctx.scene, planetary10G);
     disposeEmergency10X(ctx.scene, emergency10X);
     disposeCinematicC(ctx.scene, cinematicC);
+    // Dispose L1 Lighting
+    if (lightingState) disposeLighting(ctx, lightingState);
     for (const pl of ctx.planets) {
       ctx.scene.remove(pl.mesh); ctx.scene.remove(pl.atmo); if (pl.ring) ctx.scene.remove(pl.ring);
       for (const mo of pl.moons) ctx.scene.remove(mo.mesh);
