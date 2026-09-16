@@ -44,17 +44,23 @@ export function buildArkLibrary(): ArkBuildResult {
   // 1) KEEL — spine + 12 panel lines + 8 window strips (hard-surface)
   const keel = new THREE.Mesh(new THREE.CylinderGeometry(320, 380, 4200, 48), steel);
   keel.rotation.z = Math.PI / 2;
+  keel.castShadow = true;
+  keel.receiveShadow = true;
   g.add(keel);
   for (let i = 0; i < 12; i++) {
     const panel = new THREE.Mesh(new THREE.BoxGeometry(3800, 1.2, 6), steelHigh);
     panel.position.set(0, 310 + (i % 3) * 22 * (i < 6 ? 1 : -1), -30 + (i % 4) * 14);
     panel.rotation.z = Math.PI / 2;
     panel.rotation.y = (i / 12) * Math.PI * 0.08;
+    panel.castShadow = true;
+    panel.receiveShadow = true;
     g.add(panel);
   }
   for (let i = 0; i < 8; i++) {
     const win = new THREE.Mesh(new THREE.BoxGeometry(180, 4, 2), windowWarmMat);
     win.position.set(-1600 + i * 460, 205, 0);
+    win.castShadow = true;
+    win.receiveShadow = true;
     g.add(win);
   }
 
@@ -62,6 +68,8 @@ export function buildArkLibrary(): ArkBuildResult {
   const prow = new THREE.Mesh(new THREE.ConeGeometry(200, 1100, 40), steelHigh);
   prow.rotation.z = -Math.PI / 2;
   prow.position.x = 2400;
+  prow.castShadow = true;
+  prow.receiveShadow = true;
   g.add(prow);
   const cockpitDome = new THREE.Mesh(
     new THREE.SphereGeometry(42, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
@@ -74,18 +82,24 @@ export function buildArkLibrary(): ArkBuildResult {
     const sens = new THREE.Mesh(new THREE.CylinderGeometry(4 + i, 6 + i, 18, 8), steelHigh);
     sens.rotation.x = Math.PI / 2;
     sens.position.set(2920 + i * 14, (i - 1) * 18, 0);
+    sens.castShadow = true;
+    sens.receiveShadow = true;
     g.add(sens);
   }
 
   // 3) STERN + ENGINE HOUSING (4 nacelles) + exhaust ports + glow
   const stern = new THREE.Mesh(new THREE.SphereGeometry(360, 40, 40), steel);
   stern.position.x = -2300;
+  stern.castShadow = true;
+  stern.receiveShadow = true;
   g.add(stern);
   const enginePositions = [[-2520, 110, 110], [-2520, 110, -110], [-2520, -110, 110], [-2520, -110, -110]] as const;
   for (const [x, y, z] of enginePositions) {
     const housing = new THREE.Mesh(new THREE.CylinderGeometry(62, 82, 220, 20), steelHigh);
     housing.rotation.z = Math.PI / 2;
     housing.position.set(x, y, z);
+    housing.castShadow = true;
+    housing.receiveShadow = true;
     g.add(housing);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(), color: threeColor("#ff6a1a"), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.position.set(x - 140, y, z);
@@ -102,19 +116,27 @@ export function buildArkLibrary(): ArkBuildResult {
     g.add(port);
   }
 
-  // 4) SPIRE + observation deck + antenna + dish + light strip
+// 4) SPIRE + observation deck + antenna + dish + light strip
   const spire = new THREE.Mesh(new THREE.CylinderGeometry(90, 220, 1100, 36), steelHigh);
   spire.position.y = 700;
+  spire.castShadow = true;
+  spire.receiveShadow = true;
   g.add(spire);
   const spireCap = new THREE.Mesh(new THREE.ConeGeometry(120, 260, 36), amber);
   spireCap.position.y = 1380;
+  spireCap.castShadow = true;
+  spireCap.receiveShadow = true;
   g.add(spireCap);
   const obsDeck = new THREE.Mesh(new THREE.TorusGeometry(160, 22, 14, 40), steelHigh);
   obsDeck.rotation.x = Math.PI / 2;
   obsDeck.position.y = 860;
+  obsDeck.castShadow = true;
+  obsDeck.receiveShadow = true;
   g.add(obsDeck);
   const lightStrip = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 1080, 8), amber);
   lightStrip.position.y = 700;
+  lightStrip.castShadow = true;
+  lightStrip.receiveShadow = true;
   g.add(lightStrip);
   for (let i = 0; i < 4; i++) {
     const ant = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 220 + i * 70, 6), steelHigh);
@@ -137,6 +159,8 @@ export function buildArkLibrary(): ArkBuildResult {
     const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(radius, 26, 16, 72), r === 1 ? amber : steelHigh);
     ringMesh.rotation.x = 1.2 + r * 0.08;
     ringMesh.position.x = -400 + r * 500;
+    ringMesh.castShadow = true;
+    ringMesh.receiveShadow = true;
     rg.add(ringMesh);
     rings.push(ringMesh);
 
@@ -148,6 +172,8 @@ export function buildArkLibrary(): ArkBuildResult {
       const sy = Math.sin(ang) * radius * 0.5;
       strut.position.set(sx * 0.2, sy, Math.sin(ang) * 60);
       strut.lookAt(-400 + r * 500, 0, 0);
+      strut.castShadow = true;
+      strut.receiveShadow = true;
       rg.add(strut);
     }
 
@@ -164,6 +190,8 @@ export function buildArkLibrary(): ArkBuildResult {
     {
       const habGeom = new THREE.BoxGeometry(30, 18, 26);
       const habMesh = new THREE.InstancedMesh(habGeom, habitatMat, 24);
+      habMesh.castShadow = true;
+      habMesh.receiveShadow = true;
       for (let i = 0; i < 24; i++) {
         const ang = (i / 24) * Math.PI * 2;
         ringDummy.position.set((-400 + r * 500) + Math.cos(ang) * (radius - 12), Math.sin(ang) * (radius - 12), 0);
@@ -195,8 +223,12 @@ export function buildArkLibrary(): ArkBuildResult {
       // bay door — 2 panels
       const doorL = new THREE.Mesh(new THREE.BoxGeometry(1, 10, 9), steelHigh);
       doorL.position.set(0, 6, 4);
+      doorL.castShadow = true;
+      doorL.receiveShadow = true;
       const doorR = new THREE.Mesh(new THREE.BoxGeometry(1, 10, 9), steelHigh);
       doorR.position.set(0, -6, 4);
+      doorR.castShadow = true;
+      doorR.receiveShadow = true;
       port.add(doorL, doorR);
       rg.add(port);
     }
@@ -207,11 +239,15 @@ export function buildArkLibrary(): ArkBuildResult {
       const deck = new THREE.Mesh(new THREE.BoxGeometry(80, 3, 42), steelHigh);
       deck.position.set((-400 + r * 500) + Math.cos(ang) * (radius + 26), Math.sin(ang) * (radius + 26), 0);
       deck.rotation.z = ang;
+      deck.castShadow = true;
+      deck.receiveShadow = true;
       rg.add(deck);
       for (let k = 0; k < 2; k++) {
         const rail = new THREE.Mesh(new THREE.BoxGeometry(76, 1.2, 1.2), steelHigh);
         rail.position.set(deck.position.x, deck.position.y + (k ? 6 : -6), deck.position.z + 18);
         rail.rotation.z = ang;
+        rail.castShadow = true;
+        rail.receiveShadow = true;
         rg.add(rail);
       }
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(78, 0.6, 2), amber);
@@ -224,6 +260,8 @@ export function buildArkLibrary(): ArkBuildResult {
     {
       const winGeom = new THREE.BoxGeometry(4.2, 2.6, 0.8);
       const winMesh = new THREE.InstancedMesh(winGeom, windowWarmMat, 96);
+      winMesh.castShadow = true;
+      winMesh.receiveShadow = true;
       for (let w = 0; w < 96; w++) {
         const ang = (w / 96) * Math.PI * 2 + (w % 2) * 0.02;
         const radJ = radius + (w % 3) * 4 - 4;
@@ -248,6 +286,8 @@ export function buildArkLibrary(): ArkBuildResult {
     const spar = new THREE.Mesh(new THREE.BoxGeometry(140, 30, 1200), steelHigh);
     spar.position.set(x, 0, 0);
     spar.rotation.y = Math.PI / 2;
+    spar.castShadow = true;
+    spar.receiveShadow = true;
     g.add(spar);
     const strip = new THREE.Mesh(new THREE.BoxGeometry(138, 0.8, 2), amber);
     strip.position.set(x, 16, 0);
@@ -258,6 +298,8 @@ export function buildArkLibrary(): ArkBuildResult {
       brace.position.set(x, 0, 0);
       brace.rotation.y = Math.PI / 2;
       brace.rotation.z = k ? 0.35 : -0.35;
+      brace.castShadow = true;
+      brace.receiveShadow = true;
       g.add(brace);
     }
   }
@@ -267,23 +309,33 @@ export function buildArkLibrary(): ArkBuildResult {
   for (const [x, y, z] of mountPositions) {
     const mount = new THREE.Mesh(new THREE.BoxGeometry(15, 8, 40), steelHigh);
     mount.position.set(x, y, z);
+    mount.castShadow = true;
+    mount.receiveShadow = true;
     g.add(mount);
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 60, 8), amber);
     barrel.rotation.x = Math.PI / 2;
     barrel.position.set(x, y, z - 32);
+    barrel.castShadow = true;
+    barrel.receiveShadow = true;
     g.add(barrel);
   }
 
   // 8) DOCKING BAY — opening di hull tengah
   const bayFrame = new THREE.Mesh(new THREE.BoxGeometry(124, 84, 6), amber);
   bayFrame.position.set(200, -140, 0);
+  bayFrame.castShadow = true;
+  bayFrame.receiveShadow = true;
   g.add(bayFrame);
   const bayInner = new THREE.Mesh(new THREE.BoxGeometry(120, 80, 200), new THREE.MeshStandardMaterial({ color: threeColor("#04070d"), roughness: 1, metalness: 0 }));
   bayInner.position.set(200, -140, 40);
+  bayInner.castShadow = true;
+  bayInner.receiveShadow = true;
   g.add(bayInner);
   for (let k = 0; k < 2; k++) {
     const doorLine = new THREE.Mesh(new THREE.BoxGeometry(60, 2, 1), steelHigh);
     doorLine.position.set(200 + (k ? 30 : -30), -140 + (k ? 38 : -38), -2);
+    doorLine.castShadow = true;
+    doorLine.receiveShadow = true;
     g.add(doorLine);
   }
 
@@ -291,9 +343,13 @@ export function buildArkLibrary(): ArkBuildResult {
   for (let i = 0; i < 4; i++) {
     const pod = new THREE.Mesh(new THREE.BoxGeometry(50, 40, 80), steel);
     pod.position.set(-800 + i * 520, -210, 0);
+    pod.castShadow = true;
+    pod.receiveShadow = true;
     g.add(pod);
     const strut = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 80, 6), steelHigh);
     strut.position.set(-800 + i * 520, -160, 0);
+    strut.castShadow = true;
+    strut.receiveShadow = true;
     g.add(strut);
   }
 
@@ -302,12 +358,16 @@ export function buildArkLibrary(): ArkBuildResult {
     const h = 220 + (i % 3) * 90;
     const ant = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, h, 6), steelHigh);
     ant.position.set(-900 + i * 360, 380 + h / 2, (i % 2 ? 1 : -1) * 90);
+    ant.castShadow = true;
+    ant.receiveShadow = true;
     g.add(ant);
     antennas.push(ant);
     if (i === 1 || i === 4) {
       const dish = new THREE.Mesh(new THREE.SphereGeometry(20, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), steelHigh);
       dish.position.set(-900 + i * 360, 380 + h + 12, (i % 2 ? 1 : -1) * 90);
       dish.rotation.x = Math.PI / 2;
+      dish.castShadow = true;
+      dish.receiveShadow = true;
       g.add(dish);
     }
   }
@@ -318,6 +378,8 @@ export function buildArkLibrary(): ArkBuildResult {
     const [x, y, z] = shieldPos[i];
     const gen = new THREE.Mesh(new THREE.SphereGeometry(15, 12, 10), tech);
     gen.position.set(x, y, z);
+    gen.castShadow = true;
+    gen.receiveShadow = true;
     g.add(gen);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(), color: threeColor(colors.tech), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.position.set(x, y, z);
@@ -332,6 +394,8 @@ export function buildArkLibrary(): ArkBuildResult {
   g.add(obs);
   const obsInner = new THREE.Mesh(new THREE.BoxGeometry(18, 18, 18), steelHigh);
   obsInner.position.set(400, 210, 0);
+  obsInner.castShadow = true;
+  obsInner.receiveShadow = true;
   g.add(obsInner);
 
   return { group: g, rings, ringGroups, engines, shields, antennas, habitatMeshes, windowMeshes };

@@ -80,12 +80,16 @@ export function buildVessel(texSize = 256): THREE.Group {
   // Fuselage utama — tapered box (studio hard-surface)
   const fuselage = new THREE.Mesh(new THREE.BoxGeometry(18, 10, 52), hullMat);
   fuselage.position.y = 1.5;
+  fuselage.castShadow = true;
+  fuselage.receiveShadow = true;
   g.add(fuselage);
 
   // Nose — cone runcing depan
   const nose = new THREE.Mesh(new THREE.ConeGeometry(9, 28, 12), hullHighMat);
   nose.rotation.x = Math.PI / 2;
   nose.position.set(0, 1.5, -40);
+  nose.castShadow = true;
+  nose.receiveShadow = true;
   g.add(nose);
 
   // Cockpit canopy — dome kaca di atas depan
@@ -99,6 +103,8 @@ export function buildVessel(texSize = 256): THREE.Group {
   frame.position.set(0, 5.8, -18);
   frame.rotation.x = Math.PI / 2;
   frame.scale.set(1, 1.35, 1);
+  frame.castShadow = true;
+  frame.receiveShadow = true;
   g.add(frame);
 
   // Delta wings — swept-back hard-surface (kiri/kanan)
@@ -112,20 +118,28 @@ export function buildVessel(texSize = 256): THREE.Group {
   wingExtrude.translate(0, 0, -1.1);
   const wingL = new THREE.Mesh(wingExtrude, hullHighMat);
   wingL.position.set(9, 0.5, 6);
+  wingL.castShadow = true;
+  wingL.receiveShadow = true;
   const wingRExtrude = wingExtrude.clone();
   wingRExtrude.scale(-1, 1, 1);
   (wingRExtrude as THREE.BufferGeometry).computeVertexNormals();
   const wingR = new THREE.Mesh(wingRExtrude, hullHighMat);
   wingR.position.set(-9, 0.5, 6);
+  wingR.castShadow = true;
+  wingR.receiveShadow = true;
   g.add(wingL, wingR);
 
   // Canard depan kecil
   const canardL = new THREE.Mesh(new THREE.BoxGeometry(10, 1.4, 7), accentMat);
   canardL.position.set(12, 1.2, -14);
   canardL.rotation.y = 0.55;
+  canardL.castShadow = true;
+  canardL.receiveShadow = true;
   const canardR = canardL.clone();
   canardR.position.set(-12, 1.2, -14);
   canardR.rotation.y = -0.55;
+  canardR.castShadow = true;
+  canardR.receiveShadow = true;
   g.add(canardL, canardR);
 
   // Engine nacelles — 2 cylinder di belakang
@@ -133,8 +147,12 @@ export function buildVessel(texSize = 256): THREE.Group {
   const nacL = new THREE.Mesh(nacelleGeom, engineMetalMat);
   nacL.rotation.x = Math.PI / 2;
   nacL.position.set(10, 1.2, 28);
+  nacL.castShadow = true;
+  nacL.receiveShadow = true;
   const nacR = nacL.clone();
   nacR.position.set(-10, 1.2, 28);
+  nacR.castShadow = true;
+  nacR.receiveShadow = true;
   g.add(nacL, nacR);
   // Engine glow — sprite di exhaust
   const engGlowTex = makeGlowTexture();
@@ -160,22 +178,32 @@ export function buildVessel(texSize = 256): THREE.Group {
   const mountGeom = new THREE.BoxGeometry(5, 2.2, 8);
   const mountL = new THREE.Mesh(mountGeom, accentMat);
   mountL.position.set(34, 0.2, 12);
+  mountL.castShadow = true;
+  mountL.receiveShadow = true;
   const mountR = mountL.clone();
   mountR.position.set(-34, 0.2, 12);
+  mountR.castShadow = true;
+  mountR.receiveShadow = true;
   g.add(mountL, mountR);
   const barrelGeom = new THREE.CylinderGeometry(0.9, 1.1, 14, 8);
   const barrelMat = new THREE.MeshStandardMaterial({ color: threeColor("#2a3448"), metalness: 0.85, roughness: 0.2 });
   const barrelL = new THREE.Mesh(barrelGeom, barrelMat);
   barrelL.rotation.x = Math.PI / 2;
   barrelL.position.set(34, 0.2, 4);
+  barrelL.castShadow = true;
+  barrelL.receiveShadow = true;
   const barrelR = barrelL.clone();
   barrelR.position.set(-34, 0.2, 4);
+  barrelR.castShadow = true;
+  barrelR.receiveShadow = true;
   g.add(barrelL, barrelR);
 
   // Spine fin atas
   const fin = new THREE.Mesh(new THREE.BoxGeometry(1.2, 9, 16), accentMat);
   fin.position.set(0, 9.5, 10);
   fin.rotation.x = 0.22;
+  fin.castShadow = true;
+  fin.receiveShadow = true;
   g.add(fin);
 
   // Shield bubble — tetap, opacity ikut health (di-update luar jika perlu)

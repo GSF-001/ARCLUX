@@ -36,6 +36,7 @@ export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpe
   const mesh = new THREE.Mesh(geom, mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = -6;
+  mesh.receiveShadow = true;
 
   const g = 9.81;
   const waves = [
