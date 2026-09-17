@@ -64,15 +64,40 @@ export function createAtmosphere(radius: number, kind: PlanetKind): THREE.Group 
   mie.name = "mie";
   g.add(mie);
 
-  (g as any)._tick = (dt: number, windSpeed = 2) => {
+  (g as any)._tick = (dt: number, windSpeed = 2, sunElevation = 0.5) => {
     cloud.rotation.y += dt * 0.00042 * (1 + windSpeed * 0.08);
     haze.rotation.y += dt * 0.00018;
+    // A4 — Sunset ramp: 3-stop color shift based on sun elevation
+    // noon (elev>0.5) = blue, sunset (0..0.5) = orange→red, night (<0) = dark blue
+    const cloudMat = cloud.material as THREE.MeshStandardMaterial;
+    if (sunElevation > 0.5) {
+      // Day — neutral
+      cloudMat.emissive.setHex(0x000000);
+      cloudMat.emissiveIntensity = 0;
+    } else if (sunElevation > 0) {
+      // Sunset — warm edge-lit clouds
+      const t = sunElevation / 0.5;
+      const r = 1, g = 0.5 + t * 0.3, b = 0.2 + t * 0.6;
+      cloudMat.emissive.setRGB(r * (1 - t) * 0.3, g * (1 - t) * 0.2, b * (1 - t) * 0.15);
+      cloudMat.emissiveIntensity = (1 - t) * 0.6;
+    } else {
+      // Night — clouds dim + slight moonlight blue
+      cloudMat.emissive.setHex(0x1a2a4a);
+      cloudMat.emissiveIntensity = 0.08;
+    }
+    // Storm darkening: coverage > 0.7 darkens clouds
+    const stormDark = Math.max(0, (cloudMat.opacity - 0.3) * 0.5);
+    cloudMat.emissiveIntensity = Math.max(0, cloudMat.emissiveIntensity - stormDark);
   };
 
   return g;
 }
 
-export function lerpAtmosphereForAltitude(group: THREE.Group, altitude: number): void {
+/**
+ * A4 — lerpAtmosphereForAltitude + sun elevation for sunset ramp.
+ * Extended to accept sunElevation for color shifting.
+ */
+export function lerpAtmosphereForAltitude(group: THREE.Group, altitude: number, sunElevation?: number): void {
   const t = Math.max(0, Math.min(1, altitude));
   const clouds = group.getObjectByName("clouds") as THREE.Mesh | null;
   if (clouds) (clouds.material as THREE.MeshStandardMaterial).opacity = 0.42 * (1 - t * 0.55);
@@ -82,4 +107,9 @@ export function lerpAtmosphereForAltitude(group: THREE.Group, altitude: number):
   if (mie) (mie.material as THREE.MeshBasicMaterial).opacity = 0.015 * (1 - t * 0.6);
   const atmo = group.getObjectByName("atmoShell") as THREE.Mesh | null;
   if (atmo) (atmo.material as THREE.MeshStandardMaterial).opacity = 0.13 * (1 - t * 0.4);
+  // A4 — Update cloud sunset coloring if sunElevation provided
+  if (sunElevation !== undefined && clouds) {
+    const tick = (group as any)._tick;
+    if (tick) tick(0, 2, sunElevation);
+  }
 }

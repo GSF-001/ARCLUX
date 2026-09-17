@@ -181,7 +181,7 @@ konverter CSS↔THREE) menjadi:
 | L1 lighting | ✅ DONE (PR #740) | Lumen + VSM | Key/fill/rim → Light Rig |
 | W1 weapon | ✅ DONE (PR #741) | NS_Weapon_* | Pool → Niagara pool |
 | D1 damage | ✅ DONE (PR #742) | Material swap + VFX | Level visual SAMA |
-| A1–A4 planet | ⬜ antri | Nanite + M_* + volumetrik | Doktrin kamera TETAP |
+| A1–A4 planet | ✅ DONE (PR #743) | Nanite + M_* + volumetrik | Doktrin kamera TETAP |
 | U1–U12 UI | ⬜ antri | UMG + NPE | Desain SAMA, mesin beda |
 | H1 dunia hidup | ⬜ antri | Crowd AI sederhana + anim | f(timeSec) → Timeline |
 | R1 gaps | ⬜ antri | Per item | Presentasi-only TETAP |

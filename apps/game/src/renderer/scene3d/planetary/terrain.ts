@@ -92,16 +92,55 @@ export function heightmapToGeometry(h: Float32Array, lod: number, size: number):
   for (let i = 0; i < pos.count; i++) {
     const height = h[i];
     pos.setZ(i, height);
-    let r = 0.25, g = 0.18, b = 0.12;
-    if (height > 320) { r = 0.96; g = 0.97; b = 0.98; }
-    else if (height > 180) { const t = (height - 180) / 140; r = 0.52 + t * 0.18; g = 0.44 + t * 0.12; b = 0.36; }
-    else if (height > 90) { const t = (height - 90) / 90; r = 0.42 + t * 0.1; g = 0.34 + t * 0.1; b = 0.28; }
-    else if (height > 30) { const t = (height - 30) / 60; r = 0.33 + t * 0.12; g = 0.29 + t * 0.1; b = 0.19; }
-    else if (height > -5) { r = 0.76; g = 0.62; b = 0.38; }
-    else if (height > -25) { r = 0.62; g = 0.52; b = 0.36; }
-    else { r = 0.48; g = 0.42; b = 0.32; }
     const slope = getSlopeAt(h, lod, i % (lod + 1), Math.floor(i / (lod + 1)));
-    if (slope > 0.55) { r *= 0.92; g *= 0.9; b *= 0.88; }
+    // A2 — Biome-aware coloring with cliff strata
+    let r = 0.25, g = 0.18, b = 0.12;
+    if (height > 320) {
+      // Snow cap
+      r = 0.96; g = 0.97; b = 0.98;
+    } else if (height > 220) {
+      // Alpine rock + snow patches
+      const t = (height - 220) / 100;
+      r = 0.45 + t * 0.51; g = 0.40 + t * 0.57; b = 0.35 + t * 0.63;
+      // Strata bands
+      const strata = Math.sin(height * 0.15) * 0.06;
+      r += strata; g += strata * 0.8; b += strata * 0.6;
+    } else if (height > 140) {
+      // Cliff strata — steep gradient bands
+      const t = (height - 140) / 80;
+      r = 0.42 + t * 0.08; g = 0.34 + t * 0.08; b = 0.28 + t * 0.07;
+      // Horizontal strata lines (geological layers)
+      const strata = Math.sin(height * 0.25) * 0.05;
+      r += strata; g += strata * 0.9; b += strata * 0.7;
+    } else if (height > 80) {
+      // Highland — richer soil
+      const t = (height - 80) / 60;
+      r = 0.33 + t * 0.12; g = 0.32 + t * 0.08; b = 0.22 + t * 0.08;
+    } else if (height > 30) {
+      // Lowland forest floor — greener
+      const t = (height - 30) / 50;
+      r = 0.28 + t * 0.08; g = 0.35 + t * 0.05; b = 0.18 + t * 0.05;
+    } else if (height > -5) {
+      // Beach/sand — warm
+      r = 0.76; g = 0.62; b = 0.38;
+    } else if (height > -25) {
+      // Shallow water bed
+      r = 0.32; g = 0.42; b = 0.48;
+    } else {
+      // Deep water bed
+      r = 0.18; g = 0.28; b = 0.38;
+    }
+    // Cliff strata darkening for steep slopes
+    if (slope > 0.55) {
+      const cliffDark = 0.85 + (slope - 0.55) * 0.3;
+      r *= cliffDark; g *= cliffDark * 0.95; b *= cliffDark * 0.9;
+      // Exposed rock on very steep cliffs
+      if (slope > 0.75) {
+        r = r * 0.7 + 0.35 * 0.3;
+        g = g * 0.7 + 0.30 * 0.3;
+        b = b * 0.7 + 0.25 * 0.3;
+      }
+    }
     colors.push(r, g, b);
   }
   geom.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));

@@ -24,6 +24,29 @@ export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpe
     side: THREE.DoubleSide,
     vertexColors: true,
   });
+
+  // A3 — Foam fresnel via onBeforeCompile: foam whitecap appears at
+  // glancing angles and crests, NOT at flat surfaces (realistic ocean).
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uFoamIntensity = { value: 0 };
+    shader.uniforms.uTime = { value: 0 };
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <common>",
+      `#include <common>
+       uniform float uFoamIntensity;
+       uniform float uTime;`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <dithering_fragment>",
+      `// A3: Foam fresnel — whitecap at glancing angles + crests
+       float fresnel = pow(1.0 - max(dot(vNormal, normalize(vViewPosition)), 0.0), 3.0);
+       float foam = fresnel * uFoamIntensity;
+       gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.92, 0.95, 0.98), foam * 0.45);
+       #include <dithering_fragment>`,
+    );
+    (mat as any).__shader = shader;
+  };
+
   const colors: number[] = [];
   const pos = geom.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
@@ -57,6 +80,7 @@ export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpe
     const p = geom.attributes.position as THREE.BufferAttribute;
     const col = geom.attributes.color as THREE.BufferAttribute;
     const cosD = Math.cos(windDir), sinD = Math.sin(windDir);
+    let maxFoam = 0;
     for (let i = 0; i < p.count; i++) {
       const ox = basePositions[i * 3];
       const oz = basePositions[i * 3 + 1];
@@ -80,10 +104,17 @@ export function createOceanMesh(opts: OceanOpts = { size: 6000, seg: 64, windSpe
       const g2 = 0.29 + depthT * 0.1 + foam * 0.32;
       const b = 0.54 + depthT * 0.16 + foam * 0.22;
       col.setXYZ(i, r, g2, b);
+      maxFoam = Math.max(maxFoam, foam);
     }
     p.needsUpdate = true;
     col.needsUpdate = true;
     geom.computeVertexNormals();
+    // A3 — Update foam fresnel shader intensity (whitecap ∝ wind + ampScale)
+    const shader = (mat as any).__shader;
+    if (shader) {
+      shader.uniforms.uFoamIntensity.value = Math.min(1, maxFoam * 0.5 + (ampScale - 1) * 0.3);
+      shader.uniforms.uTime.value = t;
+    }
   };
 
   return mesh;
