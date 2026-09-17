@@ -59,6 +59,7 @@ import { disposeExplosions, spawnExplosion, spawnExplosionLarge, spawnControlled
 import { applyQuality } from "./quality";
 import { createLighting, updateLighting, updateQualityLighting, disposeLighting, type LightingState } from "./lighting";
 import { createWeaponPool, tickWeapons, disposeWeaponPool, spawnProjectileTracer, spawnBeam, spawnMissile, spawnMuzzle, spawnImpact, spawnShockwave, type WeaponPool, type WeaponArchetype, type ImpactKind } from "./weapons";
+import { resolveDamageVisuals, applyDamageVisuals, tickDamageVisuals, createDamageApplyState, damageToHudBars, disposeDamageApplyState, type DamageVisualState } from "./damage";
 import type { CockpitOverlay } from "../cockpitOverlay";
 
 export type { CameraMode };
@@ -228,8 +229,18 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     }
     // Pass kedua — anchor final.
     for (const e of region.entities.values()) {
-      if (e.kind === "vessel") updateVessel(ctx, e as VesselEntity);
-      else {
+      if (e.kind === "vessel") {
+        const ve = e as VesselEntity;
+        updateVessel(ctx, ve);
+        // D1: resolve damage visuals per vessel (event-driven, not per-frame)
+        const grp = ctx.vessels.get(ve.id);
+        if (grp && ve.vessel.systems) {
+          const damageState = resolveDamageVisuals(ve.vessel.systems);
+          let applyState = ctx.damageStates.get(ve.id);
+          if (!applyState) { applyState = createDamageApplyState(); ctx.damageStates.set(ve.id, applyState); }
+          applyDamageVisuals(ctx, grp, damageState, applyState);
+        }
+      } else {
         const se = e as StationEntity;
         const grp = ensureEntry(ctx, se.id, () => buildStation(), ctx.stations);
         const p = clampLocal(new THREE.Vector3(se.position.x, se.position.y, se.position.z), ctx.anchor);
@@ -428,6 +439,11 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     updateCosmic(ctx, t);
     updateArk(ctx, t);
     tickWeapons(ctx, 1 / 60);
+    // D1: tick smoke/fire visuals for all damaged vessels
+    const windDir = envContext?.wind.direction ?? 0;
+    for (const [, applyState] of ctx.damageStates) {
+      tickDamageVisuals(ctx, applyState, t, windDir);
+    }
     updateExplosions(ctx);
 
     // ── PLANETARY TICK (10.2-10.6) ──
@@ -565,6 +581,9 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     disposeExplosions(ctx);
     // Dispose W1 Weapon pool
     if (ctx.weaponPool) { ctx.scene.remove(ctx.weaponPool.group); disposeWeaponPool(ctx.weaponPool); ctx.weaponPool = null; }
+    // Dispose D1 damage states
+    for (const [, applyState] of ctx.damageStates) disposeDamageApplyState(ctx, applyState);
+    ctx.damageStates.clear();
     // Dispose planetary
     ctx.scene.remove(terrainMesh); ctx.scene.remove(oceanMesh); ctx.scene.remove(atmoGroup);
     disposeGroup(terrainMesh as any); disposeGroup(oceanMesh as any); disposeGroup(atmoGroup);

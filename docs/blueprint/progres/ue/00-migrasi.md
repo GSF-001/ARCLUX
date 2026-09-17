@@ -178,9 +178,9 @@ konverter CSS↔THREE) menjadi:
 | M1 material kit | ✅ DONE (PR #730) | M_Hull + T_* bake | Seed SAMA → konsisten |
 | U4 cockpit | ✅ DONE (PR #730) | CockpitWidget 3D + Post | Shake transform → UMG |
 | P1 grade+touch | ✅ DONE (PR #730) | Post Process Material | Urutan SAMA |
-| L1 lighting | ⬜ antri | Lumen + VSM | Key/fill/rim → Light Rig |
-| W1 weapon | ⬜ antri | NS_Weapon_* | Pool → Niagara pool |
-| D1 damage | ⬜ antri | Material swap + VFX | Level visual SAMA |
+| L1 lighting | ✅ DONE (PR #740) | Lumen + VSM | Key/fill/rim → Light Rig |
+| W1 weapon | ✅ DONE (PR #741) | NS_Weapon_* | Pool → Niagara pool |
+| D1 damage | ✅ DONE (PR #742) | Material swap + VFX | Level visual SAMA |
 | A1–A4 planet | ⬜ antri | Nanite + M_* + volumetrik | Doktrin kamera TETAP |
 | U1–U12 UI | ⬜ antri | UMG + NPE | Desain SAMA, mesin beda |
 | H1 dunia hidup | ⬜ antri | Crowd AI sederhana + anim | f(timeSec) → Timeline |
