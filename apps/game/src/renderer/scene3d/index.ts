@@ -55,9 +55,10 @@ import { buildCosmic, disposeCosmic, updateCosmic } from "./cosmic";
 import { buildArk, updateArk } from "./ark";
 import { clampLocal, ensureEntry, updateVessel, updateVesselInterp } from "./vessels";
 import { buildStation } from "./stations";
-import { disposeExplosions, spawnExplosion, updateExplosions } from "./explosions";
+import { disposeExplosions, spawnExplosion, spawnExplosionLarge, spawnControlledExplosion, updateExplosions } from "./explosions";
 import { applyQuality } from "./quality";
 import { createLighting, updateLighting, updateQualityLighting, disposeLighting, type LightingState } from "./lighting";
+import { createWeaponPool, tickWeapons, disposeWeaponPool, spawnProjectileTracer, spawnBeam, spawnMissile, spawnMuzzle, spawnImpact, spawnShockwave, type WeaponPool, type WeaponArchetype, type ImpactKind } from "./weapons";
 import type { CockpitOverlay } from "../cockpitOverlay";
 
 export type { CameraMode };
@@ -68,13 +69,20 @@ export interface Scene3D {
   setCameraMode(mode: CameraMode): void;
   applyQuality(settings: GameSettings): void;
   setLookYawPitch(yaw: number, pitch: number): void;
-  setSfxHandler(cb: (kind: "explosion" | "shield" | "debris") => void): void;
+  setSfxHandler(cb: (kind: "explosion" | "shield" | "debris" | "weapon" | "beam") => void): void;
   addGroup(g: THREE.Group): void;
   removeGroup(g: THREE.Group): void;
   /** Iris 6: FPS interior camera follow local pos */
   setInteriorCamera(pos: { x: number; y: number; z: number }, yaw: number, pitch: number): void;
   /** 10.V U4: daftarkan overlay droplet + HUD root (sekali saat boot). */
   setCockpitPresentation(overlay: CockpitOverlay | null, hudRoot: HTMLElement | null): void;
+  /** 10.V W1: weapon VFX spawning (presentation only, damage from sim). */
+  spawnTracer(from: THREE.Vector3, to: THREE.Vector3, tint?: number): void;
+  spawnBeam(from: THREE.Vector3, to: THREE.Vector3, width?: number, heat?: number): void;
+  spawnMissile(from: THREE.Vector3, dir: THREE.Vector3, tint?: number): void;
+  spawnMuzzle(pos: THREE.Vector3, kind?: WeaponArchetype): void;
+  spawnImpact(pos: THREE.Vector3, kind?: ImpactKind, normal?: THREE.Vector3): void;
+  spawnShockwave(pos: THREE.Vector3, radius?: number): void;
   dispose(): void;
 }
 
@@ -186,6 +194,10 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
 
   // L1 Lighting init
   lightingState = createLighting(ctx, bootSettings);
+
+  // W1 Weapon pool init
+  ctx.weaponPool = createWeaponPool();
+  ctx.scene.add(ctx.weaponPool.group);
 
   buildStars(ctx);
   buildNebula(ctx, 9);
@@ -415,6 +427,7 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     updatePlanets(ctx, tick);
     updateCosmic(ctx, t);
     updateArk(ctx, t);
+    tickWeapons(ctx, 1 / 60);
     updateExplosions(ctx);
 
     // ── PLANETARY TICK (10.2-10.6) ──
@@ -550,6 +563,8 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     for (const m of ctx.stations.values()) disposeGroup(m);
     ctx.vessels.clear(); ctx.stations.clear();
     disposeExplosions(ctx);
+    // Dispose W1 Weapon pool
+    if (ctx.weaponPool) { ctx.scene.remove(ctx.weaponPool.group); disposeWeaponPool(ctx.weaponPool); ctx.weaponPool = null; }
     // Dispose planetary
     ctx.scene.remove(terrainMesh); ctx.scene.remove(oceanMesh); ctx.scene.remove(atmoGroup);
     disposeGroup(terrainMesh as any); disposeGroup(oceanMesh as any); disposeGroup(atmoGroup);
@@ -594,11 +609,18 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     setCameraMode: (mode: CameraMode) => setCameraMode(ctx, mode),
     applyQuality: (s: GameSettings) => applyQuality(ctx, s),
     setLookYawPitch: (yaw: number, pitch: number) => setLookYawPitch(ctx, yaw, pitch),
-    setSfxHandler: (cb: (kind: "explosion" | "shield" | "debris") => void) => { ctx.sfxHandler = cb; },
+    setSfxHandler: (cb: (kind: "explosion" | "shield" | "debris" | "weapon" | "beam") => void) => { ctx.sfxHandler = cb; },
     addGroup: (g: THREE.Group) => ctx.scene.add(g),
     removeGroup: (g: THREE.Group) => ctx.scene.remove(g),
     setInteriorCamera,
     setCockpitPresentation,
+    // 10.V W1 — weapon VFX facades (presentation only, damage from sim)
+    spawnTracer: (from: THREE.Vector3, to: THREE.Vector3, tint?: number) => spawnProjectileTracer(ctx, from, to, tint),
+    spawnBeam: (from: THREE.Vector3, to: THREE.Vector3, width?: number, heat?: number) => spawnBeam(ctx, from, to, width, heat),
+    spawnMissile: (from: THREE.Vector3, dir: THREE.Vector3, tint?: number) => spawnMissile(ctx, from, dir, tint),
+    spawnMuzzle: (pos: THREE.Vector3, kind?: WeaponArchetype) => spawnMuzzle(ctx, pos, kind),
+    spawnImpact: (pos: THREE.Vector3, kind?: ImpactKind, normal?: THREE.Vector3) => spawnImpact(ctx, pos, kind, normal),
+    spawnShockwave: (pos: THREE.Vector3, radius?: number) => spawnShockwave(ctx, pos, radius),
     dispose,
   };
 }

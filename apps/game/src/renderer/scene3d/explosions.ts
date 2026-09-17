@@ -177,6 +177,134 @@ export function updateExplosions(ctx: SceneContext): void {
   }
 }
 
+/**
+ * W1.4 — Large explosion (missile hit + kill). Bigger burst, more debris,
+ * shockwave ring. TTL 2.5s. Reuses existing Explosion struct for update loop.
+ */
+export function spawnExplosionLarge(ctx: SceneContext, pos: THREE.Vector3): void {
+  const { scene, sfxHandler } = ctx;
+  sfxHandler?.("explosion");
+  const p = pos.clone();
+  // 8 burst sprites — larger, brighter
+  const burstColors = ["#ffffff", "#ffcc44", "#ff6a00", "#ff3a00", "#ff1a00", "#aa1a05", "#5a0a03", "#2a0a03"];
+  const burst: THREE.Sprite[] = [];
+  for (let i = 0; i < 8; i++) {
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: makeGlowTexture(), color: new THREE.Color(burstColors[i]), transparent: true, opacity: 1,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    spr.position.copy(p);
+    spr.position.x += (Math.random() - 0.5) * 12;
+    spr.position.y += (Math.random() - 0.5) * 12;
+    spr.position.z += (Math.random() - 0.5) * 12;
+    spr.scale.set(30 + i * 10, 30 + i * 10, 1);
+    scene.add(spr);
+    burst.push(spr);
+  }
+  // 18 debris fragments — larger
+  const debris: THREE.Mesh[] = [];
+  const debrisVel: THREE.Vector3[] = [];
+  for (let i = 0; i < 18; i++) {
+    const s = 3 + Math.random() * 5;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(s, s, s),
+      new THREE.MeshStandardMaterial({ color: threeColor(i % 3 ? colors.hullHigh : colors.hull), metalness: 0.5, roughness: 0.5, transparent: true, opacity: 1 }));
+    m.position.copy(p);
+    m.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    scene.add(m);
+    debris.push(m);
+    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    debrisVel.push(dir.multiplyScalar(25 + Math.random() * 55));
+  }
+  // 40 sparks
+  const sparks: THREE.Line[] = [];
+  const sparkVel: THREE.Vector3[] = [];
+  const sparkMatBase = new THREE.LineBasicMaterial({ color: threeColor("#ffd67a"), transparent: true, opacity: 1 });
+  for (let i = 0; i < 40; i++) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([p.x, p.y, p.z, p.x, p.y, p.z]), 3));
+    const mat = sparkMatBase.clone();
+    mat.color = new THREE.Color(`hsl(${28 + Math.random() * 18}, 100%, ${60 + Math.random() * 30}%)`);
+    const line = new THREE.Line(g, mat);
+    scene.add(line);
+    sparks.push(line);
+    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    sparkVel.push(dir.multiplyScalar(100 + Math.random() * 150));
+  }
+  // Large white flash
+  const flash = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeGlowTexture(), color: new THREE.Color(0xffffff), transparent: true, opacity: 0.98,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  flash.position.copy(p);
+  flash.scale.set(80, 80, 1);
+  scene.add(flash);
+  ctx.explosions.push({ burst, debris, debrisVel, sparks, sparkVel, flash, pos: p, t: 0, ttlDebris: 2.5 });
+}
+
+/**
+ * W1.4 — Controlled explosion (subsystem failure, smaller). Used by §11
+ * damage visual mapping. Smaller burst, fewer debris, short-lived smoke.
+ */
+export function spawnControlledExplosion(ctx: SceneContext, pos: THREE.Vector3): void {
+  const { scene, sfxHandler } = ctx;
+  sfxHandler?.("explosion");
+  const p = pos.clone();
+  // 3 burst sprites — smaller
+  const burstColors = ["#ff6a00", "#ff3a00", "#8a1a05"];
+  const burst: THREE.Sprite[] = [];
+  for (let i = 0; i < 3; i++) {
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: makeGlowTexture(), color: new THREE.Color(burstColors[i]), transparent: true, opacity: 1,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    spr.position.copy(p);
+    spr.position.x += (Math.random() - 0.5) * 5;
+    spr.position.y += (Math.random() - 0.5) * 5;
+    spr.position.z += (Math.random() - 0.5) * 5;
+    spr.scale.set(12 + i * 5, 12 + i * 5, 1);
+    scene.add(spr);
+    burst.push(spr);
+  }
+  // 6 debris fragments — small
+  const debris: THREE.Mesh[] = [];
+  const debrisVel: THREE.Vector3[] = [];
+  for (let i = 0; i < 6; i++) {
+    const s = 1.5 + Math.random() * 2.5;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(s, s, s),
+      new THREE.MeshStandardMaterial({ color: threeColor(colors.hull), metalness: 0.5, roughness: 0.5, transparent: true, opacity: 1 }));
+    m.position.copy(p);
+    m.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    scene.add(m);
+    debris.push(m);
+    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    debrisVel.push(dir.multiplyScalar(12 + Math.random() * 25));
+  }
+  // 15 sparks
+  const sparks: THREE.Line[] = [];
+  const sparkVel: THREE.Vector3[] = [];
+  const sparkMatBase = new THREE.LineBasicMaterial({ color: threeColor("#ffd67a"), transparent: true, opacity: 1 });
+  for (let i = 0; i < 15; i++) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([p.x, p.y, p.z, p.x, p.y, p.z]), 3));
+    const mat = sparkMatBase.clone();
+    mat.color = new THREE.Color(`hsl(${28 + Math.random() * 18}, 100%, ${60 + Math.random() * 30}%)`);
+    const line = new THREE.Line(g, mat);
+    scene.add(line);
+    sparks.push(line);
+    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    sparkVel.push(dir.multiplyScalar(60 + Math.random() * 80));
+  }
+  // Small orange flash
+  const flash = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeGlowTexture(), color: new THREE.Color(0xff6a00), transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  flash.position.copy(p);
+  flash.scale.set(30, 30, 1);
+  scene.add(flash);
+  ctx.explosions.push({ burst, debris, debrisVel, sparks, sparkVel, flash, pos: p, t: 0, ttlDebris: 1.5 });
+}
+
 /** Dispose paksa semua ledakan (dipakai dispose global). */
 export function disposeExplosions(ctx: SceneContext): void {
   const { scene, explosions } = ctx;
