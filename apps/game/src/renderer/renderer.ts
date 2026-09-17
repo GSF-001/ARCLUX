@@ -19,6 +19,7 @@ import { initAudio, type AudioHandle } from "./audio";
 import { initMenu, type MenuHandle, type MenuCameraMode, createCharacterOverlay, createBazaarOverlay, createStadiumOverlay } from "./menu";
 import { buildStadiumFromConfig } from "./interior";
 import { initLanding } from "./landing";
+import { initNpe } from "./npe";
 import { loadSettings } from "./settings";
 import { buildArkInterior } from "./interior";
 import type { RegionSnapshot, VesselEntity, WorldEntity } from "../../../../packages/gameserver/types";
@@ -64,7 +65,10 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     onQuality: (s) => scene.applyQuality(s),
     onAudio: (s) => audio.setEnabled(s.muted, s.masterVolume),
     onCameraMode: (mode) => scene.setCameraMode(mode as Parameters<Scene3D["setCameraMode"]>[0]),
-    onSfx: (kind) => audio.ui(kind === "click" ? "click" : "hover"),
+    onSfx: (kind) => {
+      if (kind === "click") { audio.ui("click"); audio.uiBlip(); }
+      else { audio.ui("hover"); }
+    },
   }, audio);
 
   // Fase 9 — CharacterCustom overlay (repo = karakter)
@@ -252,9 +256,13 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     if (landingPoll) window.clearInterval(landingPoll);
     landing?.dispose();
     landing = null;
+    // U10: start NPE tutorial on first play (persisted via localStorage)
+    if (!npe.isDone()) npe.start();
   };
   // Show landing on boot — MMORPG nuance, bukan langsung game
   showLanding();
+  // U10: NPE tutorial (new player experience)
+  const npe = initNpe();
 
   // Skena mulai dari settings tersimpan; audio unlock pertama interaksi.
   scene.applyQuality(settings);
@@ -332,6 +340,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     try { bazaarOverlay.dispose(); } catch {}
     try { characterOverlay.dispose(); } catch {}
     try { stadiumOverlay.dispose(); } catch {}
+    npe.dispose();
   };
 
   // Expose for manual control in devtools
