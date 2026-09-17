@@ -23,6 +23,7 @@ import type { OrbitSpec } from "./orbital";
 import type { Planet3D } from "./planets";
 import type { Explosion } from "./explosions";
 import type { WeaponPool } from "./weapons";
+import type { DamageApplyState } from "./damage";
 
 /** Satu sun: mesh + glow sprite + light + orbit (binary/trinary §2.1). */
 export interface Sun3D {
@@ -126,6 +127,8 @@ export interface SceneContext {
   sfxHandler: ((kind: "explosion" | "shield" | "debris" | "weapon" | "beam") => void) | null;
   // --- weapons.ts (W1) ---
   weaponPool: WeaponPool | null;
+  // --- damage.ts (D1) ---
+  damageStates: Map<string, DamageApplyState>;
   // --- loop (index.ts) ---
   updaters: Array<(t: number, tick: number) => void>;
   running: boolean;
@@ -162,7 +165,7 @@ export function createBase(target: HTMLElement | null, width: number, height: nu
     prev: new Map(), cur: new Map(),
     anchor: new THREE.Vector3(0, 0, 0),
     firstVesselRef: undefined, lastTick: 0, lastSnapshotAt: 0,
-    explosions: [], sfxHandler: null, weaponPool: null,
+    explosions: [], sfxHandler: null, weaponPool: null, damageStates: new Map(),
     updaters: [], running: false, rafId: 0, lastFrame: 0,
   };
 }
