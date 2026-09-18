@@ -96,8 +96,8 @@ export function initLanding(opts: { onLaunch: () => void; onTrailer?: () => void
     ["HOME", () => window.scrollTo({ top: 0, behavior: "smooth" })],
     ["UNIVERSE", () => document.querySelector<HTMLElement>(".live-universe")?.scrollIntoView({ behavior: "smooth" })],
     ["FEATURES", () => document.querySelector<HTMLElement>(".cards")?.scrollIntoView({ behavior: "smooth" })],
-    ["FACTIONS", () => alert("Factions — coming soon (governance.ts community)"),],
-    ["MEDIA", () => opts.onTrailer?.() ?? alert("Trailer — coming soon")],
+    ["FACTIONS", () => document.querySelector<HTMLElement>(".stats")?.scrollIntoView({ behavior: "smooth" })],
+    ["MEDIA", () => opts.onTrailer?.() ?? document.querySelector<HTMLElement>(".cards")?.scrollIntoView({ behavior: "smooth" })],
     ["ROADMAP", () => window.open("https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/docs/blueprint/", "_blank")],
     ["DOCS", () => window.open("https://github.com/GSF-001/ARCLUX", "_blank")],
   ] as const;
@@ -107,11 +107,10 @@ export function initLanding(opts: { onLaunch: () => void; onTrailer?: () => void
     a.onclick = fn as unknown as (e: MouseEvent) => void;
     navLinks.appendChild(a);
   }
-  // language selector placeholder
+  // Language indicator (EN only)
   const lang = document.createElement("span");
   lang.textContent = "EN";
-  lang.style.cssText = "color:rgba(201,214,255,0.5);cursor:pointer;border:1px solid rgba(201,214,255,0.12);padding:4px 8px;";
-  lang.onclick = () => alert("Language — EN only for now");
+  lang.style.cssText = "color:rgba(201,214,255,0.5);cursor:default;border:1px solid rgba(201,214,255,0.12);padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;";
   navLinks.appendChild(lang);
 
   const launchBtn = document.createElement("button");
@@ -145,7 +144,7 @@ export function initLanding(opts: { onLaunch: () => void; onTrailer?: () => void
   const trailerBtn = document.createElement("button");
   trailerBtn.className = "cta-secondary";
   trailerBtn.textContent = "WATCH TRAILER";
-  trailerBtn.onclick = () => opts.onTrailer?.() ?? alert("Trailer — coming soon");
+  trailerBtn.onclick = () => opts.onTrailer?.() ?? document.querySelector<HTMLElement>(".cards")?.scrollIntoView({ behavior: "smooth" });
   ctaRow.append(playBtn, trailerBtn);
   hero.append(title, tagline, desc, ctaRow);
 

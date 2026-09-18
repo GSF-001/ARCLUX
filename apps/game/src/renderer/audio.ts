@@ -23,6 +23,10 @@ export interface AudioHandle {
   sfxShieldHit(): void;
   sfxDebris(): void;
   sfxAmbientHum(): { stop: () => void } | undefined;
+  /** 10.V U9 — tactical UI synth sounds (CSP default-src 'self', no asset). */
+  uiBlip(): void;
+  scanConfirm(): void;
+  alarmSoft(): void;
   /** Fase 6 — custom music upload (user provides MP3/OGG/WAV/FLAC, decode via AudioContext, playlist via musicGain) */
   loadCustomMusic(file: File): Promise<string>;
   playCustom(name?: string): void;
@@ -309,6 +313,61 @@ export function initAudio(): AudioHandle {
           if (ambientGain === g) ambientGain = null;
         },
       };
+    },
+    // U9: short tactical blip — 440→660 sine, 40ms
+    uiBlip() {
+      const c = ensure();
+      if (!c || !sfxGain) return;
+      const osc = c.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(440, c.currentTime);
+      osc.frequency.linearRampToValueAtTime(660, c.currentTime + 0.04);
+      const g = c.createGain();
+      const vol = (muted ? 0 : 0.1) * (s0.sfxVolume || 0.7);
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.06);
+      osc.connect(g);
+      g.connect(sfxGain);
+      osc.start();
+      osc.stop(c.currentTime + 0.06);
+    },
+    // U9: scan confirm — two-tone sweep 200→800→400, 120ms
+    scanConfirm() {
+      const c = ensure();
+      if (!c || !sfxGain) return;
+      const osc = c.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(200, c.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, c.currentTime + 0.06);
+      osc.frequency.exponentialRampToValueAtTime(400, c.currentTime + 0.12);
+      const g = c.createGain();
+      const vol = (muted ? 0 : 0.12) * (s0.sfxVolume || 0.7);
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.15);
+      osc.connect(g);
+      g.connect(sfxGain);
+      osc.start();
+      osc.stop(c.currentTime + 0.15);
+    },
+    // U9: soft alarm — 3× beep 880 square, 60ms each, 100ms gap
+    alarmSoft() {
+      const c = ensure();
+      if (!c || !sfxGain) return;
+      const vol = (muted ? 0 : 0.08) * (s0.sfxVolume || 0.7);
+      for (let i = 0; i < 3; i++) {
+        const osc = c.createOscillator();
+        osc.type = "square";
+        osc.frequency.value = 880;
+        const g = c.createGain();
+        const t = c.currentTime + i * 0.16;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+        osc.connect(g);
+        g.connect(sfxGain);
+        osc.start(t);
+        osc.stop(t + 0.06);
+      }
     },
     async loadCustomMusic(file: File): Promise<string> {
       const c = ensure();
