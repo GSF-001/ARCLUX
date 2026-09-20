@@ -939,13 +939,13 @@ lampunya mati total dan koridor yang sepi = mati.
 
 ### Fase H1 — Dunia hidup (satu PR, `ark.ts` hanya re-material)
 
-- [ ] **H1.1 Lampu animasi interior** — sentuh `interior.ts`: advert
+- [x] **H1.1 Lampu animasi interior** — sentuh `interior.ts`: advert
       board scan (emissive offset jalan pakai `timeSec`), koridor
       strip pulse halus 0.5Hz, bazaar stall glow gantian (cap: update
       emissiveIntensity ≤8 material/frame — murah, bukan per-lampu
       traverse). Budget: ≤0.1ms. Fallback LOW: statis. Verify: GIF
       5 detik plaza + fps guard.
-- [ ] **H1.2 Crowd simple** — BARU
+- [x] **H1.2 Crowd simple** — BARU
       `apps/game/src/renderer/scene3d/crowd.ts`: agen = capsule
       low-poly 2–3 warna (crew/merchant/guard) + waypoint loop di
       promenade/plaza (12–24 agen HIGH, 6 MEDIUM, 0 LOW dengan
@@ -955,33 +955,33 @@ lampunya mati total dan koridor yang sepi = mati.
       Fallback LOW: NOL agen (ruangan "sepi jam malam" = sah).
       Verify: GIF interior 10 detik + fps guard + screenshot jauh
       (billboard terbaca sebagai orang).
-- [ ] **H1.3 Mesin bergerak** — sentuh `interior.ts`: hangar door
+- [x] **H1.3 Mesin bergerak** — sentuh `interior.ts`: hangar door
       cycle (`hangarDoors` existing DIDIPAKAI akhirnya — open/close
       8 detik loop saat docking mode), kipas ventilasi putar,
       crane hangar geser 2m loop, conveyor bazaar texture-offset
       jalan. Semua fungsi `timeSec`, semua 0 authority. Budget:
       ≤0.1ms (transform doang). Fallback LOW: pintu saja. Verify:
       GIF hangar door cycle + fps guard.
-- [ ] **H1.4 Ark dipertahankan + glow hidup** — sentuh
+- [x] **H1.4 Ark dipertahankan + glow hidup** — sentuh
       `apps/game/src/renderer/scene3d/ark.ts` MINIMAL: animasi NPV
       yang ada JANGAN DIUBAH (regresi dilarang — tulis test/smoke
       yang mengunci perilaku existing sebelum PR ini); yang boleh
       ditambah: engine glow pulse + nav-blink + re-material M1.3.
       Verify: smoke perilaku NPV lama lolos + screenshot Ark
       before/after (harus "sama tapi lebih kaya", bukan beda kapal).
-- [ ] **H1.5 City lights final** — sentuh `planetary/night.ts`:
+- [x] **H1.5 City lights final** — sentuh `planetary/night.ts`:
       kriteria FINAL = per-window intensity noise + 10% mati (L1.3)
       + runway amber + orbit readability (dari orbit malam: facility
       = cluster cahaya hangat di atas terrain gelap, BUKAN titik
       putih tunggal). Verify: screenshot orbit night + descend
       sequence 3 frame (orbit -> approach -> runway).
-- [ ] **H1.6 Traffic malam** — BARU (numpang `night.ts`): moving
+- [x] **H1.6 Traffic malam** — BARU (numpang `night.ts`): moving
       light dots di runway/facility road = InstancedMesh kecil loop
       bolak-balik (fungsi `timeSec`, 1 draw call, ≤16 dots). Ini
       "kendaraan" tanpa model kendaraan — dari kokpit malam yang
       terlihat cuma lampunya (doktrin §0 butir 1). Budget: ~0ms.
       Fallback LOW: mati. Verify: GIF 5 detik + fps guard.
-- [ ] **H1.7 Vegetasi/ocean final pass** — definisi FINAL (numpang
+- [x] **H1.7 Vegetasi/ocean final pass** — definisi FINAL (numpang
       A1/A3/A4, bukan kerjaan baru): vegetasi = kanopi + sway +
       wetness + hemisphere response (ceklist A1 SEMUA centang);
       ocean = foam texture + fresnel + whitecap ∝ wind + moon glint
@@ -1053,7 +1053,7 @@ Cross-check `docs/blueprint/10-planetary-runtime.md` +
 sudah centang [x] tapi MATANYA belum ada. Tiap item =
 presentasi-only, otoritas tidak berubah.
 
-- [ ] **R1.1 Discovery reveal** — sentuh
+- [x] **R1.1 Discovery reveal** — sentuh
       `apps/game/src/renderer/scene3d/cinematic/FacilityDiscovery.ts`
       (+ `AtmosphericReveal.ts` BILA backlog §7.2 membuktikan dia
       tidak ada — cek dulu, jangan bikin dobel) + `hud.ts`: saat
@@ -1062,14 +1062,14 @@ presentasi-only, otoritas tidak berubah.
       (U9). Blueprint 10 §11 "descend -> runway -> hangar feels
       inhabited" butuh momen "ketemu" — ini momennya. Verify:
       video discover 5 detik + fps guard.
-- [ ] **R1.2 Wreckage visual** — sentuh `vessels.ts` (varian carcass:
+- [x] **R1.2 Wreckage visual** — sentuh `vessels.ts` (varian carcass:
       gelap + panel hilang + tilt, reuse D1.4) + `damage.ts` (smoke
       tipis persistent) + `hud.ts` (plaque arsip: nama, battle,
       recovered — data dari `04-wreckage-history.md`, read-only):
       wreck = carcass + smoke tipis + beacon SOS blink + plaque
       saat dekat. Blueprint 01 §18 "tetap dapat ditemukan fisik".
       Verify: screenshot wreck dekat/jauh + plaque + fps guard.
-- [ ] **R1.3 Cosmic event visual** — sentuh
+- [x] **R1.3 Cosmic event visual** — sentuh
       `apps/game/src/renderer/scene3d/cosmic.ts` +
       `scene3d/nebula.ts` + `gradePass.ts` (P1.1): solar wind =
       sky tint aurora-ish + radio crackle (audio existing);
@@ -1078,20 +1078,20 @@ presentasi-only, otoritas tidak berubah.
       postur mahal). Numpang overlay F7 (§6): cuaca yang ke-flip
       storm OLEH anomali dapat tint ungu-hijau tipis (satu dunia,
       §0 butir 3). Verify: screenshot anomali vs normal + fps guard.
-- [ ] **R1.4 Geography readability** — sentuh
+- [x] **R1.4 Geography readability** — sentuh
       `planetary/geography.ts` (6 niches existing) + `hud.ts` (TAC):
       tiap niche = tint terrain beda + ikon TAC + label saat
       di-scan ("chokepoint", "bay", "ridge"...). Blueprint 10 §10
       "terrain creates opportunity" — opportunity yang tidak
       TERLIHAT = tidak ada. Verify: screenshot TAC overlay 6 niche.
-- [ ] **R1.5 Bahasa transisi orbit↔surface** — sentuh `camera.ts` +
+- [x] **R1.5 Bahasa transisi orbit↔surface** — sentuh `camera.ts` +
       grade + audio: SATU bahasa untuk 3 transisi: GateLink jump =
       flash + streak; entry atmosfer = heat glow (numpang Heat
       resolver C-session-1) + shake; docking hangar = iris wipe
       (fade lingkaran, DOM 300ms, murah). Pemain harus TAHU dia
       pindah lapisan TANPA baca teks. Verify: GIF 3 transisi + fps
       guard.
-- [ ] **R1.6 Coastal/hydro final visual** — sentuh `coastal.ts` +
+- [x] **R1.6 Coastal/hydro final visual** — sentuh `coastal.ts` +
       `hydrological.ts` + `atmosphericContinuity.ts` (numpang A3):
       foam line + river glint (sun glint path existing) + mist
       post-storm tidak nol-mati (bug G-§7.2 bila terbukti).

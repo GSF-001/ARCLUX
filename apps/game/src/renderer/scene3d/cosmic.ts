@@ -81,3 +81,107 @@ export function disposeCosmic(ctx: SceneContext): void {
   for (const m of ctx.meteors) ctx.scene.remove(m.line);
   ctx.meteors.length = 0;
 }
+
+// ---------------------------------------------------------------------------
+// R1.3 — Solar wind tint + anomaly gravity particles
+// ---------------------------------------------------------------------------
+
+export interface CosmicEventVisual {
+  solarWindTint: THREE.Sprite | null;
+  anomalyParticles: THREE.Points | null;
+}
+
+export function buildCosmicEventVisual(ctx: SceneContext): CosmicEventVisual {
+  const { scene, nebulaTex } = ctx;
+
+  // Solar wind — sky tint aurora-ish (aurora repurposed for solar wind mode)
+  const solarWindMat = new THREE.SpriteMaterial({
+    map: nebulaTex,
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const solarWind = new THREE.Sprite(solarWindMat);
+  solarWind.scale.set(90000, 18000, 1);
+  solarWind.position.set(0, 30000, -40000);
+  solarWind.name = "solarWindTint";
+  scene.add(solarWind);
+
+  // Anomaly gravity — particle drift (32 particles in a cluster)
+  const count = 32;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = (Math.random() - 0.5) * 6000;
+    pos[i * 3 + 1] = Math.random() * 4000;
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 6000;
+  }
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xaaffaa,
+    size: 18,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const particles = new THREE.Points(geo, mat);
+  particles.name = "anomalyParticles";
+  particles.frustumCulled = false;
+  scene.add(particles);
+
+  return { solarWindTint: solarWind, anomalyParticles: particles };
+}
+
+export function tickCosmicEventVisual(
+  vis: CosmicEventVisual,
+  isSolarWind: boolean,
+  isAnomaly: boolean,
+  timeSec: number,
+  cameraPos: { x: number; y: number; z: number },
+): void {
+  // R1.3 — Solar wind: sky tint aurora-ish, pulsing
+  if (vis.solarWindTint) {
+    const target = isSolarWind ? 0.12 + 0.06 * Math.sin(timeSec * 0.5) : 0;
+    const mat = vis.solarWindTint.material as THREE.SpriteMaterial;
+    mat.opacity += (target - mat.opacity) * 0.05;
+    vis.solarWindTint.visible = mat.opacity > 0.01;
+  }
+
+  // R1.3 — Anomaly gravity: particle drift toward camera
+  if (vis.anomalyParticles) {
+    const mat = vis.anomalyParticles.material as THREE.PointsMaterial;
+    const target = isAnomaly ? 0.35 : 0;
+    mat.opacity += (target - mat.opacity) * 0.05;
+    vis.anomalyParticles.visible = mat.opacity > 0.01;
+    if (isAnomaly) {
+      const pos = vis.anomalyParticles.geometry.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        let y = pos.getY(i) + 8;
+        if (y > 5000) y = 0;
+        pos.setY(i, y);
+        // Drift toward camera slowly
+        const cx = pos.getX(i);
+        const cz = pos.getZ(i);
+        pos.setX(i, cx + (cameraPos.x - cx) * 0.0003);
+        pos.setZ(i, cz + (cameraPos.z - cz) * 0.0003);
+      }
+      pos.needsUpdate = true;
+      vis.anomalyParticles.position.set(cameraPos.x, 0, cameraPos.z);
+    }
+  }
+}
+
+export function disposeCosmicEventVisual(vis: CosmicEventVisual, scene: THREE.Scene): void {
+  if (vis.solarWindTint) {
+    scene.remove(vis.solarWindTint);
+    (vis.solarWindTint.material as THREE.Material).dispose();
+  }
+  if (vis.anomalyParticles) {
+    scene.remove(vis.anomalyParticles);
+    vis.anomalyParticles.geometry.dispose();
+    (vis.anomalyParticles.material as THREE.Material).dispose();
+  }
+}
