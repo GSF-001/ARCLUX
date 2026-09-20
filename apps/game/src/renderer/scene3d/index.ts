@@ -53,6 +53,12 @@ import { buildBackdrops, buildPlanetSystem, updatePlanets } from "./planets";
 import { buildBelt } from "./belt";
 import { buildCosmic, disposeCosmic, updateCosmic } from "./cosmic";
 import { buildArk, updateArk } from "./ark";
+import { createCrowdSystem, tickCrowd, disposeCrowd, type CrowdSystem } from "./crowd";
+import { createInteriorAnimState, tickInteriorAnim, type InteriorAnimState } from "./interiorAnim";
+import { createWreckage, tickWreckage, disposeWreckage, type WreckageState } from "./wreckage";
+import { buildCosmicEventVisual, tickCosmicEventVisual, disposeCosmicEventVisual, type CosmicEventVisual } from "./cosmic";
+import { createTrafficSystem, tickTraffic, type TrafficSystem } from "./planetary/night";
+import { createTransitionState, triggerTransition, tickTransition, disposeTransition, type TransitionState } from "./camera";
 import { clampLocal, ensureEntry, updateVessel, updateVesselInterp } from "./vessels";
 import { buildStation } from "./stations";
 import { disposeExplosions, spawnExplosion, spawnExplosionLarge, spawnControlledExplosion, updateExplosions } from "./explosions";
@@ -75,6 +81,8 @@ export interface Scene3D {
   removeGroup(g: THREE.Group): void;
   /** Iris 6: FPS interior camera follow local pos */
   setInteriorCamera(pos: { x: number; y: number; z: number }, yaw: number, pitch: number): void;
+  /** H1.1+H1.3: initialize interior animation from build result (call after docking). */
+  initInteriorAnimation(result: import("../interior").InteriorBuildResult): void;
   /** 10.V U4: daftarkan overlay droplet + HUD root (sekali saat boot). */
   setCockpitPresentation(overlay: CockpitOverlay | null, hudRoot: HTMLElement | null): void;
   /** 10.V W1: weapon VFX spawning (presentation only, damage from sim). */
@@ -208,6 +216,16 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
   buildBackdrops(ctx);
   buildCosmic(ctx);
   buildArk(ctx);
+
+  // 10.V H1/R1 — Living world + visual gap systems
+  const crowdSystem = createCrowdSystem((bootSettings.preset ?? "HIGH") as "HIGH" | "MEDIUM" | "LOW");
+  ctx.scene.add(crowdSystem.group);
+  const trafficSystem = createTrafficSystem();
+  ctx.scene.add(trafficSystem.group);
+  const cosmicEventVisual = buildCosmicEventVisual(ctx);
+  const transitionState = createTransitionState();
+  let interiorAnimState: InteriorAnimState | null = null;
+  let wasStorm = false;
 
   // §2.3 Orbit deterministik per tick — smooth di sub-tick via TIME_BASE.
   const simTick = (): number => ctx.lastTick + (performance.now() - ctx.lastSnapshotAt) / 100;
@@ -459,6 +477,27 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       updateNightVisibility(nightGroup, envContext.timeOfDay === "night", envContext.sun.intensity);
     }
 
+    // ── H1 LIVING WORLD TICK ──
+    if (envContext) {
+      const timeSec = envContext.worldTime / 1000 + envContext.simulationTick * 0.1;
+      tickCrowd(crowdSystem, timeSec);
+      tickTraffic(trafficSystem, timeSec, { x: 2000, z: 2000 });
+      if (interiorAnimState) tickInteriorAnim(interiorAnimState, timeSec);
+      // Track storm state for R1.6 post-storm mist
+      if (envContext.ocean.waveAmplitude > 5) wasStorm = true;
+      if (!envContext.ocean.waveAmplitude || envContext.ocean.waveAmplitude < 2) wasStorm = false;
+      // R1.3 cosmic event visuals
+      tickCosmicEventVisual(
+        cosmicEventVisual,
+        envContext.wind.speed > 12,
+        false,
+        timeSec,
+        ctx.camera ? { x: ctx.camera.position.x, y: ctx.camera.position.y, z: ctx.camera.position.z } : { x: 0, y: 0, z: 0 },
+      );
+    }
+    // R1.5 transition tick
+    tickTransition(transitionState);
+
     // ── L1 LIGHTING TICK (per frame) ──
     if (lightingState && envContext && ctx.firstVesselRef) {
       const vesselPos = new THREE.Vector3(
@@ -600,6 +639,11 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     }
     for (const b of ctx.backdrops) ctx.scene.remove(b.mesh);
     disposeCosmic(ctx);
+    // Dispose H1/R1 living world + visual gap systems
+    disposeCrowd(crowdSystem);
+    ctx.scene.remove(trafficSystem.group);
+    disposeCosmicEventVisual(cosmicEventVisual, ctx.scene);
+    disposeTransition(transitionState);
     if (target && ctx.renderer.domElement.parentElement === target) target.removeChild(ctx.renderer.domElement);
   };
 
@@ -632,6 +676,9 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
     addGroup: (g: THREE.Group) => ctx.scene.add(g),
     removeGroup: (g: THREE.Group) => ctx.scene.remove(g),
     setInteriorCamera,
+    initInteriorAnimation: (result: import("../interior").InteriorBuildResult) => {
+      interiorAnimState = createInteriorAnimState(result);
+    },
     setCockpitPresentation,
     // 10.V W1 — weapon VFX facades (presentation only, damage from sim)
     spawnTracer: (from: THREE.Vector3, to: THREE.Vector3, tint?: number) => spawnProjectileTracer(ctx, from, to, tint),

@@ -54,6 +54,15 @@ export function attachNightLights(group: THREE.Group, opts: NightLightOpts): voi
     const ringRadius = opts.kind === "Hangar" ? 32 : 26;
     for (let i = 0; i < NIGHT_WINDOW_COUNT; i++) {
       const ang = (i / NIGHT_WINDOW_COUNT) * Math.PI * 2;
+      // H1.5: 10% windows permanently off (deterministic by index)
+      if (i % 10 === 0) continue;
+      // H1.5: per-window intensity noise (seeded by index)
+      const noise = 0.65 + ((i * 7 + 3) % 10) * 0.04;
+      const winMat = new THREE.MeshStandardMaterial({
+        color: NIGHT_EMISSIVE,
+        emissive: NIGHT_EMISSIVE,
+        emissiveIntensity: emissiveIntensity * noise,
+      });
       const win = new THREE.Mesh(winGeo, winMat);
       win.position.set(Math.cos(ang) * ringRadius, 8 + (i % 3) * 3, Math.sin(ang) * ringRadius);
       win.name = "nightWindow";
@@ -165,4 +174,48 @@ export function formatRadarHud(d: RadarDiscovery): string {
   return d.contacts
     .map((c) => `${c.kind} ${c.id.slice(0, 6)} ${(c.distance / 1000).toFixed(c.distance > 10000 ? 0 : 1)} km${c.unknown ? " ?" : ""}${c.emergency && c.emergency !== "nominal" ? ` [${c.emergency.toUpperCase()}]` : ""}`)
     .join(" / ");
+}
+
+// ---------------------------------------------------------------------------
+// H1.6 — Traffic malam: moving light dots on runway/facility road
+// ---------------------------------------------------------------------------
+
+const TRAFFIC_DOT_COUNT = 16;
+
+export interface TrafficSystem {
+  instanced: THREE.InstancedMesh;
+  group: THREE.Group;
+}
+
+export function createTrafficSystem(): TrafficSystem {
+  const geo = new THREE.SphereGeometry(1.2, 6, 6);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xffd9a0,
+    transparent: true,
+    opacity: 0.7,
+    depthWrite: false,
+  });
+  const instanced = new THREE.InstancedMesh(geo, mat, TRAFFIC_DOT_COUNT);
+  instanced.name = "trafficDots";
+  instanced.frustumCulled = false;
+  const group = new THREE.Group();
+  group.name = "traffic-group";
+  group.add(instanced);
+  return { instanced, group };
+}
+
+export function tickTraffic(sys: TrafficSystem, timeSec: number, facilityPos: { x: number; z: number }): void {
+  const dummy = new THREE.Object3D();
+  const roadLength = 120; // distance dots travel
+  for (let i = 0; i < TRAFFIC_DOT_COUNT; i++) {
+    // Each dot loops back and forth, offset by index
+    const phase = ((timeSec * 0.4 + i * (roadLength / TRAFFIC_DOT_COUNT)) % roadLength);
+    const t = phase / roadLength; // 0..1
+    const x = facilityPos.x - roadLength / 2 + t * roadLength;
+    const z = facilityPos.z + ((i % 4) - 2) * 8; // slight z spread
+    dummy.position.set(x, 2, z);
+    dummy.updateMatrix();
+    sys.instanced.setMatrixAt(i, dummy.matrix);
+  }
+  sys.instanced.instanceMatrix.needsUpdate = true;
 }

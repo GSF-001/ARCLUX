@@ -51,6 +51,8 @@ export interface DiscoverySystem {
   beacon: THREE.PointLight;
   runway: THREE.Group;
   silhouette: THREE.Mesh;
+  pingRing: THREE.Mesh;
+  labelSprite: THREE.Sprite;
 }
 
 export function createDiscoverySystem(pos: { x: number; y: number; z: number }): DiscoverySystem {
@@ -74,7 +76,45 @@ export function createDiscoverySystem(pos: { x: number; y: number; z: number }):
   silhouette.rotation.x = -Math.PI / 2;
   silhouette.position.set(pos.x, pos.y + 8, pos.z);
   silhouette.name = "discoverySilhouette";
-  return { beacon, runway, silhouette };
+  // R1.1 — Radar ping ring (expanding circle when facility discovered)
+  const pingGeo = new THREE.RingGeometry(2, 4, 48);
+  const pingMat = new THREE.MeshBasicMaterial({
+    color: 0x52c8ff,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const pingRing = new THREE.Mesh(pingGeo, pingMat);
+  pingRing.rotation.x = -Math.PI / 2;
+  pingRing.position.set(pos.x, pos.y + 12, pos.z);
+  pingRing.name = "discoveryPing";
+
+  // R1.1 — Label sprite (facility name, fade-in on discovery)
+  const labelCanvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  let labelSprite: THREE.Sprite;
+  if (labelCanvas) {
+    labelCanvas.width = 256;
+    labelCanvas.height = 64;
+    const lctx = labelCanvas.getContext("2d")!;
+    lctx.fillStyle = "rgba(0,0,0,0.6)";
+    lctx.fillRect(0, 0, 256, 64);
+    lctx.font = "bold 28px monospace";
+    lctx.fillStyle = "#52c8ff";
+    lctx.textAlign = "center";
+    lctx.fillText("FACILITY", 128, 42);
+    const tex = new THREE.CanvasTexture(labelCanvas);
+    labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: tex, transparent: true, opacity: 0, depthWrite: false,
+    }));
+  } else {
+    labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  }
+  labelSprite.position.set(pos.x, pos.y + 28, pos.z);
+  labelSprite.scale.set(120, 30, 1);
+  labelSprite.name = "discoveryLabel";
+
+  return { beacon, runway, silhouette, pingRing, labelSprite };
 }
 
 export function tickDiscovery(sys: DiscoverySystem, state: DiscoveryState, dt: number): void {
@@ -93,6 +133,28 @@ export function tickDiscovery(sys: DiscoverySystem, state: DiscoveryState, dt: n
   const silTarget = state.phase === "SILHOUETTE" || state.phase === "FOG" ? 0.32 + state.progress * 0.22 : state.phase === "LIGHT" ? 0.18 : 0;
   silMat.opacity += (silTarget - silMat.opacity) * a;
   sys.silhouette.visible = silMat.opacity > 0.04;
+
+  // R1.1 — Ping ring: expanding + fading when in SILHOUETTE/LIGHT phase
+  const pingMat = sys.pingRing.material as THREE.MeshBasicMaterial;
+  const shouldPing = state.phase === "SILHOUETTE" || state.phase === "LIGHT" || state.phase === "DETAIL";
+  if (shouldPing) {
+    const pingT = (state.progress * 3) % 1; // repeating expand
+    const scale = 20 + pingT * 200;
+    sys.pingRing.scale.set(scale, scale, 1);
+    pingMat.opacity = (1 - pingT) * 0.45;
+    sys.pingRing.visible = true;
+  } else {
+    pingMat.opacity *= 0.9;
+    sys.pingRing.visible = pingMat.opacity > 0.01;
+  }
+
+  // R1.1 — Label fade-in: appears at SILHOUETTE, full at DETAIL
+  const labelMat = sys.labelSprite.material as THREE.SpriteMaterial;
+  const labelTarget = state.phase === "DETAIL" || state.phase === "HANGAR" ? 0.9
+    : state.phase === "LIGHT" ? 0.5
+    : state.phase === "SILHOUETTE" ? 0.2 : 0;
+  labelMat.opacity += (labelTarget - labelMat.opacity) * a;
+  sys.labelSprite.visible = labelMat.opacity > 0.02;
 }
 
 export function disposeDiscoverySystem(sys: DiscoverySystem): void {
@@ -105,4 +167,7 @@ export function disposeDiscoverySystem(sys: DiscoverySystem): void {
   });
   sys.silhouette.geometry.dispose();
   (sys.silhouette.material as THREE.Material).dispose();
+  sys.pingRing.geometry.dispose();
+  (sys.pingRing.material as THREE.Material).dispose();
+  (sys.labelSprite.material as THREE.Material).dispose();
 }

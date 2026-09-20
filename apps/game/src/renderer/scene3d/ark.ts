@@ -436,7 +436,10 @@ export function updateArk(ctx: SceneContext, t: number): void {
     arkRingGroups[3].rotation.y -= 0.0008;
   }
   for (let i = 0; i < arkEngines.length; i++) {
-    arkEngines[i].material.opacity = 0.62 + 0.32 * Math.sin(t * 0.003 + i * 1.1);
+    // H1.4: engine glow pulse + nav-blink (secondary fast blink 2Hz)
+    const base = 0.62 + 0.32 * Math.sin(t * 0.003 + i * 1.1);
+    const navBlink = Math.sin(t * 0.012 + i * 1.7) > 0.85 ? 0.4 : 0;
+    arkEngines[i].material.opacity = Math.min(1, base + navBlink);
     arkEngines[i].material.needsUpdate = true;
   }
   for (let i = 0; i < arkShields.length; i++) {

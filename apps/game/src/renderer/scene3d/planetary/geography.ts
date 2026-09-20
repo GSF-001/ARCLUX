@@ -87,3 +87,13 @@ export function projectGeographyList(samples: GeographySample[]): Array<{ label:
     return { label: NICHE_LABEL[a.niche], niche: a.niche, score: a.score, lat: latitudeFromPosition(s.position) };
   }).sort((a, b) => b.score - a.score);
 }
+
+// R1.4 — Geography TAC overlay: scan label per niche
+export function geographyScanLabel(sample: GeographySample, neighborHeights?: number[]): { text: string; color: string; icon: string } {
+  const a = analyzeGeography(sample, neighborHeights);
+  return {
+    text: `${NICHE_LABEL[a.niche]} [${(a.score * 100).toFixed(0)}%]`,
+    color: geographyOverlayColor(a.niche, 0.8),
+    icon: NICHE_ICON[a.niche],
+  };
+}

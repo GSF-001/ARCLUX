@@ -182,10 +182,10 @@ konverter CSS↔THREE) menjadi:
 | W1 weapon | ✅ DONE (PR #741) | NS_Weapon_* | Pool → Niagara pool |
 | D1 damage | ✅ DONE (PR #742) | Material swap + VFX | Level visual SAMA |
 | A1–A4 planet | ✅ DONE (PR #743) | Nanite + M_* + volumetrik | Doktrin kamera TETAP |
-| U1–U12 UI | ⬜ antri | UMG + NPE | Desain SAMA, mesin beda |
-| H1 dunia hidup | ⬜ antri | Crowd AI sederhana + anim | f(timeSec) → Timeline |
-| R1 gaps | ⬜ antri | Per item | Presentasi-only TETAP |
-| F0/F6–F8 sim | ⬜ antri | TIDAK DI-PORT (server tetap) | UE baca hasilnya saja |
+| U1–U12 UI | ✅ DONE (PR #744) | UMG + NPE | Desain SAMA, mesin beda |
+| H1 dunia hidup | ✅ DONE (PR #745) | Crowd AI sederhana + anim | f(timeSec) → Timeline |
+| R1 gaps | ✅ DONE (PR #745) | Per item | Presentasi-only TETAP |
+| F0/F6–F8 sim | ✅ DONE (PR #738) | TIDAK DI-PORT (server tetap) | UE baca hasilnya saja |
 
 ## 7A. Peta port SELURUH blueprint 01–10.V (bukan cuma 10.V)
 
@@ -276,7 +276,6 @@ menurunkan target visual.
 
 ## 10. Kembali ke 10.V (perintah aktif)
 
-Dokumen ini DIKUNCI sampai 10.V DONE. Eksekusi lanjut: L1 → W1 → D1 →
-A1–A4 → U → H1/R1 → F0 (PR #730 = batch 1: M1/U4/P1). Setiap baris
-tabel §7 berubah ✅ = amunisi UE. Tidak ada kerja UE sebelum I.3
-(9 komposisi + fps guard) centang.
+Dokumen ini DIKUNCI sampai 10.V DONE. **10.V = DONE** (PR #730/#740/#741/#742/#743/#744/#745/#738).
+Semua baris tabel §7 ✅. Eksekusi lanjut: UE port per §8 slice.
+Tidak ada kerja UE sebelum I.3 (9 komposisi + fps guard) centang.
