@@ -16,6 +16,7 @@
 | 3 | `03-implementasi.md` | PETA TEKNIK: file MMO apa disentuh/tidak, layer apa masuk UE, langkah + checkpoint + jalan pulang | DI BUKA TERUS selama ngoding UE |
 | 4 | `04-graphics.md` | SPESIFIKASI GRAFIS: rendering, tier 4K, subsistem, aliran aset, anggaran, acceptance | Pegangan insinyur grafis + artis |
 | 5 | `05-hukum-kota.md` | HUKUM & KOTA: 3 dunia (Bumi mati/Mars hidup/Space transit), wanted 0–5, polisi pemain (rekrutmen+pangkat), NPC pelengkap, prison ship + jailbreak, bounty, ekonomi Mars, phasing | Pas bangun layer hukum di UE |
+| 6 | `06-gameplay-systems.md` | SISTEM PERMAINAN: OC currency, dual skill (ship/FPS), hacking, FPS combat, stealth, item drop, revival, police investigation, item recovery, ARCLUX store | Pas bangun gameplay loop di UE |
 
 ## Kompas satu baris per dokumen
 
@@ -30,6 +31,9 @@
   bounty — eksekusi fase UE, bukan sekarang).
 - "Maling/ponsel/pasar gelap gimana?" → `05-hukum-kota.md` §9 + §11
   (Hull ID, 3 pintu, ponsel/771, onboarding tanpa tutorial).
+- "Currency/skill/hack/combat/investigasi?" → `06-gameplay-systems.md`
+  (OC, dual skill, hacking, FPS combat, stealth, death drop, revival,
+  investigation, item recovery, ARCLUX store).
 
 ## Aturan folder (dilindungi creative director)
 

@@ -487,10 +487,15 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       if (envContext.ocean.waveAmplitude > 5) wasStorm = true;
       if (!envContext.ocean.waveAmplitude || envContext.ocean.waveAmplitude < 2) wasStorm = false;
       // R1.3 cosmic event visuals
+      const currentAnomalyChunks = generateCosmicEventsForTick("planet-07", planetTick, "planet-07")
+        .filter((e) => e.kind === "anomaly_gravity")
+        .map((e) => (e.payload["chunkKey"] as string | undefined) ?? "")
+        .filter((k) => k.length > 0);
+      const isCurrentAnomaly = currentAnomalyChunks.includes(envContext.chunkKey);
       tickCosmicEventVisual(
         cosmicEventVisual,
         envContext.wind.speed > 12,
-        false,
+        isCurrentAnomaly,
         timeSec,
         ctx.camera ? { x: ctx.camera.position.x, y: ctx.camera.position.y, z: ctx.camera.position.z } : { x: 0, y: 0, z: 0 },
       );
