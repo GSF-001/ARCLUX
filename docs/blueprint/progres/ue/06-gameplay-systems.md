@@ -97,10 +97,20 @@
 - Tidak ada cooldown cross-mode (FPS skill tidak affect ship skill, dan sebaliknya).
 - Server track: `activeMode: "ship" | "fps"` per player.
 
-### 2.6 UX di UE5
-- Ship mode: skill bar di bawah HUD (4 slot: engine/weapons/shield/nav).
-- FPS mode: skill bar di bawah HUD (4 slot: combat/stealth/survival/technical).
-- Transisi animasi: skill bar slide out → slide in (0.3s).
+### 2.5.1 Kamera & perspektif (TPP/FPP — PC)
+- **FPP (first-person)**: COCKPIT mode — mata pilot, HUD nempel kaca, droplet/shake hanya di sini. Input = mouse look + WASD kokpit.
+- **TPP (third-person)**: ORBIT / TACTICAL / CINEMATIC / FREE — kamera di luar kapal, HUD tipis contextual. Transisi FPP↔TPP via tombol **V** (berurutan, 0.4s blend, tidak reset momentum kapal).
+- Server tidak peduli FPP/TPP — state kapal sama; beda hanya presentasi. Anti-cheat: TPP tidak beri vision ekstra (clip + fog sama dengan FPP).
+- Penamaan PC: **FPP** dan **TPP** (bukan "TPP FPP" informal) — konsisten di docs & UI.
+
+### 2.6 UX di UE5 — HUD KONTEKSTUAL AAA (bukan selalu ON)
+- **Prinsip: HUD = contextual, bukan debug overlay.** Semua panel ON = amatir.
+- **Idle (normal)**: hampir kosong — hanya crosshair/reticle + speed kecil + compass tipis. Sisa HIDDEN.
+- **Scan/Tactical (on demand, hold/toggle)**: TAC kiri + target info + radar detail muncul (fade/scan 0.3s).
+- **Combat/Docking (situasional)**: full HUD — weapon slots + vessel stats + mission panel aktif. Auto-hide saat keluar combat (3 detik tanpa threat).
+- Ship mode: skill bar di bawah HUD (4 slot: engine/weapons/shield/nav) — hanya di Scan/Combat.
+- FPS mode: skill bar di bawah HUD (4 slot: combat/stealth/survival/technical) — hanya di Scan/Combat.
+- Transisi animasi: skill bar slide out → slide in (0.3s). HUD "hidup" (fade/scan, bukan pop).
 - Sound: ship mode = deep hum, FPS mode = click halus.
 
 ---
@@ -178,12 +188,28 @@
 - Looting tanpa izin = pencurian → wanted naik.
 - Corpses menghilang setelah 300 detik (5 menit).
 
-### 4.5 UX di UE5
-- Weapon wheel: rotasi senjata (tahan Q → pilih).
-- Ammo counter: di bawah crosshair.
-- Damage indicator: arah damage (flash merah di tepi layar).
-- Grenade arc: garis prediksi parabola saat lempar.
-- Loot prompt: teks muncul saat dekat corpus ("E — Loot").
+### 4.5 UX di UE5 — INVENTORI 4 SENJATA (batas keras) + HUD KONTEKSTUAL
+- **Batas inventori: 4 senjata aktif** (hotkey 1–4) + weapon wheel (tahan Q → pilih). Lebih dari 4 = harus drop/simpan di ship cargo. Tidak ada scroll tak terbatas.
+- Carry weight: melampaui 4 slot + armor berat → speed -20% + stamina -30% (server hitung).
+- Weapon wheel: rotasi senjata (tahan Q → pilih) — hanya di Scan/Combat, hidden di Idle.
+- Ammo counter: di bawah crosshair (hanya saat senjata equip).
+- Damage indicator: arah damage (flash merah di tepi layar) — contextual.
+- Grenade arc: garis prediksi parabola saat lempar — hanya saat pin ditarik.
+- Loot prompt: teks muncul saat dekat corpus ("E — Loot") — hanya 5m radius.
+
+### 4.6 Performa / proforma (anti patah-patah — optimal wajib)
+- **Snapshot 10 Hz + interpolasi klien** (bukan 60 Hz). UE interpolasi visual deterministik (sama dengan `apps/game`); NOL `Date.now` di logic. Jeda jaringan ≠ stutter.
+- **Anggaran HUD**: update hanya saat state berubah; panel scan/combat ≤0.5 ms/frame @1080p. Idle = ~0 ms (HIDDEN).
+- **Anggaran VFX FPS (HIGH)**: muzzle ≤8, tracer ≤32, impact ≤64, grenade ≤4 — pool daur-ulang (NOL spawn brutal). Melebihi = queue, bukan spike.
+- **LOD senjata**: FPP high-poly, TPP low-poly + impostor >30m. Satu tier = satu budget, bukan klaim.
+- **Kriteria patah**: frame time p95 >16.6 ms saat duel 1v1 di HIGH = bug, bukan beban wajar (ukur via `stat unit`).
+
+### 4.7 Realisme gameplay (bukan cuma asset/UI)
+- Aim = recoil + spread + stamina + stance (jongkok/prone -30% spread). Bukan hitscan murni.
+- Reload = interruptible (sprint = cancel, peluru hilang).
+- Door breach = noise 80 → stealth + wanted, bukan instant.
+- Loot = 0.5s jongkok + reach, bisa di-interrupt damage.
+- Semua angka di atas server-authoritative (presentasi UE tidak ubah hasil).
 
 ---
 
@@ -366,6 +392,11 @@
 
 ---
 
+## 9.5 Performa / proforma global (anti patah — optimal = indah)
+- Server tick 10 Hz, snapshot → UE interpolasi (bukan prediksi). Visual deterministik, NOL `Date.now` baru.
+- Budget per frame HIGH: HUD ≤0.5 ms, VFX pool ≤0.8 ms, gangguan reaktif ≤0.1 ms (lihat 04-graphics §6). Idle = HUD ~0 ms.
+- FPP/TPP: FPP = cost penuh (kokpit), TPP = cost murah (orbit). Quality mengikuti kamera (04-graphics §2.3).
+
 ## 10. KONTRAK SERVER (mirror ke C++)
 
 ### 10.1 Tipe Data
@@ -447,15 +478,18 @@ struct FAcluxEvidence {
 
 ### 10.3 Acceptance Criteria
 - [ ] OC wallet显示正确，transaksi P2P +5% tax
-- [ ] Skill dual: ship→FPS transisi otomatis, cooldown terpisah
+- [ ] Skill dual: ship→FPS transisi otomatis, cooldown terpisah, kamera V FPP/TPP
+- [ ] HUD kontekstual: Idle kosong, Scan on-demand, Combat full (bukan selalu ON)
+- [ ] Inventori 4 senjata: hotkey 1–4 + wheel Q, weight penalty, anti card web
 - [ ] Hack: animasi laptop + mini-game + success/fail
-- [ ] FPS combat: aim, melee, grenade, loot, door breach
+- [ ] FPS combat: aim (ADS/Hip/recoil), melee, grenade, loot 0.5s, door breach noise
 - [ ] Stealth: detection meter + noise system + hiding
 - [ ] Death drop: item jatuh + corpus 5 menit
 - [ ] Revival: tim revival 3 detik + station revival 100 OC
 - [ ] Investigation: laporan → evidence → arrest warrant
 - [ ] Item recovery: 30 hari → 60% return
 - [ ] ARCLUX store: beli item + item ID unik
+- [ ] Performa: 10 Hz interp NOL patah, HUD ≤0.5 ms, VFX pool ≤0.8 ms, p95 duel HIGH ≤16.6 ms
 
 ---
 
