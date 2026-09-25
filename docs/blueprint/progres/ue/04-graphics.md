@@ -104,6 +104,10 @@ kokpit, audio thunder berbasis jarak), dipicu oleh transisi state,
 bukan oleh pemicu manual.
 4.4.3. Pool partikel dibatasi per jenis (tracer ≤64, beam ≤8,
 missile ≤12, impact ≤200 pada tier HIGH) dengan daur-ulang otomatis.
+4.4.4. Cuaca = gameplay, bukan kosmetik (presentasi di sini, angka di 06 §5.4):
+hujan asam/debu menutup jejak + Trace, neon/billboard membuka LOS drone,
+badai salju/monsun = zone time-based (early boleh rotasi, late exposure stack,
+tidak bisa heal-tanking). Malam -50% vision, hujan -30% (sama dengan web).
 
 ### 4.5. Kokpit dan kamera
 

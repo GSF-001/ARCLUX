@@ -77,6 +77,9 @@ Pelanggaran = dua client beda perilaku = bug MMO. Daftar TERTUTUP
    konsisten dua client).
 6. Token warna (`tokens.ts`) → DataTable + MPC (§6 migrasi).
    Nilai HEX sama, bukan "mirip".
+7. Tabel senjata 06 §4.8 (TTK/falloff/ADS) → `FArcluxWeapon` (field 1:1, angka mirror, bukan rumus baru).
+8. Heat record 05 §2.1 + §3.5 → `FArcluxHeat` (field 1:1). UE hanya tampil, vonis tetap server.
+9. Koloni 07 §6 (`FArcluxColony` + 5 intent `colony_*`/`studio_*`) → USTRUCT + JSON key SAMA.
 
 ## §3 — Yang DITULIS-ULANG di UE (🔴, presentasi saja)
 
