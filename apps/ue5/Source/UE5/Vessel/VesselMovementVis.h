@@ -7,26 +7,26 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "ArcluxTypes.h"
+#include "UE5Types.h"
 #include "VesselMovementVis.generated.h"
 
 UCLASS(ClassGroup = (ARCLUX), meta = (BlueprintSpawnableComponent))
-class ARCLUXUE_API UVesselMovementVis : public UActorComponent
+class UE5_API UVesselMovementVis : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
 	// Dipanggil tiap OnSnapshot (10Hz). Simpan prev/curr + waktu.
 	UFUNCTION(BlueprintCallable)
-	void PushSnapshot(const FArcluxVec3& Pos, const FArcluxVec3& Vel, int64 Tick);
+	void PushSnapshot(const FUE5Vec3& Pos, const FUE5Vec3& Vel, int64 Tick);
 
 	// Dipanggil tiap frame render. Alpha = (now - tickT)/0.1, clamp 0..1.
 	UFUNCTION(BlueprintCallable)
-	FArcluxVec3 SamplePosition(double NowSec) const;
+	FUE5Vec3 SamplePosition(double NowSec) const;
 
 private:
-	FArcluxVec3 PrevPos; FArcluxVec3 CurrPos;
-	FArcluxVec3 CurrVel;
+	FUE5Vec3 PrevPos; FUE5Vec3 CurrPos;
+	FUE5Vec3 CurrVel;
 	int64 PrevTick = -1; int64 CurrTick = -1;
 	double PrevTimeSec = 0; double CurrTimeSec = 0;
 };

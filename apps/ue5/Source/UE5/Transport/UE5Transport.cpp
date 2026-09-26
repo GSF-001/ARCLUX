@@ -1,10 +1,10 @@
 // Copyright 2026 GSF-001. ARCLUX MMO License v1 — see LICENSE-MMO.
-// ArcluxTransport.cpp — Slice 1. HTTP/JSON via modul HTTP + JsonUtilities.
+// UE5Transport.cpp — Slice 1. HTTP/JSON via modul HTTP + JsonUtilities.
 // Interpolasi di UVesselMovementVis (alpha seperti vessels.ts — presentation
 // only; simulation.ts p+=v*dt tetap kebenaran). Gate slice 1: snapshot masuk
 // + vessel kelihatan + WASD gerak. Gagal = STOP TOTAL (00-migrasi.md §8).
 
-#include "ArcluxTransport.h"
+#include "UE5Transport.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
@@ -12,17 +12,17 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
-void UArcluxTransport::StartPolling()
+void UUE5Transport::StartPolling()
 {
 	if (UWorld* W = GetWorld())
 	{
 		W->GetTimerManager().ClearTimer(PollTimer);
-		W->GetTimerManager().SetTimer(PollTimer, this, &UArcluxTransport::PollOnce, SnapshotIntervalSec, true);
+		W->GetTimerManager().SetTimer(PollTimer, this, &UUE5Transport::PollOnce, SnapshotIntervalSec, true);
 	}
 	PollOnce();
 }
 
-void UArcluxTransport::StopPolling()
+void UUE5Transport::StopPolling()
 {
 	if (UWorld* W = GetWorld())
 	{
@@ -30,7 +30,7 @@ void UArcluxTransport::StopPolling()
 	}
 }
 
-void UArcluxTransport::PollOnce()
+void UUE5Transport::PollOnce()
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Req = FHttpModule::Get().CreateRequest();
 	Req->SetURL(ServerBaseUrl + TEXT("/snapshot"));
@@ -39,10 +39,10 @@ void UArcluxTransport::PollOnce()
 	Req->OnProcessRequestComplete().BindLambda([this](FHttpRequestPtr, FHttpResponsePtr Res, bool bOk)
 	{
 		if (!bOk || !Res.IsValid() || Res->GetResponseCode() != 200) return;
-		FArcluxSnapshot Snap;
+		FUE5Snapshot Snap;
 		// Field 1:1 dengan RegionSnapshot (types.ts:105). Parse minimal: tick dulu.
 		// Full parse per-field di Slice 2 (StationActor + PlanetaryReader).
-		if (FJsonObjectConverter::JsonObjectStringToUStruct<FArcluxSnapshot>(Res->GetContentAsString(), &Snap, 0, 0)
+		if (FJsonObjectConverter::JsonObjectStringToUStruct<FUE5Snapshot>(Res->GetContentAsString(), &Snap, 0, 0)
 			&& Snap.Tick > LastTickSeen)
 		{
 			LastTickSeen = Snap.Tick;
@@ -52,7 +52,7 @@ void UArcluxTransport::PollOnce()
 	Req->ProcessRequest();
 }
 
-void UArcluxTransport::SendIntent(const FArcluxIntent& Intent)
+void UUE5Transport::SendIntent(const FUE5Intent& Intent)
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Req = FHttpModule::Get().CreateRequest();
 	Req->SetURL(ServerBaseUrl + TEXT("/intent"));
