@@ -1,0 +1,38 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.5",
+  "Category": "Games",
+  "Description": "ARCLUX flagship client (UE5 presentation-only, server-authoritative TS). See Docs/PORT-10V.md. Slice 0 scaffold.",
+  "Modules": [
+    {
+      "Name": "ARCLUXUE",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "EnhancedInput",
+      "Enabled": true
+    },
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    },
+    {
+      "Name": "UMG",
+      "Enabled": true
+    },
+    {
+      "Name": "HTTP",
+      "Enabled": true
+    },
+    {
+      "Name": "JSON",
+      "Enabled": true
+    }
+  ],
+  "TargetPlatforms": [
+    "Windows"
+  ]
+}
