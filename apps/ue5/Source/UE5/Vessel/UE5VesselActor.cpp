@@ -1,10 +1,17 @@
 // Copyright 2026 GSF-001. ARCLUX MMO License v1 — see LICENSE-MMO.
 // UE5VesselActor.cpp — Slice 1. Tick = render snapshot. Input = intent.
-// Gagal gate (vessel tidak gerak)? Cek: server nyala? /snapshot ada?
-// JSON field sama? Intent sampai (log server)? (03-implementasi.md §4).
+// Mirror input.ts: STEP 2600, KeyStep (W 1.5/S/A/D 1.0, Q/E 0.8),
+// boost 2.2x, brake = target posisi sendiri, brake selalu dikirim.
+// Gagal gate? Cek server nyala → /snapshot ada → field sama → intent di log.
 
 #include "UE5VesselActor.h"
 #include "UE5Transport.h"
+
+namespace
+{
+	constexpr double MoveStep = 2600.0; // SAMA dengan input.ts STEP
+	constexpr double BoostFactor = 2.2; // SAMA dengan input.ts sendMove
+}
 
 AUE5VesselActor::AUE5VesselActor()
 {
@@ -30,16 +37,38 @@ void AUE5VesselActor::SetupPlayerInputComponent(UInputComponent* IC)
 	IC->BindAxis(TEXT("MoveForward"), this, &AUE5VesselActor::AxisForward);
 	IC->BindAxis(TEXT("MoveRight"), this, &AUE5VesselActor::AxisRight);
 	IC->BindAxis(TEXT("MoveUp"), this, &AUE5VesselActor::AxisUp);
+	IC->BindAxis(TEXT("Turn"), this, &AUE5VesselActor::AxisTurn);
+	IC->BindAxis(TEXT("LookUp"), this, &AUE5VesselActor::AxisLookUp);
+	IC->BindAction(TEXT("Boost"), IE_Pressed, this, &AUE5VesselActor::ActBoostPressed);
+	IC->BindAction(TEXT("Boost"), IE_Released, this, &AUE5VesselActor::ActBoostReleased);
+	IC->BindAction(TEXT("Brake"), IE_Pressed, this, &AUE5VesselActor::ActBrakePressed);
+	IC->BindAction(TEXT("Brake"), IE_Released, this, &AUE5VesselActor::ActBrakeReleased);
+	IC->BindAction(TEXT("Fire"), IE_Pressed, this, &AUE5VesselActor::ActFire);
+	IC->BindAction(TEXT("Camera"), IE_Pressed, this, &AUE5VesselActor::ActCamera);
 }
 
-void AUE5VesselActor::AxisForward(float V) { PendingInput.X = V; }
+// Q naik / E turun (SAMA dengan settings.ts:59-60). W maju 1.5x.
+void AUE5VesselActor::AxisForward(float V) { PendingInput.X = V * (V < 0 ? 1.5 : 1.0); }
 void AUE5VesselActor::AxisRight(float V) { PendingInput.Y = V; }
-void AUE5VesselActor::AxisUp(float V) { PendingInput.Z = V; }
+void AUE5VesselActor::AxisUp(float V) { PendingInput.Z = V * 0.8; }
+void AUE5VesselActor::AxisTurn(float V) { LookYaw += V * 0.6; }   // lookSensitivity
+void AUE5VesselActor::AxisLookUp(float V) { LookPitch = FMath::Clamp(LookPitch + V * 0.6, -1.4, 1.4); }
+void AUE5VesselActor::ActBoostPressed() { bBoostHeld = true; }
+void AUE5VesselActor::ActBoostReleased() { bBoostHeld = false; }
+void AUE5VesselActor::ActBrakePressed() { bBrakeHeld = true; }
+void AUE5VesselActor::ActBrakeReleased() { bBrakeHeld = false; }
+void AUE5VesselActor::ActFire() { RequestAttack(); }
+void AUE5VesselActor::ActCamera() { CycleCamera(); }
 
 void AUE5VesselActor::ApplySnapshot(const FUE5Vessel& Vessel, int64 Tick)
 {
 	VesselState = Vessel;
 	MovementVis->PushSnapshot(Vessel.Base.Position, Vessel.Base.Velocity, Tick);
+}
+
+void AUE5VesselActor::CycleCamera()
+{
+	CamMode = static_cast<EUE5CamMode>((static_cast<uint8>(CamMode) + 1) % 5);
 }
 
 void AUE5VesselActor::Tick(float DeltaSeconds)
@@ -50,27 +79,52 @@ void AUE5VesselActor::Tick(float DeltaSeconds)
 	const FUE5Vec3 P = MovementVis->SamplePosition(FPlatformTime::Seconds());
 	SetActorLocation(FVector(P.X, P.Y, P.Z));
 
-	// Input: WASD → intent move, throttle 100ms (samakan tick server).
-	if (Transport && !PendingInput.IsNearlyZero())
+	// Brake selalu dikirim (biar vessel berhenti); gerak cuma saat ada input.
+	if (Transport && (bBrakeHeld || !PendingInput.IsNearlyZero()))
 	{
 		const double Now = FPlatformTime::Seconds();
 		if (Now - LastIntentTimeSec >= 0.1)
 		{
 			LastIntentTimeSec = Now;
-			RequestMove(PendingInput);
+			RequestMove(PendingInput, bBoostHeld, bBrakeHeld);
 		}
 	}
 }
 
-void AUE5VesselActor::RequestMove(const FVector& Dir)
+void AUE5VesselActor::RequestMove(const FVector& Dir, bool bBoost, bool bBrake)
+{
+	if (!Transport) return;
+	const FUE5Vec3& Base = MovementVis->SamplePosition(FPlatformTime::Seconds());
+	const double BF = bBoost ? BoostFactor : 1.0;
+	FUE5Intent Intent;
+	Intent.PlayerId = VesselState.Base.OwnerId;
+	Intent.EntityId = VesselState.Base.Id.ToString();
+	Intent.Type = TEXT("move"); // key SAMA dengan TS
+	if (bBrake && !bBoost)
+	{
+		// Brake → target = posisi sendiri (server baca jarak<1 → reverse thrust).
+		Intent.PayloadJson = FString::Printf(TEXT("{\"x\":%.3f,\"y\":%.3f,\"z\":%.3f}"),
+			Base.X, Base.Y, Base.Z);
+	}
+	else
+	{
+		Intent.PayloadJson = FString::Printf(TEXT("{\"x\":%.3f,\"y\":%.3f,\"z\":%.3f}"),
+			Base.X + Dir.X * MoveStep * BF,
+			Base.Y + Dir.Y * MoveStep * BF,
+			Base.Z + Dir.Z * MoveStep * BF);
+	}
+	Intent.Seq = NextSeq++;
+	Transport->SendIntent(Intent);
+}
+
+void AUE5VesselActor::RequestAttack()
 {
 	if (!Transport) return;
 	FUE5Intent Intent;
 	Intent.PlayerId = VesselState.Base.OwnerId;
 	Intent.EntityId = VesselState.Base.Id.ToString();
-	Intent.Type = TEXT("move"); // key SAMA dengan TS
-	Intent.PayloadJson = FString::Printf(TEXT("{\"dx\":%.3f,\"dy\":%.3f,\"dz\":%.3f}"),
-		Dir.X, Dir.Y, Dir.Z);
+	Intent.Type = TEXT("attack"); // SAMA dengan input.ts:118
+	Intent.PayloadJson = TEXT("{\"weapon\":\"plasma\"}"); // targeting di Slice 4
 	Intent.Seq = NextSeq++;
 	Transport->SendIntent(Intent);
 }
