@@ -1,15 +1,15 @@
 // Copyright 2026 GSF-001. ARCLUX MMO License v1 — see LICENSE-MMO.
-// ARCLUXUE.h — Slice 0 GameInstance: boot, server URL, tick poll.
+// UE5.h — Slice 0 GameInstance: boot, server URL, tick poll.
 // UE = presentasi. Tidak pernah menulis state (00-migrasi.md §0).
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "ARCLUXUE.generated.h"
+#include "UE5.generated.h"
 
 UCLASS()
-class ARCLUXUE_API UARCLUXUEGameInstance : public UGameInstance
+class UE5_API UUE5GameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 

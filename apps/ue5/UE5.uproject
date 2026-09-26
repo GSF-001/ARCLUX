@@ -2,10 +2,10 @@
   "FileVersion": 3,
   "EngineAssociation": "5.5",
   "Category": "Games",
-  "Description": "ARCLUX flagship client (UE5 presentation-only, server-authoritative TS). See Docs/PORT-10V.md. Slice 0 scaffold.",
+  "Description": "UE5 flagship client (presentation-only, server-authoritative TS). See Docs/PORT-10V.md. Slice 0 scaffold.",
   "Modules": [
     {
-      "Name": "ARCLUXUE",
+      "Name": "UE5",
       "Type": "Runtime",
       "LoadingPhase": "Default"
     }

@@ -4,14 +4,14 @@
 > Aturan: baris ⬜ = DILARANG mulai. 1 slice = 1 gate. Gate merah = STOP, bukan lembur.
 
 ## Slice 0 — Scaffold (INI, DONE di repo)
-- [x] `ARCLUXUE.uproject` (UE 5.5, DX12, plugin HTTP/JSON/UMG/Niagara/EnhancedInput)
+- [x] `UE5.uproject` (UE 5.5, DX12, plugin HTTP/JSON/UMG/Niagara/EnhancedInput)
 - [x] `Config/` (Engine DX12+TSR+VSM+WP, Game URL :24001, Input penanda)
-- [x] `Source/ARCLUXUE/ARCLUXUE.Build.cs` + `ARCLUXUE.h/.cpp` (GameInstance boot)
+- [x] `Source/UE5/UE5.Build.cs` + `UE5.h/.cpp` (GameInstance boot)
 - Gate: project kebuka + compile bersih di PC (TIDAK bisa di Termux — butuh Windows + UE5).
 
 ## Slice 1 — Connect + 1 vessel (INI, code DONE, belum compile)
-- [x] `Transport/ArcluxTypes.h` (mirror types.ts 1:1 + Weapon/Heat/Colony)
-- [x] `Transport/ArcluxTransport.h/.cpp` (POST /intent retry 1x, GET /snapshot 100ms)
+- [x] `Transport/UE5Types.h` (mirror types.ts 1:1 + Weapon/Heat/Colony)
+- [x] `Transport/UE5Transport.h/.cpp` (POST /intent retry 1x, GET /snapshot 100ms)
 - [x] `Vessel/VesselMovementVis.h/.cpp` (interp alpha, presentation only)
 - [ ] VesselActor + IMC gerak (intent `move`) — NEXT
 - Gate: vessel server kelihatan + WASD gerak + HUD baca tick. GAGAL = STOP TOTAL.
@@ -34,5 +34,5 @@
 - Gate: pemain baru 5 menit ke hangar tanpa wiki.
 
 ## Slice 6 — Multi + shard + Studio (07)
-- [ ] Directory + gate transit + `FArcluxColony` + 5 intent colony/studio
+- [ ] Directory + gate transit + `FUE5Colony` + 5 intent colony/studio
 - Gate: 2 pemain 2 region handoff tanpa duplikat. Replication MMO DILARANG.

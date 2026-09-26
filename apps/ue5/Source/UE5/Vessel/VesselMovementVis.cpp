@@ -3,7 +3,7 @@
 
 #include "VesselMovementVis.h"
 
-void UVesselMovementVis::PushSnapshot(const FArcluxVec3& Pos, const FArcluxVec3& Vel, int64 Tick)
+void UVesselMovementVis::PushSnapshot(const FUE5Vec3& Pos, const FUE5Vec3& Vel, int64 Tick)
 {
 	PrevPos = CurrPos; PrevTick = CurrTick; PrevTimeSec = CurrTimeSec;
 	CurrPos = Pos; CurrVel = Vel; CurrTick = Tick;
@@ -11,11 +11,11 @@ void UVesselMovementVis::PushSnapshot(const FArcluxVec3& Pos, const FArcluxVec3&
 	if (PrevTick < 0) { PrevPos = CurrPos; PrevTick = CurrTick; PrevTimeSec = CurrTimeSec; }
 }
 
-FArcluxVec3 UVesselMovementVis::SamplePosition(double NowSec) const
+FUE5Vec3 UVesselMovementVis::SamplePosition(double NowSec) const
 {
 	const double Span = FMath::Max(0.0001, CurrTimeSec - PrevTimeSec);
 	const double Alpha = FMath::Clamp((NowSec - PrevTimeSec) / Span, 0.0, 1.0);
-	FArcluxVec3 Out;
+	FUE5Vec3 Out;
 	Out.X = PrevPos.X + (CurrPos.X - PrevPos.X) * Alpha;
 	Out.Y = PrevPos.Y + (CurrPos.Y - PrevPos.Y) * Alpha;
 	Out.Z = PrevPos.Z + (CurrPos.Z - PrevPos.Z) * Alpha;

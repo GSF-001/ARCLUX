@@ -1,5 +1,5 @@
 // Copyright 2026 GSF-001. ARCLUX MMO License v1 — see LICENSE-MMO.
-// ArcluxTransport.h — Slice 1 bridge (00-migrasi.md §4). Spec, bukan teori:
+// UE5Transport.h — Slice 1 bridge (00-migrasi.md §4). Spec, bukan teori:
 // POST /intent (queue + retry 1x, timeout 2s), GET /snapshot tiap 100ms,
 // broadcast OnSnapshot. UE TIDAK validasi ulang — penolakan ditampilkan read-only.
 
@@ -7,14 +7,14 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
-#include "ArcluxTypes.h"
-#include "ArcluxTransport.generated.h"
+#include "UE5Types.h"
+#include "UE5Transport.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArcluxSnapshot, const FArcluxSnapshot&, Snapshot);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnArcluxIntentRejected, const FString&, IntentType, const FString&, Reason);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUE5Snapshot, const FUE5Snapshot&, Snapshot);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUE5IntentRejected, const FString&, IntentType, const FString&, Reason);
 
 UCLASS(BlueprintType)
-class ARCLUXUE_API UArcluxTransport : public UObject
+class UE5_API UUE5Transport : public UObject
 {
 	GENERATED_BODY()
 
@@ -30,10 +30,10 @@ public:
 	float IntentTimeoutSec = 2.0f;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnArcluxSnapshot OnSnapshot;
+	FOnUE5Snapshot OnSnapshot;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnArcluxIntentRejected OnIntentRejected;
+	FOnUE5IntentRejected OnIntentRejected;
 
 	UFUNCTION(BlueprintCallable)
 	void StartPolling();
@@ -41,9 +41,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void StopPolling();
 
-	// SendIntent(FArcluxIntent) → POST /intent JSON (key SAMA dengan TS).
+	// SendIntent(FUE5Intent) → POST /intent JSON (key SAMA dengan TS).
 	UFUNCTION(BlueprintCallable)
-	void SendIntent(const FArcluxIntent& Intent);
+	void SendIntent(const FUE5Intent& Intent);
 
 private:
 	FTimerHandle PollTimer;
