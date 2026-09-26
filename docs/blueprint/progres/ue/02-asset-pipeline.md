@@ -151,7 +151,6 @@ di radius proyek komunitas (flag site PUBLIC, radius 2km):
   2 tahun → reruntuhan. Satu loop penuh, tercatat di ledger.
 
 ## 8. Repo ke game ke tangan pemain (FINAL)
-
 8.1. Pemain TIDAK PERNAH menyentuh repo. Repo adalah dapur;
 palet build dalam game adalah meja saji. Aliran wajib:
 
@@ -239,3 +238,8 @@ Regenerasi otomatis DITOLAK — stakes membuat perang bermakna.
 10.5. Ringkasan lifecycle penuh (satu baris): bangun = antre,
 hancur = jadi puing, perbaiki = antre lebih murah, ditinggal =
 bumi menelan.
+
+## 11. ARCLUX Studio — pointer (FINAL, logika di 07, tanpa duplikat)
+- Studio = bungkus `packages/*` (editor/parser/dsl/detectors/indexer/runtime/scheduler/kernel/gameserver/universe/db/provenance/networking) jadi UI isi planet, bukan game baru.
+- Koloni memakai klaim §8.5/§9 yang SAMA (100×100m, patok/sertifikat). Founder planet (misal Mars) set rule, pendatang claim di dalamnya. 1 planet = banyak koloni, 1 gate = 1 region.
+- Detail sandbox/kuota/split/deploy ada di `07-studio.md` — file ini tidak mengulang.

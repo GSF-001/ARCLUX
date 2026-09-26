@@ -211,6 +211,20 @@
 - Loot = 0.5s jongkok + reach, bisa di-interrupt damage.
 - Semua angka di atas server-authoritative (presentasi UE tidak ubah hasil).
 
+### 4.8 Tabel senjata FPS (FINAL — referensi COD, tanpa duplikat §4.1)
+- TTK acuan (HP 100): Rifle ~250ms (5-6 hit), SMG ~230ms <15m, Sniper 1 head / 2 body, Shotgun 1 hit <8m / 0 >20m. Angka final di playtest, struktur tabel TETAP.
+- Falloff 3-tier (server hitung, UE render): SMG drop-1 10-15m, Rifle 35-46m, Sniper 100m+. Di luar tier = damage turun, bukan miss acak.
+- ADS / sprint-to-fire (server vonis, UE animasi): Pistol 200ms / Rifle 300ms / Sniper 550ms+; sprint-to-fire 175-325ms (Tac-Sprint = penalti atas).
+- Flinch: kena tembak = aim punch + sway (Heavy Stock -60%, bukan laser).
+- Loot cepat (PUBG): `F` = ambil instant, `Tab` = atur; corpse 300s (§6.1) + dog-tag = recall wave berikutnya di pos radio, bukan spawn instant (§7).
+
+### 2.7 Lapisan kapal EVE (FINAL — tanpa duplikat `combat.ts`/`collision.ts`)
+- Lock = cost: frigate lock battleship 2s, battleship lock frigate 10-20s (signature vs scan res). Tanpa lock = tidak bisa inspect/focus penuh.
+- Tracking: orbit rapat cepat = miss dua arah (angular vs tracking turret). Kapal besar tidak auto-hit kecil.
+- Capacitor: scan/warp/repair kuras cap; kering = mati diam. Paksa prioritas modul.
+- Warp = align 75% + bisa di-tackle/bubble (`gate.ts` handoff 2-fase). Bukan teleport.
+- Hancur = 50% cargo drop jadi wreck publik + killmail, sisanya musnah permanen (putar ekonomi, bukan full lootback). Angka `DAMAGE_CEILING=12` di `combat.ts` TETAP (ini lapisannya, bukan gantinya).
+
 ---
 
 ## 5. STEALTH SYSTEM

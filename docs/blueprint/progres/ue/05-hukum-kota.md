@@ -92,6 +92,14 @@ mengadili.
 3.4. Insentif: gaji dinas + bonus penangkapan + pangkat = reputasi
 (06). Polisi adalah karier dengan progresi, bukan peran sementara.
 
+### 3.5 Polisi jenius — Heat memori + yurisdiksi + quickhack (FINAL, tanpa duplikat §2)
+- Heat = memori, bukan timer: wajah/outfit/mobil/senjata/CCTV terekam di record §2.1. Ganti baju/full di bagasi + pisah duo = hapus 1 level (bukan hilang instant 20s).
+- Tanpa teleport: polisi tidak spawn di belakang buronan. Mode Search/Investigasi + roadblock + ping `lastSeen` (§2.4). Nyangkut di gang = gagal, bukan cheat.
+- Yurisdiksi per-dome: korpo vs liar beda polisi; gerbang rival menolak mobil polisi (zona §7.2). Satu crowd system untuk semua dome DILARANG.
+- Quickhack = senjata polisi (bukan tembak saja): Scan-Ping, matikan getaway car, bajak bodycam/CCTV musuh. Trace balik + Counter-Hack berlaku dua arah.
+- Bodycam = bukti: ON = rekaman sah untuk warrant (§8 06), OFF = Heat naik, footage bisa dihancurkan kayak CCTV.
+- Non-letal: Warn/Defuse/suppressive pin — ngaruh reputasi permanen (Psychopath = irreversible).
+
 ## 4. NPC pelengkap (batas eksplisit — FINAL)
 
 4.1. Drone patroli: rute seeded per sektor, verifikasi ID otomatis
