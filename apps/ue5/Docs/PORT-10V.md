@@ -13,7 +13,8 @@
 - [x] `Transport/UE5Types.h` (mirror types.ts 1:1 + Weapon/Heat/Colony)
 - [x] `Transport/UE5Transport.h/.cpp` (POST /intent retry 1x, GET /snapshot 100ms)
 - [x] `Vessel/VesselMovementVis.h/.cpp` (interp alpha, presentation only)
-- [ ] VesselActor + IMC gerak (intent `move`) — NEXT
+- [x] `Vessel/UE5VesselActor.h/.cpp` (ApplySnapshot + RequestMove intent `move` + WASD)
+- [ ] IMC Pawn proper (aset editor PC) + HUD baca tick
 - Gate: vessel server kelihatan + WASD gerak + HUD baca tick. GAGAL = STOP TOTAL.
 
 ## Slice 2 — Planet + station + dock
