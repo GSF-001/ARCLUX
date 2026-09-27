@@ -6,12 +6,7 @@
 
 #include "UE5VesselActor.h"
 #include "UE5Transport.h"
-
-namespace
-{
-	constexpr double MoveStep = 2600.0; // SAMA dengan input.ts STEP
-	constexpr double BoostFactor = 2.2; // SAMA dengan input.ts sendMove
-}
+#include "UE5IntentFactory.h"
 
 AUE5VesselActor::AUE5VesselActor()
 {
@@ -95,36 +90,14 @@ void AUE5VesselActor::RequestMove(const FVector& Dir, bool bBoost, bool bBrake)
 {
 	if (!Transport) return;
 	const FUE5Vec3& Base = MovementVis->SamplePosition(FPlatformTime::Seconds());
-	const double BF = bBoost ? BoostFactor : 1.0;
-	FUE5Intent Intent;
-	Intent.PlayerId = VesselState.Base.OwnerId;
-	Intent.EntityId = VesselState.Base.Id.ToString();
-	Intent.Type = TEXT("move"); // key SAMA dengan TS
-	if (bBrake && !bBoost)
-	{
-		// Brake → target = posisi sendiri (server baca jarak<1 → reverse thrust).
-		Intent.PayloadJson = FString::Printf(TEXT("{\"x\":%.3f,\"y\":%.3f,\"z\":%.3f}"),
-			Base.X, Base.Y, Base.Z);
-	}
-	else
-	{
-		Intent.PayloadJson = FString::Printf(TEXT("{\"x\":%.3f,\"y\":%.3f,\"z\":%.3f}"),
-			Base.X + Dir.X * MoveStep * BF,
-			Base.Y + Dir.Y * MoveStep * BF,
-			Base.Z + Dir.Z * MoveStep * BF);
-	}
-	Intent.Seq = NextSeq++;
-	Transport->SendIntent(Intent);
+	Transport->SendIntent(UUE5IntentFactory::BuildMoveIntent(
+		VesselState.Base.OwnerId, VesselState.Base.Id.ToString(),
+		Base.X, Base.Y, Base.Z, Dir.X, Dir.Y, Dir.Z, bBoost, bBrake, NextSeq++));
 }
 
 void AUE5VesselActor::RequestAttack()
 {
 	if (!Transport) return;
-	FUE5Intent Intent;
-	Intent.PlayerId = VesselState.Base.OwnerId;
-	Intent.EntityId = VesselState.Base.Id.ToString();
-	Intent.Type = TEXT("attack"); // SAMA dengan input.ts:118
-	Intent.PayloadJson = TEXT("{\"weapon\":\"plasma\"}"); // targeting di Slice 4
-	Intent.Seq = NextSeq++;
-	Transport->SendIntent(Intent);
+	Transport->SendIntent(UUE5IntentFactory::BuildAttackIntent(
+		VesselState.Base.OwnerId, VesselState.Base.Id.ToString(), TEXT("plasma"), NextSeq++));
 }
