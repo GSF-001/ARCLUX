@@ -21,9 +21,11 @@
 - [ ] IMC Pawn proper (aset editor PC) + UMG visual + HUD baca tick
 - Gate: vessel server kelihatan + WASD gerak + HUD baca tick. GAGAL = STOP TOTAL.
 
-## Slice 2 — Planet + station + dock
-- [ ] `PlanetaryReader` (EnvironmentalContext → GradeMood/CockpitState, rumus SAMA)
-- [ ] `StationActor` + intent `dock` + interior UMG placeholder
+## Slice 2 — Planet + station + dock (INI code, belum compile PC)
+- [x] `PlanetaryReader` (UE5PlanetaryReader — rumus SAMA, Slice 1)
+- [x] `Station/UE5StationActor.h/.cpp` (hub+ring+safe-zone visual + IsInDockRange + RequestDock)
+- [x] Pawn `RequestDock` (G) + `UI/UE5InteriorWidget` placeholder
+- [ ] Interior full (port interior.ts) — Slice 5
 - Gate: fly → dock → interior tanpa crash.
 
 ## Slice 3 — Material + Lumen + cuaca (§7 tabel M1/L1/A1-A4)
