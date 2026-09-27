@@ -14,6 +14,7 @@
 #include "UE5VesselPawn.generated.h"
 
 class UUE5Transport;
+class AUE5StationActor;
 
 UCLASS()
 class UE5_API AUE5VesselPawn : public APawn
@@ -51,6 +52,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ApplySnapshot(const FUE5Vessel& Vessel, int64 Tick);
 
+	// Stasiun tujuan (di-set level/spawner). E = thrust di flight (settings.ts);
+	// dock pakai G sampai state-machine interior Slice 5 bawa E-kontekstual.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	AUE5StationActor* TargetStation = nullptr;
+
+	UFUNCTION(BlueprintCallable)
+	void RequestDock();
+
 	UFUNCTION(BlueprintCallable)
 	void CycleCamera();
 
@@ -85,5 +94,6 @@ private:
 	void ActBrakeReleased();
 	void ActFire();
 	void ActCamera();
+	void ActDock();
 	void RefreshActiveCamera();
 };

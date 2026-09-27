@@ -4,6 +4,7 @@
 #include "UE5VesselPawn.h"
 #include "UE5Transport.h"
 #include "UE5IntentFactory.h"
+#include "UE5StationActor.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
@@ -56,6 +57,7 @@ void AUE5VesselPawn::SetupPlayerInputComponent(UInputComponent* IC)
 	IC->BindAction(TEXT("Brake"), IE_Released, this, &AUE5VesselPawn::ActBrakeReleased);
 	IC->BindAction(TEXT("Fire"), IE_Pressed, this, &AUE5VesselPawn::ActFire);
 	IC->BindAction(TEXT("Camera"), IE_Pressed, this, &AUE5VesselPawn::ActCamera);
+	IC->BindAction(TEXT("Dock"), IE_Pressed, this, &AUE5VesselPawn::ActDock);
 }
 
 void AUE5VesselPawn::AxisForward(float V) { PendingInput.X = V * (V < 0 ? 1.5 : 1.0); }
@@ -76,6 +78,16 @@ void AUE5VesselPawn::ActFire()
 }
 
 void AUE5VesselPawn::ActCamera() { CycleCamera(); }
+
+void AUE5VesselPawn::ActDock() { RequestDock(); }
+
+void AUE5VesselPawn::RequestDock()
+{
+	if (!Transport || !TargetStation) return;
+	// Pre-check klien hemat round-trip; vonis tetap server (validator.ts:140).
+	if (!TargetStation->IsInDockRange(GetActorLocation())) return;
+	TargetStation->RequestDock(VesselState.Base.OwnerId, VesselState.Base.Id.ToString(), NextSeq);
+}
 
 void AUE5VesselPawn::CycleCamera()
 {
