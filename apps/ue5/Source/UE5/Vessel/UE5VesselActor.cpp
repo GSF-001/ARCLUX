@@ -98,6 +98,7 @@ void AUE5VesselActor::RequestMove(const FVector& Dir, bool bBoost, bool bBrake)
 void AUE5VesselActor::RequestAttack()
 {
 	if (!Transport) return;
+	// TargetId diisi targeting UI (sisa Slice 4). Kosong = server abaikan (combat.ts:46).
 	Transport->SendIntent(UUE5IntentFactory::BuildAttackIntent(
-		VesselState.Base.OwnerId, VesselState.Base.Id.ToString(), TEXT("plasma"), NextSeq++));
+		VesselState.Base.OwnerId, VesselState.Base.Id.ToString(), TEXT("plasma"), TEXT(""), NextSeq++));
 }

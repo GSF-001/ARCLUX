@@ -25,7 +25,7 @@ public:
 		double DirX, double DirY, double DirZ,
 		bool bBoost, bool bBrake, int64 Seq);
 
-	// Intent "attack" (input.ts:118). Targeting penuh di Slice 4.
+	// Intent "attack" (input.ts:118 + combat.ts:45: targetId WAJIB, kosong = server abaikan).
 	static FUE5Intent BuildAttackIntent(const FString& PlayerId, const FString& EntityId,
-		const FString& Weapon, int64 Seq);
+		const FString& Weapon, const FString& TargetId, int64 Seq);
 };

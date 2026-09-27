@@ -30,9 +30,11 @@
 - [ ] `M_Hull + T_*` (seed SAMA) + Lumen rig + 1 storm Niagara
 - Gate: banded screenshot browser vs UE mirip.
 
-## Slice 4 — Senjata + damage (W1+D1 + 06 §4.8 + lapis EVE 06 §2.7)
-- [ ] `NS_Weapon_*` pool (tracer 64/beam 8/missile 12/impact 200) + material swap
-- Gate: duel 2 vessel kill full + damage terbaca.
+## Slice 4 — Senjata + damage (INI code, belum Niagara PC)
+- [x] `Vessel/UE5Weapon.h/.cpp` (archetype + pool caps + cooldown mirror combat.ts + damage level)
+- [x] `BuildAttackIntent` bawa targetId (combat.ts:46 — kosong = server abaikan, bukan bug)
+- [ ] `NS_Weapon_*` Niagara + material swap + targeting UI + duel 2 vessel
+- Gate: kill full (large explosion + carcass) + damage terbaca.
 
 ## Slice 5 — UMG + NPE (U1-U12 + 06 HUD kontekstual + 05 §3.5 polisi)
 - [ ] TAC/VESSEL/slot + NPE 5 menit + Heat/bodycam widget

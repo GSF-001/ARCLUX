@@ -30,13 +30,13 @@ FUE5Intent UUE5IntentFactory::BuildMoveIntent(const FString& PlayerId, const FSt
 }
 
 FUE5Intent UUE5IntentFactory::BuildAttackIntent(const FString& PlayerId, const FString& EntityId,
-	const FString& Weapon, int64 Seq)
+	const FString& Weapon, const FString& TargetId, int64 Seq)
 {
 	FUE5Intent Intent;
 	Intent.PlayerId = PlayerId;
 	Intent.EntityId = EntityId;
 	Intent.Type = TEXT("attack"); // SAMA dengan input.ts:118
-	Intent.PayloadJson = FString::Printf(TEXT("{\"weapon\":\"%s\"}"), *Weapon);
+	Intent.PayloadJson = FString::Printf(TEXT("{\"weapon\":\"%s\",\"targetId\":\"%s\"}"), *Weapon, *TargetId);
 	Intent.Seq = Seq;
 	return Intent;
 }
