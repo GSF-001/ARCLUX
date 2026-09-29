@@ -74,7 +74,7 @@ void AUE5VesselPawn::ActFire()
 {
 	if (!Transport) return;
 	Transport->SendIntent(UUE5IntentFactory::BuildAttackIntent(
-		VesselState.Base.OwnerId, VesselState.Base.Id.ToString(), TEXT("plasma"), NextSeq++));
+		VesselState.Base.OwnerId, VesselState.Base.Id.ToString(), TEXT("plasma"), TEXT(""), NextSeq++));
 }
 
 void AUE5VesselPawn::ActCamera() { CycleCamera(); }
