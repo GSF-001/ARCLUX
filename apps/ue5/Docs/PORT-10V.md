@@ -28,8 +28,11 @@
 - [ ] Interior full (port interior.ts) — Slice 5
 - Gate: fly → dock → interior tanpa crash.
 
-## Slice 3 — Material + Lumen + cuaca (§7 tabel M1/L1/A1-A4)
-- [ ] `M_Hull + T_*` (seed SAMA) + Lumen rig + 1 storm Niagara
+## Slice 3 — Material + Lumen + cuaca (§7 tabel M1/L1/A1-A4) (code DONE, belum compile)
+- [x] `Planetary/UE5MaterialKit.h/.cpp` (M1.1 port bit-identik: mulberry32 + noise2D + hull albedo + roughness + normal Sobel)
+- [x] `Planetary/UE5LightRigActor.h/.cpp` (key/fill/rim mirror lighting.ts, elevation rad → pitch, intensity dari sin(elev))
+- [x] `Planetary/UE5StormDirector.h/.cpp` (weather.kind → OnWeatherChanged, IsStorm/IsPrecip)
+- [ ] Editor PC: `M_Hull` + bake `T_*` via UE5MaterialKit, Lumen rig assign ke LightRigActor, `NS_Storm` Niagara bind ke StormDirector.OnWeatherChanged
 - Gate: banded screenshot browser vs UE mirip.
 
 ## Slice 4 — Senjata + damage (INI code, belum Niagara PC)
