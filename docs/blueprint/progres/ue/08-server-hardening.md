@@ -1,4 +1,4 @@
-# 08 — SERVER HARDENING (MMORPG otoritatif, EVE-grade)
+# 08 — SERVER HARDENING (MMORPG otoritatif)
 
 > Status: **DRAFT v2 — AUDIT LENGKAP + RENCANA RINCI.** 2026-10-04.
 > Induk: `00-migrasi.md` §0 (server = otoritas), `03-implementasi.md` §1,
