@@ -28,6 +28,15 @@ void UUE5Hud::SetScanHeld(bool bHeld)
 	RecomputeMode();
 }
 
+void UUE5Hud::SetActiveMode(const FString& Mode)
+{
+	if (Mode != ActiveMode)
+	{
+		ActiveMode = Mode;
+		OnHudModeChanged(HudMode); // reuse event agar skill bar ikut swap
+	}
+}
+
 void UUE5Hud::SelectSlot(int32 Slot)
 {
 	if (Slot >= 1 && Slot <= 4) SelectedSlot = Slot; // batas keras 06 §4.5

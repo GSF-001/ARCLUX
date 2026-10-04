@@ -41,8 +41,14 @@
 - [ ] `NS_Weapon_*` Niagara + material swap + targeting UI + duel 2 vessel
 - Gate: kill full (large explosion + carcass) + damage terbaca.
 
-## Slice 5 — UMG + NPE (U1-U12 + 06 HUD kontekstual + 05 §3.5 polisi)
-- [ ] TAC/VESSEL/slot + NPE 5 menit + Heat/bodycam widget
+## Slice 5 — UMG + NPE (U1-U12 + 06 HUD kontekstual + 05 §3.5 polisi) (code DONE, belum compile)
+- [x] `UI/UE5Tokens.h/.cpp` (SATU sumber hex/font/glow/transition/glass — mirror tokens.ts)
+- [x] `UI/UE5NpeWidget.h/.cpp` (5 langkah state-driven, centang dari event gameplay, skippable, OnFinished)
+- [x] `UI/UE5SkillBarWidget.h/.cpp` (ship/FPS 4 slot, visible hanya Scan/Combat, swap slide 0.3s)
+- [x] `UI/UE5WalletWidget.h/.cpp` (OC + format koma ribuan, OnOcChanged hologram)
+- [x] `UI/UE5HeatWidget.h/.cpp` (wanted 0-5 + bodycam + tether warning, warna ok/warn/danger)
+- [x] `UE5Hud::SetActiveMode` (ship/fps dari server, swap event)
+- [ ] Editor PC: pasang DataTable DT_ArcluxColors/DT_ArcluxType, layout UMG (TAC kiri/VESSEL kanan/slot bawah, JANGAN pindah), glass material (§4.6.2), NPE overlay, skill bar slide
 - Gate: pemain baru 5 menit ke hangar tanpa wiki.
 
 ## Slice 6 — Multi + shard + Studio (07)

@@ -41,6 +41,14 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	int32 SelectedSlot = 0; // 1..4 (inventori 06 §4.5)
 
+	// Mode aktif (06 §2.5): di kapal = Ship, di darat/interior = Fps.
+	// Server kirim activeMode; UE cuma tampil.
+	UPROPERTY(BlueprintReadOnly)
+	FString ActiveMode = TEXT("ship");
+
+	UFUNCTION(BlueprintCallable)
+	void SetActiveMode(const FString& Mode);
+
 	// Dipanggil tiap OnSnapshot. NOL update UMG bila hash sama (pola hud.ts).
 	UFUNCTION(BlueprintCallable)
 	void PushState(int64 Tick, int32 InHull, double InSpeed, bool bThreat);
