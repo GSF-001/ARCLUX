@@ -28,4 +28,16 @@ public:
 	// Intent "attack" (input.ts:118 + combat.ts:45: targetId WAJIB, kosong = server abaikan).
 	static FUE5Intent BuildAttackIntent(const FString& PlayerId, const FString& EntityId,
 		const FString& Weapon, const FString& TargetId, int64 Seq);
+
+	// Slice 6 — 5 intent koloni/studio (07-studio.md §6, key SAMA dua klien).
+	static FUE5Intent BuildColonyClaimIntent(const FString& PlayerId, const FString& EntityId,
+		const FString& PlanetId, const FString& ClaimId, int64 Seq);
+	static FUE5Intent BuildColonySubmitIntent(const FString& PlayerId, const FString& EntityId,
+		const FString& ColonyId, const FString& Path, int64 Seq);
+	static FUE5Intent BuildColonyRollbackIntent(const FString& PlayerId, const FString& EntityId,
+		const FString& ColonyId, int64 Seq);
+	static FUE5Intent BuildStudioPublishIntent(const FString& PlayerId, const FString& EntityId,
+		const FString& ColonyId, const FString& Title, int64 Seq);
+	static FUE5Intent BuildStudioForkIntent(const FString& PlayerId, const FString& EntityId,
+		const FString& SourceColonyId, int64 Seq);
 };

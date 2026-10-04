@@ -40,3 +40,30 @@ FUE5Intent UUE5IntentFactory::BuildAttackIntent(const FString& PlayerId, const F
 	Intent.Seq = Seq;
 	return Intent;
 }
+
+static FUE5Intent MakeColonyIntent(const FString& P, const FString& E,
+	const FString& Type, const FString& PayloadJson, int64 Seq)
+{
+	FUE5Intent Intent;
+	Intent.PlayerId = P;
+	Intent.EntityId = E;
+	Intent.Type = Type; // key SAMA dengan TS
+	Intent.PayloadJson = PayloadJson;
+	Intent.Seq = Seq;
+	return Intent;
+}
+
+FUE5Intent UUE5IntentFactory::BuildColonyClaimIntent(const FString& P, const FString& E, const FString& PlanetId, const FString& ClaimId, int64 S)
+{ return MakeColonyIntent(P, E, TEXT("colony_claim"), FString::Printf(TEXT("{\"planetId\":\"%s\",\"claimId\":\"%s\"}"), *PlanetId, *ClaimId), S); }
+
+FUE5Intent UUE5IntentFactory::BuildColonySubmitIntent(const FString& P, const FString& E, const FString& ColonyId, const FString& Path, int64 S)
+{ return MakeColonyIntent(P, E, TEXT("colony_submit"), FString::Printf(TEXT("{\"colonyId\":\"%s\",\"path\":\"%s\"}"), *ColonyId, *Path), S); }
+
+FUE5Intent UUE5IntentFactory::BuildColonyRollbackIntent(const FString& P, const FString& E, const FString& ColonyId, int64 S)
+{ return MakeColonyIntent(P, E, TEXT("colony_rollback"), FString::Printf(TEXT("{\"colonyId\":\"%s\"}"), *ColonyId), S); }
+
+FUE5Intent UUE5IntentFactory::BuildStudioPublishIntent(const FString& P, const FString& E, const FString& ColonyId, const FString& Title, int64 S)
+{ return MakeColonyIntent(P, E, TEXT("studio_publish"), FString::Printf(TEXT("{\"colonyId\":\"%s\",\"title\":\"%s\"}"), *ColonyId, *Title), S); }
+
+FUE5Intent UUE5IntentFactory::BuildStudioForkIntent(const FString& P, const FString& E, const FString& SourceColonyId, int64 S)
+{ return MakeColonyIntent(P, E, TEXT("studio_fork"), FString::Printf(TEXT("{\"sourceColonyId\":\"%s\"}"), *SourceColonyId), S); }
