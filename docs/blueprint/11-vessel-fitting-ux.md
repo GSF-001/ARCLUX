@@ -143,20 +143,21 @@ graphs/       calc · events · data · gui · style (proyeksi
 
 ## 5. Rencana eksekusi
 
-### Fase 1 — Engine calc (`packages/universe`, TS)
-- [ ] `fitCalc.ts` — component-effect pipeline: pasang/lepas
+### Fase 1 — Engine calc (`packages/universe`, TS) ✅ SELESAI (PR #767)
+- [x] `fitCalc.ts` — component-effect pipeline: pasang/lepas
       `ComponentBinding` → hitung ulang `SystemState.health`
       + `VesselModel` stats (deterministic, pure function).
-- [ ] `capSim.ts` — simulasi kapasitor per tick (konsumsi vs
+- [x] `capSim.ts` — simulasi kapasitor per tick (konsumsi vs
       regen, depletion warning) — referensi `capSim.py`,
       implementasi sendiri.
-- [ ] Slot constraint engine — tiap subsystem punya slot
+- [x] Slot constraint engine — tiap subsystem punya slot
       capacity; validator menolak overflow.
-- [ ] Damage profile — incoming damage type → resistensi
+- [x] Damage profile — incoming damage type → resistensi
       subsystem (referensi `damagePattern.py`).
-- [ ] Regresi test: same input → same output (determinism law).
+- [x] Regresi test: same input → same output (determinism law)
+      — 40 test (`tests/fit-calc.test.ts` + `tests/cap-sim.test.ts`).
 
-### Fase 2 — Vessel Design Dashboard (`apps/web`, blueprint 05)
+### Fase 2 — Vessel Design Dashboard (alat luar-game di `apps/web` + view in-game di `apps/game` — D-026, blueprint 05)
 - [ ] Slot grid UI (6 subsystem + component slots).
 - [ ] Stat projection real-time (Fase 1 dipanggil per perubahan).
 - [ ] Cap gauge + gauge widget (referensi `pyfa_gauge`).
@@ -197,13 +198,13 @@ graphs/       calc · events · data · gui · style (proyeksi
 ## 7. Checklist verifikasi PR
 
 ```
-[ ] npx tsc --noEmit — bersih (universe + gameserver + apps)
-[ ] Regresi test determinism fitCalc — PASS
-[ ] Tidak ada kode/data Pyfa yang di-copy (GPL audit)
-[ ] Tidak ada string/data EVE di kode (CCP audit)
-[ ] MMO-IMPLEMENTATION.md §2 + §3 di-update
-[ ] decisions-mmo.md entry baru (keputusan desain)
-[ ] docs/ di-add pakai git add -f
+[x] npx tsc --noEmit — bersih (universe, --strict)
+[x] Regresi test determinism fitCalc — PASS (40/40, PR #767)
+[x] Tidak ada kode/data Pyfa yang di-copy (GPL audit) — clean-room
+[x] Tidak ada string/data EVE di kode (CCP audit) — bersih
+[ ] MMO-IMPLEMENTATION.md §2 + §3 di-update — N/A Fase 1 (universe-only; gameserver belum berubah — wajib saat Fase 3 wire)
+[x] decisions-mmo.md entry baru — D-026 (penempatan dashboard)
+[x] docs/ di-add pakai git add -f
 ```
 
 ## 8. Referensi
