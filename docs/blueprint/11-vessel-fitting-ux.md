@@ -7,6 +7,8 @@
 > Referensi: [github.com/pyfa-org/Pyfa](https://github.com/pyfa-org/Pyfa)
 > — Python Fitting Assistant for EVE Online (1.8k★, 466 fork,
 > 9.788 commit, aktif 2026-10-05).
+> Ekosistem referensi EVE lain (Pathfinder, EveVision,
+> Z-S Overview Pack): lihat §9.
 
 ---
 
@@ -212,3 +214,34 @@ graphs/       calc · events · data · gui · style (proyeksi
 - Blueprint ARCLUX: `05-vessel-design-dashboard.md`,
   `07-special-capabilities.md` (V4), `06-community-social-ownership.md`
 - ARCLUX: `packages/universe/stats.ts`, `packages/gameserver/capability.ts`
+
+---
+
+## 9. Referensi ekosistem EVE (tambahan — pola saja)
+
+Subjek dokumen ini tetap **Pyfa** (fitting). Tiga repo
+lain = referensi silang untuk lapisan ARCLUX lain:
+
+| Repo | Apa adanya | Dipakai untuk ARCLUX | Lisensi |
+|---|---|---|---|
+| [exodus4d/pathfinder](https://github.com/exodus4d/pathfinder) | tool map + intel + koordinasi player EVE (Python: map engine, pathfinding, intel tracking) | rujukan **map engine + intel layer** — **kandidat blueprint terpisah** (belum ada): node/link graph → `packages/graph`, intel koordinasi → `intel.ts` (D-021) | GPL-3.0 (pola saja) |
+| [evevision/evevision](https://github.com/evevision/evevision) | overlay UI di dalam client EVE: Electron (split `app/main` + `app/renderer` + `app/shared`) + C++ DLL inject (minhook, DirectX) + native node module + **FlatBuffers** (DLL↔Node) | (a) **FlatBuffers = kandidat format bridge UE5(C++)↔gameserver(TS)** — schema-first, version-tolerant, zero-copy (bandingkan vs JSON/Protobuf sebelum putuskan); (b) disiplin proses Electron: split main/renderer/shared + IPC contract + `electron-store` + Sentry; (c) doktrin fair-play CCP ("overlay tanpa keuntungan tidak adil = boleh") — selaras combat design 6.B | GPL-3.0 (pola saja) |
+| [Arziel1992/Z-S-Overview-Pack](https://github.com/Arziel1992/Z-S-Overview-Pack) | preset konfigurasi Overview EVE (YAML: `columnOrder`/`backgroundOrder`/`backgroundStates`); 6-tab layout (Full/Compact, swappable), preset modular per aktivitas (PvX/D-Scan/Friendly/Targets), color-coded per kategori | pola **information architecture tactical overview** → wire `apps/game/src/renderer/tacticalWindows.ts` (**sudah dibangun, belum wired** — `09-client-polish.md`); konsep "overview preset" (`.arclux/overview/`, modular + swappable); color-coding sudah ada di `intel.ts` (`classifyEntity` green/yellow/red) | GPL-3.0 (pola saja) |
+
+Aturan (non-negotiable):
+
+1. **DILARANG copy kode/data** keempat repo — GPL-3.0
+   menginfeksi lisensi ARCLUX, dan isi datanya = dogma
+   CCP (typeID EVE, nama kapal, faction). Clean-room
+   reimplementasi saja.
+2. **DILARANG pakai teknik injection EveVision** (minhook,
+   DX hook, DLL inject) — ARCLUX **adalah gamenya sendiri**
+   (`apps/game` Electron + `apps/ue5` render sendiri),
+   bukan overlay di game orang lain.
+3. **Plugin system EveVision = vaporware** — README
+   menjanjikannya sejak 2020, tidak ada di kode. Jangan
+   dijadikan acuan; ARCLUX sudah punya registry-driven
+   DSL (`packages/dsl`) sebagai basis plugin masa depan.
+4. Pathfinder & Z-S **bukan subjek blueprint 11** —
+   hanya referensi silang; fitting (subjek dokumen ini)
+   tetap mengacu ke Pyfa.
