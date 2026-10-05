@@ -301,6 +301,31 @@ konteks, pilihan, dan alasan — supaya bisa dilacak & tidak bolak-balik.
 
 ---
 
+## D-026 — Vessel Design Dashboard: alat luar-game di apps/web, view in-game di apps/game
+
+- **Tanggal:** 2026-10-05
+- **Konteks:** Fase 2 blueprint 11 butuh tempat fitting
+  dashboard. D-025 melarang menyebut UI MMO sebagai "3D dari
+  graph web" — `apps/web` adalah produk engine (Apache-2.0),
+  `apps/game` adalah permukaan native MMO. Keduanya sudah
+  mengimpor `packages/universe` (`apps/cli/lib.ts`,
+  `apps/game/src/renderer/scene3d/damage.ts`), jadi pola
+  konsumsi lintas license sudah jalan.
+- **Keputusan:** Fitting dashboard = **alat luar-game** (model
+  Pyfa: fitting tool di luar game client), hidup sebagai route
+  baru di `apps/web` — UI Apache-2.0 yang hanya merender +
+  memanggil `computeFit`/`projectFit`/`simulateCapacitor`
+  dari `packages/universe`. Rendering in-game dari fit yang
+  sudah terpasang tetap di cockpit `apps/game` (`hud.ts`,
+  `tacticalWindows.ts`) sesuai D-025. **Klien tidak pernah
+  menghitung** — semua math satu sumber di universe; server
+  memverifikasi proyeksi klien lewat `fitHash`.
+- **Alasan:** satu engine fitting untuk tiga permukaan
+  (dashboard web, client Electron, UE5 nanti) tanpa duplikasi
+  logika; identitas visual tetap terpisah sesuai D-025.
+
+---
+
 ## Keputusan pending / terbuka
 
 - Model gate antar shard: eksplisit (pindah dunia) vs seamless real-time —
