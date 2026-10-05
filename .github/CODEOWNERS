@@ -1,2 +1,42 @@
-# Default reviewers for all files
-* @ManSio
+# ARCLUX CODEOWNERS
+# Aturan: siapa yang WAJIB review perubahan di area ini.
+# Lihat ARCHITECTURE_MAP.md (boundary) + docs/blueprint/progres/MMO-CONTRACT.md.
+#
+# CATATAN: ARCLUX-assets adalah repo TERPISAH (private) —
+# CODEOWNERS ini tidak berlaku di sana.
+
+# Fallback: seluruh repo butuh review owner.
+* @GSF-001
+
+# ── CORE ENGINE (boundary: perubahan perlu entries decisions.md dulu)
+/packages/engine/        @GSF-001
+/packages/repository/    @GSF-001
+/packages/shared/        @GSF-001
+/packages/indexer/       @GSF-001
+/packages/graph/         @GSF-001
+
+# ── MMO CORE (server authoritative — D-008; inti produk, jangan disentuh sembarangan)
+/packages/gameserver/    @GSF-001
+/packages/universe/      @GSF-001
+/packages/relay/         @GSF-001
+/packages/directory/     @GSF-001
+
+# ── MMO surface (client render-only, tapi bagian dari produk)
+/apps/game/              @GSF-001
+/apps/ue5/               @GSF-001
+
+# ── Platform surface
+/apps/cli/               @GSF-001
+/apps/web/               @GSF-001
+
+# ── Kontrak bersama (type yang di-import lintas package — ubah = review wajib)
+/packages/gameserver/types.ts   @GSF-001
+/packages/universe/types.ts     @GSF-001
+/packages/shared/types.ts       @GSF-001
+
+# ── Governance & lisensi (jangan berubah tanpa keputusan tercatat)
+/LICENSE-MMO             @GSF-001
+/LICENSE-ENGINE          @GSF-001
+/BLUEPRINT.md            @GSF-001
+/ARCHITECTURE_MAP.md     @GSF-001
+/CONTEXT.md              @GSF-001
