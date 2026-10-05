@@ -14,3 +14,5 @@ export * from "./stats";
 export * from "./license";
 export * from "./schema";
 export * from "./connect";
+export * from "./fitCalc";
+export * from "./capSim";
