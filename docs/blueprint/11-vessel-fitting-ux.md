@@ -184,16 +184,21 @@ graphs/       calc · events · data · gui · style (proyeksi
 - [ ] Export/import vessel definition (DSL `.arclux`).
 - [ ] Prereq check UI (component requirement).
 
-### Fase 3 — Wire ke gameserver (PRIORITAS UTAMA — fokus game server)
-- [ ] **Extend `validator.ts`** (bukan duplikat — validator
+### Fase 3 — Wire ke gameserver (PRIORITAS UTAMA — fokus game server) ✅ SELESAI (PR #772 + #773)
+- [x] **Extend `validator.ts`** (bukan duplikat — validator
       existing = move/dock/attack; tambah fit intents:
       equip/unequip dengan slot constraint + component
-      prerequisite).
-- [ ] `capSim` server-side (authoritative — client hanya render
-      proyeksi).
-- [ ] Damage profile masuk `combat.ts`.
-- [ ] Persist vessel definition + verifikasi `fitHash`
-      (server rekomputasi, tolak mismatch — anti-cheat).
+      prerequisite). — `fitting.ts::validateFitIntent`
+- [x] `capSim` server-side (authoritative — client hanya render
+      proyeksi). — `stepCapacitor` per tick (formula `capStep`
+      dari universe) + gate `activate_capability` saat kapasitor
+      0 (PR #773)
+- [x] Damage profile masuk `combat.ts`. — resist dari
+      `computeResists(fitted)`, cap `MAX_RESIST`, `impact.resisted`
+      (PR #773)
+- [x] Persist vessel definition + verifikasi `fitHash`
+      (server rekomputasi, tolak mismatch — anti-cheat). —
+      `stateHash = fitHash`, persist via `RegionSnapshot`
 
 ### Fase 4 — UE5 slice (eksekusi kode di UE5 dengan referensi ini)
 - [ ] UMG Fitting Window: slot grid + stat projection + cap
@@ -224,7 +229,7 @@ graphs/       calc · events · data · gui · style (proyeksi
 [x] Regresi test determinism fitCalc — PASS (40/40, PR #767)
 [x] Tidak ada kode/data Pyfa yang di-copy (GPL audit) — clean-room
 [x] Tidak ada string/data EVE di kode (CCP audit) — bersih
-[ ] MMO-IMPLEMENTATION.md §2 + §3 di-update — N/A Fase 1 (universe-only; gameserver belum berubah — wajib saat Fase 3 wire)
+[x] MMO-IMPLEMENTATION.md §2 + §3 di-update — Fase 3 (fitting.ts + kapasitor + combat resist — PR #772 + #773)
 [x] decisions-mmo.md entry baru — D-026 (penempatan dashboard)
 [x] docs/ di-add pakai git add -f
 ```

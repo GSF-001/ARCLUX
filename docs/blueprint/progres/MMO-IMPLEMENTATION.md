@@ -65,6 +65,13 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
 - `simulation.ts` — SimulationEngine (enqueue/step deterministic tick, moveToward,
   integratePhysics, cooldown, replayLog, computeEntityHash)
 - `combat.ts` — applyCombatIntent, damage per subsystem, DAMAGE_CEILING
+  + Fase 3 (PR #773): resistensi fit target via
+  `fitCalc::computeResists` dari komponen terpasang (impact.resisted,
+  cap MAX_RESIST); weapon tak dikenal tetap jalur polos
+- `fitting.ts` (PR #772 + #773) — fit authority: fittedComponents/
+  liveFit/projectFitAction/validateFitIntent (intent equip/unequip,
+  expectHash anti-cheat, slot/prerequisite gate) + stepCapacitor
+  (kapasitor authoritative per tick, formula `capStep` dari universe)
 - Barrel `index.ts`
 
 **Sudah diisi (PR #589):**
@@ -170,6 +177,8 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 ### PR #636 ✅ quickstart MMO EN — SUDJAH (QUICKSTART-MMO.md)
 ### PR #638 ✅ 09 Fase 5 — 5 SFX explosion/weapon/shield/debris/ambient hum (audio.ts) — SUDJAH (2026-09-03)
 ### PR #639 ✅ clouds AAA+ — procedural clouds di SEMUA planet visual-only (scene3d.ts makeCloudTexture) — SUDJAH (2026-09-03, pause 09 di Fase 5)
+### PR #772 ✅ Fase 3 fit authority — fitting.ts (validateFitIntent equip/unequip) + stateHash=fitHash — SUDJAH (2026-10-06)
+### PR #773 ✅ Fase 3 sisa — kapasitor per tick (stepCapacitor + gate activate) + combat resist fit — SUDJAH (2026-10-06)
 ### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs — SELESAI
@@ -207,6 +216,8 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 - [x] 09 Fase 6 custom music (MP3/OGG/WAV/FLAC decode via AudioContext, playlist, menu.ts + audio.ts) — SELESAI (PR #642, doc sync 09-04)
 - [x] 09 Fase 7 UI polish (hud.ts fade+glow + menu.ts hover+slide-in) — SELESAI
 - [x] 09 Fase 8 FPS interior 6 iris — corridor+promenade (iris1) + plaza+96 habitat (iris2) + lighting PMREM reuse (iris3) + FPS controller 60Hz Box3 (iris4) + CharacterEntity+DockingState (iris5) + HUD deck+camera FPS (iris6) — SELESAI (PR #664-669)
+- [x] `fitting.ts` — Fase 3 fit authority (equip/unequip + expectHash anti-cheat) + kapasitor per tick `stepCapacitor` — SELESAI (PR #772 + #773)
+- [x] Fase 3 sisa: combat resist fit `computeResists` + gate `activate_capability` saat kapasitor 0 — SELESAI (PR #773)
 - [ ] 09 Part B Fase 9 karakter repo (CharacterEntity + spawnCharacter)
 - [ ] 09 Part B Fase 10 hangar 32 slot + docking film 3s (gate.ts + bridge.ts)
 - [ ] 09 Part B Fase 11 bazaar 16 lapak (component.ts + validator)
