@@ -53,6 +53,12 @@ export interface VesselEntity extends GameEntity {
    * RegionSnapshot like any other entity field; cleared on full repair.
    */
   emergency?: VesselEmergency;
+  /**
+   * Kapasitor (Fase 3 blueprint 11) — state authoritative, di-tick
+   * server tiap frame, persisten via RegionSnapshot. Absent = belum
+   * pernah di-tick (inisialisasi lazy dari reactor pada step pertama).
+   */
+  capacitor?: import("../universe/capSim").CapacitorState;
 }
 
 /**

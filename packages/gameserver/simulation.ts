@@ -19,7 +19,7 @@
 import type { GameEvent, PlayerIntent, Vec3, VesselEntity, WorldEntity } from "./types";
 import { WorldRegion } from "./world";
 import { validateIntent, type ValidatorContext } from "./validator";
-import { projectFitAction } from "./fitting";
+import { projectFitAction, stepCapacitor } from "./fitting";
 import { applyCombatIntent } from "./combat";
 import type { EnvironsState } from "./environs";
 import { integrateEnvirons, getBodiesArray } from "./environs";
@@ -125,6 +125,7 @@ export class SimulationEngine {
     const start = Date.now();
     this.integratePhysics();
     this.decrementCooldowns();
+    this.stepCapacitors();
     // Cosmic environs per tick (Newton/Kepler, D-020) — deterministic, authoritative + strengthened
     if (this.enableEnvirons && this.environs) {
       integrateEnvirons(this.environs);
@@ -199,6 +200,14 @@ export class SimulationEngine {
       }
       case "activate_capability": {
         if (entity.kind === "vessel") {
+          // Kapasitor habis → aktifkan kemampuan ditolak (Fase 3).
+          if (entity.capacitor && entity.capacitor.current <= 0) {
+            this.log("capability_rejected", intent.playerId, {
+              entityId: entity.id,
+              reason: "capacitor depleted",
+            });
+            return;
+          }
           const chk = canActivate(entity.id);
           if (!chk.ok) {
             this.log("capability_rejected", intent.playerId, { entityId: entity.id, reason: chk.reason });
@@ -322,6 +331,19 @@ export class SimulationEngine {
         });
         this.log("stadium_spawned", intent.playerId, { stationId: station.id, rings: p.rings ?? 4, habitatsPerRing: p.habitatsPerRing ?? 24 });
         break;
+      }
+    }
+  }
+
+  /** Kapasitor authoritative per tick (Fase 3 blueprint 11): drain dari
+   *  powerDraw fit, regen dari reactor — formula capStep (universe)
+   *  yang sama dengan proyeksi klien. */
+  private stepCapacitors(): void {
+    for (const e of this.region["entities"].values()) {
+      if (e.kind !== "vessel") continue;
+      const res = stepCapacitor(e);
+      if (res.newlyDepleted) {
+        this.log("capacitor_depleted", "server", { entityId: e.id, current: res.current });
       }
     }
   }

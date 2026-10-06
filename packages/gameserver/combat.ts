@@ -13,6 +13,9 @@
 
 import type { PlayerIntent, VesselEntity } from "./types";
 import type { WorldRegion } from "./world";
+import { computeResists, MAX_RESIST } from "../universe/fitCalc";
+import type { DamageType } from "../universe/types";
+import { fitDefinitionsOf } from "./fitting";
 
 /** Max damage a single attack can deal, per subsystem (Layer I.7 ceiling). */
 export const DAMAGE_CEILING = 12;
@@ -27,6 +30,8 @@ export interface CombatImpact {
   after: number;
   damage: number;
   destroyed: boolean;
+  /** Poin damage yang terserap resistensi fit target (Fase 3). */
+  resisted?: number;
 }
 
 export type CombatLogger = (meta: Record<string, unknown>) => void;
@@ -54,7 +59,14 @@ export function applyCombatIntent(
   if (!sys) return undefined;
 
   const rawCapability = attackPower(attacker, weaponType);
-  const damage = applyDamageCeiling(rawCapability, sys.health);
+  // Resistensi fit target (Fase 3) — dihitung dari komponen TERPASANG
+  // lewat fitCalc::computeResists (cap MAX_RESIST, tanpa duplikasi
+  // logika). Weapon tak dikenal → jalur polos (perilaku lama).
+  const dtype = damageTypeOf(weaponType);
+  const resist = dtype ? resistFactor(target, dtype) : 0;
+  const afterResist = Math.round(rawCapability * (1 - resist) * 10) / 10;
+  const resisted = Math.round((rawCapability - afterResist) * 10) / 10;
+  const damage = applyDamageCeiling(afterResist, sys.health);
 
   const before = sys.health;
   sys.health = Math.max(SUBSYSTEM_DESTROYED_AT, before - damage);
@@ -70,6 +82,7 @@ export function applyCombatIntent(
     after: sys.health,
     damage,
     destroyed,
+    resisted,
   };
 
   logger?.({
@@ -119,4 +132,22 @@ function cooldownTicks(weaponType: string): number {
     case "weapon.explosive": return 10;
     default: return 4;
   }
+}
+
+const DAMAGE_TYPES: DamageType[] = ["plasma", "railgun", "missile", "emp", "explosive"];
+
+/** "weapon.plasma" → "plasma". Weapon tak dikenal → undefined (tanpa resist). */
+function damageTypeOf(weaponType: string): DamageType | undefined {
+  const t = weaponType.startsWith("weapon.") ? weaponType.slice("weapon.".length) : weaponType;
+  return DAMAGE_TYPES.includes(t as DamageType) ? (t as DamageType) : undefined;
+}
+
+/**
+ * Resistensi fit TARGET untuk satu tipe damage (0..MAX_RESIST).
+ * Delegasi ke fitCalc::computeResists — dihitung dari komponen
+ * yang benar-benar terpasang, bukan katalog.
+ */
+function resistFactor(target: VesselEntity, type: DamageType): number {
+  const resists = computeResists(fitDefinitionsOf(target.vessel));
+  return Math.min(MAX_RESIST, resists[type] ?? 0);
 }
