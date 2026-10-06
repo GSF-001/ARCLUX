@@ -301,7 +301,7 @@ konteks, pilihan, dan alasan — supaya bisa dilacak & tidak bolak-balik.
 
 ---
 
-## D-026 — Vessel Design Dashboard: alat luar-game di apps/web, view in-game di apps/game
+## D-026 — ~~Vessel Design Dashboard: alat luar-game di apps/web, view in-game di apps/game~~ **DICABUT — lihat D-027**
 
 - **Tanggal:** 2026-10-05
 - **Konteks:** Fase 2 blueprint 11 butuh tempat fitting
@@ -323,6 +323,37 @@ konteks, pilihan, dan alasan — supaya bisa dilacak & tidak bolak-balik.
 - **Alasan:** satu engine fitting untuk tiga permukaan
   (dashboard web, client Electron, UE5 nanti) tanpa duplikasi
   logika; identitas visual tetap terpisah sesuai D-025.
+
+---
+
+## D-027 — Fitting UI in-game; apps/web bukan permukaan MMO (menggantikan D-026)
+
+- **Tanggal:** 2026-10-05
+- **Konteks:** D-026 ( fitting dashboard = alat luar-game di
+  `apps/web`) **SALAH**. User menegaskan: dashboard/fitting
+  UI harus **di dalam game**, bukan di luar game.
+  `apps/web` adalah produk engine (Apache-2.0) dan **tidak
+  ada sangkutannya dengan MMO**. `apps/game` (Electron)
+  hanya **demo** s/d UE5 ready — game final di UE5.
+  Fokus eksekusi = **game server** (`gameserver`).
+- **Keputusan:**
+  1. Fitting UI = **in-game**. Target final: UE5 (UMG
+     fitting window, Fase 4 blueprint 11). S/d UE5 ready,
+     demo di `apps/game/src/renderer/` (penempatan client
+     mengikuti blueprint 09).
+  2. **`apps/web` = engine-only.** Tidak ada route/dashboard
+     MMO di sana. (D-026 dicabut.)
+  3. **Fase 3 (gameserver authority) = prioritas utama**:
+     extend `validator.ts` (existing: move/dock/attack —
+     tambah fit intents equip/unequip), `capSim`
+     server-side, damage profile ke `combat.ts`, persist
+     vessel definition + verifikasi `fitHash`.
+  4. Tidak menabrak blueprint 01–10: visual = 05,
+     combat = 03, capabilities = 07, client = 09
+     (blueprint 11 §5 catatan anti-tabrakan).
+- **Alasan:** satu engine fitting (universe) untuk server +
+  client; UI adalah bagian dari game, bukan produk web
+  terpisah; tidak ada duplikasi logika.
 
 ---
 
