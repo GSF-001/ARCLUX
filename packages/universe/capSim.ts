@@ -89,7 +89,7 @@ export function simulateCapacitor(
   let warningTicks = 0;
 
   for (let tick = 1; tick <= horizon; tick++) {
-    level = clamp(round2(level - draw + regen), 0, capacity);
+    level = capStep(level, draw, regen, capacity);
     const depleted = level <= 0;
     const warning = level <= capacity * CAP_WARNING_THRESHOLD;
     if (depleted && firstDepletionTick === undefined) firstDepletionTick = tick;
@@ -105,6 +105,19 @@ export function simulateCapacitor(
     draw <= regen ? "stable" : firstDepletionTick === undefined ? "sustainable" : "unstable";
 
   return { history, minLevel, endLevel, firstDepletionTick, warningRatio, verdict };
+}
+
+/**
+ * Single-tick primitive: level setelah satu langkah draw+regen.
+ * `simulateCapacitor` mem-loop fungsi ini; gameserver memanggilnya
+ * langsung tiap tick — SATU formula, kedua sisi tidak mungkin beda
+ * (bukan duplikasi: inilah satu-satunya rumusnya).
+ */
+export function capStep(current: number, draw: number, regen: number, capacity: number): number {
+  const cap = Math.max(0, capacity);
+  const d = Math.max(0, draw);
+  const r = Math.max(0, regen);
+  return clamp(round2(current - d + r), 0, cap);
 }
 
 /**

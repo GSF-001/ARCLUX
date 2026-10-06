@@ -22,6 +22,7 @@ import {
   deriveComponentDefinition,
   type FitInput,
 } from "../universe/fitCalc";
+import { capacitorBudget, capStep } from "../universe/capSim";
 import { checkComponent, type AuthorizationContext } from "../universe/license";
 import type {
   ComponentBinding,
@@ -170,4 +171,49 @@ export function validateFitIntent(
     return { decision: "reject", reason: firstError?.message ?? "invalid fit" };
   }
   return { decision: "accept" };
+}
+
+// ─────────────────────────────────────────────────────────
+// Kapasitor authority (Fase 3) — satu tick, server-side
+// ─────────────────────────────────────────────────────────
+
+/** Regen kapasitor penuh per tick pada reactor 100% health. */
+export const CAP_REGEN_AT_FULL = 4;
+/** Kapasitor minimum — vessel kecil tetap punya cadangan. */
+export const CAP_MIN_CAPACITY = 20;
+
+export interface CapacitorTickResult {
+  capacity: number;
+  /** Level akhir tick (0..capacity). */
+  current: number;
+  /** Draw = Σ powerDraw komponen terpasang. */
+  draw: number;
+  regen: number;
+  /** true bila level 0 (aktivasi kemampuan ditolak). */
+  depleted: boolean;
+  /** true HANYA pada tick saat menyeberang ke depletion. */
+  newlyDepleted: boolean;
+}
+
+const round2g = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Tick kapasitor vessel SATU langkah, authoritative:
+ *   - capacity = max(CAP_MIN_CAPACITY, reactor baseStat)
+ *   - regen    ∝ reactor health (0 .. CAP_REGEN_AT_FULL/tick)
+ *   - draw     = capacitorBudget(fitted components) dari capSim
+ *   - level    = capStep(...) — rumus yang SAMA dengan yang klien
+ *     pakai untuk proyeksi (bukan duplikasi: satu fungsi di capSim).
+ * Mutates `entity.capacitor` (state game memang mutasi otoritatif).
+ */
+export function stepCapacitor(entity: VesselEntity): CapacitorTickResult {
+  const reactor = entity.vessel.systems.find((s) => s.id === "reactor");
+  const capacity = Math.max(CAP_MIN_CAPACITY, Math.round((reactor?.baseStat ?? 50) * 10) / 10);
+  const regen = round2g(((reactor?.health ?? 50) / 100) * CAP_REGEN_AT_FULL);
+  const draw = capacitorBudget(fitDefinitionsOf(entity.vessel));
+  const prev = entity.capacitor?.current ?? capacity;
+  const current = capStep(prev, draw, regen, capacity);
+  entity.capacitor = { capacity, current, regenPerTick: regen };
+  const depleted = current <= 0;
+  return { capacity, current, draw, regen, depleted, newlyDepleted: depleted && prev > 0 };
 }
