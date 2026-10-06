@@ -19,6 +19,7 @@
 import type { GameEvent, PlayerIntent, Vec3, VesselEntity, WorldEntity } from "./types";
 import { WorldRegion } from "./world";
 import { validateIntent, type ValidatorContext } from "./validator";
+import { projectFitAction } from "./fitting";
 import { applyCombatIntent } from "./combat";
 import type { EnvironsState } from "./environs";
 import { integrateEnvirons, getBodiesArray } from "./environs";
@@ -222,6 +223,26 @@ export class SimulationEngine {
         const range = (intent.payload as any)?.range ?? 5000;
         const nearby = this.region.entitiesWithin(entity.position, range).map((e) => e.id);
         this.log("scan_result", intent.playerId, { entityId: entity.id, count: nearby.length, nearby });
+        break;
+      }
+      case "equip_component":
+      case "unequip_component": {
+        if (entity.kind === "vessel") {
+          const p = intent.payload as { componentId?: string };
+          if (!p.componentId) break;
+          const op = intent.type === "equip_component" ? "equip" : "unequip";
+          // Validator sudah memproyeksikan legalitas; commit di sini
+          // murni mengomits proyeksi deterministik yang sama.
+          const projected = projectFitAction(entity.vessel, op, p.componentId);
+          entity.vessel.fitted = projected.fitted;
+          // stateHash = receipt fit terkini (anti-cheat, Layer I.5).
+          entity.stateHash = projected.fit.hash;
+          this.log(intent.type, intent.playerId, {
+            entityId: entity.id,
+            componentId: p.componentId,
+            fitHash: entity.stateHash,
+          });
+        }
         break;
       }
       case "teleport": {

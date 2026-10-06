@@ -17,6 +17,7 @@
 // later and must never exceed the cap enforced by the validator.
 
 import type { AnalyzeRepositoryResult } from "../engine/pipeline";
+import { deriveSlotLayout } from "./fitCalc";
 import type {
   ArcluxManifest,
   ComponentBinding,
@@ -202,6 +203,7 @@ export function buildVesselModel(
     license,
     systems,
     components,
+    slotLayout: deriveSlotLayout(result),
     integrity: systems.find((s) => s.id === "reactor")?.health ?? base.integrity,
     defense: systems.find((s) => s.id === "defense")?.health ?? base.defense,
     weapons: systems.find((s) => s.id === "weapons")?.health ?? base.weapons,
