@@ -17,6 +17,7 @@ import { checkComponent, type AuthorizationContext } from "../universe/license";
 import type { VesselEntity, PlayerIntent, WorldEntity } from "./types";
 import { WorldRegion, distanceBetween } from "./world";
 import { hullOf, ADRIFT_BELOW } from "./vesselState";
+import { fittedComponents, validateFitIntent } from "./fitting";
 
 export type ValidatorDecision = "accept" | "reject";
 
@@ -74,6 +75,14 @@ export function validateIntent(
         if (c && c.depleted) return { decision: "reject", reason: "component depleted" };
       }
       return { decision: "accept" };
+    }
+    case "equip_component":
+    case "unequip_component": {
+      const v = entity as VesselEntity;
+      if (v.kind !== "vessel") {
+        return { decision: "reject", reason: "only vessels can be fitted" };
+      }
+      return validateFitIntent(v, intent, ctx.auth);
     }
     case "scan":
       return { decision: "accept" };
@@ -209,8 +218,9 @@ function validateAttack(
   }
 
   // Component/license authorization (Layer I.6) — attacker must be authorized
-  // for the weapon capability.
-  const weaponComponent = attacker.vessel.components.find((c) => c.capability === weaponType);
+  // for the weapon capability. Senjata harus TERPASANG (fitted) — katalog
+  // saja tidak cukup (blueprint 11 Fase 3).
+  const weaponComponent = fittedComponents(attacker.vessel).find((c) => c.capability === weaponType);
   if (weaponComponent) {
     const check = checkComponent(weaponComponent, ctx.auth);
     if (check.decision === "disabled") {

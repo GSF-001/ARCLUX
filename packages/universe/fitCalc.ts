@@ -74,6 +74,11 @@ const BASE_SLOTS: SlotLayout = {
   ai: 2,
 };
 
+/** Slot layout fallback untuk vessel tanpa layout turunan analisis (legacy). */
+export function defaultSlotLayout(): SlotLayout {
+  return { ...BASE_SLOTS };
+}
+
 /**
  * Capability family → subsystem the component mounts into.
  * Mirrors the capability namespaces produced by the analysis

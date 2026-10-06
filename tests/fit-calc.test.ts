@@ -25,11 +25,11 @@ import {
   projectFit,
   FIT_DAMAGE_CEILING,
   MAX_RESIST,
+  type FitInput,
 } from "../packages/universe/fitCalc";
 import type {
   ComponentBinding,
   ComponentDefinition,
-  FitInput,
   SystemState,
 } from "../packages/universe/types";
 

@@ -17,9 +17,10 @@ import {
   simulateCapacitor,
   sustainableDraw,
   CAP_WARNING_THRESHOLD,
+  type CapacitorState,
 } from "../packages/universe/capSim";
 import { deriveComponentDefinition } from "../packages/universe/fitCalc";
-import type { ComponentBinding, CapacitorState } from "../packages/universe/types";
+import type { ComponentBinding } from "../packages/universe/types";
 
 function state(current: number, capacity = 100, regenPerTick = 0): CapacitorState {
   return { capacity, current, regenPerTick };
@@ -70,7 +71,7 @@ describe("simulateCapacitor", () => {
   });
 
   it("zero ticks → empty history, no crash", () => {
-    const sim = simulateCapacitor(state(50), 10, 0, 0);
+    const sim = simulateCapacitor(state(50), 10, 0);
     expect(sim.history).toEqual([]);
     expect(sim.minLevel).toBe(50);
     expect(sim.endLevel).toBe(50);

@@ -81,6 +81,19 @@ export interface VesselModel {
   license: LicenseTier;
   systems: SystemState[];
   components: ComponentBinding[];
+  /**
+   * Ids of mounted components (pilihan fit pemain). Absent = vessel
+   * legacy di mana seluruh katalog terpasang (back-compat).
+   * Server-authoritative: klien hanya mengirim intent equip/unequip,
+   * never the fitted set itself.
+   */
+  fitted?: string[];
+  /**
+   * Slot capacity per subsystem — diturunkan dari analisis saat vessel
+   * dibuat (deriveSlotLayout). Kapasitas fitting berakar pada apa yang
+   * repository benar-benar contains, bukan input pengguna.
+   */
+  slotLayout?: SlotLayout;
   /** Aggregate armor/integrity 0..100. */
   integrity: number;
   /** Aggregate defensive posture 0..100 (attack surface). */
