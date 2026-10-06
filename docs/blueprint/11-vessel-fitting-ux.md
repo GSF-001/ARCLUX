@@ -143,6 +143,16 @@ graphs/       calc · events · data · gui · style (proyeksi
 
 ## 5. Rencana eksekusi
 
+> **Tidak menabrak blueprint 01–10** (larangan duplikasi):
+> desain visual vessel/dashboard = **05** (11 hanya
+> referensi, tidak re-spec visual); aplikasi damage =
+> **03**/`combat.ts` (11 punya proyeksi murni saja,
+> tidak mutate); capabilities = **07** (`fitCalc` sudah
+> integrasi via `requiresCapability`); client polish =
+> **09** (fitting panel mengikuti penempatan client 09);
+> validator = **03** (Fase 3 **extend** `validator.ts`,
+> bukan duplikat).
+
 ### Fase 1 — Engine calc (`packages/universe`, TS) ✅ SELESAI (PR #767)
 - [x] `fitCalc.ts` — component-effect pipeline: pasang/lepas
       `ComponentBinding` → hitung ulang `SystemState.health`
@@ -157,7 +167,15 @@ graphs/       calc · events · data · gui · style (proyeksi
 - [x] Regresi test: same input → same output (determinism law)
       — 40 test (`tests/fit-calc.test.ts` + `tests/cap-sim.test.ts`).
 
-### Fase 2 — Vessel Design Dashboard (alat luar-game di `apps/web` + view in-game di `apps/game` — D-026, blueprint 05)
+### Fase 2 — Fitting panel IN-GAME (client) — D-027
+> UI fitting hidup **di dalam game**, bukan alat luar-game.
+> Target final: UE5 (UMG, Fase 4). S/d UE5 ready:
+> `apps/game` (Electron demo — penempatan client mengikuti
+> blueprint 09: semua client work di
+> `apps/game/src/renderer/`). **`apps/web` BUKAN permukaan
+> MMO** (D-027) — tidak ada dashboard MMO di sana.
+> Prioritas: setelah Fase 3 (fokus utama = game server);
+> opsional sebagai demo.
 - [ ] Slot grid UI (6 subsystem + component slots).
 - [ ] Stat projection real-time (Fase 1 dipanggil per perubahan).
 - [ ] Cap gauge + gauge widget (referensi `pyfa_gauge`).
@@ -166,12 +184,16 @@ graphs/       calc · events · data · gui · style (proyeksi
 - [ ] Export/import vessel definition (DSL `.arclux`).
 - [ ] Prereq check UI (component requirement).
 
-### Fase 3 — Wire ke gameserver
-- [ ] Validator: slot constraint + component prerequisite
-      (`validator.ts` rules baru).
+### Fase 3 — Wire ke gameserver (PRIORITAS UTAMA — fokus game server)
+- [ ] **Extend `validator.ts`** (bukan duplikat — validator
+      existing = move/dock/attack; tambah fit intents:
+      equip/unequip dengan slot constraint + component
+      prerequisite).
 - [ ] `capSim` server-side (authoritative — client hanya render
       proyeksi).
 - [ ] Damage profile masuk `combat.ts`.
+- [ ] Persist vessel definition + verifikasi `fitHash`
+      (server rekomputasi, tolak mismatch — anti-cheat).
 
 ### Fase 4 — UE5 slice (eksekusi kode di UE5 dengan referensi ini)
 - [ ] UMG Fitting Window: slot grid + stat projection + cap
