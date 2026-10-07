@@ -365,18 +365,23 @@ function mapCategoryFor(pkgName) {
     '',
     '## Get started',
     '',
-    'Not yet published to npm -- clone and build locally.',
+    'Published on npm -- zero setup:',
+    '',
+    '```bash',
+    'npx arclux analyze .          # one-off, no install',
+    'npm i -g arclux               # or install once, get the `arclux` binary',
+    '```',
+    '',
+    'The package ships every tree-sitter grammar it needs -- no native compilation,',
+    'no grammar installs. Node 20+.',
+    '',
+    'From source (development):',
     '',
     '```bash',
     'git clone https://github.com/GSF-001/ARCLUX.git',
     'cd ARCLUX',
     'pnpm install',
-    '```',
-    '',
-    'Run CLI commands via:',
-    '',
-    '```bash',
-    'npx tsx apps/cli/index.ts analyze [path]',
+    'pnpm build:cli',
     '```',
     '',
     'Or start the web dashboard:',
@@ -395,6 +400,30 @@ function mapCategoryFor(pkgName) {
     'Parsing TypeScript/TSX pakai TypeScript Compiler API, parsing Python pakai',
     '`web-tree-sitter`. Kalau nambah bahasa baru, cek `packages/parser/` dulu sebelum bikin parser baru.',
     '</Note>',
+    '',
+    '## MCP for AI agents',
+    '',
+    'ARCLUX exposes 30+ tools over Model Context Protocol, with self-triggering',
+    'workflow instructions so agents pick the right tool unprompted:',
+    '',
+    '```json',
+    '{',
+    '  "mcpServers": {',
+    '    "arclux": { "command": "npx", "args": ["arclux", "mcp"] }',
+    '  }',
+    '}',
+    '```',
+    '',
+    '## Always-on daemon',
+    '',
+    '```bash',
+    'arclux daemon --detach     # watch the repo, re-analyze on every change',
+    'arclux daemon --status',
+    'arclux daemon --stop',
+    '```',
+    '',
+    'The daemon exposes a local HTTP+SSE bridge (`GET /analysis`, `GET /events`)',
+    'so any editor or terminal can connect.',
     '',
     '## What it actually does',
     '',
@@ -422,12 +451,17 @@ function mapCategoryFor(pkgName) {
     '',
     '<CardGroup cols={2}>',
     '  <Card title="Solid today" icon="check">',
-    '    Core pipeline, 27 languages, all 20 detectors, impact analysis, DSL, search, security -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`',
+    '    Core pipeline, 27 languages, all 20 detectors, impact analysis, call graph, DSL, search, security, MCP server, daemon -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`',
     '  </Card>',
     '  <Card title="Not there yet" icon="hourglass-half">',
-    '    Persistence layer (packages/db), per-file incremental re-indexing, npm publishing',
+    '    Per-file incremental re-indexing is still coarse (full rebuild per change); the MMO (`apps/game` + `gameserver` + `universe`) is alpha',
     '  </Card>',
     '</CardGroup>',
+    '',
+    '## Two licenses',
+    '',
+    '- **ARCLUX Platform** (engine, parser, graph, cli, web) -- Apache 2.0, open, contribute freely',
+    '- **ARCLUX MMO** (gameserver, relay, universe, apps/game) -- source-available, no commercial hosting of a cloned game without written permission',
     '',
     '## Next steps',
     '',
@@ -592,6 +626,214 @@ function mapCategoryFor(pkgName) {
     ''
   ].join('\n');
   writeDoc('status.mdx', 'Status & Progress', 'Current progress, open bugs, priorities', statusBody);
+}
+
+// ── Halaman tambahan: top-level yang selama ini gak punya halaman docs ───
+function firstHeading(content, fallback) {
+  const m = content.match(/^#\s+(.+)$/m);
+  return m ? m[1].replace(/[#*`_]/g, '').trim() : fallback;
+}
+
+{
+  const about = readIfExists('ABOUT.md');
+  if (about) {
+    writeDoc('about.mdx', 'About ARCLUX', 'The map: intelligence layer + platform layer', stripFrontmatter(about));
+  }
+}
+{
+  const mmo = readIfExists('QUICKSTART-MMO.md');
+  if (mmo) {
+    writeDoc(
+      'quickstart-mmo.mdx',
+      'MMO Quickstart',
+      'Clone repo jadi kapal, self-host region, main dari nol',
+      stripFrontmatter(mmo)
+    );
+  }
+}
+{
+  const changelog = readIfExists('CHANGELOG.md');
+  if (changelog) {
+    writeDoc('changelog.mdx', 'Changelog', 'Release history — Keep a Changelog + SemVer', stripFrontmatter(changelog));
+  }
+}
+
+// ── Learning library: docs/GUIDES, DEEP_DIVE, EXAMPLES ────────────────────
+[
+  ['docs/GUIDES.md', 'guides.mdx', 'Guides', 'Step-by-step guides'],
+  ['docs/DEEP_DIVE.md', 'deep-dive.mdx', 'Deep Dive', 'How ARCLUX works under the hood'],
+  ['docs/EXAMPLES.md', 'examples.mdx', 'Examples', 'Real analysis runs on real repos'],
+].forEach(([src, out, title, desc]) => {
+  const content = readIfExists(src);
+  if (content) writeDoc(out, title, desc, stripFrontmatter(content));
+  else console.log(`  skip ${out} (${src} tidak ada)`);
+});
+
+// ── Blueprint (BLUEPRINT.md + docs/blueprint/**) ──────────────────────────
+function slugify(name) {
+  return name
+    .replace(/\.(md|mdx)$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function copyMdTree(srcRel, outSub, opts) {
+  const base = path.join(ROOT, srcRel);
+  if (!fs.existsSync(base)) {
+    console.log(`  skip ${srcRel} (tidak ada)`);
+    return [];
+  }
+  const made = [];
+  const walk = (dir, subOut) => {
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        walk(p, `${subOut}/${slugify(e.name)}`);
+      } else if (/\.md$/.test(e.name)) {
+        const content = fs.readFileSync(p, 'utf-8');
+        const slug = slugify(e.name);
+        const title = opts.title ? opts.title(e.name, content) : firstHeading(content, slug);
+        writeDoc(`${slug}.mdx`, title, opts.desc(e.name, content), stripFrontmatter(content), subOut);
+        made.push(`${subOut}/${slug}`);
+      }
+    });
+  };
+  walk(base, outSub);
+  return made;
+}
+
+{
+  const bp = readIfExists('BLUEPRINT.md');
+  if (bp) {
+    // Ditulis sebagai blueprint/index.mdx biar jadi landing page folder ini
+    // di dua-duanya: Mintlify (/blueprint) dan Docusaurus (routeBasePath /blueprint).
+    writeDoc(
+      'index.mdx',
+      'Blueprint — Repository War Universe',
+      'Visi strategis ARCLUX sebagai universe yang digerakkan oleh repository',
+      stripFrontmatter(bp),
+      'blueprint'
+    );
+  }
+  const pages = copyMdTree('docs/blueprint', 'blueprint', {
+    title: (name, content) => firstHeading(content, slugify(name)),
+    desc: () => 'Blueprint detail — ARCLUX Repository War Universe',
+  });
+  if (pages.length) console.log(`  info blueprint pages (${pages.length}): ${pages.slice(0, 6).join(', ')} …`);
+}
+
+// ── Auto-rebuild docs.json navigation ─────────────────────────────────────
+// Nav di-rebuild dari file yang benar-benar ada di disk, jadi halaman baru
+// (map/blueprint/progres) otomatis ke-register — gak perlu edit docs.json manual.
+function listPageIds(dir, prefix) {
+  const base = path.join(DOCS_OUT, dir);
+  if (!fs.existsSync(base)) return [];
+  const out = [];
+  const walk = (d, rel) => {
+    fs.readdirSync(d, { withFileTypes: true })
+      .sort((a, b) => (a.isDirectory() ? 1 : 0) - (b.isDirectory() ? 1 : 0) || a.name.localeCompare(b.name))
+      .forEach((e) => {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) walk(p, rel ? `${rel}/${e.name}` : e.name);
+        else if (/\.mdx?$/.test(e.name)) out.push(`${prefix}${rel ? rel + '/' : ''}${e.name.replace(/\.mdx?$/, '')}`);
+      });
+  };
+  walk(base, '');
+  return out;
+}
+
+const TITLECASE_ACRONYMS = { ue: 'UE', mmo: 'MMO', cli: 'CLI', api: 'API', sdk: 'SDK' };
+
+function titleCase(s) {
+  const base = s
+    .split('/')
+    .pop()
+    .replace(/[-_]+/g, ' ');
+  return base
+    .split(' ')
+    .map((w) => (TITLECASE_ACRONYMS[w.toLowerCase()] || w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+}
+
+// [['01-a','x/y/b']] -> flat top pages + {group} per subfolder
+function nestedGroups(ids) {
+  const top = ids.filter((i) => i.split('/').length === 1);
+  const byDir = {};
+  ids
+    .filter((i) => i.split('/').length > 1)
+    .forEach((i) => {
+      const parts = i.split('/');
+      const dir = parts.slice(0, -1).join('/');
+      (byDir[dir] = byDir[dir] || []).push(i);
+    });
+  const res = [...top];
+  Object.keys(byDir)
+    .sort()
+    .forEach((d) => res.push({ group: titleCase(d), pages: byDir[d].sort() }));
+  return res;
+}
+
+{
+  const docsJsonPath = path.join(DOCS_OUT, 'docs.json');
+  const cfg = JSON.parse(fs.readFileSync(docsJsonPath, 'utf-8'));
+
+  const mapRoots = ['intelligence', 'platform', 'apps'];
+  const mapGroups = mapRoots
+    .map((r) => ({
+      group: r.charAt(0).toUpperCase() + r.slice(1),
+      pages: listPageIds(`map/${r}`, `map/${r}/`),
+      defaultOpen: r !== 'apps',
+    }))
+    .filter((g) => g.pages.length);
+
+  const progresPages = listPageIds('progres', 'progres/');
+  const blueprintPages = nestedGroups(listPageIds('blueprint', ''))
+    .map((e) =>
+      typeof e === 'string' ? `blueprint/${e}` : { ...e, pages: e.pages.map((p) => `blueprint/${p}`) })
+    .flatMap((e) => (typeof e === 'string' && e === 'blueprint/index' ? [] : [e]));
+
+  cfg.navigation = {
+    groups: [
+      {
+        group: 'Getting Started',
+        pages: ['overview', 'quickstart', 'usage', 'how-to-use', 'tutorial', 'skill'],
+      },
+      {
+        group: 'Reference',
+        pages: ['about', 'architecture', 'stack', 'status', 'gotchas', 'tooling', 'guides', 'deep-dive', 'examples'],
+      },
+      {
+        group: 'MMO & Blueprint',
+        pages: ['quickstart-mmo', 'blueprint/index', ...blueprintPages],
+        defaultOpen: false,
+      },
+      {
+        group: 'Progress Detail',
+        pages: progresPages,
+        defaultOpen: false,
+      },
+      {
+        group: 'Codebase Map',
+        pages: mapGroups,
+      },
+      {
+        group: 'Release',
+        pages: ['changelog'],
+      },
+    ],
+  };
+
+  cfg.colors = { primary: '#C15F3C', light: '#E07A55', dark: '#D97757' };
+  cfg.fonts = { heading: { family: 'Fraunces' }, body: { family: 'Inter' }, mono: { family: 'JetBrains Mono' } };
+  cfg.appearance = { default: 'dark', strict: false };
+  cfg.background = { color: { dark: '#191817', light: '#FAF9F5' } };
+
+  fs.writeFileSync(docsJsonPath, JSON.stringify(cfg, null, 2) + '\n');
+  const total =
+    cfg.navigation.groups.reduce((n, g) => n + (Array.isArray(g.pages) ? g.pages.length : 0), 0) +
+    mapGroups.reduce((n, g) => n + g.pages.length, 0);
+  console.log(`  ok docs.json nav rebuilt — ${cfg.navigation.groups.length} groups, ${total} top entries`);
 }
 
 console.log('\n== Selesai. Halaman ke-generate ke docs-site/*.mdx ==');

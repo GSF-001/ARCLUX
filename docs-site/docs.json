@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "ARCLUX",
   "colors": {
-    "primary": "#0070F3",
-    "light": "#3f8fff",
-    "dark": "#0070F3"
+    "primary": "#C15F3C",
+    "light": "#E07A55",
+    "dark": "#D97757"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -15,37 +15,89 @@
         "pages": [
           "overview",
           "quickstart",
-          "tutorial",
           "usage",
           "how-to-use",
+          "tutorial",
           "skill"
         ]
       },
       {
         "group": "Reference",
         "pages": [
+          "about",
           "architecture",
           "stack",
           "status",
           "gotchas",
-          "tooling"
+          "tooling",
+          "guides",
+          "deep-dive",
+          "examples"
         ]
+      },
+      {
+        "group": "MMO & Blueprint",
+        "pages": [
+          "quickstart-mmo",
+          "blueprint/index",
+          "blueprint/01-spatial-ux",
+          "blueprint/02-station-infrastructure",
+          "blueprint/03-combat",
+          "blueprint/04-wreckage-history",
+          "blueprint/05-vessel-design-dashboard",
+          "blueprint/06-community-social-ownership",
+          "blueprint/07-special-capabilities",
+          "blueprint/08-persistent-world",
+          "blueprint/09-client-polish",
+          "blueprint/10-planetary-runtime",
+          "blueprint/10-visual-fidelity",
+          "blueprint/11-vessel-fitting-ux",
+          "blueprint/blueprint-license",
+          {
+            "group": "Progres",
+            "pages": [
+              "blueprint/progres/arsitektur",
+              "blueprint/progres/decisions-mmo",
+              "blueprint/progres/mmo-contract",
+              "blueprint/progres/mmo-implementation",
+              "blueprint/progres/readme"
+            ]
+          },
+          {
+            "group": "UE",
+            "pages": [
+              "blueprint/progres/ue/00-migrasi",
+              "blueprint/progres/ue/01-assets",
+              "blueprint/progres/ue/02-asset-pipeline",
+              "blueprint/progres/ue/03-implementasi",
+              "blueprint/progres/ue/04-graphics",
+              "blueprint/progres/ue/05-hukum-kota",
+              "blueprint/progres/ue/06-gameplay-systems",
+              "blueprint/progres/ue/07-studio",
+              "blueprint/progres/ue/08-hud-cockpit",
+              "blueprint/progres/ue/08-server-hardening",
+              "blueprint/progres/ue/readme"
+            ]
+          }
+        ],
+        "defaultOpen": false
       },
       {
         "group": "Progress Detail",
         "pages": [
-          "progres/progres-readme",
           "progres/progres-bugs",
           "progres/progres-collaborators",
           "progres/progres-decisions",
           "progres/progres-gotchas",
+          "progres/progres-readme",
           "progres/progres-roadmap",
           "progres/progres-status-backlog",
           "progres/progres-status-core",
           "progres/progres-status-detectors",
           "progres/progres-status-infra",
           "progres/progres-status-web"
-        ]
+        ],
+        "defaultOpen": false
       },
       {
         "group": "Codebase Map",
@@ -60,27 +112,32 @@
               "map/intelligence/detectors",
               "map/intelligence/diagnostics",
               "map/intelligence/diff",
+              "map/intelligence/directory",
               "map/intelligence/dsl",
               "map/intelligence/engine",
+              "map/intelligence/gameserver",
               "map/intelligence/git",
               "map/intelligence/graph",
               "map/intelligence/impact",
               "map/intelligence/indexer",
               "map/intelligence/language",
+              "map/intelligence/mcp",
               "map/intelligence/parser",
               "map/intelligence/provenance",
-              "map/intelligence/remote",
+              "map/intelligence/relay",
               "map/intelligence/remote-analysis",
+              "map/intelligence/remote",
               "map/intelligence/repository",
               "map/intelligence/rules",
               "map/intelligence/search",
-              "map/intelligence/security",
               "map/intelligence/security-analysis",
+              "map/intelligence/security",
               "map/intelligence/semantic-diff",
               "map/intelligence/shared",
-              "map/intelligence/ui"
+              "map/intelligence/ui",
+              "map/intelligence/universe"
             ],
-            "defaultOpen": false
+            "defaultOpen": true
           },
           {
             "group": "Platform",
@@ -109,28 +166,37 @@
               "map/platform/web-intake",
               "map/platform/workspace"
             ],
-            "defaultOpen": false
+            "defaultOpen": true
           },
           {
             "group": "Apps",
             "pages": [
               "map/apps/cli",
+              "map/apps/game",
+              "map/apps/ue5",
               "map/apps/vscode-extension",
               "map/apps/web"
             ],
             "defaultOpen": false
           }
         ]
+      },
+      {
+        "group": "Release",
+        "pages": [
+          "changelog"
+        ]
       }
     ]
   },
   "appearance": {
     "default": "dark",
-    "strict": true
+    "strict": false
   },
   "background": {
     "color": {
-      "dark": "#000000"
+      "dark": "#191817",
+      "light": "#FAF9F5"
     }
   },
   "navbar": {
@@ -147,6 +213,9 @@
     },
     "body": {
       "family": "Inter"
+    },
+    "mono": {
+      "family": "JetBrains Mono"
     }
   }
 }
