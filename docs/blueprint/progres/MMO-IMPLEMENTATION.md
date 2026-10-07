@@ -93,6 +93,30 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
   store (`savePendingHandoff`/`loadPendingHandoffs`/`deletePendingHandoff`,
   collection "handoffs", index list utk recovery) (PR #592).
 
+**Sudah diisi (PR #775 — Sprint 1 hardening, `08-server-hardening.md` §4):**
+- `auth.ts` ✅ — `POST /login` → Bearer HMAC token {sub,iat,exp} + TTL;
+  `signHandoff`/`verifyHandoff` (HMAC raw body ±60s, timingSafeEqual);
+  `isDeliverAllowed` (loopback + allowlist); secret via env
+  `ARCLUX_AUTH_SECRET`/`ARCLUX_HANDOFF_SECRET`.
+- `server.ts` ✅ — `/intent` rate limit (429 + shadowban) + auth 401 +
+  seq stale 409 + identity mismatch rejected + ack `{ok,seq,verdict}`;
+  `/deliver` IP allowlist 403 + HMAC 403 + `sanitizeVesselModel`
+  (clamp+recompute agregat, D-008) ; `readBody` 1MB → 413;
+  `GET /servers` (visibility/federation/status filter);
+  lifecycle: `persistence` option, resume-on-start, save-on-stop,
+  autosave 100 tick, heartbeat 10s + port aktual dari `server.address()`.
+- `simulation.ts` ✅ (+guard) — `checkStability` per step (stability_trip →
+  trim separuh), entity cap → `spawn_rejected`, E-5 posisi/id `spawn_station`
+  dari seeded rng (Math.random/Date.now sim path = 0).
+- `validator.ts` ✅ (+E-1) — `resolveTradeSeller`/`actorOwnsSeller` tutup
+  trade theft (dipakai juga di sim = 2 lapis).
+- `world.ts` ✅ (+`restore` resume) · `directory/registry.ts` ✅ TTL 30s
+  `effectiveStatus` + `listServersWithHealth` ·
+  `transport/HttpClientTransport.ts` ✅ auto-login + retry 401 +
+  `handoffSigner` opt-in (browser gak pegang secret) ·
+  `apps/cli/serve.ts` ✅ persistence default ON (`--no-persist`).
+- Regresi: `tests/server-hardening-sprint1.test.ts` 20 test.
+
 **Arah (prioritas isi berikutnya) — update 09-03:**
 1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591).
 2. ~~handoff token crash-safe di `gate.ts`~~ — SELESAI via PR #592.
@@ -179,6 +203,7 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 ### PR #639 ✅ clouds AAA+ — procedural clouds di SEMUA planet visual-only (scene3d.ts makeCloudTexture) — SUDJAH (2026-09-03, pause 09 di Fase 5)
 ### PR #772 ✅ Fase 3 fit authority — fitting.ts (validateFitIntent equip/unequip) + stateHash=fitHash — SUDJAH (2026-10-06)
 ### PR #773 ✅ Fase 3 sisa — kapasitor per tick (stepCapacitor + gate activate) + combat resist fit — SUDJAH (2026-10-06)
+### PR #775 ✅ Sprint 1 server hardening — auth.ts (login+handoff HMAC) + E-1..E-5 + rate limit/1MB + /servers TTL + lifecycle persistence — SUDJAH (2026-10-06)
 ### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs — SELESAI
@@ -218,6 +243,8 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 - [x] 09 Fase 8 FPS interior 6 iris — corridor+promenade (iris1) + plaza+96 habitat (iris2) + lighting PMREM reuse (iris3) + FPS controller 60Hz Box3 (iris4) + CharacterEntity+DockingState (iris5) + HUD deck+camera FPS (iris6) — SELESAI (PR #664-669)
 - [x] `fitting.ts` — Fase 3 fit authority (equip/unequip + expectHash anti-cheat) + kapasitor per tick `stepCapacitor` — SELESAI (PR #772 + #773)
 - [x] Fase 3 sisa: combat resist fit `computeResists` + gate `activate_capability` saat kapasitor 0 — SELESAI (PR #773)
+- [x] `auth.ts` — login Bearer HMAC + handoff HMAC + isDeliverAllowed — SELESAI (PR #775)
+- [x] `server.ts` — Sprint 1 route hardening: auth 401 + rate limit 429 + seq 409 + 413 + /deliver guard + /servers + lifecycle persistence — SELESAI (PR #775)
 - [ ] 09 Part B Fase 9 karakter repo (CharacterEntity + spawnCharacter)
 - [ ] 09 Part B Fase 10 hangar 32 slot + docking film 3s (gate.ts + bridge.ts)
 - [ ] 09 Part B Fase 11 bazaar 16 lapak (component.ts + validator)
@@ -274,3 +301,4 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 | 2026-09-03 | #638 | 09 Fase 5 5 SFX explosion/weapon/shield/debris/ambient hum (audio.ts) | ✅ merged |
 | 2026-09-03 | #639 | clouds AAA+ di SEMUA planet procedural makeCloudTexture 512, visual-only | ✅ merged |
 | 2026-09-03 | — | update MMO-IMPLEMENTATION.md ketinggalan → sync 09 + clouds + landing + serve --vessel | in progress |
+| 2026-10-06 | #775 | Sprint 1 server hardening (08 §4): auth.ts login+handoff HMAC, E-1..E-5, rate limit/1MB/403/409, /servers TTL, lifecycle persistence, 20 regresi test | in progress |
