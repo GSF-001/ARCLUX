@@ -751,6 +751,11 @@ function nestedGroups(ids) {
   cfg.fonts = { heading: { family: 'Inter' }, body: { family: 'Inter' } };
   cfg.appearance = { default: 'dark', strict: true };
   cfg.background = { color: { dark: '#0B0E14', light: '#FFFFFF' } };
+  cfg.colors = { primary: '#C15F3C', light: '#E07A55', dark: '#D97757' };
+  cfg.fonts = { heading: { family: 'Fraunces' }, body: { family: 'Inter' } };
+  cfg.appearance = { default: 'dark', strict: false };
+  cfg.background = { color: { dark: '#191817', light: '#FAF9F5' } };
+
 
   fs.writeFileSync(docsJsonPath, JSON.stringify(cfg, null, 2) + '\n');
   const total =
