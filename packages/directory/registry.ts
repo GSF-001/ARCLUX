@@ -24,22 +24,58 @@ export function registerServer(manifest: ServerManifest, id?: ServerIdentity): {
 
 export function unregisterServer(serverId: string): boolean { return servers.delete(serverId) && health.delete(serverId); }
 
-export function heartbeat(serverId: string, h: Partial<ServerHealth>): ServerHealth | null {
+export function heartbeat(serverId: string, h: Partial<ServerHealth>, now: number = Date.now()): ServerHealth | null {
   const cur = health.get(serverId);
   if (!cur) return null;
-  const next: ServerHealth = { ...cur, ...h, serverId, updatedAt: new Date().toISOString() } as ServerHealth;
+  const next: ServerHealth = { ...cur, ...h, serverId, updatedAt: new Date(now).toISOString() } as ServerHealth;
   health.set(serverId, next);
   const m = servers.get(serverId);
   if (m && typeof h.population === "number") m.population = h.population;
   return { ...next };
 }
 
+/** Health TTL (P0-5): bila tidak ada heartbeat ≥30 detik, server dianggap
+ *  OFFLINE otomatis — directory TIDAK boleh menampilkan ONLINE selamanya
+ *  meski prosesnya sudah mati. */
+export const HEALTH_TTL_MS = 30_000;
+
+/** Status efektif = status tercatat, tapi override OFFLINE bila heartbeat
+ *  sudah kedaluwarsa (TTL 30s). */
+export function effectiveStatus(serverId: string, now: number = Date.now()): ServerStatus {
+  const h = health.get(serverId);
+  if (!h) return "OFFLINE";
+  const updated = Date.parse(h.updatedAt);
+  if (Number.isFinite(updated) && now - updated > HEALTH_TTL_MS) return "OFFLINE";
+  return h.status;
+}
+
 export function listServers(filter?: { visibility?: string; federation?: string; status?: ServerStatus }): ServerManifest[] {
   let out = Array.from(servers.values());
   if (filter?.visibility) out = out.filter((s) => s.visibility === filter.visibility);
   if (filter?.federation) out = out.filter((s) => s.federation === filter.federation);
-  if (filter?.status) out = out.filter((s) => health.get(s.serverId)?.status === filter.status);
+  if (filter?.status) out = out.filter((s) => effectiveStatus(s.serverId) === filter.status);
   return out.map((s) => ({ ...s }));
+}
+
+/** Manifest + health efektif (untuk endpoint GET /servers — status sudah
+ *  lewat TTL check, jadi konsumen tidak perlu menghitung umur sendiri). */
+export interface ServerListing extends ServerManifest {
+  status: ServerStatus;
+  updatedAt: string;
+}
+
+export function listServersWithHealth(
+  filter?: { visibility?: string; federation?: string; status?: ServerStatus },
+  now: number = Date.now()
+): ServerListing[] {
+  return listServers(filter).map((m) => {
+    const h = health.get(m.serverId);
+    return {
+      ...m,
+      status: effectiveStatus(m.serverId, now),
+      updatedAt: h?.updatedAt ?? new Date(0).toISOString(),
+    };
+  });
 }
 
 export function getServer(serverId: string): { manifest?: ServerManifest; health?: ServerHealth; identity?: ServerIdentity } {

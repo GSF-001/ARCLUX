@@ -34,6 +34,31 @@ export interface ValidatorContext {
 }
 
 /**
+ * E-1 (08 hardening): resolve vessel yang BENAR-BENAR memiliki componentId.
+ * Satu sumber kebenaran untuk validator + simulation — simulation memakai
+ * fungsi ini, bukan scan ulang dengan logika sendiri (dua-resolve = dua
+ * kebenaran = celah).
+ */
+export function resolveTradeSeller(
+  region: WorldRegion,
+  componentId: string
+): { seller: VesselEntity; compIdx: number } | undefined {
+  for (const e of region["entities"].values()) {
+    if (e.kind !== "vessel") continue;
+    const idx = e.vessel.components.findIndex((c) => c.id === componentId);
+    if (idx !== -1) return { seller: e, compIdx: idx };
+  }
+  return undefined;
+}
+
+/** Kepemilikan seller untuk trade: pemilik vessel penjual, ATAU karakter
+ *  yang sedang berada di vessel penjual (karakter di vessel aktor). */
+export function actorOwnsSeller(seller: VesselEntity, actor: WorldEntity, playerId: string): boolean {
+  if (seller.owner === playerId) return true;
+  return actor.kind === "character" && actor.vesselId === seller.id;
+}
+
+/**
  * Validate a single intent. The rules mirror Layer I checklist:
  * attacker valid, weapon/component authorized, license valid, vessel state
  * valid, cooldown valid, range valid, target valid, damage <= ruleset, state
@@ -98,6 +123,13 @@ export function validateIntent(
     case "trade_component": {
       const p = intent.payload as { componentId?: string };
       if (!p?.componentId) return { decision: "reject", reason: "trade requires componentId" };
+      // E-1: cek SELLER (bukan cuma kepemilikan entityId aktor — itu celah
+      // pencurian component pemain lain). Resolve via resolver bersama.
+      const found = resolveTradeSeller(region, p.componentId);
+      if (!found) return { decision: "reject", reason: "component not found on any vessel" };
+      if (!actorOwnsSeller(found.seller, entity, ctx.playerId)) {
+        return { decision: "reject", reason: "actor does not own seller vessel" };
+      }
       // Check component exists and not depleted (reuse component.ts)
       try {
         const { getComponent } = require("./component");

@@ -20,6 +20,7 @@
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
 import { createGameServer } from "../../packages/gameserver/server";
+import { createDbPersistence } from "../../packages/gameserver/persistence";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { analyzeRepository } from "../../packages/engine/pipeline";
@@ -35,7 +36,8 @@ export function registerServeCommand(program: Command): void {
     .option("--client <dir>", "static dir of the bundled game client (served at /)")
     .option("--vessel <path>", "path to vessel repo to auto-spawn on boot (analyzed via .arclux/)")
     .option("--no-register", "do NOT register this server in the public directory")
-    .action(async (options: { region: string; name?: string; port: number; client?: string; vessel?: string; register: boolean }) => {
+    .option("--no-persist", "disable world persistence (D-013: save-on-stop + autosave tiap 100 tick)")
+    .action(async (options: { region: string; name?: string; port: number; client?: string; vessel?: string; register: boolean; persist: boolean }) => {
       const clientDir = options.client ? resolve(options.client) : null;
       if (clientDir && !existsSync(clientDir as string)) {
         p.log.error(`--client dir not found: ${clientDir}`);
@@ -53,11 +55,16 @@ export function registerServeCommand(program: Command): void {
         port: options.port || undefined,
         register: options.register,
         staticDir: clientDir ?? undefined,
+        // E-3 (08 hardening): world persist — resume-on-start, save-on-stop,
+        // autosave tiap 100 tick. kill -9 kehilangan ≤100 tick, bukan reset.
+        persistence: options.persist ? createDbPersistence() : undefined,
       });
 
       const { url, port } = await gs.start();
       p.log.success(`🌌 Region "${options.region}" live at ${url}`);
-      p.log.info(`   API  : ${url}/snapshot · /health · /intent · /deliver`);
+      p.log.info(`   API  : ${url}/snapshot · /health · /intent · /deliver · /servers`);
+      p.log.info(`   Port : ${port}`);
+      if (options.persist) p.log.info(`   World: persistence ON (resume + autosave 100t + save-on-stop) — --no-persist untuk matikan`);
       p.log.info(`   Port : ${port}`);
       if (clientDir) p.log.info(`   Game : ${url}/ (static client from ${clientDir})`);
       else p.log.info(`   Game : no --client supplied — serve the bundled client with --client dist/renderer`);

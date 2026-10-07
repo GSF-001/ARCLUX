@@ -18,7 +18,8 @@
 
 import type { GameEvent, PlayerIntent, Vec3, VesselEntity, WorldEntity } from "./types";
 import { WorldRegion } from "./world";
-import { validateIntent, type ValidatorContext } from "./validator";
+import { validateIntent, resolveTradeSeller, actorOwnsSeller, type ValidatorContext } from "./validator";
+import { createSeedRng } from "./random";
 import { projectFitAction, stepCapacitor } from "./fitting";
 import { applyCombatIntent } from "./combat";
 import type { EnvironsState } from "./environs";
@@ -34,6 +35,11 @@ import { recordCreation } from "./lineage";
 import { computeRecall } from "./teleport";
 import { clampSpeed } from "./physics";
 import { recordTickTrace } from "./observability";
+// P0-4 stability (08 hardening). Siklus statik simulation ↔ stability AMAN:
+// stability memakai computeEntityHash (function declaration — di-hoist, live
+// binding) hanya saat dipanggil, bukan saat init. `require()` TIDAK dipakai —
+// di runtime webpack/vitest require relatif tidak resolve (gotcha repo).
+import { checkStability, STABILITY_LIMITS } from "./stability";
 import {
   hullOf,
   nextEmergencyState,
@@ -78,6 +84,8 @@ export class SimulationEngine {
   private pending: PlayerIntent[] = [];
   private eventLog: GameEvent[] = [];
   private eventSeq = 0;
+  /** Durasi step sebelumnya (ms) — input checkStability tick_overbudget. */
+  private lastTickMs = 0;
 
   constructor(opts: SimulationOptions) {
     this.region = opts.region;
@@ -94,6 +102,10 @@ export class SimulationEngine {
 
   /** Process one tick: drain queue, validate, simulate, advance physics. */
   step(): TickResult {
+    // P0-4 stability guard di awal tick (08 hardening): trip bila entity cap /
+    // tick overbudget / eventlog overflow — log ke replay + rotate bila perlu.
+    this.checkWorldStability();
+    const stepStart = Date.now();
     const queue = this.pending;
     this.pending = [];
     const accepted: GameEvent[] = [];
@@ -148,6 +160,7 @@ export class SimulationEngine {
       recordTickTrace({ tick: this.region.tick, regionId: this.region.regionId, durationMs: Date.now() - start, entityCount: this.region.snapshot().entities.length, eventCount: accepted.length + rejected.length, timestamp: new Date().toISOString() });
     }
     this.region.advanceTick();
+    this.lastTickMs = Date.now() - stepStart;
 
     return {
       accepted,
@@ -274,6 +287,11 @@ export class SimulationEngine {
       }
       case "spawn_character": {
         const p = intent.payload as { vesselId?: string; preset?: string; armorColor?: string; emblemRepo?: string; deck?: string };
+        // P0-4: spawn baru ditolak saat entity cap tercapai.
+        if (this.entityCapExceeded()) {
+          this.log("spawn_rejected", intent.playerId, { type: "spawn_character", reason: "entity_cap" });
+          break;
+        }
         const charId = `char:${intent.playerId}`;
         if (this.region.has(charId)) break;
         const vessel = p.vesselId ? this.region.getVessel(p.vesselId) : entity.kind === "vessel" ? entity : undefined;
@@ -287,22 +305,20 @@ export class SimulationEngine {
       case "trade_component": {
         const p = intent.payload as { componentId?: string; fromVesselId?: string; toVesselId?: string };
         if (!p.componentId) break;
-        // Find seller vessel that owns component
-        let seller: import("./types").VesselEntity | undefined;
-        let compIdx = -1;
-        for (const e of this.region["entities"].values()) {
-          if (e.kind === "vessel") {
-            const idx = (e as import("./types").VesselEntity).vessel.components.findIndex((c) => c.id === p.componentId);
-            if (idx !== -1) { seller = e as import("./types").VesselEntity; compIdx = idx; break; }
-          }
-        }
-        if (!seller || compIdx === -1) {
+        // E-1: pakai resolver SAMA dengan validator (bukan scan ulang dengan
+        // logika sendiri — dua-resolve = dua kebenaran).
+        const found = resolveTradeSeller(this.region, p.componentId);
+        if (!found) {
           this.log("trade_rejected", intent.playerId, { reason: "component not found", componentId: p.componentId });
           break;
         }
-        // Check health/depleted
-        const comp = seller.vessel.components[compIdx];
-        // simple health check: if component depleted via useComponent, reject (already validated)
+        const { seller, compIdx } = found;
+        // Defense-in-depth: state bisa berubah antara validasi & apply tick
+        // ini — cek ulang kepemilikan seller dengan aturan yang sama.
+        if (!actorOwnsSeller(seller, entity, intent.playerId)) {
+          this.log("trade_rejected", intent.playerId, { reason: "actor does not own seller vessel", componentId: p.componentId, seller: seller.id });
+          break;
+        }
         const buyerId = p.toVesselId ?? (entity.kind === "character" ? (entity as import("./types").CharacterEntity).vesselId : entity.id);
         const buyer = this.region.getVessel(buyerId);
         if (!buyer) {
@@ -319,14 +335,23 @@ export class SimulationEngine {
       }
       case "spawn_station": {
         const p = intent.payload as { name?: string; rings?: number; habitatsPerRing?: number; dockingPerRing?: number; communityId?: string };
-        const stationId = `stadium:${intent.playerId}:${Date.now() % 100000}`;
+        // P0-4: spawn baru ditolak saat entity cap tercapai.
+        if (this.entityCapExceeded()) {
+          this.log("spawn_rejected", intent.playerId, { type: "spawn_station", reason: "entity_cap" });
+          break;
+        }
+        // E-5 determinisme: id dari tick+eventSeq (bukan Date.now) dan
+        // posisi dari seeded rng (bukan Math.random) — replay log wajib bisa
+        // merekonstruksi world state yang sama persis (D-008/Layer I.8).
+        const stationId = `${this.region.regionId}:st:${this.region.tick}:${this.eventSeq}`;
         if (this.region.has(stationId)) break;
+        const rng = createSeedRng(stationSeed(this.region.regionId, this.region.tick, this.eventSeq));
         const station = this.region.spawnStation({
           id: stationId,
           name: p.name ?? `Stadion ${intent.playerId}`,
           owner: intent.playerId,
           communityId: p.communityId,
-          position: { x: entity.position.x + 2000 + Math.random() * 2000, y: entity.position.y, z: entity.position.z + 2000 },
+          position: { x: entity.position.x + 2000 + rng.next() * 2000, y: entity.position.y, z: entity.position.z + 2000 + rng.next() * 2000 },
           safeZoneRadius: 1000,
         });
         this.log("stadium_spawned", intent.playerId, { stationId: station.id, rings: p.rings ?? 4, habitatsPerRing: p.habitatsPerRing ?? 24 });
@@ -346,6 +371,28 @@ export class SimulationEngine {
         this.log("capacitor_depleted", "server", { entityId: e.id, current: res.current });
       }
     }
+  }
+
+  /** P0-4 (08 hardening): stability guard di AWAL step — entity cap, tick
+   *  budget (dari step sebelumnya), eventlog overflow. */
+  private checkWorldStability(): void {
+    const stab = checkStability(this.region, this.lastTickMs, this.eventLog.length);
+    if (stab.ok) return;
+    this.log("stability_trip", "server", {
+      reason: stab.reason,
+      entities: this.region["entities"].size,
+      eventLog: this.eventLog.length,
+      lastTickMs: this.lastTickMs,
+    });
+    if (stab.reason === "eventlog_overflow") {
+      // Rotate: buang separuh event lama — replay tetap jalan, memori stabil.
+      this.eventLog = this.eventLog.slice(Math.floor(this.eventLog.length / 2));
+    }
+  }
+
+  /** Entity cap (STABILITY_LIMITS.maxEntities) — spawn baru wajib ditolak. */
+  private entityCapExceeded(): boolean {
+    return this.region["entities"].size >= STABILITY_LIMITS.maxEntities;
   }
 
   private integratePhysics(): void {
@@ -445,6 +492,17 @@ export class SimulationEngine {
       }
     }
   }
+}
+
+/** Seed deterministik per (region, tick, eventSeq) — FNV-1a regionId ⊕
+ *  tick/seq (E-5: posisi spawn_station wajib reproducible dari input). */
+function stationSeed(regionId: string, tick: number, eventSeq: number): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < regionId.length; i++) {
+    h ^= regionId.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h ^ Math.imul(tick, 7919) ^ Math.imul(eventSeq, 104729)) >>> 0;
 }
 
 function moveToward(entity: WorldEntity, target: Vec3, dt: number): void {
