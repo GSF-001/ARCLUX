@@ -11,18 +11,23 @@ See through your codebase before it breaks. Every codebase accumulates debt nobo
 
 ## Get started
 
-Not yet published to npm -- clone and build locally.
+Published on npm -- zero setup:
+
+```bash
+npx arclux analyze .          # one-off, no install
+npm i -g arclux               # or install once, get the `arclux` binary
+```
+
+The package ships every tree-sitter grammar it needs -- no native compilation,
+no grammar installs. Node 20+.
+
+From source (development):
 
 ```bash
 git clone https://github.com/GSF-001/ARCLUX.git
 cd ARCLUX
 pnpm install
-```
-
-Run CLI commands via:
-
-```bash
-npx tsx apps/cli/index.ts analyze [path]
+pnpm build:cli
 ```
 
 Or start the web dashboard:
@@ -41,6 +46,30 @@ Turbopack belum didukung di arsitektur ini. Jangan tambahkan `--turbo` ke script
 Parsing TypeScript/TSX pakai TypeScript Compiler API, parsing Python pakai
 `web-tree-sitter`. Kalau nambah bahasa baru, cek `packages/parser/` dulu sebelum bikin parser baru.
 </Note>
+
+## MCP for AI agents
+
+ARCLUX exposes 30+ tools over Model Context Protocol, with self-triggering
+workflow instructions so agents pick the right tool unprompted:
+
+```json
+{
+  "mcpServers": {
+    "arclux": { "command": "npx", "args": ["arclux", "mcp"] }
+  }
+}
+```
+
+## Always-on daemon
+
+```bash
+arclux daemon --detach     # watch the repo, re-analyze on every change
+arclux daemon --status
+arclux daemon --stop
+```
+
+The daemon exposes a local HTTP+SSE bridge (`GET /analysis`, `GET /events`)
+so any editor or terminal can connect.
 
 ## What it actually does
 
@@ -68,12 +97,17 @@ This project is under active development with a small team. Expect breaking chan
 
 <CardGroup cols={2}>
   <Card title="Solid today" icon="check">
-    Core pipeline, 27 languages, all 20 detectors, impact analysis, DSL, search, security -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`
+    Core pipeline, 27 languages, all 20 detectors, impact analysis, call graph, DSL, search, security, MCP server, daemon -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`
   </Card>
   <Card title="Not there yet" icon="hourglass-half">
-    Persistence layer (packages/db), per-file incremental re-indexing, npm publishing
+    Per-file incremental re-indexing is still coarse (full rebuild per change); the MMO (`apps/game` + `gameserver` + `universe`) is alpha
   </Card>
 </CardGroup>
+
+## Two licenses
+
+- **ARCLUX Platform** (engine, parser, graph, cli, web) -- Apache 2.0, open, contribute freely
+- **ARCLUX MMO** (gameserver, relay, universe, apps/game) -- source-available, no commercial hosting of a cloned game without written permission
 
 ## Next steps
 

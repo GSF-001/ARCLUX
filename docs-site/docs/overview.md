@@ -1,5 +1,5 @@
 ---
-title: Intro
+title: Introduction
 sidebar_position: 1
 ---
 
@@ -8,15 +8,17 @@ sidebar_position: 1
 ![alt text](https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/assets/Banner-preview.png) 
 ## OPEN SOURCE
 
-Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard.
+Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard + MCP for AI.
 
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
- [](LICENSE)
+  [](LICENSE)
+![Version: 0.3.0](https://img.shields.io/badge/version-0.3.0-3f8fff)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-black)
 [](#status)
 
 [![CI](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml/badge.svg)](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-live-3f8fff)](https://arclux-os.mintlify.site)
+[![npm](https://img.shields.io/badge/npm-arclux-cb3837)](https://www.npmjs.com/package/arclux)
 
 &lt;p align="center">
   &lt;img src="assets/demo.gif" alt="ARCLUX CLI in action: arclux analyze . and arclux doctor" />
@@ -35,11 +37,14 @@ Dependency graph, impact analysis, and structural convention checking for your c
 > [!NOTE] 
 > 
 > **[official documentation](https://arclux-os.mintlify.site)**
-content, searchable and organized
+> content, searchable and organized
+
+> This README is intentionally stable. Live numbers, detailed status, and per-package docs live in the links below and update automatically — you don't need to watch this file for changes.
 
 -----
 - [`ABOUT.md`](https://github.com/GSF-001/ARCLUX/blob/main/ABOUT.md) — the ARCLUX map: what it is, the intelligence layer, the platform underneath — **start here if you're new**
-- [`QUICKSTART.md`](https://github.com/GSF-001/ARCLUX/blob/main/QUICKSTART.md) — start here, fast-path workflow cheat sheet
+- [`QUICKSTART.md`](https://github.com/GSF-001/ARCLUX/blob/main/QUICKSTART.md) — fast-path workflow cheat sheet
+- [`QUICKSTART-MMO.md`](https://github.com/GSF-001/ARCLUX/blob/main/QUICKSTART-MMO.md) — MMO game: clone → vessel → self-host region → play (from zero)
 - [`TOOLING.md`](https://github.com/GSF-001/ARCLUX/blob/main/TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](https://github.com/GSF-001/ARCLUX/blob/main/CONTRIBUTING.md) — conventions for contributing code
 - [`PROGRES.md`](https://github.com/GSF-001/ARCLUX/blob/main/PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
@@ -48,35 +53,41 @@ content, searchable and organized
 - [`CONTEXT.md`](https://github.com/GSF-001/ARCLUX/blob/main/CONTEXT.md) — project brief at a glance: stack, architecture, current state.
 - [`progres/roadmap.md`](https://github.com/GSF-001/ARCLUX/blob/main/progres/roadmap.md) — long-term direction, phased
 
-## Status: alpha
+## Status
 
-Under active development. Core pipeline (parse/index/graph/impact), 20 detectors, 14 framework convention rules, scripting DSL, CLI + web dashboard + always-on daemon + VS Code extension are solid and verified against real repos (vscode, react, vite, laravel, flask). The persistence/cache layers are still stubs.
+Under active development. This section stays high-level on purpose — for the current, detailed breakdown see [progres/status-core.md](https://github.com/GSF-001/ARCLUX/blob/main/progres/status-core.md), [status-web.md](https://github.com/GSF-001/ARCLUX/blob/main/progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
 
-For the current, detailed breakdown -- see [progres/status-core.md](https://github.com/GSF-001/ARCLUX/blob/main/progres/status-core.md), [status-web.md](https://github.com/GSF-001/ARCLUX/blob/main/progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
+Core engine (parse / index / graph / impact / call graph / detectors / framework rules / DSL / search / security) is solid and verified against real repos (vscode, react, vite, laravel, flask). Platform layers (daemon + SSE bridge, persistence via `packages/db`, content-hash caches, watcher) are wired and used in production. Per-file incremental re-index is built but still coarse (full rebuild per change) — see `progres/status-core.md`. MMO product (`apps/game` + `packages/gameserver` + `packages/universe`) is in alpha — see `docs/blueprint/`.
 
 ## What it does
 
 - Builds a dependency graph (imports, exports, folders) + call graph (which functions call which, across files) from static analysis
-- Traces impact - what is affected if you change file X
-- Detects circular deps, dead code, orphan files, duplicate modules, layer violations, and more (20 detectors — run them all with `arclux doctor`)
-- Enforces framework conventions (14 rules: Next.js, NestJS, Express, Vite, Electron, React, Laravel — `arclux verify` gates on them)
+- Traces impact — what is affected if you change file X
+- Detects structural issues (circular deps, dead code, orphan files, duplicate modules, layer violations, and more — architecture detectors, auto-discovered — run them all with `arclux doctor`)
+- Enforces framework conventions (Next.js, NestJS, Express, Vite, Electron, React, Laravel — `arclux verify` gates on them, auto-discovered)
 - Runs scripted analysis — `arclux script file.arclux` executes the ARCLUX DSL (analyze, impact, doctor, security, graph from plain-text scripts)
-- Parses 27 languages: TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C#, Bash, C, Dart, Elixir, Kotlin, Lua, Objective-C, OCaml, Scala, Solidity, Swift, Vue, Zig, Elm, ReScript, plus manifest formats (package.json, go.mod, Cargo.toml, Gemfile, composer.json, csproj, gradle, pom.xml, requirements.txt)
+- Parses many languages: TypeScript/TSX, JavaScript, Python, Go, Java, PHP, Ruby, Rust, C++, C#, Bash, C, Dart, Elixir, Kotlin, Lua, Objective-C, OCaml, Scala, Solidity, Swift, Vue, Zig, Elm, ReScript, plus manifest formats (package.json, go.mod, Cargo.toml, Gemfile, composer.json, csproj, gradle, pom.xml, requirements.txt) — via TypeScript Compiler API + web-tree-sitter. New parsers appear automatically in `arclux config` and `--help`.
+
+> Numbers (detector / rule / language counts) grow automatically as the codebase grows. This README does not chase them — run `arclux --help`, `arclux config`, or see the docs site for live counts.
 
 ## Install
 
 ```bash
-npx arclux analyze .          # zero setup
-npm i -g arclux               # install globally
+npx arclux analyze .          # or any command — zero setup
+npm i -g arclux               # or install once, get the `arclux` binary
 ```
+
+The package ships every tree-sitter grammar it needs — no native
+compilation, no grammar installs. Node 20+.
 
 ### From source (development)
 
     git clone https://github.com/GSF-001/ARCLUX.git
     cd ARCLUX
     pnpm install
+    pnpm build:cli             # bundles apps/cli/dist/arclux.mjs + wasms/
 
-Run CLI commands via: `arclux <command>` (installed) or `node apps/cli/dist/arclux.mjs <command>` (bundled).
+Run CLI commands via: `arclux &lt;command>` (installed) or `node apps/cli/dist/arclux.mjs &lt;command>` (bundled).
 
 
 

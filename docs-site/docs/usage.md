@@ -66,20 +66,41 @@ progres/collaborators.md — who owns what right now
 
 ## Usage
 
-    npx tsx apps/cli/index.ts analyze [path]
-    npx tsx apps/cli/index.ts graph [path]
-    npx tsx apps/cli/index.ts graph [path] -o out.json
-    npx tsx apps/cli/index.ts impact &lt;file> [path]
-    npx tsx apps/cli/index.ts doctor [path]
-    npx tsx apps/cli/index.ts diff &lt;from> &lt;to> [path]
-    npx tsx apps/cli/index.ts diagnose [path]
-    npx tsx apps/cli/index.ts verify [path]
-    npx tsx apps/cli/index.ts security [path]
-    npx tsx apps/cli/index.ts search &lt;query> [path]
-    npx tsx apps/cli/index.ts script &lt;file.arclux>
-    npx tsx apps/cli/index.ts config [path]
+    arclux analyze [path]
+    arclux graph [path]
+    arclux graph [path] -o out.json
+    arclux impact &lt;file> [path]
+    arclux doctor [path]
+    arclux diff &lt;from> &lt;to> [path]
+    arclux diagnose [path]
+    arclux verify [path]
+    arclux security [path]
+    arclux search &lt;query> [path]
+    arclux script &lt;file.arclux>
+    arclux config [path]
+    arclux shell
+    arclux mcp
+
+Run `arclux --help` for the full, always-current command list.
 
 Web dashboard:
 
     cd apps/web
     pnpm run dev
+
+### MCP for AI (self-triggering)
+
+ARCLUX exposes 30+ tools via Model Context Protocol. The server ships workflow instructions so AI agents use the right tool without being asked — `analyze` first, `file_info`/`impact` instead of manual reads, `detect`/`doctor` to verify.
+
+```json
+{
+  "mcpServers": {
+    "arclux": {
+      "command": "npx",
+      "args": ["arclux", "mcp"]
+    }
+  }
+}
+```
+
+See the pinned Discussion “Getting Started — install, CLI usage, MCP client config” and [`SKILL.md`](https://github.com/GSF-001/ARCLUX/blob/main/SKILL.md) for details. New detectors/rules/parsers automatically appear as tools — no manual MCP updates.
