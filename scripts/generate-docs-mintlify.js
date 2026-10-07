@@ -825,7 +825,7 @@ function nestedGroups(ids) {
   };
 
   cfg.colors = { primary: '#C15F3C', light: '#E07A55', dark: '#D97757' };
-  cfg.fonts = { heading: { family: 'Fraunces' }, body: { family: 'Inter' }, mono: { family: 'JetBrains Mono' } };
+  cfg.fonts = { heading: { family: 'Fraunces' }, body: { family: 'Inter' } };
   cfg.appearance = { default: 'dark', strict: false };
   cfg.background = { color: { dark: '#191817', light: '#FAF9F5' } };
 

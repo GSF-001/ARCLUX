@@ -213,9 +213,6 @@
     },
     "body": {
       "family": "Inter"
-    },
-    "mono": {
-      "family": "JetBrains Mono"
     }
   }
 }
