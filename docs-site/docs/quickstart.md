@@ -52,8 +52,8 @@ Confirms whether the file is already claimed by a collaborator before you start 
 
 1. Log progress before moving to the next task, not at the end of the session.
 2. Typecheck apps/web from inside apps/web, not repo root:
-   cd apps/web && npx tsc --noEmit
-   Running from root produces 100+ false "@/" alias errors — known, harmless, documented in gotchas.md.
+ cd apps/web && npx tsc --noEmit
+ Running from root produces 100+ false "@/" alias errors — known, harmless, documented in gotchas.md.
 3. /tmp does not exist on Termux. Put throwaway scripts inside the repo folder and delete them after use.
 
 ## Where things live

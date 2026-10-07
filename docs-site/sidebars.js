@@ -16,17 +16,12 @@ const sidebars = {
       type: 'category',
       label: 'Reference',
       collapsed: false,
-      items: ['about', 'architecture', 'stack', 'status', 'gotchas', 'roadmap'],
+      items: ['about', 'architecture', 'stack', 'status', 'gotchas'],
     },
     {
       type: 'category',
       label: 'Learn',
       items: ['guides', 'deep-dive', 'examples'],
-    },
-    {
-      type: 'category',
-      label: 'MMO',
-      items: ['quickstart-mmo'],
     },
     {
       type: 'doc',

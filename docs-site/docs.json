@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "ARCLUX",
   "colors": {
-    "primary": "#C15F3C",
-    "light": "#E07A55",
-    "dark": "#D97757"
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -36,70 +36,6 @@
         ]
       },
       {
-        "group": "MMO & Blueprint",
-        "pages": [
-          "quickstart-mmo",
-          "blueprint/index",
-          "blueprint/01-spatial-ux",
-          "blueprint/02-station-infrastructure",
-          "blueprint/03-combat",
-          "blueprint/04-wreckage-history",
-          "blueprint/05-vessel-design-dashboard",
-          "blueprint/06-community-social-ownership",
-          "blueprint/07-special-capabilities",
-          "blueprint/08-persistent-world",
-          "blueprint/09-client-polish",
-          "blueprint/10-planetary-runtime",
-          "blueprint/10-visual-fidelity",
-          "blueprint/11-vessel-fitting-ux",
-          "blueprint/blueprint-license",
-          {
-            "group": "Progres",
-            "pages": [
-              "blueprint/progres/arsitektur",
-              "blueprint/progres/decisions-mmo",
-              "blueprint/progres/mmo-contract",
-              "blueprint/progres/mmo-implementation",
-              "blueprint/progres/readme"
-            ]
-          },
-          {
-            "group": "UE",
-            "pages": [
-              "blueprint/progres/ue/00-migrasi",
-              "blueprint/progres/ue/01-assets",
-              "blueprint/progres/ue/02-asset-pipeline",
-              "blueprint/progres/ue/03-implementasi",
-              "blueprint/progres/ue/04-graphics",
-              "blueprint/progres/ue/05-hukum-kota",
-              "blueprint/progres/ue/06-gameplay-systems",
-              "blueprint/progres/ue/07-studio",
-              "blueprint/progres/ue/08-hud-cockpit",
-              "blueprint/progres/ue/08-server-hardening",
-              "blueprint/progres/ue/readme"
-            ]
-          }
-        ],
-        "defaultOpen": false
-      },
-      {
-        "group": "Progress Detail",
-        "pages": [
-          "progres/progres-bugs",
-          "progres/progres-collaborators",
-          "progres/progres-decisions",
-          "progres/progres-gotchas",
-          "progres/progres-readme",
-          "progres/progres-roadmap",
-          "progres/progres-status-backlog",
-          "progres/progres-status-core",
-          "progres/progres-status-detectors",
-          "progres/progres-status-infra",
-          "progres/progres-status-web"
-        ],
-        "defaultOpen": false
-      },
-      {
         "group": "Codebase Map",
         "pages": [
           {
@@ -115,7 +51,6 @@
               "map/intelligence/directory",
               "map/intelligence/dsl",
               "map/intelligence/engine",
-              "map/intelligence/gameserver",
               "map/intelligence/git",
               "map/intelligence/graph",
               "map/intelligence/impact",
@@ -172,8 +107,6 @@
             "group": "Apps",
             "pages": [
               "map/apps/cli",
-              "map/apps/game",
-              "map/apps/ue5",
               "map/apps/vscode-extension",
               "map/apps/web"
             ],
@@ -191,12 +124,12 @@
   },
   "appearance": {
     "default": "dark",
-    "strict": false
+    "strict": true
   },
   "background": {
     "color": {
-      "dark": "#191817",
-      "light": "#FAF9F5"
+      "dark": "#0B0E14",
+      "light": "#FFFFFF"
     }
   },
   "navbar": {
@@ -209,13 +142,10 @@
   },
   "fonts": {
     "heading": {
-      "family": "Fraunces"
+      "family": "Inter"
     },
     "body": {
       "family": "Inter"
-    },
-    "mono": {
-      "family": "JetBrains Mono"
     }
   }
 }
