@@ -1,12 +1,38 @@
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
   docsSidebar: [
-    'intro',
-    'how-to-use',
-    'architecture',
-    'stack',
-    'gotchas',
-    'roadmap',
+    {
+      type: 'doc',
+      id: 'overview',
+      label: 'Introduction',
+    },
+    {
+      type: 'category',
+      label: 'Getting Started',
+      collapsed: false,
+      items: ['quickstart', 'usage', 'how-to-use', 'tutorial', 'skill'],
+    },
+    {
+      type: 'category',
+      label: 'Reference',
+      collapsed: false,
+      items: ['about', 'architecture', 'stack', 'status', 'gotchas', 'roadmap'],
+    },
+    {
+      type: 'category',
+      label: 'Learn',
+      items: ['guides', 'deep-dive', 'examples'],
+    },
+    {
+      type: 'category',
+      label: 'MMO',
+      items: ['quickstart-mmo'],
+    },
+    {
+      type: 'doc',
+      id: 'changelog',
+      label: 'Changelog',
+    },
   ],
 };
 

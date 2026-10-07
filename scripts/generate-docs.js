@@ -106,7 +106,7 @@ const context = readIfExists('CONTEXT.md');
   }
   if (context) body += `\n\n## Context tambahan\n\n${stripFrontmatter(context)}`;
   if (!body.trim()) body = '_README.md tidak ditemukan di root repo._';
-  writeDoc('intro.md', 'Intro', 1, body);
+  writeDoc('overview.md', 'Introduction', 1, body);
 }
 
 {
@@ -166,6 +166,47 @@ const context = readIfExists('CONTEXT.md');
       'Tambahkan section dengan heading `## Gotchas` di CONTEXT.md, atau edit file ini manual._';
   }
   writeDoc('gotchas.md', 'Gotchas', 6, body);
+}
+
+// ── Halaman tambahan (sinkron dengan docs.json / site Mintlify) ───────────
+function firstHeading(content, fallback) {
+  const m = content.match(/^#\s+(.+)$/m);
+  return m ? m[1].replace(/[#*`_]/g, '').trim() : fallback;
+}
+
+{
+  const about = readIfExists('ABOUT.md');
+  if (about) writeDoc('about.md', 'About ARCLUX', 7, stripFrontmatter(about));
+}
+{
+  const quickstart = readIfExists('QUICKSTART.md');
+  if (quickstart) writeDoc('quickstart.md', 'Quickstart', 8, stripFrontmatter(quickstart));
+}
+{
+  const mmo = readIfExists('QUICKSTART-MMO.md');
+  if (mmo) writeDoc('quickstart-mmo.md', 'MMO Quickstart', 9, stripFrontmatter(mmo));
+}
+{
+  const tutorial = readIfExists('docs/TUTORIAL.md');
+  if (tutorial) writeDoc('tutorial.md', 'Tutorial', 10, stripFrontmatter(tutorial));
+  else console.log('  skip tutorial.md (docs/TUTORIAL.md tidak ada)');
+}
+{
+  const skill = readIfExists('SKILL.md');
+  if (skill) writeDoc('skill.md', 'AI Skill', 11, stripFrontmatter(skill));
+}
+[
+  ['docs/GUIDES.md', 'guides.md', 'Guides'],
+  ['docs/DEEP_DIVE.md', 'deep-dive.md', 'Deep Dive'],
+  ['docs/EXAMPLES.md', 'examples.md', 'Examples'],
+].forEach(([src, out, title]) => {
+  const content = readIfExists(src);
+  if (content) writeDoc(out, title, 12, stripFrontmatter(content));
+  else console.log(`  skip ${out} (${src} tidak ada)`);
+});
+{
+  const changelog = readIfExists('CHANGELOG.md');
+  if (changelog) writeDoc('changelog.md', 'Changelog', 13, stripFrontmatter(changelog));
 }
 
 console.log('\n== Selesai. Halaman ke-generate ke docs-site/docs/ ==');

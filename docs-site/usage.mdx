@@ -81,7 +81,26 @@ progres/collaborators.md — who owns what right now
     arclux shell
     arclux mcp
 
+Run `arclux --help` for the full, always-current command list.
+
 Web dashboard:
 
     cd apps/web
     pnpm run dev
+
+### MCP for AI (self-triggering)
+
+ARCLUX exposes 30+ tools via Model Context Protocol. The server ships workflow instructions so AI agents use the right tool without being asked — `analyze` first, `file_info`/`impact` instead of manual reads, `detect`/`doctor` to verify.
+
+```json
+{
+  "mcpServers": {
+    "arclux": {
+      "command": "npx",
+      "args": ["arclux", "mcp"]
+    }
+  }
+}
+```
+
+See the pinned Discussion “Getting Started — install, CLI usage, MCP client config” and [`SKILL.md`](https://github.com/GSF-001/ARCLUX/blob/main/SKILL.md) for details. New detectors/rules/parsers automatically appear as tools — no manual MCP updates.
