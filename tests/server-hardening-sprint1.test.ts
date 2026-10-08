@@ -276,15 +276,6 @@ describe("HTTP /login + /intent auth & idempotency", () => {
     const backwards = await post(url, "/intent", mv(0), h);
     expect(backwards.status).toBe(409);
     const next = await post(url, "/intent", mv(2), h);
-    const ok = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 1), h);
-    expect(ok.status).toBe(200);
-    expect(ok.body.verdict).toBe("accepted");
-    const replay = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 1), h);
-    expect(replay.status).toBe(409);
-    expect(replay.body.reason).toContain("stale");
-    const backwards = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 0), h);
-    expect(backwards.status).toBe(409);
-    const next = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 2), h);
     expect(next.status).toBe(200);
     expect(next.body.verdict).toBe("accepted");
   });
@@ -299,16 +290,6 @@ describe("HTTP /login + /intent auth & idempotency", () => {
     );
     const saw429 = results.some((r) => r.status === 429);
     const sawShadow = results.some((r) => r.status === 429 && r.body?.reason === "shadowbanned");
-    let saw429 = false;
-    let sawShadow = false;
-    for (let i = 0; i < 120; i++) {
-      const r = await post(url, "/intent", intent("bot", "no-such-entity", "scan", {}, i + 1));
-      if (r.status === 429) {
-        saw429 = true;
-        if (r.body?.reason === "shadowbanned") sawShadow = true;
-      }
-    }
-    
     expect(saw429).toBe(true);
     expect(sawShadow).toBe(true);
     const after = await post(url, "/intent", intent("bot", "no-such-entity", "scan", {}, 999));

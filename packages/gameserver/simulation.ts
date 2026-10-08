@@ -32,7 +32,6 @@ import { HACK_COOLDOWN_TICKS, HACK_WANTED_DELTA, HACK_EFFECT_TICKS, HACK_FAIL_AL
 import { WITNESS_RADIUS_M, type CrimeKind } from "../wanted";
 import { CLAIM_HALF_M } from "./claims";
 import type { HackAttempt } from "./hack";
-import { validateIntent, resolveTradeSeller, actorOwnsSeller, type ValidatorContext } from "./validator";
 import { createSeedRng } from "./random";
 import { projectFitAction, stepCapacitor } from "./fitting";
 import { applyCombatIntent } from "./combat";

@@ -94,31 +94,6 @@ export function actorOwnsSeller(seller: VesselEntity, actor: WorldEntity, player
 }
 
 /**
- * E-1 (08 hardening): resolve vessel yang BENAR-BENAR memiliki componentId.
- * Satu sumber kebenaran untuk validator + simulation — simulation memakai
- * fungsi ini, bukan scan ulang dengan logika sendiri (dua-resolve = dua
- * kebenaran = celah).
- */
-export function resolveTradeSeller(
-  region: WorldRegion,
-  componentId: string
-): { seller: VesselEntity; compIdx: number } | undefined {
-  for (const e of region["entities"].values()) {
-    if (e.kind !== "vessel") continue;
-    const idx = e.vessel.components.findIndex((c) => c.id === componentId);
-    if (idx !== -1) return { seller: e, compIdx: idx };
-  }
-  return undefined;
-}
-
-/** Kepemilikan seller untuk trade: pemilik vessel penjual, ATAU karakter
- *  yang sedang berada di vessel penjual (karakter di vessel aktor). */
-export function actorOwnsSeller(seller: VesselEntity, actor: WorldEntity, playerId: string): boolean {
-  if (seller.owner === playerId) return true;
-  return actor.kind === "character" && actor.vesselId === seller.id;
-}
-
-/**
  * Validate a single intent. The rules mirror Layer I checklist:
  * attacker valid, weapon/component authorized, license valid, vessel state
  * valid, cooldown valid, range valid, target valid, damage <= ruleset, state
