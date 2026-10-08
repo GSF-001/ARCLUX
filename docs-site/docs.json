@@ -3,11 +3,11 @@
   "theme": "mint",
   "name": "ARCLUX",
   "colors": {
-    "primary": "#2563EB",
-    "light": "#3B82F6",
-    "dark": "#1D4ED8"
+    "primary": "#4DE3FF",
+    "light": "#7CEDFF",
+    "dark": "#0F9BB8"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/static/img/favicon.svg",
   "navigation": {
     "groups": [
       {
@@ -128,8 +128,7 @@
   },
   "background": {
     "color": {
-      "dark": "#0B0E14",
-      "light": "#FFFFFF"
+      "dark": "#000000"
     }
   },
   "navbar": {
@@ -142,7 +141,7 @@
   },
   "fonts": {
     "heading": {
-      "family": "Inter"
+      "family": "Isometra"
     },
     "body": {
       "family": "Inter"

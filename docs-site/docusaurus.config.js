@@ -65,7 +65,7 @@ const config = {
       colorMode: {
         defaultMode: 'dark',
         respectPrefersColorScheme: false,
-        disableSwitch: false,
+        disableSwitch: true,
       },
       metadata: [
         {
