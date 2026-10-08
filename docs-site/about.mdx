@@ -21,29 +21,18 @@ Everything in this file is real and working. No marketing promises — every cla
 ## The map
 
 ```
- ┌─────────────────────────────────────────────┐
- │ ARCLUX PLATFORM │
- │ │
- INTELLIGENCE │ kernel ── signal bus (every subsystem │
- LAYER │ talks through this) │
- ─────────── │ runtime ── process manager │
- parser (27 langs) │ scheduler ── job queue │
- graph / call graph │ services ── service lifecycle │
- impact analysis │ storage ── artifacts, cache, recovery │
- 20 detectors │ networking ── connections, ports, endpoints│
- 14 convention rules│ notifications ── event fan-out to channels │
- security pipeline │ orchestration ── PlatformOrchestrator │
- scripting DSL │ │
- provenance │ │
- └─────────────────────────────────────────────┘
- │ │
- │ consumed through │ consumed through
- ▼ ▼
- ┌──────────────┐ ┌──────────────────────────────────┐
- │ CLI + shell │ │ daemon (HTTP+SSE bridge) │
- │ web app │ │ VS Code extension │
- │ security CLI│ │ any tool that can read HTTP/SSE │
- └──────────────┘ └──────────────────────────────────┘
+INTELLIGENCE LAYER PLATFORM LAYER (kernel)
+ parser (27 langs) signal bus
+ graph / call graph runtime / scheduler
+ impact analysis services / storage
+ 20 detectors networking / notifications
+ 14 convention rules orchestration
+ security pipeline
+ scripting DSL · provenance
+
+CONSUMED BY
+ CLI + shell · web app · security CLI · daemon (HTTP+SSE bridge)
+ VS Code extension · any tool that can read HTTP/SSE
 ```
 
 ## The intelligence layer — what you can do with it

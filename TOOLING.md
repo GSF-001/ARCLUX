@@ -41,7 +41,10 @@ Valid categories: `status-core`, `status-detectors`, `status-web`,
 
 Example:
 ```bash
-scripts/log-progress.sh bugs "Fix parser crash on empty file" "TypeScript parser crashed on empty files (license header only). Fixed by adding an early-return check in parseTs.ts."
+scripts/log-progress.sh bugs \
+  "Fix parser crash on empty file" \
+  "TypeScript parser crashed on empty files (license header \
+only). Fixed by adding an early-return check in parseTs.ts."
 ```
 
 ### Closing out an old plan -- use close-plan
@@ -54,7 +57,8 @@ if left untouched.
 Use close-plan mode:
 
 ```bash
-scripts/log-progress.sh close-plan <category> "<old entry title>" "<new update title>" "<update body>"
+scripts/log-progress.sh close-plan <category> \
+  "<old entry title>" "<new update title>" "<update body>"
 ```
 
 This automatically finds the old entry by a substring of its title,
@@ -103,7 +107,8 @@ from before this feature existed), a status line is added automatically.
 Example workflow:
 ```bash
 # Start working on something
-scripts/log-progress.sh decisions "Refactor X" "Plan to refactor X because of Y" "In Progress"
+scripts/log-progress.sh decisions \
+  "Refactor X" "Plan to refactor X because of Y" "In Progress"
 
 # ...a few hours later, it's done...
 scripts/log-progress.sh set-status decisions "Refactor X" "Done"

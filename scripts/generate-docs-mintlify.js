@@ -730,18 +730,22 @@ function nestedGroups(ids) {
     groups: [
       {
         group: 'Getting Started',
+        icon: { library: 'lucide', name: 'rocket' },
         pages: ['overview', 'quickstart', 'usage', 'how-to-use', 'tutorial', 'skill'],
       },
       {
         group: 'Reference',
+        icon: { library: 'lucide', name: 'book-open' },
         pages: ['about', 'architecture', 'stack', 'status', 'gotchas', 'tooling', 'guides', 'deep-dive', 'examples'],
       },
       {
         group: 'Codebase Map',
+        icon: { library: 'lucide', name: 'folder-tree' },
         pages: mapGroups,
       },
       {
         group: 'Release',
+        icon: { library: 'lucide', name: 'tag' },
         pages: ['changelog'],
       },
     ],
@@ -770,6 +774,16 @@ function nestedGroups(ids) {
   cfg.colors = { primary: '#4DE3FF', light: '#7CEDFF', dark: '#0F9BB8' };
   cfg.fonts = { heading: { family: 'Isometra' }, body: { family: 'Inter' } };
   cfg.favicon = pickFavicon();
+
+  // Keren & rapi (schema-valid Mintlify): code block theme gelap, CTA GitHub,
+  // icon lucide di group nav, meta description.
+  cfg.description =
+    'Open-source codebase intelligence -- live dependency graphs, impact tracing, detectors, conventions, DSL.';
+  cfg.icons = { library: 'lucide' };
+  cfg.styling = { codeblocks: { theme: 'catppuccin-mocha' } };
+  cfg.navbar = {
+    primary: { type: 'button', label: 'GitHub', href: 'https://github.com/GSF-001/ARCLUX' },
+  };
 
 
   fs.writeFileSync(docsJsonPath, JSON.stringify(cfg, null, 2) + '\n');
