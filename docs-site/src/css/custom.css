@@ -1,144 +1,149 @@
 /* ==========================================================================
-   ARCLUX docs — design system
-   Warm paper + clay accent, Fraunces display serif, Inter body,
-   JetBrains Mono code. Light-first (Claude-ish), dark mode included.
+   ARCLUX docs - design system
+   Corporate: clean white / deep navy, blue accent, Inter everywhere,
+   JetBrains Mono code. Dark-first, professional.
    ========================================================================== */
 
 :root {
-  /* palette — light (warm paper) */
-  --paper: #faf9f5;
-  --paper-raised: #ffffff;
-  --paper-sunken: #f2f0e9;
-  --ink: #1f1e1d;
-  --ink-muted: #6b6a65;
-  --line: #e7e4dc;
-  --line-strong: #d8d4c9;
-  --clay: #c15f3c;
-  --clay-strong: #a94e2f;
-  --clay-soft: #e07a55;
-  --sage: #2f8f5b;
-  --amber: #b7791f;
+  /* palette — light (clean white) */
+  --paper: #fff;
+  --paper-raised: #fff;
+  --paper-sunken: #f5f6f8;
+  --ink: #0d1220;
+  --ink-muted: #5c6473;
+  --line: #e6e9ef;
+  --line-strong: #d3d9e2;
+  --clay: #2563eb;
+  --clay-strong: #1e40af;
+  --clay-soft: #3b82f6;
+  --sage: #16a34a;
+  --amber: #d97706;
 
-  --ifm-color-primary: #c15f3c;
-  --ifm-color-primary-dark: #b15433;
-  --ifm-color-primary-darker: #a94f30;
-  --ifm-color-primary-darkest: #8b4127;
-  --ifm-color-primary-light: #cd7151;
-  --ifm-color-primary-lighter: #d37b5d;
-  --ifm-color-primary-lightest: #e2a189;
+  --ifm-color-primary: #2563eb;
+  --ifm-color-primary-dark: #1d55ca;
+  --ifm-color-primary-darker: #1a4db8;
+  --ifm-color-primary-darkest: #163f99;
+  --ifm-color-primary-light: #3b76f2;
+  --ifm-color-primary-lighter: #4a83f4;
+  --ifm-color-primary-lightest: #7ea7f7;
 
   --ifm-background-color: var(--paper);
   --ifm-background-surface-color: var(--paper-raised);
   --ifm-font-color-base: var(--ink);
   --ifm-font-family-base:
     'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --ifm-heading-font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --ifm-heading-font-family:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --ifm-font-family-monospace:
     'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --ifm-line-height-base: 1.65;
-  --ifm-global-radius: 10px;
+  --ifm-global-radius: 8px;
   --ifm-radius-rounded: 999px;
   --ifm-code-font-size: 0.875em;
-  --ifm-heading-font-weight: 600;
-  --ifm-heading-letter-spacing: -0.018em;
+  --ifm-heading-font-weight: 650;
+  --ifm-heading-letter-spacing: -0.02em;
   --ifm-leading: 1.6;
 
-  --ifm-color-emphasis-100: #f4f2ec;
+  --ifm-color-emphasis-100: #f5f6f8;
   --ifm-color-emphasis-200: var(--line);
   --ifm-color-emphasis-300: var(--line-strong);
-  --ifm-color-emphasis-400: #c2bcae;
-  --ifm-color-emphasis-500: #9c968a;
+  --ifm-color-emphasis-400: #c6cdd8;
+  --ifm-color-emphasis-500: #a3abba;
   --ifm-color-emphasis-600: var(--ink-muted);
-  --ifm-color-emphasis-700: #4a4844;
-  --ifm-color-emphasis-800: #33322f;
+  --ifm-color-emphasis-700: #3a4150;
+  --ifm-color-emphasis-800: #20273a;
   --ifm-color-emphasis-900: var(--ink);
 
   --ifm-link-color: var(--clay);
   --ifm-link-hover-color: var(--clay-strong);
-  --ifm-navbar-background-color: rgba(250, 249, 245, 0.82);
+  --ifm-navbar-background-color: rgba(255, 255, 255, 0.86);
   --ifm-navbar-height: 4rem;
-  --ifm-footer-background-color: #1c1b1a;
+  --ifm-footer-background-color: #0d1220;
   --ifm-toc-border-color: var(--line);
   --ifm-table-border-color: var(--line);
   --ifm-blockquote-color: var(--ink-muted);
-  --ifm-h1-font-size: clamp(2.1rem, 4vw, 2.7rem);
-  --ifm-h2-font-size: clamp(1.5rem, 2.6vw, 1.95rem);
-  --ifm-h3-font-size: 1.28rem;
+  --ifm-h1-font-size: clamp(2rem, 4vw, 2.7rem);
+  --ifm-h2-font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+  --ifm-h3-font-size: 1.22rem;
 
   /* module tokens */
-  --hero-bg-top: #fbfaf6;
-  --hero-orb: rgba(193, 95, 60, 0.16);
-  --hero-glow: rgba(224, 122, 85, 0.1);
-  --hero-dot-ring: rgba(193, 95, 60, 0.18);
-  --chip-bg: rgba(255, 255, 255, 0.7);
-  --code-line-bg: #ffffff;
-  --code-line-shadow: 0 10px 30px -18px rgba(31, 30, 29, 0.45);
-  --section-alt-bg: #f4f2eb;
+  --hero-bg-top: #fff;
+  --hero-orb: rgba(37, 99, 235, 0.1);
+  --hero-glow: rgba(37, 99, 235, 0.06);
+  --hero-dot-ring: rgba(37, 99, 235, 0.14);
+  --chip-bg: rgba(255, 255, 255, 0.85);
+  --code-line-bg: #f8fafc;
+  --code-line-shadow: 0 10px 30px -18px rgba(13, 18, 32, 0.35);
+  --section-alt-bg: #f4f6f9;
   --card-bg: var(--paper-raised);
-  --card-shadow: 0 18px 40px -26px rgba(31, 30, 29, 0.5);
-  --tag-bg: rgba(193, 95, 60, 0.1);
-  --snippet-bg: #1f1e1d;
+  --card-shadow: 0 16px 36px -24px rgba(13, 18, 32, 0.4);
+  --tag-bg: rgba(37, 99, 235, 0.08);
+  --snippet-bg: #0d1220;
 
-  --mx-shadow: 0 1px 2px rgba(31, 30, 29, 0.04);
-  --mx-code-bg: #f6f4ee;
+  --mx-shadow: 0 1px 2px rgba(13, 18, 32, 0.05);
+  --mx-code-bg: #f1f4f8;
 }
 
 [data-theme='dark'] {
-  --paper: #191817;
-  --paper-raised: #211f1e;
-  --paper-sunken: #141312;
-  --ink: #edeae3;
-  --ink-muted: #a5a199;
-  --line: #302e2b;
-  --line-strong: #3d3a36;
-  --clay: #e08a6b;
-  --clay-strong: #f0a184;
-  --clay-soft: #c15f3c;
-  --sage: #5fbd8b;
-  --amber: #e0a54a;
+  --paper: #0b0e14;
+  --paper-raised: #12161f;
+  --paper-sunken: #080b10;
+  --ink: #e6eaf2;
+  --ink-muted: #98a1b3;
+  --line: #1e2634;
+  --line-strong: #2a3446;
+  --clay: #6a93ff;
+  --clay-strong: #8db0ff;
+  --clay-soft: #3b82f6;
+  --sage: #4ade80;
+  --amber: #fbbf24;
 
-  --ifm-color-primary: #e08a6b;
-  --ifm-color-primary-dark: #d97a58;
-  --ifm-color-primary-darker: #d5724e;
-  --ifm-color-primary-darkest: #c05e3c;
-  --ifm-color-primary-light: #e69a80;
-  --ifm-color-primary-lighter: #e9a28b;
-  --ifm-color-primary-lightest: #f2c3b2;
+  --ifm-color-primary: #6a93ff;
+  --ifm-color-primary-dark: #5d84f8;
+  --ifm-color-primary-darker: #5479ee;
+  --ifm-color-primary-darkest: #4160c8;
+  --ifm-color-primary-light: #7ba2ff;
+  --ifm-color-primary-lighter: #8badff;
+  --ifm-color-primary-lightest: #b3c9ff;
 
-  --ifm-background-color: #191817;
-  --ifm-background-surface-color: #211f1e;
-  --ifm-font-color-base: #edeae3;
+  --ifm-background-color: #0b0e14;
+  --ifm-background-surface-color: #12161f;
+  --ifm-font-color-base: #e6eaf2;
 
-  --ifm-color-emphasis-100: #262421;
+  --ifm-color-emphasis-100: #161b26;
   --ifm-color-emphasis-200: var(--line);
   --ifm-color-emphasis-300: var(--line-strong);
-  --ifm-color-emphasis-400: #524e49;
-  --ifm-color-emphasis-500: #6e6a63;
+  --ifm-color-emphasis-400: #2f3a4f;
+  --ifm-color-emphasis-500: #45526b;
   --ifm-color-emphasis-600: var(--ink-muted);
-  --ifm-color-emphasis-700: #c5c1b8;
-  --ifm-color-emphasis-800: #ddd9d1;
+  --ifm-color-emphasis-700: #c0c9dc;
+  --ifm-color-emphasis-800: #d9e0ec;
   --ifm-color-emphasis-900: var(--ink);
 
-  --ifm-navbar-background-color: rgba(25, 24, 23, 0.82);
-  --ifm-footer-background-color: #131211;
-  --ifm-toc-link-color: var(--ink-muted);
+  --ifm-link-color: var(--clay);
+  --ifm-link-hover-color: var(--clay-strong);
+  --ifm-navbar-background-color: rgba(11, 14, 20, 0.86);
+  --ifm-footer-background-color: #07090d;
+  --ifm-toc-border-color: var(--line);
+  --ifm-table-border-color: var(--line);
 
-  --hero-bg-top: #1d1c1a;
-  --hero-orb: rgba(224, 138, 107, 0.14);
-  --hero-glow: rgba(193, 95, 60, 0.08);
-  --hero-dot-ring: rgba(224, 138, 107, 0.18);
-  --chip-bg: rgba(33, 31, 30, 0.75);
-  --code-line-bg: #211f1e;
-  --code-line-shadow: 0 12px 34px -20px rgba(0, 0, 0, 0.9);
-  --section-alt-bg: #1d1c1a;
-  --card-bg: #211f1e;
-  --card-shadow: 0 20px 44px -28px rgba(0, 0, 0, 0.95);
-  --tag-bg: rgba(224, 138, 107, 0.13);
-  --snippet-bg: #131211;
+  --hero-bg-top: #0b0e14;
+  --hero-orb: rgba(106, 147, 255, 0.12);
+  --hero-glow: rgba(37, 99, 235, 0.07);
+  --hero-dot-ring: rgba(106, 147, 255, 0.16);
+  --chip-bg: rgba(18, 22, 31, 0.9);
+  --code-line-bg: #0e1219;
+  --code-line-shadow: 0 12px 34px -20px rgba(0, 0, 0, 0.6);
+  --section-alt-bg: #0e1219;
+  --card-bg: #12161f;
+  --card-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.6);
+  --tag-bg: rgba(106, 147, 255, 0.12);
+  --snippet-bg: #07090d;
 
-  --mx-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --mx-code-bg: #262421;
+  --mx-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --mx-code-bg: #161b26;
 }
+
 
 html {
   scroll-behavior: smooth;

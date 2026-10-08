@@ -14,8 +14,8 @@ See through your codebase before it breaks. Every codebase accumulates debt nobo
 Published on npm -- zero setup:
 
 ```bash
-npx arclux analyze .          # one-off, no install
-npm i -g arclux               # or install once, get the `arclux` binary
+npx arclux analyze . # one-off, no install
+npm i -g arclux # or install once, get the `arclux` binary
 ```
 
 The package ships every tree-sitter grammar it needs -- no native compilation,
@@ -54,16 +54,16 @@ workflow instructions so agents pick the right tool unprompted:
 
 ```json
 {
-  "mcpServers": {
-    "arclux": { "command": "npx", "args": ["arclux", "mcp"] }
-  }
+ "mcpServers": {
+ "arclux": { "command": "npx", "args": ["arclux", "mcp"] }
+ }
 }
 ```
 
 ## Always-on daemon
 
 ```bash
-arclux daemon --detach     # watch the repo, re-analyze on every change
+arclux daemon --detach # watch the repo, re-analyze on every change
 arclux daemon --status
 arclux daemon --stop
 ```
@@ -74,21 +74,21 @@ so any editor or terminal can connect.
 ## What it actually does
 
 <CardGroup cols={2}>
-  <Card title="Dependency graph" icon="diagram-project">
-    Maps every import, export, and folder into one live dependency graph
-  </Card>
-  <Card title="Impact analysis" icon="radar">
-    Change one file, trace everything downstream before you ship
-  </Card>
-  <Card title="20 structural detectors" icon="magnifying-glass">
-    Circular deps, dead code, orphan files, layer violations, and more
-  </Card>
-  <Card title="Framework conventions" icon="ruler">
-    Enforces conventions across Next.js, NestJS, Express, Vite, Electron, React, Laravel
-  </Card>
-  <Card title="Scripting DSL" icon="terminal">
-    arclux script -- chain analyze, impact, doctor, security in plain-text scripts
-  </Card>
+ <Card title="Dependency graph" icon="diagram-project">
+ Maps every import, export, and folder into one live dependency graph
+ </Card>
+ <Card title="Impact analysis" icon="radar">
+ Change one file, trace everything downstream before you ship
+ </Card>
+ <Card title="20 structural detectors" icon="magnifying-glass">
+ Circular deps, dead code, orphan files, layer violations, and more
+ </Card>
+ <Card title="Framework conventions" icon="ruler">
+ Enforces conventions across Next.js, NestJS, Express, Vite, Electron, React, Laravel
+ </Card>
+ <Card title="Scripting DSL" icon="terminal">
+ arclux script -- chain analyze, impact, doctor, security in plain-text scripts
+ </Card>
 </CardGroup>
 
 ## Status: alpha
@@ -96,32 +96,31 @@ so any editor or terminal can connect.
 This project is under active development with a small team. Expect breaking changes and stubs that aren't wired up yet.
 
 <CardGroup cols={2}>
-  <Card title="Solid today" icon="check">
-    Core pipeline, 27 languages, all 20 detectors, impact analysis, call graph, DSL, search, security, MCP server, daemon -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`
-  </Card>
-  <Card title="Not there yet" icon="hourglass-half">
-    Per-file incremental re-indexing is still coarse (full rebuild per change); the MMO (`apps/game` + `gameserver` + `universe`) is alpha
-  </Card>
+ <Card title="Solid today" icon="check">
+ Core pipeline, 27 languages, all 20 detectors, impact analysis, call graph, DSL, search, security, MCP server, daemon -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`
+ </Card>
+ <Card title="Not there yet" icon="hourglass-half">
+ Per-file incremental re-indexing is still coarse (full rebuild per change)
+ </Card>
 </CardGroup>
 
-## Two licenses
+## License
 
-- **ARCLUX Platform** (engine, parser, graph, cli, web) -- Apache 2.0, open, contribute freely
-- **ARCLUX MMO** (gameserver, relay, universe, apps/game) -- source-available, no commercial hosting of a cloned game without written permission
+**Apache License 2.0** — open source, contribute freely. See [LICENSE](https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/LICENSE).
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Usage" icon="terminal" href="/usage">
-    Full CLI command reference and web dashboard setup
-  </Card>
-  <Card title="Architecture" icon="sitemap" href="/architecture">
-    How the pipeline fits together: parser to graph to detectors
-  </Card>
-  <Card title="Status & Progress" icon="chart-line" href="/status">
-    What's solid, what's a stub, and what's actively being worked on
-  </Card>
-  <Card title="Codebase Map" icon="folder-tree" href="/map/apps/cli">
-    Browse every package and app in the monorepo
-  </Card>
+ <Card title="Usage" icon="terminal" href="/usage">
+ Full CLI command reference and web dashboard setup
+ </Card>
+ <Card title="Architecture" icon="sitemap" href="/architecture">
+ How the pipeline fits together: parser to graph to detectors
+ </Card>
+ <Card title="Status & Progress" icon="chart-line" href="/status">
+ What's solid, what's a stub, and what's actively being worked on
+ </Card>
+ <Card title="Codebase Map" icon="folder-tree" href="/map/apps/cli">
+ Browse every package and app in the monorepo
+ </Card>
 </CardGroup>

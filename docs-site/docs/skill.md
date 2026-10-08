@@ -34,9 +34,9 @@ npx tsx apps/cli/commands/work.ts <file> <newContentFile>
 
 Understanding a file or module before working on it:
 ```bash
-npx tsx apps/cli/index.ts graph [path]        # dependency graph, prints or saves JSON
-npx tsx apps/cli/index.ts language <file>     # exports/imports/calls for a single file
-npx tsx apps/cli/index.ts analyze [path]      # full parse + index + graph build
+npx tsx apps/cli/index.ts graph [path] # dependency graph, prints or saves JSON
+npx tsx apps/cli/index.ts language <file> # exports/imports/calls for a single file
+npx tsx apps/cli/index.ts analyze [path] # full parse + index + graph build
 ```
 
 Comparing two states (e.g. before/after a refactor, or two git refs):

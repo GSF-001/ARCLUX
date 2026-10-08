@@ -17,8 +17,8 @@ sidebar_position: 5
 > ```bash
 > cd ~/arclux
 > find apps packages scripts tests -type f \( -name "*.ts" -o -name "*.tsx" \) \
->   -not -path "*/node_modules/*" | while read f; do
->   echo "$(wc -l < "$f") $f"
+> -not -path "*/node_modules/*" | while read f; do
+> echo "$(wc -l < "$f") $f"
 > done | sort -n
 > ```
 > Threshold: a file with only the Apache 2.0 license header has a baseline
@@ -27,8 +27,8 @@ sidebar_position: 5
 
 ## What this is
 
-ARCLUX = a codebase analysis tool. Clone repo → parse → index → build
-dependency graph → interactive browser visualization. Goal: see how
+ARCLUX = a codebase analysis tool. Clone repo parse index build
+dependency graph interactive browser visualization. Goal: see how
 files/modules connect to each other, what gets affected if you change
 something, and which conventions are being violated (e.g. "added a
 Next.js page but forgot to register the route").
@@ -36,7 +36,7 @@ Next.js page but forgot to register the route").
 ## Stack
 
 - Monorepo: `apps/web` (Next.js 16, App Router, Webpack — **not** Turbopack,
-  unsupported on Termux arm64), `packages/*` (core logic, framework-agnostic)
+ unsupported on Termux arm64), `packages/*` (core logic, framework-agnostic)
 - UI: React, Tailwind v4, shadcn/ui (Base UI variant) + Aceternity + Magic UI
 - Graph rendering: SVG + `d3-force` (physics layout)
 - Parsing: TypeScript Compiler API (TS/TSX) + `web-tree-sitter` (Python)
@@ -63,29 +63,29 @@ This file used to contain everything. It's now split for readability:
 
 Ask in this order, stop at the first "yes":
 1. Is this about a wrong assumption in a PAST PROGRES entry getting
-   corrected, or a new package/feature reaching a milestone (done, X/Y
-   complete, newly verified)? -> **status** (pick the matching file:
-   core / detectors / web / infra / backlog -- see list above)
+ corrected, or a new package/feature reaching a milestone (done, X/Y
+ complete, newly verified)? -> **status** (pick the matching file:
+ core / detectors / web / infra / backlog -- see list above)
 2. Did something in ARCLUX's OWN code produce wrong output/crash, and you
-   fixed it? -> **bugs**
+ fixed it? -> **bugs**
 3. Did you choose between two real design options and want the reasoning
-   preserved (not just "it works")? -> **decisions**
+ preserved (not just "it works")? -> **decisions**
 4. Is the problem actually the terminal/OS/bundler/package manager, not
-   ARCLUX's code? -> **gotchas**
+ ARCLUX's code? -> **gotchas**
 5. Are you assigning a task to a collaborator, or updating the status of
-   one already assigned? -> **collaborators**
+ one already assigned? -> **collaborators**
 
 **Closing out an old plan/next-step**: if you just finished something
 that an EARLIER entry in `decisions.md` described as "planned", "not yet
 built", or a "next step", don't just log a new status entry and move on
 -- that leaves the old entry looking unfinished forever. Instead:
 1. Add a new dated entry titled `UPDATE: &lt;old title> — implemented` (or
-   `— resolved`) describing what actually got built and what's still open.
+ `— resolved`) describing what actually got built and what's still open.
 2. Go back to the OLD entry and add a one-line blockquote pointer at the
-   top: `> **[STATUS UPDATE, YYYY-MM-DD]: this plan is now implemented.**
-   See "&lt;new entry title>" below.` Don't delete or shorten the old entry
-   -- the plan/reasoning stays as historical context, the pointer just
-   stops it from being mistaken for still-pending work.
+ top: `> **[STATUS UPDATE, YYYY-MM-DD]: this plan is now implemented.**
+ See "&lt;new entry title>" below.` Don't delete or shorten the old entry
+ -- the plan/reasoning stays as historical context, the pointer just
+ stops it from being mistaken for still-pending work.
 
 **Still not sure which status file? Put it in status-core.md.**
 A slightly-misfiled status entry costs nothing; agonizing over the perfect

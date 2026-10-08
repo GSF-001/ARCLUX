@@ -20,3 +20,4 @@ KNOWN_ISSUES.md
 apps/cli/dist/
 
 nul
+docs-site/node_modules

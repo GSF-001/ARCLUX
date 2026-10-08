@@ -232,8 +232,8 @@ If you want to split by area later (e.g. person A owns `apps/web/`,
 person B owns `packages/detectors/`), just edit that file and add a
 line:
 ```
-apps/web/            @username
-packages/detectors/  @username
+apps/web/ @username
+packages/detectors/ @username
 ```
 
 ---

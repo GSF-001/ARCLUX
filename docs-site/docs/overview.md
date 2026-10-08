@@ -10,28 +10,20 @@ sidebar_position: 1
 
 Dependency graph, impact analysis, and structural convention checking for your codebase. CLI + web dashboard + MCP for AI.
 
-![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black)
-  [](LICENSE)
-![Version: 0.3.0](https://img.shields.io/badge/version-0.3.0-3f8fff)
-![Status: alpha](https://img.shields.io/badge/status-alpha-black)
-[](#status)
 
 [![CI](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml/badge.svg)](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-live-3f8fff)](https://arclux-os.mintlify.site)
-[![npm](https://img.shields.io/badge/npm-arclux-cb3837)](https://www.npmjs.com/package/arclux)
 
 &lt;p align="center">
-  &lt;img src="assets/demo.gif" alt="ARCLUX CLI in action: arclux analyze . and arclux doctor" />
+ &lt;img src="assets/demo.gif" alt="ARCLUX CLI in action: arclux analyze . and arclux doctor" />
 &lt;/p>
 
 ![alt text](https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/assets/Graph-3d-preview.png)
-  &lt;br>
-  &lt;em>Interactive 3D dependency graph — nodes sized by fan-in, colored by type&lt;/em>
+ &lt;br>
+ &lt;em>Interactive 3D dependency graph — nodes sized by fan-in, colored by type&lt;/em>
 &lt;/p>
 
 -----
 
-[](https://github.com/GSF-001/ARCLUX/actions/workflows/ci.yml)
 
 ## Documentation
 > [!NOTE] 
@@ -44,10 +36,10 @@ Dependency graph, impact analysis, and structural convention checking for your c
 -----
 - [`ABOUT.md`](https://github.com/GSF-001/ARCLUX/blob/main/ABOUT.md) — the ARCLUX map: what it is, the intelligence layer, the platform underneath — **start here if you're new**
 - [`QUICKSTART.md`](https://github.com/GSF-001/ARCLUX/blob/main/QUICKSTART.md) — fast-path workflow cheat sheet
-- [`QUICKSTART-MMO.md`](https://github.com/GSF-001/ARCLUX/blob/main/QUICKSTART-MMO.md) — MMO game: clone → vessel → self-host region → play (from zero)
+- [`QUICKSTART-MMO.md`](https://github.com/GSF-001/ARCLUX/blob/main/QUICKSTART-MMO.md) — MMO game: clone vessel self-host region play (from zero)
 - [`TOOLING.md`](https://github.com/GSF-001/ARCLUX/blob/main/TOOLING.md) — all repo config/tooling explained (PROGRES system, git workflow, pre-commit hook, CI, CODEOWNERS, etc.)
 - [`CONTRIBUTING.md`](https://github.com/GSF-001/ARCLUX/blob/main/CONTRIBUTING.md) — conventions for contributing code
-- [`PROGRES.md`](https://github.com/GSF-001/ARCLUX/blob/main/PROGRES.md) (+ [`progres/`](progres/)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
+- [`PROGRES.md`](https://github.com/GSF-001/ARCLUX/blob/main/PROGRES.md) (+ [`progres/`](https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/progres)) — up-to-date project status: what works, what's a stub, decisions, known bugs/gotchas
 - [`ARCHITECTURE_MAP.md`](https://github.com/GSF-001/ARCLUX/blob/main/ARCHITECTURE_MAP.md) — boundary map for the codebase, read before adding new capabilities
 - [`SKILL.md`](https://github.com/GSF-001/ARCLUX/blob/main/SKILL.md) — auto-discovered by AI coding agents (Claude Code, Cursor, etc); teaches them to use the `arclux` CLI instead of guessing at codebase structure
 - [`CONTEXT.md`](https://github.com/GSF-001/ARCLUX/blob/main/CONTEXT.md) — project brief at a glance: stack, architecture, current state.
@@ -73,8 +65,8 @@ Core engine (parse / index / graph / impact / call graph / detectors / framework
 ## Install
 
 ```bash
-npx arclux analyze .          # or any command — zero setup
-npm i -g arclux               # or install once, get the `arclux` binary
+npx arclux analyze . # or any command — zero setup
+npm i -g arclux # or install once, get the `arclux` binary
 ```
 
 The package ships every tree-sitter grammar it needs — no native
@@ -82,10 +74,10 @@ compilation, no grammar installs. Node 20+.
 
 ### From source (development)
 
-    git clone https://github.com/GSF-001/ARCLUX.git
-    cd ARCLUX
-    pnpm install
-    pnpm build:cli             # bundles apps/cli/dist/arclux.mjs + wasms/
+ git clone https://github.com/GSF-001/ARCLUX.git
+ cd ARCLUX
+ pnpm install
+ pnpm build:cli # bundles apps/cli/dist/arclux.mjs + wasms/
 
 Run CLI commands via: `arclux &lt;command>` (installed) or `node apps/cli/dist/arclux.mjs &lt;command>` (bundled).
 
@@ -102,21 +94,21 @@ Run CLI commands via: `arclux &lt;command>` (installed) or `node apps/cli/dist/a
 > udah gak relevan, masukin yang baru. Target selalu di bawah ~200 baris.
 
 ## Apa ini
-ARCLUX = tool analisis codebase. Clone repo → parse → index → build
-dependency graph → visualisasi interaktif di browser. Filosofi:
+ARCLUX = tool analisis codebase. Clone repo parse index build
+dependency graph visualisasi interaktif di browser. Filosofi:
 "workspace, bukan dashboard" — hindari istilah HealthScore/Analytics/
 Dashboard.
 
 ## Stack & environment
 - Monorepo: apps/web (Next.js 16, App Router, **Webpack bukan Turbopack**
-  — gak support Termux arm64), packages/* (framework-agnostic)
+ — gak support Termux arm64), packages/* (framework-agnostic)
 - Package manager: **pnpm** (bukan npm)
 - Parsing: TypeScript Compiler API (TS/TSX) + web-tree-sitter (Python)
 - Graph render: SVG + d3-force
 - Environment: **Termux di Android** — gak ada `/tmp`, pakai `~` sebagai
-  gantinya
+ gantinya
 - Lisensi Apache 2.0 — file stub baseline-nya 8 baris (header lisensi),
-  bukan 0 baris, jadi "kosong" = ≤9 baris bukan `==0`
+ bukan 0 baris, jadi "kosong" = ≤9 baris bukan `==0`
 
 ## Arsitektur ringkas
 packages/git, parser (27 bahasa: TS/JS via Compiler API, sisanya web-tree-sitter
@@ -144,7 +136,7 @@ baru di-register), shared/types.ts (kamus tipe wajib dipakai semua package).
 apps/web punya: /api/audit+security+verify+script+health+callgraph
 (parity routes), halaman /[org]/[repo]/audit (AuditWorkspace: STREAM ×
 FOCUS × GRAPH), /script = playground TUI opencode-style (slash palette,
-highlight, JSON tree), nav registry lib/navigation.ts → sidebar+bottom
+highlight, JSON tree), nav registry lib/navigation.ts sidebar+bottom
 bar+Ctrl+K palette satu sumber, useGraphAuditOverlay (halo severity di
 graph 3D via fgRef, zero core diff), JetBrains Mono, ViewModeToggle.
 apps/web/components: graph/ (GraphCanvas, GraphProvider, GraphFocusView,
@@ -155,68 +147,68 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
 
 ## Yang udah solid — jangan disentuh tanpa alasan kuat
 - packages/engine/pipeline.ts (satu entry point, jangan panggil step
-  individual dari luar engine/)
+ individual dari luar engine/)
 - Parser TS/Python/JS/Go/Java + manifest parsers (semua di-wire ke
-  parserRegistry/manifestRegistry di pipeline.ts)
+ parserRegistry/manifestRegistry di pipeline.ts)
 - 20 detector file, GraphCanvas/GraphProvider/GraphFocusView (history nav
-  + expand-on-demand udah di-fix & diverifikasi browser)
+ + expand-on-demand udah di-fix & diverifikasi browser)
 - Call graph (buildCallGraph), search engine (packages/search), 14 rules
-  (termasuk laravel/requireController), 3 web hooks baru, DSL lengkap
+ (termasuk laravel/requireController), 3 web hooks baru, DSL lengkap
 
 ## GOTCHA KRITIS — baca ini sebelum debug apapun
 1. **`nodeRequire.resolve()` TIDAK BISA DIPERCAYA di runtime webpack
-   Next.js** — balikin path relatif ke lokasi bundle, bukan absolute
-   filesystem path. Ini udah bikin bug yang sama 2x (sekali asli, sekali
-   regresi pas "cleanup"). Kalau butuh resolve path native asset
-   (`.wasm`, dll) di server-side Next.js code, JANGAN pakai
-   `nodeRequire.resolve()` sama sekali — build path dari `process.cwd()`.
+ Next.js** — balikin path relatif ke lokasi bundle, bukan absolute
+ filesystem path. Ini udah bikin bug yang sama 2x (sekali asli, sekali
+ regresi pas "cleanup"). Kalau butuh resolve path native asset
+ (`.wasm`, dll) di server-side Next.js code, JANGAN pakai
+ `nodeRequire.resolve()` sama sekali — build path dari `process.cwd()`.
 2. **Next.js dev server port suka geser + zombie process numpuk.**
-   Kalau curl/test dapet response kosong/aneh, JANGAN asumsi itu bug
-   kode — cek dulu `ps aux | grep node` (harus kosong sebelum start
-   ulang) dan pastiin port yang dites PERSIS sama dengan yang muncul di
-   baris `Local: http://localhost:XXXX`. Ini penyebab kebingungan
-   paling sering sepanjang sesi-sesi kemarin.
+ Kalau curl/test dapet response kosong/aneh, JANGAN asumsi itu bug
+ kode — cek dulu `ps aux | grep node` (harus kosong sebelum start
+ ulang) dan pastiin port yang dites PERSIS sama dengan yang muncul di
+ baris `Local: http://localhost:XXXX`. Ini penyebab kebingungan
+ paling sering sepanjang sesi-sesi kemarin.
 3. **Selalu `cat` file dulu sebelum patch** — jangan asumsi isi file
-   dari draft/issue/percakapan sebelumnya, walau keliatan "pasti sama".
-   File bisa udah berubah dari sesi lain / PR lain.
+ dari draft/issue/percakapan sebelumnya, walau keliatan "pasti sama".
+ File bisa udah berubah dari sesi lain / PR lain.
 4. Patch pakai python3 heredoc + verifikasi `anchor count == 1` sebelum
-   nulis (abort kalau 0 atau >1) — pola aman yang udah terbukti.
-   `set +H` dulu di awal sesi biar bash gak makan karakter `!` di
-   heredoc.
+ nulis (abort kalau 0 atau >1) — pola aman yang udah terbukti.
+ `set +H` dulu di awal sesi biar bash gak makan karakter `!` di
+ heredoc.
 5. Error yang ketangkep `ArcluxError` di API routes **gak otomatis
-   ke-log** ke server console — kalau debug error yang gak keliatan di
-   log, cek dulu apa error-handling-nya sengaja skip `console.error`.
+ ke-log** ke server console — kalau debug error yang gak keliatan di
+ log, cek dulu apa error-handling-nya sengaja skip `console.error`.
 6. Testing lewat `tsx` langsung (`analyzeRepository`/`buildIndex`)
-   SKIP TOTAL webpack — itu cuma buktiin logic Node-nya bener, BUKAN
-   buktiin jalan di runtime Next.js beneran. Dua-duanya harus dites
-   terpisah, bug bisa ada di salah satu doang.
+ SKIP TOTAL webpack — itu cuma buktiin logic Node-nya bener, BUKAN
+ buktiin jalan di runtime Next.js beneran. Dua-duanya harus dites
+ terpisah, bug bisa ada di salah satu doang.
 7. Komponen yang progress notes-nya bilang "typecheck-only, belum
-   diverifikasi visual" — anggap serius kalau ada bug report soal itu,
-   walau kodenya "kelihatan" udah bener pas dibaca.
+ diverifikasi visual" — anggap serius kalau ada bug report soal itu,
+ walau kodenya "kelihatan" udah bener pas dibaca.
 8. `wasmPath` sekarang hardcoded ke struktur pnpm
-   (`node_modules/.pnpm/tree-sitter-wasms@VERSION/...`) — bakal patah
-   kalau pindah ke npm/yarn.
+ (`node_modules/.pnpm/tree-sitter-wasms@VERSION/...`) — bakal patah
+ kalau pindah ke npm/yarn.
 
 ## Prioritas aktif sekarang
 1. True per-file incremental — `packages/incremental` (Cell/Database/Query,
-   reactive) + `watcher` built dan verified standalone, tapi `buildIndex`
-   masih full rebuild tiap kali; `watchRepository` udah dipakai daemon
-   via DaemonRepositoryWatcher (coarse dulu, per-file deferred — keputusan #6)
+ reactive) + `watcher` built dan verified standalone, tapi `buildIndex`
+ masih full rebuild tiap kali; `watchRepository` udah dipakai daemon
+ via DaemonRepositoryWatcher (coarse dulu, per-file deferred — keputusan #6)
 2. `apps/web/lib/api.ts`/`graph.ts` — beberapa komponen (ImpactSummary,
-   GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
+ GlobalSearch) masih inline `fetch()`, belum consume `fetchJson()`
 3. Docs sync — README/ABOUT/CONTEXT/docs-site harus ikut perubahan
-   parser (27 bahasa), DSL, dan fitur baru tiap PR besar (sync besar
-   terakhir 08-21, PR #532)
+ parser (27 bahasa), DSL, dan fitur baru tiap PR besar (sync besar
+ terakhir 08-21, PR #532)
 4. 5 packages masih header-only stub: observation, services,
-   package-manager, ui, web-intake — arah platform, belum ada konsumen
+ package-manager, ui, web-intake — arah platform, belum ada konsumen
 
 ## Yang udah wired (jangan dikira stub lagi — audit 08-21)
 - `packages/db` — client + schema v1 + 3 store (RepoStore/AnalysisStore/
-  IssueStore, CRUD lengkap), DIPAKAI daemon (`saveRepo`/`saveAnalysis`
-  per re-analysis, apps/cli/daemon.ts:21-22)
+ IssueStore, CRUD lengkap), DIPAKAI daemon (`saveRepo`/`saveAnalysis`
+ per re-analysis, apps/cli/daemon.ts:21-22)
 - `packages/cache` — CacheProvider (getCacheStats/clearAllCaches) +
-  MemoryCache class implementasi beneran; fileCache/repositoryCache/
-  graphCache wired di pipeline
+ MemoryCache class implementasi beneran; fileCache/repositoryCache/
+ graphCache wired di pipeline
 - `packages/watcher` — watchRepository/changeQueue, dipakai daemon
 
 ## Kalau butuh detail lebih dalam

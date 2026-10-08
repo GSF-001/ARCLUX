@@ -52,8 +52,8 @@ Confirms whether the file is already claimed by a collaborator before you start 
 
 1. Log progress before moving to the next task, not at the end of the session.
 2. Typecheck apps/web from inside apps/web, not repo root:
-   cd apps/web && npx tsc --noEmit
-   Running from root produces 100+ false "@/" alias errors — known, harmless, documented in gotchas.md.
+ cd apps/web && npx tsc --noEmit
+ Running from root produces 100+ false "@/" alias errors — known, harmless, documented in gotchas.md.
 3. /tmp does not exist on Termux. Put throwaway scripts inside the repo folder and delete them after use.
 
 ## Where things live
@@ -66,27 +66,27 @@ progres/collaborators.md — who owns what right now
 
 ## Usage
 
-    arclux analyze [path]
-    arclux graph [path]
-    arclux graph [path] -o out.json
-    arclux impact &lt;file> [path]
-    arclux doctor [path]
-    arclux diff &lt;from> &lt;to> [path]
-    arclux diagnose [path]
-    arclux verify [path]
-    arclux security [path]
-    arclux search &lt;query> [path]
-    arclux script &lt;file.arclux>
-    arclux config [path]
-    arclux shell
-    arclux mcp
+ arclux analyze [path]
+ arclux graph [path]
+ arclux graph [path] -o out.json
+ arclux impact &lt;file> [path]
+ arclux doctor [path]
+ arclux diff &lt;from> &lt;to> [path]
+ arclux diagnose [path]
+ arclux verify [path]
+ arclux security [path]
+ arclux search &lt;query> [path]
+ arclux script &lt;file.arclux>
+ arclux config [path]
+ arclux shell
+ arclux mcp
 
 Run `arclux --help` for the full, always-current command list.
 
 Web dashboard:
 
-    cd apps/web
-    pnpm run dev
+ cd apps/web
+ pnpm run dev
 
 ### MCP for AI (self-triggering)
 
@@ -94,12 +94,12 @@ ARCLUX exposes 30+ tools via Model Context Protocol. The server ships workflow i
 
 ```json
 {
-  "mcpServers": {
-    "arclux": {
-      "command": "npx",
-      "args": ["arclux", "mcp"]
-    }
-  }
+ "mcpServers": {
+ "arclux": {
+ "command": "npx",
+ "args": ["arclux", "mcp"]
+ }
+ }
 }
 ```
 
