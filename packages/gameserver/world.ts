@@ -165,6 +165,18 @@ export class WorldRegion {
   remove(id: string): boolean {
     return this.entities.delete(id);
   }
+
+  /**
+   * Hydrate region INI dari persisted snapshot (E-3 lifecycle — D-013
+   * "server restart ≠ world reset"). Tick + seluruh entity ditimpa dari
+   * snapshot; regionId/name tetap milik region ini (caller wajib sudah
+   * validasi snapshot via validateRegion/isValidResume).
+   */
+  restore(state: RegionSnapshot): void {
+    this.tick = state.tick;
+    this.entities.clear();
+    for (const e of state.entities) this.entities.set(e.id, e);
+  }
 }
 
 /** Rebuild a WorldRegion from a persisted RegionSnapshot (for recovery). */
