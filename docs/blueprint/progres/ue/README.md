@@ -17,6 +17,7 @@
 | 4 | `04-graphics.md` | SPESIFIKASI GRAFIS: rendering, tier 4K, subsistem, aliran aset, anggaran, acceptance | Pegangan insinyur grafis + artis |
 | 5 | `05-hukum-kota.md` | HUKUM & KOTA: 3 dunia (Bumi mati/Mars hidup/Space transit), wanted 0–5, polisi pemain (rekrutmen+pangkat), NPC pelengkap, prison ship + jailbreak, bounty, ekonomi Mars, phasing | Pas bangun layer hukum di UE |
 | 6 | `06-gameplay-systems.md` | SISTEM PERMAINAN: OC currency, dual skill (ship/FPS), hacking, FPS combat, stealth, item drop, revival, police investigation, item recovery, ARCLUX store | Pas bangun gameplay loop di UE |
+| 9 | `09-combat-depth.md` | COMBAT DEPTH: lock-on, projectile server-side (bisa dielak), NPC AI PvE, damage pipeline — spesifikasi server-authoritative + pemetaan referensi client UE5 (ideas-only dari riset 3 repo) | Saat merancang combat/PvE/skill foundation |
 
 ## Kompas satu baris per dokumen
 
