@@ -747,14 +747,29 @@ function nestedGroups(ids) {
     ],
   };
 
-  cfg.colors = { primary: '#2563EB', light: '#3B82F6', dark: '#1D4ED8' };
-  cfg.fonts = { heading: { family: 'Inter' }, body: { family: 'Inter' } };
+  // ── Tema hitam "arc-light" ────────────────────────────────────────────────
+  // Hitam-only (strict dark), aksen cyan glow, wordmark heading pakai Isometra.
+  // favicon di-tarik OTOMATIS dari docs-site/static/img — tinggal ganti file
+  // icon di situ (mis. favicon.svg / logo.svg), re-run generator, path di
+  // docs.json ikut update. Gak perlu sentuh docs.json manual.
+  const STATIC_IMG = path.join(DOCS_OUT, 'static', 'img');
+  const IMG_EXTS = new Set(['.svg', '.png', '.webp', '.jpg', '.jpeg', '.ico']);
+  const pickFavicon = () => {
+    if (fs.existsSync(STATIC_IMG)) {
+      const imgs = fs.readdirSync(STATIC_IMG).filter((f) => IMG_EXTS.has(path.extname(f).toLowerCase()));
+      if (imgs.length) {
+        const branded = imgs.find((f) => /favicon|logo|icon/i.test(f)) || imgs[0];
+        return `/static/img/${branded}`;
+      }
+    }
+    return '/favicon.svg';
+  };
+
+  cfg.background = { color: { dark: '#000000' } };
   cfg.appearance = { default: 'dark', strict: true };
-  cfg.background = { color: { dark: '#0B0E14', light: '#FFFFFF' } };
-  cfg.colors = { primary: '#C15F3C', light: '#E07A55', dark: '#D97757' };
-  cfg.fonts = { heading: { family: 'Fraunces' }, body: { family: 'Inter' } };
-  cfg.appearance = { default: 'dark', strict: false };
-  cfg.background = { color: { dark: '#191817', light: '#FAF9F5' } };
+  cfg.colors = { primary: '#4DE3FF', light: '#7CEDFF', dark: '#0F9BB8' };
+  cfg.fonts = { heading: { family: 'Isometra' }, body: { family: 'Inter' } };
+  cfg.favicon = pickFavicon();
 
 
   fs.writeFileSync(docsJsonPath, JSON.stringify(cfg, null, 2) + '\n');
