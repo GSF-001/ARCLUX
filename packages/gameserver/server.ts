@@ -51,6 +51,8 @@ import { createClaimStore } from "./claims";
 import { sanitizeSnapshot } from "./visibility";
 import { createEconomy } from "../economy";
 import { createWantedStore } from "../wanted";
+import { validateIntent } from "./validator";
+import { createRateLimiter } from "./rateLimiter";
 import { shouldSnapshot } from "./stability";
 import { isValidResume, saveSnapshot } from "./regionState";
 import type { PersistenceStore } from "./persistence";
@@ -337,7 +339,11 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
         }
         // Ack verdict awal — ctx memakai sub token, jadi playerId ≠ subject
         // jatuh di guard identitas validateIntent (validator.ts identity mismatch).
+
         const verdict = validateIntent(region, intent as PlayerIntent, { playerId: ctxPlayerId, auth: { actor: ctxPlayerId }, authority });
+
+        const verdict = validateIntent(region, intent as PlayerIntent, { playerId: ctxPlayerId, auth: { actor: ctxPlayerId } });
+
         if (verdict.decision === "reject") {
           sendJson(res, 200, { ok: false, seq: intent.seq ?? 0, verdict: "rejected", reason: verdict.reason });
           return;

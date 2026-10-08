@@ -155,7 +155,7 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
   sanitize viewer (Bearer sub / `?playerId=`);
   `transport/HttpTransport.ts` `/snapshot?playerId=`.
 - Regresi: `tests/server-sprint2.test.ts` 23 test.
-
+- 
 **Arah (prioritas isi berikutnya) — update 09-03:**
 1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591).
 2. ~~handoff token crash-safe di `gate.ts`~~ — SELESAI via PR #592.
@@ -242,7 +242,7 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 ### PR #639 ✅ clouds AAA+ — procedural clouds di SEMUA planet visual-only (scene3d.ts makeCloudTexture) — SUDJAH (2026-09-03, pause 09 di Fase 5)
 ### PR #772 ✅ Fase 3 fit authority — fitting.ts (validateFitIntent equip/unequip) + stateHash=fitHash — SUDJAH (2026-10-06)
 ### PR #773 ✅ Fase 3 sisa — kapasitor per tick (stepCapacitor + gate activate) + combat resist fit — SUDJAH (2026-10-06)
-### PR #775 ✅ Sprint 1 server hardening — auth.ts (login+handoff HMAC) + E-1..E-5 + rate limit/1MB + /servers TTL + lifecycle persistence — SUDJAH (2026-10-06)
+### PR #775 ✅ Sprint 1 server hardening — auth.ts (login+handoff HMAC) + E-1..E-5 + rate limit/1MB + /servers TTL + lifecycle persistence — SUDAH (2026-10-06)
 ### PR #779 ✅ Sprint 2 otoritas fitur — economy/wanted/session/claims/hack/visibility + validator/sim P1-2..P1-9 + P2-4 sanitize snapshot + mode gate — SUDJAH (2026-10-08)
 ### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
@@ -347,3 +347,4 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 | 2026-09-03 | — | update MMO-IMPLEMENTATION.md ketinggalan → sync 09 + clouds + landing + serve --vessel | in progress |
 | 2026-10-06 | #775 | Sprint 1 server hardening (08 §4): auth.ts login+handoff HMAC, E-1..E-5, rate limit/1MB/403/409, /servers TTL, lifecycle persistence, 20 regresi test | in progress |
 | 2026-10-08 | #779 | Sprint 2 otoritas fitur (08 §4): packages/economy+wanted, session/claims/hack/visibility, validator/sim P1-2..P1-9 + P2-4 sanitize snapshot, 23 regresi test | in progress |
+
