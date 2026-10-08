@@ -418,14 +418,36 @@ dulu, lalu otoritas, lalu skala, lalu operasional.
 (replay intent curian → reject; forge deliver → 403; kill -9 → world utuh);
 `npx tsc --noEmit` bersih; smoke test QUICKSTART-MMO.md masih jalan.
 
-### Sprint 2 — Otoritas fitur (P1)
-- [ ] Validator: tether, wanted gate, hack cooldown, OC cost, klaim radius,
-      activeMode, scan cooldown.
-- [ ] Hapus dead code intent `spawn` (P1-2).
-- [ ] Paket `packages/economy` (OC, pajak 5%, Company Store, P2P tx log +
-      idempotency key).
-- [ ] `packages/wanted` (eskalasi/blacklist).
-- [ ] Snapshot sanitasi per-pemirsa (P2-4).
+### Sprint 2 — Otoritas fitur (P1) — SELESAI (PR #779)
+- [x] Validator: tether FPS 1000m tujuan→kapal induk (P1-4), wanted gate
+      ≥3 + blacklist per kota (P1-5), hack cooldown 60s + range 10m/5m +
+      attempt deterministik (P1-9), OC cost buy/sell (P1-6), klaim radius
+      500m + anti-serakah 3 petak (P1-7), activeMode ship/fps gate —
+      `SHIP_ONLY_INTENTS`/`FPS_ONLY_INTENTS` (P1-8), scan cooldown 10 tick
+      + range ≤10km + payload `{id,kind,faction}` (P1-3).
+- [x] Hapus dead code intent `spawn` (P1-2) — validator default-reject;
+      sim `case "spawn"` ikut dihapus.
+- [x] Paket `packages/economy` (integer OC, pajak 5% → treasury,
+      Company Store 13 item, P2P tx log append-only + idempotency key
+      `intent:<player>:<seq>`).
+- [x] `packages/wanted` (eskalasi saksi 50m, bobot kill 3/riot 2/theft 1
+      cap 5, blacklist per communityId, decay 1 level/36k tick tunable).
+- [x] Snapshot sanitasi per-pemirsa (P2-4): `sanitizeSnapshot` — owner
+      penuh, pemirsa lain komponen non-open → `{id,capability}`,
+      anonim legacy penuh; viewer = Bearer sub / `?playerId=`.
+      (+ `packages/gameserver/{session,claims,hack,visibility}.ts` store)
+
+> Regresi: `tests/server-sprint2.test.ts` 23 test (tether, scan cooldown
+> +redact, mode gate, wanted witness/gate/blacklist/decay, economy
+> topup/tax/idempotency, buy/sell_player, hack sukses/3-fail/cancel,
+> klaim radius/overlap/anti-serakah, spawn dead code, redact HTTP) +
+> sprint1 tetap 20/20 (E-4 kini pakai `move`; flood 429 diparalelkan
+> agar deterministik di bawah load).
+
+**Definisi done Sprint 2**: setiap gap P1-2..P1-9 + P2-4 punya regresi
+test; `npx tsc --noEmit` scoped bersih; gate mode HANYA aktif saat
+`ctx.authority` ada (engine + /intent HTTP), test tanpa authority tak
+terpengaruh.
 
 ### Sprint 3 — Skala (P2)
 - [ ] Interest management + delta snapshot (pakai `interestFiltered`,

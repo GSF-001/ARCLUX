@@ -18,12 +18,45 @@ import type { VesselEntity, PlayerIntent, WorldEntity } from "./types";
 import { WorldRegion, distanceBetween } from "./world";
 import { hullOf, ADRIFT_BELOW } from "./vesselState";
 import { fittedComponents, validateFitIntent } from "./fitting";
+import { SHIP_ONLY_INTENTS, FPS_ONLY_INTENTS, type SessionStore } from "./session";
+import {
+  HACK_RANGE_SHIP_M,
+  HACK_RANGE_FPS_M,
+  HACK_TARGET_TYPES,
+  HACK_BUTTONS,
+  type HackStore,
+  type HackTargetType,
+} from "./hack";
+import { CLAIM_PLANT_RADIUS_M, CLAIM_MAX_PER_PLAYER, type ClaimStore } from "./claims";
+import { ARCLUX_STORE, type Economy } from "../economy";
+import { WANTED_GATE_LEVEL, type WantedStore } from "../wanted";
 
 export type ValidatorDecision = "accept" | "reject";
+
+/** Scan anti-spam (P1-3): range max & cooldown per vessel (tick). */
+export const SCAN_RANGE_MAX = 10_000;
+export const SCAN_DEFAULT_RANGE = 5_000;
+export const SCAN_COOLDOWN_TICKS = 10;
+
+/** Tether FPS (P1-4, 01-assets §5): radius maksimal dari kapal sendiri. */
+export const FPS_TETHER_RADIUS_M = 1_000;
 
 export interface ValidationResult {
   decision: ValidatorDecision;
   reason?: string;
+}
+
+/**
+ * Bundle otoritas Sprint 2 (08 §4) — dipakai validator + simulation lewat
+ * ValidatorContext.authority. Server membuat bundle-nya; test boleh
+ * membuat sendiri. Tanpa bundle (legacy/test lama) gate di-skip.
+ */
+export interface AuthorityDeps {
+  sessions: SessionStore;
+  wanted: WantedStore;
+  economy: Economy;
+  hacks: HackStore;
+  claims: ClaimStore;
 }
 
 export interface ValidatorContext {
@@ -31,6 +64,8 @@ export interface ValidatorContext {
   playerId: string;
   /** Components the actor owns / has grants for. */
   auth: AuthorizationContext;
+  /** Store otoritas Sprint 2 (session/wanted/economy/hack/claims). */
+  authority?: AuthorityDeps;
 }
 
 /**
@@ -81,6 +116,18 @@ export function validateIntent(
     return { decision: "reject", reason: "not the acting owner of entity" };
   }
 
+  // P1-8 (06 §2.5): server memegang activeMode; intent tidak legal di
+  // mode sekarang DITOLAK (ship skills tersembunyi saat FPS, dst).
+  if (ctx.authority) {
+    const mode = ctx.authority.sessions.modeOf(ctx.playerId);
+    if (mode === "fps" && SHIP_ONLY_INTENTS.has(intent.type)) {
+      return { decision: "reject", reason: `intent ${intent.type} requires ship mode (06 §2.5)` };
+    }
+    if (mode === "ship" && FPS_ONLY_INTENTS.has(intent.type)) {
+      return { decision: "reject", reason: `intent ${intent.type} requires fps mode (06 §2.5)` };
+    }
+  }
+
   switch (intent.type) {
     case "move":
       return validateMove(region, entity, intent);
@@ -109,15 +156,99 @@ export function validateIntent(
       }
       return validateFitIntent(v, intent, ctx.auth);
     }
-    case "scan":
+    case "scan": {
+      // P1-3: scan butuh cooldown per vessel + range dibatasi (anti intel spam).
+      const cd = (entity as VesselEntity).kind === "vessel" ? (entity as VesselEntity).cooldowns["scan"] ?? 0 : 0;
+      if (cd > 0) return { decision: "reject", reason: `scan on cooldown (${cd} ticks)` };
+      const range = intent.payload?.range;
+      if (range !== undefined && (typeof range !== "number" || !Number.isFinite(range) || range <= 0 || range > SCAN_RANGE_MAX)) {
+        return { decision: "reject", reason: `scan range must be 0 < range <= ${SCAN_RANGE_MAX}` };
+      }
       return { decision: "accept" };
+    }
+    case "fps_switch_mode": {
+      const m = intent.payload?.mode;
+      if (m !== "ship" && m !== "fps") return { decision: "reject", reason: 'fps_switch_mode requires mode "ship"|"fps"' };
+      return { decision: "accept" };
+    }
+    case "hack_start":
+    case "hack_input":
+    case "hack_cancel":
+      return validateHack(region, entity, intent, ctx);
+    case "buy_arclux": {
+      const itemId = intent.payload?.itemId as string | undefined;
+      if (!itemId) return { decision: "reject", reason: "buy_arclux requires itemId" };
+      const entry = ARCLUX_STORE[itemId];
+      if (!entry) return { decision: "reject", reason: `unknown store item: ${itemId}` };
+      // P1-6: OC cost divalidasi server — saldo kurang = tolak.
+      if (ctx.authority && !ctx.authority.economy.canAfford(ctx.playerId, entry.price)) {
+        return { decision: "reject", reason: `insufficient OC (price ${entry.price})` };
+      }
+      return { decision: "accept" };
+    }
+    case "sell_player": {
+      const p = intent.payload as { componentId?: string; toPlayerId?: string; price?: number };
+      if (!p?.componentId) return { decision: "reject", reason: "sell_player requires componentId" };
+      if (!p?.toPlayerId) return { decision: "reject", reason: "sell_player requires toPlayerId" };
+      if (p.toPlayerId === ctx.playerId) return { decision: "reject", reason: "self trade" };
+      // 06 §1.4: harga ditentukan penjual, server validasi harga >= 0, integer.
+      if (typeof p.price !== "number" || !Number.isInteger(p.price) || p.price < 0) {
+        return { decision: "reject", reason: "price must be integer >= 0" };
+      }
+      const found = resolveTradeSeller(region, p.componentId);
+      if (!found) return { decision: "reject", reason: "component not found on any vessel" };
+      if (!actorOwnsSeller(found.seller, entity, ctx.playerId)) {
+        return { decision: "reject", reason: "actor does not own seller vessel" };
+      }
+      if (ctx.authority && !ctx.authority.economy.canAfford(p.toPlayerId, p.price)) {
+        return { decision: "reject", reason: "buyer has insufficient OC" };
+      }
+      // Komponen butuh kapal pembeli untuk dititipkan (06 §1.4).
+      const hasBuyerVessel = [...region["entities"].values()].some((e) => e.kind === "vessel" && e.owner === p.toPlayerId);
+      if (!hasBuyerVessel) return { decision: "reject", reason: "buyer has no vessel" };
+      return { decision: "accept" };
+    }
+    case "claim_land": {
+      const p = intent.payload as { x?: number; z?: number };
+      if (typeof p?.x !== "number" || typeof p?.z !== "number" || !Number.isFinite(p.x) || !Number.isFinite(p.z)) {
+        return { decision: "reject", reason: "claim_land requires numeric x/z" };
+      }
+      if (!ctx.authority) return { decision: "accept" };
+      const { claims } = ctx.authority;
+      // Patok harus ditanam dekat aktor.
+      const d = Math.hypot(entity.position.x - p.x, entity.position.z - p.z);
+      if (d > CLAIM_PLANT_RADIUS_M) {
+        return { decision: "reject", reason: `claim too far — plant within ${CLAIM_PLANT_RADIUS_M}m (aktor di ${Math.round(d)}m)` };
+      }
+      if (claims.countFor(ctx.playerId) >= CLAIM_MAX_PER_PLAYER) {
+        return { decision: "reject", reason: `anti-serakah: maks ${CLAIM_MAX_PER_PLAYER} petak per pemain (02 §9.4)` };
+      }
+      if (claims.overlaps(p.x, p.z)) {
+        return { decision: "reject", reason: "claim overlaps existing claim (100x100m)" };
+      }
+      return { decision: "accept" };
+    }
     case "teleport": {
       const to = intent.payload as { x?: number; y?: number; z?: number } | undefined;
       if (!to || typeof to.x !== "number") return { decision: "reject", reason: "teleport requires x/y/z" };
       return { decision: "accept" };
     }
-    case "dock":
+    case "dock": {
+      // P1-5 (05 §2.3/§2.6): gerbang kota menolak buronan level ≥3 +
+      // blacklist per kota (communityId stasiun).
+      if (ctx.authority) {
+        const w = ctx.authority.wanted;
+        if (w.isGateBlocked(ctx.playerId)) {
+          return { decision: "reject", reason: `wanted level ${w.levelOf(ctx.playerId)} ≥ ${WANTED_GATE_LEVEL} — akses kota ditolak (05 §2.3)` };
+        }
+        const stationId0 = intent.payload?.stationId as string | undefined;
+        const station0 = stationId0 ? region.get(stationId0) : undefined;
+        if (station0 && station0.kind === "station" && station0.communityId && w.isBlacklisted(station0.communityId, ctx.playerId)) {
+          return { decision: "reject", reason: `blacklisted from city ${station0.communityId} (05 §2.6)` };
+        }
+      }
       return validateDock(region, entity, intent);
+    }
     case "spawn_character":
       return { decision: "accept" };
     case "trade_component": {
@@ -160,6 +291,24 @@ function validateMove(
   // 10.E: dead engines cannot thrust — adrift/falling/crashed vessels hold position.
   const blocked = flightBlocked(entity);
   if (blocked) return { decision: "reject", reason: blocked };
+  if (entity.kind === "vessel") {
+    // Efek hack engine-disable (06 §3.4): mesin mati 30 detik tidak bisa thrust.
+    const engines = entity.cooldowns["engines"] ?? 0;
+    if (engines > 0) return { decision: "reject", reason: `engines disabled — hacked (${engines} ticks)` };
+  }
+  if (entity.kind === "character") {
+    // P1-4 tether (01 §5): karakter tidak boleh > 1000m dari kapal induk.
+    // Kapal = anchor sendiri; tanpa kapal induk (vesselId === charId) = bebas.
+    if (entity.vesselId && entity.vesselId !== entity.id) {
+      const vessel = _region.getVessel(entity.vesselId);
+      if (vessel) {
+        const d = Math.hypot(to.x - vessel.position.x, to.y - vessel.position.y, to.z - vessel.position.z);
+        if (d > FPS_TETHER_RADIUS_M) {
+          return { decision: "reject", reason: `tether limit — kembali ke kapal (maks ${FPS_TETHER_RADIUS_M}m, tujuan ${Math.round(d)}m)` };
+        }
+      }
+    }
+  }
   return { decision: "accept" };
 }
 
@@ -260,5 +409,58 @@ function validateAttack(
     }
   }
 
+  return { decision: "accept" };
+}
+
+/**
+ * P1-9 + P1-3 (06 §3): hack punya prasyarat — target valid, jarak
+ * (≤10m kapal / ≤5m karakter), target tidak di safe zone, cooldown per
+ * target 60 detik, dan attempt state untuk hack_input/hack_cancel.
+ */
+function validateHack(
+  region: WorldRegion,
+  entity: WorldEntity,
+  intent: PlayerIntent,
+  ctx: ValidatorContext
+): ValidationResult {
+  if (intent.type === "hack_start") {
+    const p = intent.payload as { targetId?: string; targetType?: string };
+    if (!p?.targetId) return { decision: "reject", reason: "hack_start requires targetId" };
+    if (!HACK_TARGET_TYPES.includes(p.targetType as HackTargetType)) {
+      return { decision: "reject", reason: `targetType must be one of ${HACK_TARGET_TYPES.join("|")}` };
+    }
+    const target = region.get(p.targetId);
+    if (!target) return { decision: "reject", reason: `unknown hack target: ${p.targetId}` };
+    if (target.kind === "character") return { decision: "reject", reason: "cannot hack a character" };
+    // 06 §3.2: target tidak boleh di safe zone.
+    const nearStation = safeZoneBlocked(region, target);
+    if (nearStation) return { decision: "reject", reason: `target in safe zone of station ${nearStation}` };
+    // 06 §3.2: jarak ≤10m (kapal) / ≤5m (karakter FPS).
+    const maxRange = entity.kind === "vessel" ? HACK_RANGE_SHIP_M : HACK_RANGE_FPS_M;
+    const d = distanceBetween(entity, target);
+    if (d > maxRange) {
+      return { decision: "reject", reason: `hack target out of range (${Math.round(d)}m > ${maxRange}m)` };
+    }
+    // 06 §3.5: cooldown 60 detik per target.
+    const cdKey = `hack:${p.targetId}`;
+    const cd = entity.kind === "vessel" ? entity.cooldowns[cdKey] ?? 0 : 0;
+    if (cd > 0) return { decision: "reject", reason: `hack target on cooldown (${cd} ticks)` };
+    if (ctx.authority && ctx.authority.hacks.get(ctx.playerId)) {
+      return { decision: "reject", reason: "hack attempt already in progress" };
+    }
+    return { decision: "accept" };
+  }
+
+  // hack_input / hack_cancel: harus ada attempt aktif + keyIndex sah.
+  const attempt = ctx.authority?.hacks.get(ctx.playerId);
+  if (ctx.authority && !attempt) {
+    return { decision: "reject", reason: "no active hack attempt" };
+  }
+  if (intent.type === "hack_input") {
+    const keyIndex = intent.payload?.keyIndex;
+    if (typeof keyIndex !== "number" || !Number.isInteger(keyIndex) || keyIndex < 0 || keyIndex >= HACK_BUTTONS) {
+      return { decision: "reject", reason: `hack_input requires integer keyIndex 0..${HACK_BUTTONS - 1}` };
+    }
+  }
   return { decision: "accept" };
 }

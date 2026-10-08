@@ -43,8 +43,14 @@ import {
   verifyHandoff,
   verifyLoginToken,
 } from "./auth";
-import { validateIntent } from "./validator";
+import { validateIntent, type AuthorityDeps } from "./validator";
 import { createRateLimiter } from "./rateLimiter";
+import { createSessionStore } from "./session";
+import { createHackStore } from "./hack";
+import { createClaimStore } from "./claims";
+import { sanitizeSnapshot } from "./visibility";
+import { createEconomy } from "../economy";
+import { createWantedStore } from "../wanted";
 import { shouldSnapshot } from "./stability";
 import { isValidResume, saveSnapshot } from "./regionState";
 import type { PersistenceStore } from "./persistence";
@@ -98,6 +104,8 @@ export interface GameServerOptions {
 export interface GameServerHandle {
   region: WorldRegion;
   engine: SimulationEngine;
+  /** Bundle otoritas Sprint 2 (session/wanted/economy/hack/claims). */
+  authority: AuthorityDeps;
   port: number;
   url: string;
   start(): Promise<{ url: string; port: number }>;
@@ -217,12 +225,22 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
     : defaultBodies(regionId);
 
   const environsState = createEnvirons(bodies);
+  // Sprint 2 (08 §4): bundle otoritas — mode SHIP/FPS, buronan, ekonomi OC,
+  // hack attempts, klaim tanah. Dibagikan ke validator (ctx) + sim (opts).
+  const authority: AuthorityDeps = {
+    sessions: createSessionStore(),
+    wanted: createWantedStore(),
+    economy: createEconomy(),
+    hacks: createHackStore(),
+    claims: createClaimStore(),
+  };
   const engine = new SimulationEngine({
     region,
     dt,
     environs: environsState,
     enableEnvirons: true,
     authProvider: defaultAuthProvider(),
+    authority,
   });
 
   // Sprint 1 state (08 hardening): rate limit P0-4, idempotency E-4, auth P0-2.
@@ -238,7 +256,16 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
     try {
       const u = new URL(req.url ?? "/", "http://localhost");
       if (req.method === "GET" && u.pathname === "/snapshot") {
-        sendJson(res, 200, region.snapshot());
+        // P2-4: snapshot disanitasi per-pemirsa — viewer dari token sub
+        // (bila auth on) atau ?playerId=; anonim/dev tetap legacy penuh.
+        let viewer: string | undefined;
+        const bearer = bearerFromHeader(req.headers.authorization);
+        if (authEnabled && bearer) {
+          const payload = verifyLoginToken(bearer, authSecret);
+          if (payload) viewer = payload.sub;
+        }
+        if (!viewer) viewer = u.searchParams.get("playerId") ?? undefined;
+        sendJson(res, 200, sanitizeSnapshot(region.snapshot(), viewer));
         return;
       }
       if (req.method === "GET" && u.pathname === "/health") {
@@ -310,7 +337,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
         }
         // Ack verdict awal — ctx memakai sub token, jadi playerId ≠ subject
         // jatuh di guard identitas validateIntent (validator.ts identity mismatch).
-        const verdict = validateIntent(region, intent as PlayerIntent, { playerId: ctxPlayerId, auth: { actor: ctxPlayerId } });
+        const verdict = validateIntent(region, intent as PlayerIntent, { playerId: ctxPlayerId, auth: { actor: ctxPlayerId }, authority });
         if (verdict.decision === "reject") {
           sendJson(res, 200, { ok: false, seq: intent.seq ?? 0, verdict: "rejected", reason: verdict.reason });
           return;
@@ -373,6 +400,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
   const handle: GameServerHandle = {
     region,
     engine,
+    authority,
     port,
     url: `http://${host}:${port}`,
     start: async () => {

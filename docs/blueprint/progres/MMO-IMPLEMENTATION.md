@@ -117,6 +117,45 @@ server-authoritative penuh (D-008), self-host per shard (D-009), multi-shard Reg
   `apps/cli/serve.ts` ✅ persistence default ON (`--no-persist`).
 - Regresi: `tests/server-hardening-sprint1.test.ts` 20 test.
 
+**Sudah diisi (PR #779 — Sprint 2 otoritas fitur, `08-server-hardening.md` §4):**
+- `packages/economy` ✅ — integer OC, pajak 5% → `world:treasury` (floor),
+  Company Store 13 item harga tetap, P2P `transfer` append-only tx log +
+  idempotency key `intent:<player>:<seq>`, `buyFromStore` origin arclux
+  durability 100, `topup` minimum 10 OC.
+- `packages/wanted` ✅ — eskalasi saksi (`WITNESS_RADIUS_M` 50; tanpa
+  saksi = tanpa record, 05 §2.2), bobot kill 3/riot 2/theft 1 cap 5,
+  blacklist per communityId, gate ≥3, decay 1 level/36k tick tunable.
+- `session.ts` ✅ — activeMode ship/fps per pemain + `SHIP_ONLY_INTENTS`
+  (attack/teleport/scan/dock/spawn_station/activate_capability/equip…) +
+  `FPS_ONLY_INTENTS` (use_skill, gate-nya dulu); transisi:
+  `spawn_character`→fps, `dock`→ship, intent `fps_switch_mode`.
+- `claims.ts` ✅ — klaim 100×100, radius tanam 500m, maks 3 petak/pemain
+  (anti-serakah), overlap check. Patok 7 hari + garis pantai = Sprint 5.
+- `hack.ts` ✅ — attempt 4-6 tombol (idx 0-5) seed FNV-1a
+  `(player,target,tick)`, cooldown 600 tick/target, range 10m/5m; efek:
+  engine disable 3000 tick (validator `move` tolak), delta wanted tabel
+  06 §3.4, 3 fail → alarm 12k tick + wanted +2. Requirement "computer"
+  ditunda Sprint 5 (component registry kosong).
+- `visibility.ts` ✅ — `sanitizeSnapshot(snap, viewer)`: owner penuh,
+  pemirsa lain komponen non-open → `{id,capability}` (tanpa label/
+  provenance/license), tanpa viewer = legacy penuh; copy-on-write, asli
+  tak dimutasi (P2-4).
+- `validator.ts` ✅ (+P1) — tether 1000m tujuan→kapal, scan cooldown +
+  range ≤10km, mode gate, wanted gate/blacklist, hack range/cooldown +
+  attempt, OC cost buy/sell (termasuk "buyer has no vessel"), klaim
+  radius/overlap/anti-serakah, `engines disabled` bila kena hack;
+  hapus dead code `case "spawn"` (P1-2).
+- `simulation.ts` ✅ (+P1) — authority injection (`SimulationOptions.authority`
+  → ctx bila authProvider belum bawa), kill trigger → `vessel_destroyed`
+  + escalate (saksi = owner lain ≤50m), scan redact payload
+  `{id,kind,faction}`, fps/ship transisi, apply buy/sell/claim/hack,
+  wanted decay per step; `sell_player` cari kapal pembeli by owner.
+- `server.ts` ✅ (+P1) — `AuthorityDeps` bundle (sessions/wanted/economy/
+  hacks/claims) → engine + `/intent` ctx + `handle.authority`; `/snapshot`
+  sanitize viewer (Bearer sub / `?playerId=`);
+  `transport/HttpTransport.ts` `/snapshot?playerId=`.
+- Regresi: `tests/server-sprint2.test.ts` 23 test.
+- 
 **Arah (prioritas isi berikutnya) — update 09-03:**
 1. ~~`packages/relay`~~ hubungkan `gate.notifyTarget` — SELESAI via bridge (PR #591).
 2. ~~handoff token crash-safe di `gate.ts`~~ — SELESAI via PR #592.
@@ -203,7 +242,8 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 ### PR #639 ✅ clouds AAA+ — procedural clouds di SEMUA planet visual-only (scene3d.ts makeCloudTexture) — SUDJAH (2026-09-03, pause 09 di Fase 5)
 ### PR #772 ✅ Fase 3 fit authority — fitting.ts (validateFitIntent equip/unequip) + stateHash=fitHash — SUDJAH (2026-10-06)
 ### PR #773 ✅ Fase 3 sisa — kapasitor per tick (stepCapacitor + gate activate) + combat resist fit — SUDJAH (2026-10-06)
-### PR #775 ✅ Sprint 1 server hardening — auth.ts (login+handoff HMAC) + E-1..E-5 + rate limit/1MB + /servers TTL + lifecycle persistence — SUDJAH (2026-10-06)
+### PR #775 ✅ Sprint 1 server hardening — auth.ts (login+handoff HMAC) + E-1..E-5 + rate limit/1MB + /servers TTL + lifecycle persistence — SUDAH (2026-10-06)
+### PR #779 ✅ Sprint 2 otoritas fitur — economy/wanted/session/claims/hack/visibility + validator/sim P1-2..P1-9 + P2-4 sanitize snapshot + mode gate — SUDJAH (2026-10-08)
 ### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs — SELESAI
@@ -245,6 +285,10 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 - [x] Fase 3 sisa: combat resist fit `computeResists` + gate `activate_capability` saat kapasitor 0 — SELESAI (PR #773)
 - [x] `auth.ts` — login Bearer HMAC + handoff HMAC + isDeliverAllowed — SELESAI (PR #775)
 - [x] `server.ts` — Sprint 1 route hardening: auth 401 + rate limit 429 + seq 409 + 413 + /deliver guard + /servers + lifecycle persistence — SELESAI (PR #775)
+- [x] `session.ts` — activeMode ship/fps + SHIP_ONLY/FPS_ONLY gate + spawn_character/dock/fps_switch_mode — SELESAI (PR #779)
+- [x] `claims.ts` — klaim 100x100 radius tanam 500m maks 3 petak + overlap + anti-serakah — SELESAI (PR #779)
+- [x] `hack.ts` — attempt FNV-1a 4-6 tombol + cooldown 600 tick + engine-disable/wanted delta/3-fail alarm — SELESAI (PR #779)
+- [x] `visibility.ts` — sanitizeSnapshot per-pemirsa (owner penuh, redact {id,capability}, anonim legacy) — SELESAI (PR #779)
 - [ ] 09 Part B Fase 9 karakter repo (CharacterEntity + spawnCharacter)
 - [ ] 09 Part B Fase 10 hangar 32 slot + docking film 3s (gate.ts + bridge.ts)
 - [ ] 09 Part B Fase 11 bazaar 16 lapak (component.ts + validator)
@@ -302,3 +346,5 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 | 2026-09-03 | #639 | clouds AAA+ di SEMUA planet procedural makeCloudTexture 512, visual-only | ✅ merged |
 | 2026-09-03 | — | update MMO-IMPLEMENTATION.md ketinggalan → sync 09 + clouds + landing + serve --vessel | in progress |
 | 2026-10-06 | #775 | Sprint 1 server hardening (08 §4): auth.ts login+handoff HMAC, E-1..E-5, rate limit/1MB/403/409, /servers TTL, lifecycle persistence, 20 regresi test | in progress |
+| 2026-10-08 | #779 | Sprint 2 otoritas fitur (08 §4): packages/economy+wanted, session/claims/hack/visibility, validator/sim P1-2..P1-9 + P2-4 sanitize snapshot, 23 regresi test | in progress |
+
