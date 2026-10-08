@@ -53,14 +53,25 @@ function mdxSafe(text) {
 // Ganti link relatif ke file .md (yang lokasinya di root repo, bukan di docs-site/docs)
 // jadi link langsung ke GitHub, biar gak "broken link".
 function fixLinks(text) {
-  return text.replace(/\]\((?!https?:\/\/)([^)\s]+\.md[^)\s]*)\)/g, (match, p1) => {
+  let out = text.replace(/\]\((?!https?:\/\/)([^)\s]+\.md[^)\s]*)\)/g, (match, p1) => {
     const clean = p1.replace(/^\.?\//, '');
     return `](${GITHUB_BASE}${clean})`;
   });
+  // Folder/root relatif yang gak ada pasangannya di site → arahkan ke GitHub.
+  const DIR_MAP = { 'progres/': 'https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/progres' };
+  Object.entries(DIR_MAP).forEach(([ref, url]) => {
+    out = out.split(`](${ref})`).join(`](${url})`);
+  });
+  return out;
+}
+
+const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2190}-\u{21FF}\u{FE0F}\u2300-\u23FF\u{2700}-\u{27BF}\u{2B50}\u2705\u274C]/gu;
+function stripEmoji(text) {
+  return text.replace(EMOJI_RE, '').replace(/ {2,}/g, ' ').trim();
 }
 
 function sanitize(text) {
-  return fixLinks(mdxSafe(text));
+  return fixLinks(stripEmoji(mdxSafe(text)));
 }
 
 function writeDoc(filename, title, sidebarPosition, body) {
@@ -102,7 +113,12 @@ const context = readIfExists('CONTEXT.md');
   let body = '';
   if (readme) {
     const cut = readme.search(/^#+\s*(Installation|Usage|Getting Started|Quickstart)/im);
-    body += stripFrontmatter(cut > -1 ? readme.slice(0, cut) : readme);
+    let head = stripFrontmatter(cut > -1 ? readme.slice(0, cut) : readme);
+    head = head
+      .split('\n')
+      .filter((l) => !/img\.shields\.io/.test(l) && !/^\s*\[\]\(/.test(l))
+      .join('\n');
+    body += head;
   }
   if (context) body += `\n\n## Context tambahan\n\n${stripFrontmatter(context)}`;
   if (!body.trim()) body = '_README.md tidak ditemukan di root repo._';
@@ -176,16 +192,18 @@ function firstHeading(content, fallback) {
 
 {
   const about = readIfExists('ABOUT.md');
-  if (about) writeDoc('about.md', 'About ARCLUX', 7, stripFrontmatter(about));
+  if (about) {
+    const ab = stripFrontmatter(about)
+      .replace(/\|.*MMO Fase[^|]*\|/g, '')
+      .replace(/\(\+ \[`progres\/`\]\(progres\/\)\)/, '(https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/progres)');
+    writeDoc('about.md', 'About ARCLUX', 7, ab);
+  }
 }
 {
   const quickstart = readIfExists('QUICKSTART.md');
   if (quickstart) writeDoc('quickstart.md', 'Quickstart', 8, stripFrontmatter(quickstart));
 }
-{
-  const mmo = readIfExists('QUICKSTART-MMO.md');
-  if (mmo) writeDoc('quickstart-mmo.md', 'MMO Quickstart', 9, stripFrontmatter(mmo));
-}
+// Quickstart MMO tidak lagi di-generate — MMO bukan bagian dari docs publik.
 {
   const tutorial = readIfExists('docs/TUTORIAL.md');
   if (tutorial) writeDoc('tutorial.md', 'Tutorial', 10, stripFrontmatter(tutorial));

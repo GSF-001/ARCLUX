@@ -34,38 +34,38 @@ npx tsx apps/cli/index.ts analyze .
 ```
  ARCLUX Analysis Report
 
-  Project Summary
-  • Total modules: 87
-  • Total files: 312
-  • Languages: TypeScript, JavaScript
+ Project Summary
+ • Total modules: 87
+ • Total files: 312
+ • Languages: TypeScript, JavaScript
 
-  Frameworks Detected
-  ✓ React
-  ✓ TypeScript
-  ✓ Storybook
+ Frameworks Detected
+ React
+ TypeScript
+ Storybook
 
-    Issues Found: 18
+ Issues Found: 18
 
-    Circular Dependencies (3)
-     • Button → ButtonGroup → Button
-     • Tooltip → Popover → Tooltip
-     • Modal → Dialog → Modal
+ Circular Dependencies (3)
+ • Button ButtonGroup Button
+ • Tooltip Popover Tooltip
+ • Modal Dialog Modal
 
-      Unused Exports (8)
-     • src/components/Button/deprecated-props.ts
-     • src/components/Input/old-variants.ts
-     • src/hooks/useOldAnimation.ts
-     • [5 more...]
+ Unused Exports (8)
+ • src/components/Button/deprecated-props.ts
+ • src/components/Input/old-variants.ts
+ • src/hooks/useOldAnimation.ts
+ • [5 more...]
 
-    Orphan Files (5)
-     • src/components/LegacyButton/
-     • src/types/old-api.ts
-     • src/utils/deprecated-helpers.ts
-     • [2 more...]
+ Orphan Files (5)
+ • src/components/LegacyButton/
+ • src/types/old-api.ts
+ • src/utils/deprecated-helpers.ts
+ • [2 more...]
 
-     Layer Violations (2)
-     • Button.tsx imports from pages/ (shouldn't!)
-     • Tooltip imports from forms/ (wrong layer!)
+ Layer Violations (2)
+ • Button.tsx imports from pages/ (shouldn't!)
+ • Tooltip imports from forms/ (wrong layer!)
 ```
 
 ### Key Findings & Insights
@@ -241,33 +241,33 @@ npx tsx apps/cli/index.ts analyze .
  ARCLUX Analysis Report
 
  Project Summary
-  • Total modules: 124
-  • Total files: 643
-  • Languages: TypeScript, JavaScript
+ • Total modules: 124
+ • Total files: 643
+ • Languages: TypeScript, JavaScript
 
-  Frameworks Detected
-  ✓ Next.js
-  ✓ React
-  ✓ TailwindCSS
-  ✓ TypeScript
+ Frameworks Detected
+ Next.js
+ React
+ TailwindCSS
+ TypeScript
 
-   Issues Found: 22
+ Issues Found: 22
 
-    Circular Dependencies (4)
-     • packages/ui ↔ packages/api (both import each other!)
-     • apps/web ↔ packages/utils (unexpected!)
+ Circular Dependencies (4)
+ • packages/ui packages/api (both import each other!)
+ • apps/web packages/utils (unexpected!)
 
-    Unused Exports (7)
-     • apps/admin/lib/old-auth.ts
-     • packages/ui/components/DeprecatedButton.tsx
+ Unused Exports (7)
+ • apps/admin/lib/old-auth.ts
+ • packages/ui/components/DeprecatedButton.tsx
 
-    Orphan Files (6)
-     • apps/web/utils/backup/
-     • packages/api/old-endpoints/
+ Orphan Files (6)
+ • apps/web/utils/backup/
+ • packages/api/old-endpoints/
 
-     Layer Violations (5)
-     • apps/web/components/UserCard imports from apps/admin
-     • packages/utils exports server utilities to browser code
+ Layer Violations (5)
+ • apps/web/components/UserCard imports from apps/admin
+ • packages/utils exports server utilities to browser code
 ```
 
 ### Key Findings
@@ -275,7 +275,7 @@ npx tsx apps/cli/index.ts analyze .
 **1. CRITICAL: Monorepo Architecture Issue**
 
 ```
-packages/ui ↔ packages/api (circular!)
+packages/ui packages/api (circular!)
 
 Why this is bad:
 - Can't use UI without API
@@ -287,10 +287,10 @@ Why this is bad:
 **Root cause:**
 ```javascript
 // packages/ui/Button.tsx
-import { api } from '@myapp/api'  // Depends on API!
+import { api } from '@myapp/api' // Depends on API!
 
 // packages/api/client.ts
-import { Button } from '@myapp/ui'  // API imports UI!
+import { Button } from '@myapp/ui' // API imports UI!
 ```
 
 **Solution:**
@@ -346,7 +346,7 @@ Problem:
 - Should split into separate packages
 
 Solution:
-packages/utils-node/   (server only)
+packages/utils-node/ (server only)
 packages/utils-client/ (browser safe)
 packages/utils-shared/ (both)
 ```
@@ -392,17 +392,17 @@ npx tsx apps/cli/index.ts analyze .
 ```
 Issues Found: 45 
 
-  Circular Dependencies (8)
-   Many files importing each other
+ Circular Dependencies (8)
+ Many files importing each other
 
-  Unused Exports (22)
-   Dead code everywhere
+ Unused Exports (22)
+ Dead code everywhere
 
-  Orphan Files (12)
-   Old code nobody uses
+ Orphan Files (12)
+ Old code nobody uses
 
-  Layer Violations (3)
-   Routes importing from each other
+ Layer Violations (3)
+ Routes importing from each other
 ```
 
 ### Strategy
@@ -429,10 +429,10 @@ Month 2: Continued cleanup
 
 **Result after 2 months:**
 ```
-Issues: 45 → 5
-Circular deps: 8 → 0
-Orphan files: 12 → 0
-Code quality: ⭐️⭐️⭐️⭐️⭐️
+Issues: 45 5
+Circular deps: 8 0
+Orphan files: 12 0
+Code quality: 
 ```
 
 ---

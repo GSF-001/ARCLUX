@@ -74,14 +74,25 @@ function mdxSafe(text) {
 }
 
 function fixLinks(text) {
-  return text.replace(/\]\((?!https?:\/\/)([^)\s]+\.md[^)\s]*)\)/g, (match, p1) => {
+  let out = text.replace(/\]\((?!https?:\/\/)([^)\s]+\.md[^)\s]*)\)/g, (match, p1) => {
     const clean = p1.replace(/^\.?\//, '');
     return `](${GITHUB_BASE}${clean})`;
   });
+  // Folder/root relatif yang gak ada pasangannya di site → arahkan ke GitHub.
+  const DIR_MAP = { 'progres/': 'https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/progres' };
+  Object.entries(DIR_MAP).forEach(([ref, url]) => {
+    out = out.split(`](${ref})`).join(`](${url})`);
+  });
+  return out;
+}
+
+const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2190}-\u{21FF}\u{FE0F}\u2300-\u23FF\u{2700}-\u{27BF}\u{2B50}\u2705\u274C]/gu;
+function stripEmoji(text) {
+  return text.replace(EMOJI_RE, '').replace(/ {2,}/g, ' ').trim();
 }
 
 function sanitize(text) {
-  return fixLinks(mdxSafe(text));
+  return fixLinks(stripEmoji(mdxSafe(text)));
 }
 
 function firstLine(text, maxLen) {
@@ -197,23 +208,8 @@ const context = readIfExists('CONTEXT.md');
   writeDoc('gotchas.mdx', 'Gotchas', 'Hal-hal yang gampang bikin salah kalau gak tau', body);
 }
 
-// Detail progress files (progres/*.md) — masing-masing jadi halaman terpisah
-{
-  const progresDir = path.join(ROOT, 'progres');
-  if (fs.existsSync(progresDir)) {
-    const files = fs.readdirSync(progresDir).filter((f) => f.endsWith('.md'));
-    const pages = [];
-    files.forEach((f) => {
-      const content = fs.readFileSync(path.join(progresDir, f), 'utf-8');
-      const slug = f.replace(/\.md$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const filename = `progres-${slug}.mdx`;
-      const title = f.replace(/\.md$/, '').replace(/[-_]/g, ' ');
-      writeDoc(filename, title, `Detail progres: ${title}`, stripFrontmatter(content), 'progres');
-      pages.push(filename.replace('.mdx', ''));
-    });
-    if (pages.length) console.log(`  info progres pages: ${pages.join(', ')} -- tambahkan ke docs.json nav`);
-  }
-}
+// Detail progres (progres/*.md di repo) sengaja TIDAK di-generate ke docs-site.
+// Docs ini hanya menampilkan konten penting; arsip progres tetap di repo.
 
 // ── Codebase Map kategorisasi tematik ────────────────────────────────────
 // Struktur URL: /map/{category}/{name} — bersih, gak ada dobel "map-".
@@ -282,10 +278,13 @@ function mapCategoryFor(pkgName) {
     return null;
   }
 
+  const MMO_PKGS = new Set(['gameserver', 'relay', 'universe', 'game', 'ue5']);
   function scanGroup(groupDir, label) {
     const base = path.join(ROOT, groupDir);
     if (!fs.existsSync(base)) return [];
-    const entries = fs.readdirSync(base).filter((f) => fs.statSync(path.join(base, f)).isDirectory());
+    const entries = fs.readdirSync(base)
+      .filter((f) => fs.statSync(path.join(base, f)).isDirectory())
+      .filter((n) => !MMO_PKGS.has(n));
     const pageNames = [];
     entries.forEach((name) => {
       const dir = path.join(base, name);
@@ -454,14 +453,13 @@ function mapCategoryFor(pkgName) {
     '    Core pipeline, 27 languages, all 20 detectors, impact analysis, call graph, DSL, search, security, MCP server, daemon -- verified against `vscode`, `react`, `vite`, `laravel`, `flask`',
     '  </Card>',
     '  <Card title="Not there yet" icon="hourglass-half">',
-    '    Per-file incremental re-indexing is still coarse (full rebuild per change); the MMO (`apps/game` + `gameserver` + `universe`) is alpha',
+    '    Per-file incremental re-indexing is still coarse (full rebuild per change)',
     '  </Card>',
     '</CardGroup>',
     '',
-    '## Two licenses',
+    '## License',
     '',
-    '- **ARCLUX Platform** (engine, parser, graph, cli, web) -- Apache 2.0, open, contribute freely',
-    '- **ARCLUX MMO** (gameserver, relay, universe, apps/game) -- source-available, no commercial hosting of a cloned game without written permission',
+    '**Apache License 2.0** — open source, contribute freely. See [LICENSE](https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/LICENSE).',
     '',
     '## Next steps',
     '',
@@ -637,20 +635,13 @@ function firstHeading(content, fallback) {
 {
   const about = readIfExists('ABOUT.md');
   if (about) {
-    writeDoc('about.mdx', 'About ARCLUX', 'The map: intelligence layer + platform layer', stripFrontmatter(about));
+    const ab = stripFrontmatter(about)
+      .replace(/\|.*MMO Fase[^|]*\|/g, '')
+      .replace(/\(\+ \[`progres\/`\]\(progres\/\)\)/, '(https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/progres)');
+    writeDoc('about.mdx', 'About ARCLUX', 'The map: intelligence layer + platform layer', ab);
   }
 }
-{
-  const mmo = readIfExists('QUICKSTART-MMO.md');
-  if (mmo) {
-    writeDoc(
-      'quickstart-mmo.mdx',
-      'MMO Quickstart',
-      'Clone repo jadi kapal, self-host region, main dari nol',
-      stripFrontmatter(mmo)
-    );
-  }
-}
+// Quickstart MMO tidak lagi di-generate — MMO bukan bagian dari docs publik.
 {
   const changelog = readIfExists('CHANGELOG.md');
   if (changelog) {
@@ -669,63 +660,11 @@ function firstHeading(content, fallback) {
   else console.log(`  skip ${out} (${src} tidak ada)`);
 });
 
-// ── Blueprint (BLUEPRINT.md + docs/blueprint/**) ──────────────────────────
-function slugify(name) {
-  return name
-    .replace(/\.(md|mdx)$/, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function copyMdTree(srcRel, outSub, opts) {
-  const base = path.join(ROOT, srcRel);
-  if (!fs.existsSync(base)) {
-    console.log(`  skip ${srcRel} (tidak ada)`);
-    return [];
-  }
-  const made = [];
-  const walk = (dir, subOut) => {
-    fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
-      const p = path.join(dir, e.name);
-      if (e.isDirectory()) {
-        walk(p, `${subOut}/${slugify(e.name)}`);
-      } else if (/\.md$/.test(e.name)) {
-        const content = fs.readFileSync(p, 'utf-8');
-        const slug = slugify(e.name);
-        const title = opts.title ? opts.title(e.name, content) : firstHeading(content, slug);
-        writeDoc(`${slug}.mdx`, title, opts.desc(e.name, content), stripFrontmatter(content), subOut);
-        made.push(`${subOut}/${slug}`);
-      }
-    });
-  };
-  walk(base, outSub);
-  return made;
-}
-
-{
-  const bp = readIfExists('BLUEPRINT.md');
-  if (bp) {
-    // Ditulis sebagai blueprint/index.mdx biar jadi landing page folder ini
-    // di dua-duanya: Mintlify (/blueprint) dan Docusaurus (routeBasePath /blueprint).
-    writeDoc(
-      'index.mdx',
-      'Blueprint — Repository War Universe',
-      'Visi strategis ARCLUX sebagai universe yang digerakkan oleh repository',
-      stripFrontmatter(bp),
-      'blueprint'
-    );
-  }
-  const pages = copyMdTree('docs/blueprint', 'blueprint', {
-    title: (name, content) => firstHeading(content, slugify(name)),
-    desc: () => 'Blueprint detail — ARCLUX Repository War Universe',
-  });
-  if (pages.length) console.log(`  info blueprint pages (${pages.length}): ${pages.slice(0, 6).join(', ')} …`);
-}
+// Blueprint/MMO dihapus dari docs publik — cek repo untuk arsip lengkap.
 
 // ── Auto-rebuild docs.json navigation ─────────────────────────────────────
 // Nav di-rebuild dari file yang benar-benar ada di disk, jadi halaman baru
-// (map/blueprint/progres) otomatis ke-register — gak perlu edit docs.json manual.
+// (map) otomatis ke-register — gak perlu edit docs.json manual.
 function listPageIds(dir, prefix) {
   const base = path.join(DOCS_OUT, dir);
   if (!fs.existsSync(base)) return [];
@@ -787,47 +726,65 @@ function nestedGroups(ids) {
     }))
     .filter((g) => g.pages.length);
 
-  const progresPages = listPageIds('progres', 'progres/');
-  const blueprintPages = nestedGroups(listPageIds('blueprint', ''))
-    .map((e) =>
-      typeof e === 'string' ? `blueprint/${e}` : { ...e, pages: e.pages.map((p) => `blueprint/${p}`) })
-    .flatMap((e) => (typeof e === 'string' && e === 'blueprint/index' ? [] : [e]));
-
   cfg.navigation = {
     groups: [
       {
         group: 'Getting Started',
+        icon: { library: 'lucide', name: 'rocket' },
         pages: ['overview', 'quickstart', 'usage', 'how-to-use', 'tutorial', 'skill'],
       },
       {
         group: 'Reference',
+        icon: { library: 'lucide', name: 'book-open' },
         pages: ['about', 'architecture', 'stack', 'status', 'gotchas', 'tooling', 'guides', 'deep-dive', 'examples'],
       },
       {
-        group: 'MMO & Blueprint',
-        pages: ['quickstart-mmo', 'blueprint/index', ...blueprintPages],
-        defaultOpen: false,
-      },
-      {
-        group: 'Progress Detail',
-        pages: progresPages,
-        defaultOpen: false,
-      },
-      {
         group: 'Codebase Map',
+        icon: { library: 'lucide', name: 'folder-tree' },
         pages: mapGroups,
       },
       {
         group: 'Release',
+        icon: { library: 'lucide', name: 'tag' },
         pages: ['changelog'],
       },
     ],
   };
 
-  cfg.colors = { primary: '#C15F3C', light: '#E07A55', dark: '#D97757' };
-  cfg.fonts = { heading: { family: 'Fraunces' }, body: { family: 'Inter' }, mono: { family: 'JetBrains Mono' } };
-  cfg.appearance = { default: 'dark', strict: false };
-  cfg.background = { color: { dark: '#191817', light: '#FAF9F5' } };
+  // ── Tema hitam "arc-light" ────────────────────────────────────────────────
+  // Hitam-only (strict dark), aksen cyan glow, wordmark heading pakai Isometra.
+  // favicon di-tarik OTOMATIS dari docs-site/static/img — tinggal ganti file
+  // icon di situ (mis. favicon.svg / logo.svg), re-run generator, path di
+  // docs.json ikut update. Gak perlu sentuh docs.json manual.
+  const STATIC_IMG = path.join(DOCS_OUT, 'static', 'img');
+  const IMG_EXTS = new Set(['.svg', '.png', '.webp', '.jpg', '.jpeg', '.ico']);
+  const pickFavicon = () => {
+    if (fs.existsSync(STATIC_IMG)) {
+      const imgs = fs.readdirSync(STATIC_IMG).filter((f) => IMG_EXTS.has(path.extname(f).toLowerCase()));
+      if (imgs.length) {
+        const branded = imgs.find((f) => /favicon|logo|icon/i.test(f)) || imgs[0];
+        return `/static/img/${branded}`;
+      }
+    }
+    return '/favicon.svg';
+  };
+
+  cfg.background = { color: { dark: '#000000' } };
+  cfg.appearance = { default: 'dark', strict: true };
+  cfg.colors = { primary: '#4DE3FF', light: '#7CEDFF', dark: '#0F9BB8' };
+  cfg.fonts = { heading: { family: 'Isometra' }, body: { family: 'Inter' } };
+  cfg.favicon = pickFavicon();
+
+  // Keren & rapi (schema-valid Mintlify): code block theme gelap, CTA GitHub,
+  // icon lucide di group nav, meta description.
+  cfg.description =
+    'Open-source codebase intelligence -- live dependency graphs, impact tracing, detectors, conventions, DSL.';
+  cfg.icons = { library: 'lucide' };
+  cfg.styling = { codeblocks: { theme: 'catppuccin-mocha' } };
+  cfg.navbar = {
+    primary: { type: 'button', label: 'GitHub', href: 'https://github.com/GSF-001/ARCLUX' },
+  };
+
 
   fs.writeFileSync(docsJsonPath, JSON.stringify(cfg, null, 2) + '\n');
   const total =
