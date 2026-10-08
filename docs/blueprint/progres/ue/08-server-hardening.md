@@ -486,6 +486,36 @@ terpengaruh.
 - [ ] Acceptance banded: screenshot client TS vs UE5 identik (sudah jadi
       milik `04-graphics.md`).
 
+### Sprint 7 — Combat depth (lock-on, projectile, AI, pipeline) — SPEC-FINAL
+> Spesifikasi lengkap (angka, state machine, kontrak, test): `09-combat-depth.md`.
+> Sumber ide: riset 3 repo UE5 — ideas-only, nol kode disalin (lisensi NONE).
+> Catatan urutan: TIDAK bergantung ke Sprint 3-6 — boleh disisipkan kapan saja
+> setelah Sprint 2 (kalau mau gameplay terasa lebih dulu), tanpa menahan sprint lain.
+- [ ] PR-A Lock-on: `targeting.ts` (state machine acquiring/locked/breaking,
+      cone 45°, grace 4 tick, re-lock 50%, kelas target 8/15/30 tick) +
+      validator (`lock`/`unlock`, missile wajib locked, turret cukup range+cone)
+      + event privat `lock_*` — `09-combat-depth.md` §2.
+- [ ] PR-B Projectile: `projectiles.ts` (homing slerp turn-rate — BISA DIELAK,
+      TTL fizzle, arm 2 tick, cap 100) + spawn dari intent missile + point
+      defense `intercept` deterministik — §3.
+- [ ] PR-C NPC AI: `npcBrain.ts` (PATROL→DETECT→CHASE→AIM→FIRE, think 3 tick
+      stagger, safe-zone no-fire, faction matrix) + wave spawner ala
+      GameMode_Survival + budget 20 AI/region; kill NPC tanpa wanted + salvage
+      — §4.
+- [ ] PR-D Pipeline: `stats.ts` (attackPower/defensePower/signature derived) +
+      refactor `combat.ts` ke pipeline `raw × power/defense × mod-hooks ×
+      resist × ceiling` (mod MVP: rangeFalloff, conditionPenalty) — fondasi
+      Sprint 5 skill — §5.
+- [ ] Kontrak: `MMO-CONTRACT.md` + sanitizeSnapshot proyeksi projectile ringan
+      + stability caps baru — §6.
+
+> Regresi per-PR: `tests/server-sprint7-{lock,projectile,ai,pipeline}.test.ts`
+> (9+7+6+6 test) + determinisme replay 2 proses lock/projectile/AI.
+
+**Definisi done Sprint 7**: 4 subslice merge dengan regresi hijau; replay
+determinisme identik; ceiling 12 berlaku di SEMUA jalur damage baru; `npx tsc
+--noEmit` scoped bersih; sim path tanpa Math.random/Date.now tetap 0.
+
 ---
 
 ## 5. Invariant desain (tidak bisa ditawar)
