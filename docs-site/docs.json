@@ -12,6 +12,10 @@
     "groups": [
       {
         "group": "Getting Started",
+        "icon": {
+          "library": "lucide",
+          "name": "rocket"
+        },
         "pages": [
           "overview",
           "quickstart",
@@ -23,6 +27,10 @@
       },
       {
         "group": "Reference",
+        "icon": {
+          "library": "lucide",
+          "name": "book-open"
+        },
         "pages": [
           "about",
           "architecture",
@@ -37,6 +45,10 @@
       },
       {
         "group": "Codebase Map",
+        "icon": {
+          "library": "lucide",
+          "name": "folder-tree"
+        },
         "pages": [
           {
             "group": "Intelligence",
@@ -116,6 +128,10 @@
       },
       {
         "group": "Release",
+        "icon": {
+          "library": "lucide",
+          "name": "tag"
+        },
         "pages": [
           "changelog"
         ]
@@ -132,12 +148,11 @@
     }
   },
   "navbar": {
-    "links": [
-      {
-        "label": "GitHub",
-        "href": "https://github.com/GSF-001/ARCLUX"
-      }
-    ]
+    "primary": {
+      "type": "button",
+      "label": "GitHub",
+      "href": "https://github.com/GSF-001/ARCLUX"
+    }
   },
   "fonts": {
     "heading": {
@@ -145,6 +160,15 @@
     },
     "body": {
       "family": "Inter"
+    }
+  },
+  "description": "Open-source codebase intelligence -- live dependency graphs, impact tracing, detectors, conventions, DSL.",
+  "icons": {
+    "library": "lucide"
+  },
+  "styling": {
+    "codeblocks": {
+      "theme": "catppuccin-mocha"
     }
   }
 }

@@ -27,10 +27,10 @@ Dependency graph, impact analysis, and structural convention checking for your c
 
 ## Documentation
 > [!NOTE] 
-> 
 > **[official documentation](https://arclux-os.mintlify.site)**
-> content, searchable and organized
 
+> [ **[arclux pages](https://gsf-001.github.io/ARCLUX)** ]
+content, searchable and organized
 > This README is intentionally stable. Live numbers, detailed status, and per-package docs live in the links below and update automatically — you don't need to watch this file for changes.
 
 -----
