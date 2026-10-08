@@ -13,6 +13,7 @@ import type { NetworkHandoff, HttpServerTransport } from "./Transport";
 import { createHttpClientTransport } from "./HttpClientTransport";
 import type { TransportClient } from "./Transport";
 import { HANDOFF_HEADER, isDeliverAllowed, resolveHandoffSecret, verifyHandoff } from "../auth";
+import { sanitizeSnapshot } from "../visibility";
 
 /** Batas body POST — sama dengan server.ts (Sprint 1). */
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -64,7 +65,12 @@ export function createHttpServerTransport(region: WorldRegion, port: number, opt
   const server: Server = createServer(async (req, res) => {
     try {
       const u = new URL(req.url ?? "/", "http://localhost");
-      if (req.method === "GET" && u.pathname === "/snapshot") { sendJson(res, 200, region.snapshot()); return; }
+      if (req.method === "GET" && u.pathname === "/snapshot") {
+        // P2-4: sanitasi per-pemirsa (?playerId=) — anonim legacy penuh.
+        const viewer = u.searchParams.get("playerId") ?? undefined;
+        sendJson(res, 200, sanitizeSnapshot(region.snapshot(), viewer));
+        return;
+      }
       if (req.method === "POST" && u.pathname === "/deliver") {
         const { raw, json: h } = await readBody(req);
         // E-2: IP allowlist + HMAC signature atas raw body — /deliver hanya

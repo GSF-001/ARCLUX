@@ -264,30 +264,32 @@ describe("HTTP /login + /intent auth & idempotency", () => {
     gs.spawnPlayerVessel({ playerId: "p1", vessel: vesselModel() });
     const token = await login(url, "p1");
     const h = { authorization: `Bearer ${token}` };
-    const ok = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 1), h);
+    // Pakai `move` (bukan scan) — scan kini punya cooldown 10 tick (Sprint 2,
+    // P1-3); E-4 menguji seq logic, bukan scan.
+    const mv = (seq: number) => intent("p1", "v-sprint1", "move", { x: 4e9, y: 0, z: 0 }, seq);
+    const ok = await post(url, "/intent", mv(1), h);
     expect(ok.status).toBe(200);
     expect(ok.body.verdict).toBe("accepted");
-    const replay = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 1), h);
+    const replay = await post(url, "/intent", mv(1), h);
     expect(replay.status).toBe(409);
     expect(replay.body.reason).toContain("stale");
-    const backwards = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 0), h);
+    const backwards = await post(url, "/intent", mv(0), h);
     expect(backwards.status).toBe(409);
-    const next = await post(url, "/intent", intent("p1", "v-sprint1", "scan", {}, 2), h);
+    const next = await post(url, "/intent", mv(2), h);
     expect(next.status).toBe(200);
     expect(next.body.verdict).toBe("accepted");
   });
 
   it("P0-4 rate limit: flood → 429 + shadowban (deny berikutnya tetap 429)", async () => {
     const { url } = await startServer();
-    let saw429 = false;
-    let sawShadow = false;
-    for (let i = 0; i < 120; i++) {
-      const r = await post(url, "/intent", intent("bot", "no-such-entity", "scan", {}, i + 1));
-      if (r.status === 429) {
-        saw429 = true;
-        if (r.body?.reason === "shadowbanned") sawShadow = true;
-      }
-    }
+    // Flood PARALEL: flood sekuensial gampang lolos saat latency tinggi
+    // (bucket refill 20/s mengejar tiap request) — konkoransi bikin burst
+    // pasti meledak melewati burst 40 walau di bawah CPU load penuh.
+    const results = await Promise.all(
+      Array.from({ length: 120 }, (_, i) => post(url, "/intent", intent("bot", "no-such-entity", "scan", {}, i + 1)))
+    );
+    const saw429 = results.some((r) => r.status === 429);
+    const sawShadow = results.some((r) => r.status === 429 && r.body?.reason === "shadowbanned");
     expect(saw429).toBe(true);
     expect(sawShadow).toBe(true);
     const after = await post(url, "/intent", intent("bot", "no-such-entity", "scan", {}, 999));

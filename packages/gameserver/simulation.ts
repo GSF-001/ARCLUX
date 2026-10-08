@@ -18,7 +18,20 @@
 
 import type { GameEvent, PlayerIntent, Vec3, VesselEntity, WorldEntity } from "./types";
 import { WorldRegion } from "./world";
-import { validateIntent, resolveTradeSeller, actorOwnsSeller, type ValidatorContext } from "./validator";
+import {
+  validateIntent,
+  resolveTradeSeller,
+  actorOwnsSeller,
+  type ValidatorContext,
+  type AuthorityDeps,
+  SCAN_RANGE_MAX,
+  SCAN_DEFAULT_RANGE,
+  SCAN_COOLDOWN_TICKS,
+} from "./validator";
+import { HACK_COOLDOWN_TICKS, HACK_WANTED_DELTA, HACK_EFFECT_TICKS, HACK_FAIL_ALARM_DELTA, fnv1a, type HackTargetType } from "./hack";
+import { WITNESS_RADIUS_M, type CrimeKind } from "../wanted";
+import { CLAIM_HALF_M } from "./claims";
+import type { HackAttempt } from "./hack";
 import { createSeedRng } from "./random";
 import { projectFitAction, stepCapacitor } from "./fitting";
 import { applyCombatIntent } from "./combat";
@@ -58,6 +71,9 @@ export interface SimulationOptions {
   dt?: number;
   /** Validation context (player identity + authorization). */
   authProvider: (playerId: string) => ValidatorContext;
+  /** Bundle otoritas Sprint 2 (session/wanted/economy/hack/claims) — di-inject
+   *  ke ctx tiap intent bila ctx belum membawanya. */
+  authority?: AuthorityDeps;
   /** Cosmic environs (star/planet) — if provided, integrated per tick (D-020). */
   environs?: EnvironsState;
   /** Enable thermal/collision checks (default true if environs provided). */
@@ -79,6 +95,7 @@ export class SimulationEngine {
   readonly region: WorldRegion;
   private readonly dt: number;
   private readonly authProvider: (playerId: string) => ValidatorContext;
+  private readonly authority?: AuthorityDeps;
   private readonly environs?: EnvironsState;
   private readonly enableEnvirons: boolean;
   private pending: PlayerIntent[] = [];
@@ -91,6 +108,7 @@ export class SimulationEngine {
     this.region = opts.region;
     this.dt = opts.dt ?? 0.1; // default 10 ticks/sec
     this.authProvider = opts.authProvider;
+    this.authority = opts.authority;
     this.environs = opts.environs;
     this.enableEnvirons = opts.enableEnvirons ?? !!opts.environs;
   }
@@ -112,7 +130,8 @@ export class SimulationEngine {
     const rejected: GameEvent[] = [];
 
     for (const intent of queue) {
-      const ctx = this.authProvider(intent.playerId);
+      const base = this.authProvider(intent.playerId);
+      const ctx = this.authority && !base.authority ? { ...base, authority: this.authority } : base;
       const verdict = validateIntent(this.region, intent, ctx);
       if (verdict.decision === "reject") {
         rejected.push(this.log("intent_rejected", intent.playerId, {
@@ -138,6 +157,8 @@ export class SimulationEngine {
     this.integratePhysics();
     this.decrementCooldowns();
     this.stepCapacitors();
+    // P1-5: decay buronan per tick (05 §2 — interval tunable di wanted.ts).
+    this.authority?.wanted.decay(this.region.tick);
     // Cosmic environs per tick (Newton/Kepler, D-020) — deterministic, authoritative + strengthened
     if (this.enableEnvirons && this.environs) {
       integrateEnvirons(this.environs);
@@ -208,6 +229,14 @@ export class SimulationEngine {
           applyCombatIntent(this.region, entity, intent, (meta) => {
             this.log("combat", intent.playerId, { entityId: entity.id, ...meta });
           });
+          // P1-5: hull target habis = kill — naikkan buronan bila ada saksi
+          // (05 §2.2: tanpa saksi = tanpa record).
+          const targetId = intent.payload?.targetId as string | undefined;
+          const target = targetId ? this.region.get(targetId) : undefined;
+          if (target && target.kind === "vessel" && hullOf(target.vessel) <= 0) {
+            this.log("vessel_destroyed", intent.playerId, { entityId: target.id });
+            this.escalateCrime(intent.playerId, target, { crime: "kill" });
+          }
         }
         break;
       }
@@ -237,13 +266,21 @@ export class SimulationEngine {
         if (station && station.kind === "station") {
           entity.position = { ...station.position };
           entity.velocity = { x: 0, y: 0, z: 0 };
+          // P1-8 (06 §2.5): duduk di cockpit → mode ship (otomatis, server).
+          ctx.authority?.sessions.setMode(intent.playerId, "ship");
           this.log("docked", intent.playerId, { entityId: entity.id, stationId });
         }
         break;
       }
       case "scan": {
-        const range = (intent.payload as any)?.range ?? 5000;
-        const nearby = this.region.entitiesWithin(entity.position, range).map((e) => e.id);
+        // P1-3: range dibatasi + payload minimal (id + kelas/faction saja —
+        // bukan detail; privasi intel ala EVE) + cooldown per vessel.
+        const rawRange = (intent.payload as any)?.range;
+        const range = typeof rawRange === "number" && rawRange > 0 ? Math.min(rawRange, SCAN_RANGE_MAX) : SCAN_DEFAULT_RANGE;
+        const nearby = this.region
+          .entitiesWithin(entity.position, range)
+          .map((e) => ({ id: e.id, kind: e.kind, faction: e.faction ?? null }));
+        if (entity.kind === "vessel") entity.cooldowns["scan"] = SCAN_COOLDOWN_TICKS;
         this.log("scan_result", intent.playerId, { entityId: entity.id, count: nearby.length, nearby });
         break;
       }
@@ -280,11 +317,6 @@ export class SimulationEngine {
         }
         break;
       }
-      case "spawn": {
-        // Live spawn via lineage — authoritative
-        if (entity.kind === "vessel") recordCreation((entity as VesselEntity).vessel.id, entity.id, intent.playerId, this.region.tick);
-        break;
-      }
       case "spawn_character": {
         const p = intent.payload as { vesselId?: string; preset?: string; armorColor?: string; emblemRepo?: string; deck?: string };
         // P0-4: spawn baru ditolak saat entity cap tercapai.
@@ -299,7 +331,17 @@ export class SimulationEngine {
         const pos = vessel ? { ...vessel.position } : { ...entity.position };
         const character = this.region.spawnCharacter({ id: charId, owner: intent.playerId, vesselId: vessel?.id ?? charId, deck, position: pos });
         recordCreation(character.id, character.vesselId, intent.playerId, this.region.tick);
+        // P1-8 (06 §2.5): berdiri dari cockpit → mode fps (otomatis, server).
+        ctx.authority?.sessions.setMode(intent.playerId, "fps");
         this.log("character_spawned", intent.playerId, { characterId: charId, preset: p.preset, armorColor: p.armorColor, emblemRepo: p.emblemRepo, deck });
+        break;
+      }
+      case "fps_switch_mode": {
+        // 06 §2.5: satu-satunya jalan ganti mode — keputusan server.
+        const m = intent.payload?.mode as "ship" | "fps" | undefined;
+        if (m !== "ship" && m !== "fps") break;
+        ctx.authority?.sessions.setMode(intent.playerId, m);
+        this.log("mode_switched", intent.playerId, { mode: m });
         break;
       }
       case "trade_component": {
@@ -357,6 +399,188 @@ export class SimulationEngine {
         this.log("stadium_spawned", intent.playerId, { stationId: station.id, rings: p.rings ?? 4, habitatsPerRing: p.habitatsPerRing ?? 24 });
         break;
       }
+      case "buy_arclux": {
+        const p = intent.payload as { itemId?: string };
+        if (!p.itemId || !ctx.authority) break;
+        const res = ctx.authority.economy.buyFromStore(intent.playerId, p.itemId, this.region.tick, `intent:${intent.playerId}:${intent.seq}`);
+        if (res.ok && !res.replayed) {
+          this.log("purchase", intent.playerId, { itemId: p.itemId, txId: res.txId });
+          this.log("wallet_changed", intent.playerId, { playerId: intent.playerId, balance: ctx.authority.economy.balanceOf(intent.playerId) });
+        } else if (!res.ok) {
+          this.log("purchase_rejected", intent.playerId, { itemId: p.itemId, reason: res.reason });
+        }
+        break;
+      }
+      case "sell_player": {
+        const p = intent.payload as { componentId?: string; toPlayerId?: string; price?: number };
+        if (!p.componentId || !p.toPlayerId || !ctx.authority) break;
+        const found = resolveTradeSeller(this.region, p.componentId);
+        if (!found || !actorOwnsSeller(found.seller, entity, intent.playerId)) {
+          this.log("trade_rejected", intent.playerId, { reason: "actor does not own seller vessel", componentId: p.componentId });
+          break;
+        }
+        const buyer = p.toPlayerId;
+        if (buyer === intent.playerId) break;
+        // Kapal milik pembeli — buyer itu PLAYER-id, bukan vessel-id
+        // (getVessel(buyer) salah; cari vessel yang owner-nya pembeli).
+        let buyerVessel: VesselEntity | undefined;
+        for (const e of this.region["entities"].values()) {
+          if (e.kind === "vessel" && e.owner === buyer) { buyerVessel = e; break; }
+        }
+        if (!buyerVessel) {
+          this.log("trade_rejected", intent.playerId, { reason: "buyer vessel not found", buyerId: buyer, componentId: p.componentId });
+          break;
+        }
+        // OC pindah dulu (idempotency per intent seq) — gagal = tidak ada transfer barang.
+        const tx = ctx.authority.economy.transfer({
+          from: buyer,
+          to: found.seller.owner ?? intent.playerId,
+          amount: p.price ?? 0,
+          idempotencyKey: `intent:${intent.playerId}:${intent.seq}`,
+          tick: this.region.tick,
+        });
+        if (p.price && p.price > 0 && !tx.ok) {
+          this.log("trade_rejected", intent.playerId, { reason: tx.reason, componentId: p.componentId });
+          break;
+        }
+        this.moveComponent(found, buyerVessel, intent.playerId);
+        this.log("trade", intent.playerId, { componentId: p.componentId, from: found.seller.id, to: buyer, price: p.price ?? 0, tax: tx.tax });
+        if (p.price && p.price > 0) this.log("wallet_changed", intent.playerId, { playerId: buyer, balance: ctx.authority.economy.balanceOf(buyer) });
+        break;
+      }
+      case "claim_land": {
+        const p = intent.payload as { x?: number; z?: number };
+        if (typeof p?.x !== "number" || typeof p?.z !== "number" || !ctx.authority) break;
+        ctx.authority.claims.add({
+          claimId: `${this.region.regionId}:cl:${this.region.tick}:${this.eventSeq}`,
+          owner: intent.playerId,
+          centerX: p.x,
+          centerZ: p.z,
+          tick: this.region.tick,
+        });
+        this.log("land_claimed", intent.playerId, { x: p.x, z: p.z, size: CLAIM_HALF_M * 2 });
+        break;
+      }
+      case "hack_start": {
+        if (!ctx.authority) break;
+        const p = intent.payload as { targetId?: string; targetType?: HackTargetType };
+        const target = p.targetId ? this.region.get(p.targetId) : undefined;
+        if (!target || !p.targetType) break;
+        const res = ctx.authority.hacks.start({
+          actorId: intent.playerId,
+          targetId: target.id,
+          targetType: p.targetType,
+          tick: this.region.tick,
+          seed: fnv1a(`${intent.playerId}:${target.id}:${this.region.tick}`),
+        });
+        if (!res.ok) {
+          this.log("hack_rejected", intent.playerId, { targetId: target.id, reason: res.reason });
+          break;
+        }
+        if (entity.kind === "vessel") entity.cooldowns[`hack:${target.id}`] = HACK_COOLDOWN_TICKS;
+        this.log("hack_started", intent.playerId, { targetId: target.id, targetType: p.targetType, buttons: res.attempt.sequence.length });
+        break;
+      }
+      case "hack_input": {
+        if (!ctx.authority) break;
+        const keyIndex = intent.payload?.keyIndex as number;
+        const res = ctx.authority.hacks.input(intent.playerId, keyIndex);
+        if (!res.ok) {
+          this.log("hack_rejected", intent.playerId, { reason: res.reason });
+          break;
+        }
+        if (res.status === "accepted") {
+          this.log("hack_progress", intent.playerId, { progress: res.progress, need: res.need });
+        } else if (res.status === "wrong") {
+          // 06 §3.5: salah tombol → fail; 3 fail berturut → alarm + wanted +2.
+          this.handleHackWrong(intent.playerId, res.attempt);
+        } else if (res.status === "complete") {
+          this.handleHackComplete(intent.playerId, res.attempt);
+        }
+        break;
+      }
+      case "hack_cancel": {
+        if (!ctx.authority) break;
+        if (ctx.authority.hacks.cancel(intent.playerId)) this.log("hack_cancelled", intent.playerId, {});
+        break;
+      }
+    }
+  }
+
+  /** Pindahkan component antar vessel + update lineage (trade/sell). */
+  private moveComponent(found: { seller: VesselEntity; compIdx: number }, buyer: VesselEntity, playerId: string): void {
+    const [transferred] = found.seller.vessel.components.splice(found.compIdx, 1);
+    if (!transferred) return;
+    try { const { transferOwnership } = require("./lineage"); transferOwnership(transferred.id, buyer.owner ?? playerId); } catch {}
+    buyer.vessel.components.push(transferred);
+  }
+
+  /** Jumlah saksi unik (pemain lain dalam radius WITNESS_RADIUS_M —
+   *  korban sendiri ikut dihitung; 05 §2.2 tanpa saksi = tanpa record). */
+  private witnessCount(target: WorldEntity, actorId: string): number {
+    const owners = new Set<string>();
+    if (target.owner && target.owner !== actorId) owners.add(target.owner);
+    for (const e of this.region.entitiesWithin(target.position, WITNESS_RADIUS_M)) {
+      if (e.id === target.id) continue;
+      if (e.owner && e.owner !== actorId) owners.add(e.owner);
+    }
+    return owners.size;
+  }
+
+  /** Naikkan buronan aktor dengan aturan saksi (05 §2.2). */
+  private escalateCrime(actorId: string, target: WorldEntity, input: { crime?: CrimeKind; delta?: number }): void {
+    const auth = this.authority;
+    if (!auth) return;
+    const witnessed = this.witnessCount(target, actorId) >= 1;
+    const res = auth.wanted.escalate(actorId, {
+      crime: input.crime,
+      delta: input.delta,
+      witnessed,
+      tick: this.region.tick,
+      chunkKey: this.region.regionId,
+    });
+    this.log(res.applied ? "wanted_escalated" : "wanted_ignored", actorId, {
+      level: res.level,
+      reason: res.reason,
+      witnessed,
+    });
+  }
+
+  /** Hack sukses: efek target (06 §3.4) + delta wanted bila ada saksi. */
+  private handleHackComplete(actorId: string, attempt: HackAttempt): void {
+    const auth = this.authority;
+    if (!auth) return;
+    const target = this.region.get(attempt.targetId);
+    auth.hacks.recordSuccess(actorId, attempt.targetId);
+    const duration = HACK_EFFECT_TICKS[attempt.targetType];
+    // engine disable → mesin mati N tick (di-enforce validator `move`).
+    if (attempt.targetType === "engine" && target?.kind === "vessel" && duration !== null) {
+      target.cooldowns["engines"] = duration;
+    }
+    this.log("hack_effect", actorId, {
+      targetId: attempt.targetId,
+      targetType: attempt.targetType,
+      durationTicks: duration,
+    });
+    const delta = HACK_WANTED_DELTA[attempt.targetType];
+    if (delta > 0 && target) this.escalateCrime(actorId, target, { delta });
+  }
+
+  /** Hack gagal: 3 fail berturut → alarm + wanted +2 (06 §3.5). */
+  private handleHackWrong(actorId: string, attempt: HackAttempt): void {
+    const auth = this.authority;
+    if (!auth) return;
+    const target = this.region.get(attempt.targetId);
+    const alarm = auth.hacks.recordFail(actorId, attempt.targetId);
+    this.log("hack_failed", actorId, { targetId: attempt.targetId, targetType: attempt.targetType, alarmTriggered: alarm });
+    if (alarm && target) {
+      this.log("hack_effect", actorId, {
+        targetId: attempt.targetId,
+        targetType: "alarm",
+        durationTicks: HACK_EFFECT_TICKS["alarm"],
+        cause: "3 consecutive fails",
+      });
+      this.escalateCrime(actorId, target, { delta: HACK_FAIL_ALARM_DELTA });
     }
   }
 
