@@ -21,29 +21,18 @@ Everything in this file is real and working. No marketing promises — every cla
 ## The map
 
 ```
-                      ┌─────────────────────────────────────────────┐
-                      │            ARCLUX PLATFORM                 │
-                      │                                             │
-   INTELLIGENCE       │  kernel ── signal bus (every subsystem      │
-   LAYER              │  talks through this)                        │
-   ───────────        │  runtime ── process manager                 │
-   parser (27 langs)  │  scheduler ── job queue                     │
-   graph / call graph │  services ── service lifecycle              │
-   impact analysis    │  storage ── artifacts, cache, recovery      │
-   20 detectors       │  networking ── connections, ports, endpoints│
-   14 convention rules│  notifications ── event fan-out to channels │
-   security pipeline  │  orchestration ── PlatformOrchestrator      │
-   scripting DSL      │                                             │
-   provenance         │                                             │
-                      └─────────────────────────────────────────────┘
-        │                         │
-        │  consumed through       │  consumed through
-        ▼                         ▼
-   ┌──────────────┐        ┌──────────────────────────────────┐
-   │  CLI + shell │        │  daemon (HTTP+SSE bridge)         │
-   │  web app     │        │  VS Code extension                │
-   │  security CLI│        │  any tool that can read HTTP/SSE  │
-   └──────────────┘        └──────────────────────────────────┘
+INTELLIGENCE LAYER PLATFORM LAYER (kernel)
+ parser (27 langs) signal bus
+ graph / call graph runtime / scheduler
+ impact analysis services / storage
+ 20 detectors networking / notifications
+ 14 convention rules orchestration
+ security pipeline
+ scripting DSL · provenance
+
+CONSUMED BY
+ CLI + shell · web app · security CLI · daemon (HTTP+SSE bridge)
+ VS Code extension · any tool that can read HTTP/SSE
 ```
 
 ## The intelligence layer — what you can do with it
@@ -57,7 +46,7 @@ Everything in this file is real and working. No marketing promises — every cla
 | `arclux verify <repo>` | 14 framework convention rules (Next.js, NestJS, Express, Vite, Electron, React, Laravel) |
 | `arclux security <repo>` | Secrets, unsafe patterns, sensitive data flow, trust boundaries, attack surface, dependency risk |
 | `arclux search <query>` | Full-text + symbol search across the codebase |
-| `arclux script <file.arclux>` | Run the ARCLUX scripting DSL — chain analyze → doctor → impact → security in one readable script |
+| `arclux script <file.arclux>` | Run the ARCLUX scripting DSL — chain analyze doctor impact security in one readable script |
 | Web audit | `/{org}/{repo}/audit` — findings theater (STREAM × FOCUS × GRAPH), plus **live severity halos on the 3D graph** while the audit replays |
 | `arclux diff <a> <b>` | What changed between two states, structurally |
 | `arclux diagnose <repo>` | Deep-dive diagnostics for problem hunting |
@@ -124,10 +113,10 @@ findings as a terminal theater and replays them as breathing halos on the
 ## How it works (the 10-second version)
 
 ```
-repository → parser → graph → detectors → engine → report
-                       → rules (framework conventions)
-                       → impact (consumer/dependent tracing)
-                       → security pipeline
+repository parser graph detectors engine report
+ rules (framework conventions)
+ impact (consumer/dependent tracing)
+ security pipeline
 ```
 
 Each stage is an independent package (`parser`, `graph`, `impact`, `detectors`, `rules`, `engine`, `security`). Add a new parser, detector, or rule without touching the rest. The single entry point is `analyzeRepository` in the engine pipeline — nothing calls individual steps from outside.
@@ -156,28 +145,28 @@ The daemon, watcher, incremental indexer, shell session, and workspace layers si
 
 ## Fair Evaluation Protocol — how to judge ARCLUX (or any architecture)
 
-Don't evaluate architecture from screenshots. Screenshot → feeling → ranking
+Don't evaluate architecture from screenshots. Screenshot feeling ranking
 is not analysis. The fair ladder is:
 
 ```
-repository → source → graph → build/test → runtime → conclusion
+repository source graph build/test runtime conclusion
 ```
 
 1. **Repository** — look at structure and scope, not renders.
 2. **Source** — read the actual implementation.
 3. **Graph** — check dependencies, impact, coupling (`arclux graph`,
-   `arclux impact`, `arclux doctor` do exactly this).
+ `arclux impact`, `arclux doctor` do exactly this).
 4. **Build/Test** — verify claims executably (build scripts, `tsc`,
-   detectors, checks — not words).
+ detectors, checks — not words).
 5. **Runtime** — observe real system behavior (server, snapshots,
-   persistence — not mockups).
+ persistence — not mockups).
 6. **Conclusion** — only conclude what the evidence supports.
 
 And keep four words apart — an honest engineer knows exactly which is which:
 
 | Word | Meaning | Example |
 |---|---|---|
-| **DONE** | commit + PR + build/test + acceptance | MMO Fase 1–7 (`docs/blueprint/progres/MMO-IMPLEMENTATION.md`) |
+
 | **PLAN** | designed, not implemented — never counted as a feature | Blueprint 10 (planetary runtime) |
 | **ANALOGY** | explains architecture, claims nothing about resources | "ARCLUX is the factory, not the plane" — expansive by design, still bounded by compute/storage/network |
 | **CLAIM** | anything else — must be verified before it becomes DONE | — |
@@ -187,4 +176,4 @@ And keep four words apart — an honest engineer knows exactly which is which:
 - [`QUICKSTART.md`](https://github.com/GSF-001/ARCLUX/blob/main/QUICKSTART.md) — fast-path workflow cheat sheet
 - [`CONTEXT.md`](https://github.com/GSF-001/ARCLUX/blob/main/CONTEXT.md) — stack, architecture, current state at a glance
 - [docs site](https://arclux-os.mintlify.site) — full, searchable documentation
-- [`PROGRES.md`](https://github.com/GSF-001/ARCLUX/blob/main/PROGRES.md) (+ [`progres/`](progres/)) — live status: what works, what's a stub, known bugs
+- [`PROGRES.md`](https://github.com/GSF-001/ARCLUX/blob/main/PROGRES.md) (https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/progres) — live status: what works, what's a stub, known bugs

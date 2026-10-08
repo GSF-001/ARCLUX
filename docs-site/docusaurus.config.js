@@ -23,7 +23,7 @@ const config = {
 
   stylesheets: [
     {
-      href: 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+      href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap',
       rel: 'stylesheet',
     },
   ],
@@ -57,35 +57,15 @@ const config = {
         editUrl: 'https://github.com/GSF-001/ARCLUX/edit/ARCLUX.main/docs-site/',
       },
     ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'progres',
-        path: 'progres',
-        routeBasePath: 'progres',
-        sidebarPath: require.resolve('./sidebars-progres.js'),
-        editUrl: 'https://github.com/GSF-001/ARCLUX/edit/ARCLUX.main/docs-site/',
-      },
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'blueprint',
-        path: 'blueprint',
-        routeBasePath: 'blueprint',
-        sidebarPath: require.resolve('./sidebars-blueprint.js'),
-        editUrl: 'https://github.com/GSF-001/ARCLUX/edit/ARCLUX.main/docs-site/',
-      },
-    ],
   ],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       colorMode: {
-        defaultMode: 'light',
-        respectPrefersColorScheme: true,
-        disableSwitch: false,
+        defaultMode: 'dark',
+        respectPrefersColorScheme: false,
+        disableSwitch: true,
       },
       metadata: [
         {
@@ -116,20 +96,6 @@ const config = {
             label: 'Codebase Map',
           },
           {
-            type: 'doc',
-            docsPluginId: 'blueprint',
-            docId: 'index',
-            position: 'left',
-            label: 'Blueprint',
-          },
-          {
-            type: 'doc',
-            docsPluginId: 'progres',
-            docId: 'progres-status-core',
-            position: 'left',
-            label: 'Progress',
-          },
-          {
             href: 'https://www.npmjs.com/package/arclux',
             label: 'npm',
             position: 'right',
@@ -158,8 +124,8 @@ const config = {
             title: 'Explore',
             items: [
               { label: 'Codebase Map', to: '/map/intelligence/parser' },
-              { label: 'Progress Detail', to: '/progres/progres-status-core' },
-              { label: 'Blueprint', to: '/blueprint' },
+              { label: 'Guides', to: '/guides' },
+              { label: 'Deep Dive', to: '/deep-dive' },
               { label: 'Gotchas', to: '/gotchas' },
             ],
           },
@@ -179,11 +145,11 @@ const config = {
             ],
           },
         ],
-        copyright: `ARCLUX — Apache 2.0 (engine) · ARCLUX MMO License (gameserver). Copyright © ${new Date().getFullYear()}.`,
+        copyright: `ARCLUX — Open source under the Apache License 2.0. Copyright © ${new Date().getFullYear()}.`,
       },
       prism: {
         theme: themes.github,
-        darkTheme: themes.dracula,
+        darkTheme: themes.vsDark,
         additionalLanguages: ['bash', 'python', 'typescript', 'json', 'yaml', 'toml', 'diff', 'go', 'rust'],
       },
     }),

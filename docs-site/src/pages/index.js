@@ -59,12 +59,6 @@ const LAYERS = [
     text: 'Kernel with signal bus, process manager, job scheduler, services, storage, networking, notifications, daemon, watcher and content-hash caches underneath.',
     to: '/stack',
   },
-  {
-    name: 'MMO',
-    status: 'alpha',
-    text: 'apps/game + gameserver + universe + relay turn a repository into a flyable vessel. Source-available under the ARCLUX MMO License.',
-    to: '/blueprint',
-  },
 ];
 
 function CodeLine({ children }) {
@@ -142,7 +136,7 @@ export default function Home() {
       <section className={clsx(styles.section, styles.sectionAlt)}>
         <div className="container">
           <div className={styles.sectionHead}>
-            <Heading as="h2">Three layers, one repo</Heading>
+            <Heading as="h2">Two layers, one platform</Heading>
             <p>Codebase intelligence is the first application of the platform — not the last.</p>
           </div>
 

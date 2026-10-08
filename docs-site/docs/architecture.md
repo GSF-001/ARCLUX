@@ -36,19 +36,19 @@ fixing/completing an existing stub.
 ### packages/ — MOSTLY STUB
 
 - `search/` — core engine done (issue #9): `SearchIndex`, `SearchEngine`
-  (fuzzyScore ranking over paths + export names), `SearchFilters`;
-  `SearchProvider`/`SearchResults`/`SearchKeyboard` are plain-TS
-  session/type/shortcut helpers (packages are framework-agnostic — React
-  wiring lives in `apps/web`). Consumed by `/api/search`.
+ (fuzzyScore ranking over paths + export names), `SearchFilters`;
+ `SearchProvider`/`SearchResults`/`SearchKeyboard` are plain-TS
+ session/type/shortcut helpers (packages are framework-agnostic — React
+ wiring lives in `apps/web`). Consumed by `/api/search`.
 
 ### packages/ — FOUNDATION, BUILT BUT NOT WIRED INTO THE PIPELINE
 
 - `watcher/`, `incremental/` — see `decisions.md`. `watchRepository`
-  (coarse, change-level cache over `analyzeRepository({ localPath })`)
-  is functional but has no consumer yet; `buildIndex` still does a full
-  rebuild (per-file granular incrementality is deferred — issue #6,
-  see decisions.md). Don't build new capabilities on top of these until
-  a consumer exists.
+ (coarse, change-level cache over `analyzeRepository({ localPath })`)
+ is functional but has no consumer yet; `buildIndex` still does a full
+ rebuild (per-file granular incrementality is deferred — issue #6,
+ see decisions.md). Don't build new capabilities on top of these until
+ a consumer exists.
 
 ### apps/ — SURFACES (consume packages/, no business logic here)
 
@@ -58,7 +58,7 @@ fixing/completing an existing stub.
 ## Where intelligence/AI layers go
 
 ARCLUX's job is building an accurate STRUCTURAL model of a codebase:
-parse → index → graph → impact → detect. It is deliberately NOT trying
+parse index graph impact detect. It is deliberately NOT trying
 to be a semantic search engine, a RAG system, an agent-facing MCP
 server, or an embeddings/reranking pipeline — those are different,
 legitimate problems, but they are consumers of a structural model, not
@@ -89,15 +89,15 @@ idea a skilled collaborator brings and losing that discipline.
 Not done until all five:
 1. **Implemented** — the code exists and typechecks
 2. **Tested** — verified against a real fixture or repo, not just
-   `tsc --noEmit` (see TOOLING.md's verification standard)
+ `tsc --noEmit` (see TOOLING.md's verification standard)
 3. **Integrated** — actually called from somewhere real (engine/
-   pipeline.ts, a detector registry, an API route) — see
-   progres/bugs.md's manifest-parser and cache entries for what
-   "implemented but never wired in" costs if skipped
+ pipeline.ts, a detector registry, an API route) — see
+ progres/bugs.md's manifest-parser and cache entries for what
+ "implemented but never wired in" costs if skipped
 4. **Verified** — for anything touching apps/web, confirmed visually
-   in-browser, not just assumed from code review
+ in-browser, not just assumed from code review
 5. **Documented** — a progres/*.md entry exists (status, decision, or
-   bug depending on what it is) — see TOOLING.md section 1
+ bug depending on what it is) — see TOOLING.md section 1
 
 ## Changing this file
 

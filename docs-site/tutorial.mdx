@@ -23,7 +23,7 @@ ARCLUX builds an accurate **structural model** of a codebase:
 
 ```
 repository -> parser -> index -> graph -> impact -> detectors
-                                   \-> rules (framework conventions)
+ \-> rules (framework conventions)
 ```
 
 It answers questions like:
@@ -85,33 +85,33 @@ arclux analyze ~/flask
 Real output (analyzing Flask):
 
 ```
-●  Repository: flask
+● Repository: flask
 │
-●  Frameworks: none detected
+● Frameworks: none detected
 │
-●  Package manager: uv
+● Package manager: uv
 │
-◆  83 modules indexed
+◆ 83 modules indexed
 │
-●  Scan: 83 files, 83 parsed, 0 skipped (no parser)
+● Scan: 83 files, 83 parsed, 0 skipped (no parser)
 │
-◆  83 nodes, 118 edges in dependency graph
+◆ 83 nodes, 118 edges in dependency graph
 │
-●  Detectors: 184 issues — circular 43, unused 116, orphan 25, layer 0
+● Detectors: 184 issues — circular 43, unused 116, orphan 25, layer 0
 │
-●  Elapsed: 2.19s
+● Elapsed: 2.19s
 ```
 
 Reading the output:
 
 - **modules indexed** — how many files made it into the model
 - **Scan: X parsed, Y skipped** — the population guard. If a repo has
-  files in a language without a parser yet, they are *counted as
-  skipped*, not silently dropped. `0 skipped` means the whole repo got
-  into the graph.
+ files in a language without a parser yet, they are *counted as
+ skipped*, not silently dropped. `0 skipped` means the whole repo got
+ into the graph.
 - **nodes / edges** — the size of the dependency graph
 - **Detectors** — a first-pass summary of what `doctor` will report in
-  detail
+ detail
 
 ## Part 4 — Working with the graph
 
@@ -125,26 +125,26 @@ arclux graph ~/flask -o graph.json
 Real output:
 
 ```
-●  83 nodes, 118 edges
+● 83 nodes, 118 edges
 │
-│    [file] conf.py
+│ [file] conf.py
 │
-│    [file] make_celery.py
+│ [file] make_celery.py
 │
-│    [file] __init__.py
+│ [file] __init__.py
 │
-│    [file] tasks.py
+│ [file] tasks.py
 │
-│    [file] views.py
+│ [file] views.py
 ```
 
 Graph variants available in `packages/graph/`:
 
 - `buildDependencyGraph` — module-level import graph (what `graph`
-  prints)
+ prints)
 - `buildImportGraph` — same shape, import edges
 - `buildCallGraph` — which module's functions are actually *called*,
-  edge weight = distinct call sites
+ edge weight = distinct call sites
 - `buildExportGraph` — export/re-export chains
 - `buildFolderGraph` — folder-level tree (used by the web dashboard)
 
@@ -159,17 +159,17 @@ arclux impact <file> [repoPath]
 Real output for `src/flask/app.py`:
 
 ```
-●  Direct consumers (6):
+● Direct consumers (6):
 │
-│    src/flask/__init__.py
+│ src/flask/__init__.py
 │
-│    src/flask/cli.py
+│ src/flask/cli.py
 │
-│    src/flask/ctx.py
+│ src/flask/ctx.py
 │
-│    src/flask/globals.py
+│ src/flask/globals.py
 │
-│    src/flask/sessions.py
+│ src/flask/sessions.py
 ```
 
 `impact` traces both directions — direct consumers (importers) and, on
@@ -188,17 +188,17 @@ arclux doctor ~/flask
 Real output (excerpt):
 
 ```
-▲  43 circular dependencies found:
+▲ 43 circular dependencies found:
 │
-│    examples/celery/src/task_app/__init__.py → examples/celery/src/task_app/__init__.py
+│ examples/celery/src/task_app/__init__.py examples/celery/src/task_app/__init__.py
 │
-│    examples/tutorial/flaskr/__init__.py → examples/tutorial/flaskr/__init__.py
+│ examples/tutorial/flaskr/__init__.py examples/tutorial/flaskr/__init__.py
 │
-│    src/flask/__init__.py → src/flask/__init__.py
+│ src/flask/__init__.py src/flask/__init__.py
 │
-│    src/flask/__init__.py → src/flask/app.py → src/flask/__init__.py
+│ src/flask/__init__.py src/flask/app.py src/flask/__init__.py
 │
-│    src/flask/__init__.py → src/flask/app.py → src/flask/ctx.py → src/flask/__init__.py
+│ src/flask/__init__.py src/flask/app.py src/flask/ctx.py src/flask/__init__.py
 ```
 
 The 20 detectors (all crash-isolated — a detector that throws becomes an
@@ -222,11 +222,11 @@ arclux verify ~/flask
 Real output:
 
 ```
-●  Detectors: 246 issue(s) across 10 checks
+● Detectors: 246 issue(s) across 10 checks
 │
-●  Rules: 0 violation(s) (0 error, 0 warning) — frameworks checked: none detected
+● Rules: 0 violation(s) (0 error, 0 warning) — frameworks checked: none detected
 │
-■  FAIL — 246 detector issue(s), 0 rule error(s)
+■ FAIL — 246 detector issue(s), 0 rule error(s)
 ```
 
 The 14 framework rules (Next.js, NestJS, Express, Vite, Electron,
@@ -257,11 +257,11 @@ arclux diagnose ~/flask
 Real output (excerpt):
 
 ```
-▲  387 diagnostic event(s) found:
+▲ 387 diagnostic event(s) found:
 │
-│    [error] examples/celery/src/task_app/__init__.py — Circular dependency: ...
+│ [error] examples/celery/src/task_app/__init__.py — Circular dependency: ...
 │
-│      affects 1 file(s)
+│ affects 1 file(s)
 ```
 
 ## Part 10 — Config
@@ -273,13 +273,13 @@ arclux config ~/flask
 Real output:
 
 ```
-●  name: flask
+● name: flask
 │
-●  frameworks: none detected
+● frameworks: none detected
 │
-●  packageManager: uv
+● packageManager: uv
 │
-●  rootPath: /root/flask
+● rootPath: /root/flask
 ```
 
 Shows the auto-detected repository metadata (framework + package
@@ -291,11 +291,11 @@ is automatic.
 The daemon watches a repo and re-analyzes on every change:
 
 ```bash
-arclux daemon <path>            # foreground
-arclux daemon <path> --detach   # background process
-arclux daemon <path> --status   # is it running?
-arclux daemon <path> --health   # is the bridge actually responding?
-arclux daemon <path> --stop     # stop it
+arclux daemon <path> # foreground
+arclux daemon <path> --detach # background process
+arclux daemon <path> --status # is it running?
+arclux daemon <path> --health # is the bridge actually responding?
+arclux daemon <path> --stop # stop it
 ```
 
 Re-analysis is routed through a job scheduler (ported from the Linux
@@ -320,7 +320,7 @@ process/service/job registry):
 | `ps` | List processes registered with the ARCLUX kernel |
 | `run <service>` | Start a named internal service (`web`, ...) |
 | `exec <cmd> [args...]` | Run a command through the sandboxed terminal layer (capability checks + session recording) |
-| `work <file> <newContentFile>` | Apply a file's new content via the Change Pipeline (ChangePlan → PatchSet → ChangeExecutor) |
+| `work <file> <newContentFile>` | Apply a file's new content via the Change Pipeline (ChangePlan PatchSet ChangeExecutor) |
 | `edit <file>` | Show a file's dependencies and consumers before you edit it |
 | `open <file>` | Resolve a file to its module in the repository model |
 | `logs` | View daemon or CLI logs |
@@ -336,7 +336,7 @@ cd apps/web
 pnpm run dev
 ```
 
-The dashboard analyzes a **remote repo URL** (clone → analyze →
+The dashboard analyzes a **remote repo URL** (clone analyze 
 visualize), then renders:
 
 - Interactive dependency graph (SVG + d3-force physics layout)
@@ -350,8 +350,8 @@ visualize), then renders:
 Gate CI on the structural truth:
 
 ```bash
-arclux verify .       # FAIL → block the PR
-arclux diff main..HEAD .   # show what the PR changes architecturally
+arclux verify . # FAIL block the PR
+arclux diff main..HEAD . # show what the PR changes architecturally
 ```
 
 Team conventions:
@@ -359,21 +359,21 @@ Team conventions:
 - Keep PRs scoped to one package or one concern
 - `main` is protected — everything goes through a PR
 - Run `arclux doctor` before opening a PR; fix at least the `error`
-  severity findings
+ severity findings
 
 ## Part 15 — Troubleshooting
 
 - **Ports shift / zombie node processes** — before debugging weird web
-  responses, check `ps aux | grep node` and confirm the port you're
-  hitting matches the `Local:` line of the dev server.
+ responses, check `ps aux | grep node` and confirm the port you're
+ hitting matches the `Local:` line of the dev server.
 - **Empty analysis on local dirs** — local-path analysis never caches by
-  design (stale results mid-edit would be worse). Re-run if results feel
-  stale.
+ design (stale results mid-edit would be worse). Re-run if results feel
+ stale.
 - **Files skipped, not parsed** — check the `Scan:` line. `skipped
-  (no parser)` means the language isn't supported yet, not that ARCLUX
-  broke.
+ (no parser)` means the language isn't supported yet, not that ARCLUX
+ broke.
 - **Termux/Android** — no `/tmp`; ARCLUX uses `~` for scratch space.
-  The web app uses Webpack, not Turbopack.
+ The web app uses Webpack, not Turbopack.
 
 ---
 

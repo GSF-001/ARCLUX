@@ -32,15 +32,15 @@ ARCLUX checks:
 Next.js Convention Check
 ========================
 
-✓ Route /dashboard → app/dashboard/page.tsx exists
-✓ API /api/users → app/api/users/route.ts exists
-✗ Route /old-page → NO CORRESPONDING FILE FOUND
-✗ Component imports server-only lib in client component
+ Route /dashboard app/dashboard/page.tsx exists
+ API /api/users app/api/users/route.ts exists
+ Route /old-page NO CORRESPONDING FILE FOUND
+ Component imports server-only lib in client component
 ```
 
 ### Common Issues & Fixes
 
-**Issue: "Route /old-page → NO CORRESPONDING FILE FOUND"**
+**Issue: "Route /old-page NO CORRESPONDING FILE FOUND"**
 - **Meaning:** You have a route defined but no actual file
 - **Fix:** Create the missing page.tsx OR remove the reference
 
@@ -77,14 +77,14 @@ ARCLUX verifies:
 
 ```
 src/
-  ├── users/
-  │   ├── users.module.ts
-  │   ├── users.service.ts
-  │   └── users.controller.ts
-  ├── auth/
-  │   ├── auth.module.ts
-  │   ├── auth.service.ts
-  │   └── auth.controller.ts
+ ├── users/
+ │ ├── users.module.ts
+ │ ├── users.service.ts
+ │ └── users.controller.ts
+ ├── auth/
+ │ ├── auth.module.ts
+ │ ├── auth.service.ts
+ │ └── auth.controller.ts
 ```
 
 ### Common Issues & Fixes
@@ -126,16 +126,16 @@ ARCLUX verifies:
 
 ```
 src/
-  ├── routes/
-  │   ├── users.ts
-  │   └── products.ts
-  ├── controllers/
-  │   ├── usersController.ts
-  │   └── productsController.ts
-  ├── services/
-  │   ├── userService.ts
-  │   └── productService.ts
-  └── app.ts (entry point)
+ ├── routes/
+ │ ├── users.ts
+ │ └── products.ts
+ ├── controllers/
+ │ ├── usersController.ts
+ │ └── productsController.ts
+ ├── services/
+ │ ├── userService.ts
+ │ └── productService.ts
+ └── app.ts (entry point)
 ```
 
 ### Common Issues & Fixes
@@ -177,16 +177,16 @@ ARCLUX verifies:
 
 ```
 src/
-  ├── components/
-  │   ├── Button/
-  │   ├── Card/
-  │   └── Modal/
-  ├── hooks/
-  │   ├── useAuth.ts
-  │   └── useForm.ts
-  ├── pages/
-  │   └── Home.tsx
-  └── App.tsx
+ ├── components/
+ │ ├── Button/
+ │ ├── Card/
+ │ └── Modal/
+ ├── hooks/
+ │ ├── useAuth.ts
+ │ └── useForm.ts
+ ├── pages/
+ │ └── Home.tsx
+ └── App.tsx
 ```
 
 ### Common Issues & Fixes
@@ -228,15 +228,15 @@ ARCLUX verifies:
 
 ```
 src/
-  ├── types/
-  │   ├── user.ts
-  │   └── api.ts
-  ├── interfaces/
-  │   ├── IUser.ts
-  │   └── IProduct.ts
-  ├── models/
-  │   └── User.ts
-  └── index.ts
+ ├── types/
+ │ ├── user.ts
+ │ └── api.ts
+ ├── interfaces/
+ │ ├── IUser.ts
+ │ └── IProduct.ts
+ ├── models/
+ │ └── User.ts
+ └── index.ts
 ```
 
 ### Common Issues & Fixes
@@ -292,17 +292,17 @@ npx tsx apps/cli/index.ts analyze .
 
 ```
 project/
-  ├── frontend/      (TypeScript)
-  ├── backend/       (Python)
-  └── scripts/       (Go)
+ ├── frontend/ (TypeScript)
+ ├── backend/ (Python)
+ └── scripts/ (Go)
 ```
 
 Output:
 ```
-  Project Summary
-  • Total modules: 35
-  • Total files: 120
-  • Languages: TypeScript, Python, Go
+ Project Summary
+ • Total modules: 35
+ • Total files: 120
+ • Languages: TypeScript, Python, Go
 ```
 
 ### Tips for Multi-Language Projects
@@ -338,32 +338,32 @@ npx tsx apps/cli/index.ts analyze packages/ui
 
 ```
 monorepo/
-  ├── packages/
-  │   ├── core/
-  │   ├── ui/
-  │   ├── api/
-  │   └── cli/
-  └── apps/
-      ├── web/
-      └── mobile/
+ ├── packages/
+ │ ├── core/
+ │ ├── ui/
+ │ ├── api/
+ │ └── cli/
+ └── apps/
+ ├── web/
+ └── mobile/
 ```
 
 ### Benefits for Monorepos
 
 1. **See cross-package dependencies**
-   ```bash
-   npx tsx apps/cli/index.ts graph | grep "packages/"
-   ```
+ ```bash
+ npx tsx apps/cli/index.ts graph | grep "packages/"
+ ```
 
 2. **Check for circular imports between packages**
-   ```bash
-   npx tsx apps/cli/index.ts doctor
-   ```
+ ```bash
+ npx tsx apps/cli/index.ts doctor
+ ```
 
 3. **Understand impact of changes**
-   ```bash
-   npx tsx apps/cli/index.ts impact --file packages/core/index.ts .
-   ```
+ ```bash
+ npx tsx apps/cli/index.ts impact --file packages/core/index.ts .
+ ```
 
 ---
 
@@ -373,13 +373,13 @@ ARCLUX works with any TypeScript/JavaScript project!
 
 The guides above are just recommendations.
 You can still:
-- ✅ Run `analyze`
-- ✅ Find circular dependencies
-- ✅ Check impact analysis
-- ✅ Find dead code
+- Run `analyze`
+- Find circular dependencies
+- Check impact analysis
+- Find dead code
 
 It all works! Try it out! 
 
 ---
 
-**Pick your framework above and get started! 🎉**
+**Pick your framework above and get started! **

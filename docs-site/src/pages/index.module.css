@@ -294,7 +294,7 @@
 }
 
 .status_verified {
-  color: #2f8f5b;
+  color: var(--sage);
 }
 
 .status_wired {
@@ -302,7 +302,7 @@
 }
 
 .status_alpha {
-  color: #b7791f;
+  color: var(--amber);
 }
 
 .split {
