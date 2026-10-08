@@ -16,28 +16,44 @@
 //      dikirim ke browser client.
 //
 // Determinisme & safety: verifikasi pakai timingSafeEqual; exp dicek per
-// verify (bukan cache). Secret default = dev-only fallback — production wajib
-// set env (lihat resolveAuthSecret/resolveHandoffSecret).
+// verify (bukan cache). Fallback secret HANYA dev single-process: acak per
+// proses (randomBytes) — production/multi-proses WAJIB set env
+// ARCLUX_AUTH_SECRET / ARCLUX_HANDOFF_SECRET (lihat resolve*Secret).
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /** Header HTTP untuk Bearer token login. */
 export const AUTH_HEADER = "authorization";
 /** Header HMAC untuk payload server-to-server /deliver. */
 export const HANDOFF_HEADER = "x-arclux-handoff";
-/** Dev-only secret — production WAJIB set ARCLUX_AUTH_SECRET. */
-export const DEV_SECRET = "arclux-dev-secret";
 /** Replay window /deliver: signature valid ±60 detik dari now. */
 export const HANDOFF_WINDOW_MS = 60_000;
 /** Default lifetime login token (1 jam). */
 export const LOGIN_TOKEN_TTL_MS = 3_600_000;
 
+// Fallback acak per proses (cached) — BUKAN literal hardcoded: secret yang
+// diketahui semua pembaca repo bisa dipakai memalsukan token/handoff di
+// server yang lupa set env. Token lama mati saat proses restart; client
+// auto-login (retry 401) menanganinya.
+let authFallback: string | undefined;
+let handoffFallback: string | undefined;
+
 export function resolveAuthSecret(): string {
-  try { return process.env.ARCLUX_AUTH_SECRET || DEV_SECRET; } catch { return DEV_SECRET; }
+  try {
+    const env = process.env.ARCLUX_AUTH_SECRET;
+    if (env) return env;
+  } catch { /* tanpa process env */ }
+  authFallback ??= randomBytes(32).toString("hex");
+  return authFallback;
 }
 
 export function resolveHandoffSecret(): string {
-  try { return process.env.ARCLUX_HANDOFF_SECRET || DEV_SECRET; } catch { return DEV_SECRET; }
+  try {
+    const env = process.env.ARCLUX_HANDOFF_SECRET;
+    if (env) return env;
+  } catch { /* tanpa process env */ }
+  handoffFallback ??= randomBytes(32).toString("hex");
+  return handoffFallback;
 }
 
 export interface LoginTokenPayload {
