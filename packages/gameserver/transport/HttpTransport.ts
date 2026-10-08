@@ -12,13 +12,33 @@ import type { WorldRegion } from "../world";
 import type { NetworkHandoff, HttpServerTransport } from "./Transport";
 import { createHttpClientTransport } from "./HttpClientTransport";
 import type { TransportClient } from "./Transport";
+import { HANDOFF_HEADER, isDeliverAllowed, resolveHandoffSecret, verifyHandoff } from "../auth";
 
-function readBody(req: IncomingMessage): Promise<any> {
+/** Batas body POST — sama dengan server.ts (Sprint 1). */
+const MAX_BODY_BYTES = 1024 * 1024;
+
+interface ParsedBody {
+  raw: string;
+  json: any;
+}
+
+function readBody(req: IncomingMessage): Promise<ParsedBody> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (c: Buffer) => chunks.push(c));
+    let size = 0;
+    let overflow = false;
+    req.on("data", (c: Buffer) => {
+      if (overflow) return;
+      size += c.length;
+      if (size > MAX_BODY_BYTES) { overflow = true; chunks.length = 0; return; }
+      chunks.push(c);
+    });
     req.on("end", () => {
-      try { resolve(chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {}); } catch (e) { reject(e); }
+      if (overflow) { reject(Object.assign(new Error("payload too large"), { statusCode: 413 })); return; }
+      try {
+        const raw = chunks.length ? Buffer.concat(chunks).toString("utf8") : "";
+        resolve({ raw, json: raw ? JSON.parse(raw) : {} });
+      } catch (e) { reject(e); }
     });
     req.on("error", reject);
   });
@@ -32,21 +52,42 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 export { createHttpClientTransport };
 export type { TransportClient };
 
-export function createHttpServerTransport(region: WorldRegion, port: number): HttpServerTransport {
+export interface HttpServerTransportOptions {
+  /** IP tambahan yang boleh POST /deliver (loopback selalu boleh). */
+  deliverAllowlist?: string[];
+  /** Secret HMAC handoff — default resolveHandoffSecret(). */
+  handoffSecret?: string;
+}
+
+export function createHttpServerTransport(region: WorldRegion, port: number, opts: HttpServerTransportOptions = {}): HttpServerTransport {
+  const handoffSecret = opts.handoffSecret ?? resolveHandoffSecret();
   const server: Server = createServer(async (req, res) => {
     try {
       const u = new URL(req.url ?? "/", "http://localhost");
       if (req.method === "GET" && u.pathname === "/snapshot") { sendJson(res, 200, region.snapshot()); return; }
       if (req.method === "POST" && u.pathname === "/deliver") {
-        const h = (await readBody(req)) as NetworkHandoff;
+        const { raw, json: h } = await readBody(req);
+        // E-2: IP allowlist + HMAC signature atas raw body — /deliver hanya
+        // untuk shard terpercaya (bukan endpoint publik).
+        if (!isDeliverAllowed(req.socket.remoteAddress, opts.deliverAllowlist)) {
+          sendJson(res, 403, { ok: false, reason: "deliver: address not allow-listed" });
+          return;
+        }
+        if (!verifyHandoff(raw, req.headers[HANDOFF_HEADER], handoffSecret)) {
+          sendJson(res, 403, { ok: false, reason: "deliver: invalid handoff signature" });
+          return;
+        }
         if (!h || typeof h.vesselId !== "string" || !h.vesselId) { sendJson(res, 400, { ok: false, reason: "invalid handoff payload" }); return; }
         if (region.has(h.vesselId)) { sendJson(res, 200, { ok: false, reason: `entity already exists: ${h.vesselId}` }); return; }
+        if (region.snapshot().entities.length >= 5000) { sendJson(res, 200, { ok: false, reason: "entity_cap" }); return; }
         region.spawnVessel({ id: h.vesselId, owner: h.owner, vessel: h.vessel, position: h.position });
         sendJson(res, 200, { ok: true });
         return;
       }
       sendJson(res, 404, { ok: false, reason: `unknown ${req.method} ${u.pathname}` });
-    } catch (e) { sendJson(res, 500, { ok: false, reason: (e as Error).message }); }
+    } catch (e) {
+      sendJson(res, (e as { statusCode?: number })?.statusCode ?? 500, { ok: false, reason: (e as Error).message });
+    }
   });
   const url = `http://127.0.0.1:${port}`;
   return {

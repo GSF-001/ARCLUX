@@ -385,22 +385,34 @@ asset hashed.
 Setiap sprint wajib lulus checklist §6. Urutan prioritas = tutup eksploit
 dulu, lalu otoritas, lalu skala, lalu operasional.
 
-### Sprint 1 — "Waras dulu" (P0 eksploit + auth)
-- [ ] Tutup E-1 (trade theft): validator resolve seller + ownership check;
-      sim pakai seller tervalidasi.
-- [ ] Tutup E-2 (`/deliver`): signed handoff token (HMAC), server re-derive
+### Sprint 1 — "Waras dulu" (P0 eksploit + auth) — SELESAI (PR #775)
+- [x] Tutup E-1 (trade theft): validator resolve seller + ownership check;
+      sim pakai seller tervalidasi. (`resolveTradeSeller`/`actorOwnsSeller`
+      di validator + dipakai lagi di sim = defense-in-depth 2 lapis)
+- [x] Tutup E-2 (`/deliver`): signed handoff token (HMAC), server re-derive
       VesselModel (tidak terima stat dari wire), IP allow-list.
-- [ ] Tutup E-3 (lifecycle): `persistence` option di `createGameServer`,
+      (`auth.ts` signHandoff/verifyHandoff ±60s timingSafeEqual;
+      `sanitizeVesselModel` clamp+recompute agregat; `rederiveVessel` hook)
+- [x] Tutup E-3 (lifecycle): `persistence` option di `createGameServer`,
       `start()` → `loadAndResume`, `stop()` → `saveSnapshot`, autosave tiap
-      100 tick.
-- [ ] Tutup E-4 (replay): per-player `lastSeq`, reject stale, ack intent
+      100 tick. (+ resume via `isValidResume` + `world.restore`, `serve`
+      default ON, `--no-persist` untuk matikan)
+- [x] Tutup E-4 (replay): per-player `lastSeq`, reject stale, ack intent
       (seq + verdict).
-- [ ] Tutup E-5 (determinisme): id & posisi `spawn_station` dari seeded rng.
-- [ ] Auth: `POST /login` → Bearer token (HMAC+exp), intent wajib token.
-- [ ] Wire `rateLimiter` (POST /intent) + `stability.checkStability` (tick loop)
-      + shadowban.
-- [ ] `GET /servers` directory endpoint + heartbeat loop 10s + TTL 30s.
-- [ ] Batasi `readBody` 1MB.
+- [x] Tutup E-5 (determinisme): id & posisi `spawn_station` dari seeded rng.
+      (`createSeedRng` FNV-1a; Math.random/Date.now di sim path = 0)
+- [x] Auth: `POST /login` → Bearer token (HMAC+exp), intent wajib token.
+      (401 tanpa/expired/forged; identity mismatch → rejected;
+      `HttpClientTransport` auto-login + retry 401; handoffSigner opt-in)
+- [x] Wire `rateLimiter` (POST /intent) + `stability.checkStability` (tick loop)
+      + shadowban. (429 + shadowban flag; stability_trip → trim separuh;
+      entity cap → spawn_rejected; eventlog_overflow)
+- [x] `GET /servers` directory endpoint + heartbeat loop 10s + TTL 30s.
+      (visibility/federation/status filter, `effectiveStatus`)
+- [x] Batasi `readBody` 1MB. (`MAX_BODY_BYTES` → 413)
+
+> Regresi: `tests/server-hardening-sprint1.test.ts` 20 test (E-1..E-5,
+> auth, 413, 429, sanitize D-008, save/resume, entity cap, /servers TTL).
 
 **Definisi done Sprint 1**: semua eksploit E-1..E-5 punya regresi test
 (replay intent curian → reject; forge deliver → 403; kill -9 → world utuh);
