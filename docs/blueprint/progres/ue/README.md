@@ -18,6 +18,7 @@
 | 5 | `05-hukum-kota.md` | HUKUM & KOTA: 3 dunia (Bumi mati/Mars hidup/Space transit), wanted 0–5, polisi pemain (rekrutmen+pangkat), NPC pelengkap, prison ship + jailbreak, bounty, ekonomi Mars, phasing | Pas bangun layer hukum di UE |
 | 6 | `06-gameplay-systems.md` | SISTEM PERMAINAN: OC currency, dual skill (ship/FPS), hacking, FPS combat, stealth, item drop, revival, police investigation, item recovery, ARCLUX store | Pas bangun gameplay loop di UE |
 | 9 | `09-combat-depth.md` | COMBAT DEPTH: lock-on, projectile server-side (bisa dielak), NPC AI PvE, damage pipeline — spesifikasi server-authoritative + pemetaan referensi client UE5 (ideas-only dari riset 3 repo) | Saat merancang combat/PvE/skill foundation |
+| 10 | `10-cangyuan.md` | PLANET CANGYUAN ke-3: politik otonom + suksesi permanen, faction entity (jianghu + imperium), kontrak Biao Ren encounter-abstrak, perang + logistik, eksekusi publik world-event, Phase A–E + acceptance — digabung dari 2 draft user | Saat bangun planet ke-3 / sistem kontrak-faksi |
 
 ## Kompas satu baris per dokumen
 
