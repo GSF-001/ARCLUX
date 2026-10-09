@@ -171,13 +171,13 @@ export class SimulationEngine {
       const events = generateCosmicEvents(this.environs, this.region.regionId, this.region.tick);
       for (const ev of events) this.log(`cosmic_${ev.kind}`, "env", { severity: ev.severity, payload: ev.payload });
       // Baseline per-region time dilation — D-019
-      for (const e of this.region["entities"].values()) {
+      for (const e of this.region.values()) {
         const speed = Math.sqrt(e.velocity.x * e.velocity.x + e.velocity.y * e.velocity.y + e.velocity.z * e.velocity.z);
         if (!isWithinBaseline(speed)) this.log("baseline_breach", e.id, { speed, region: this.region.regionId });
         void perRegionTimeDilation(this.region.regionId, this.region.tick, speed);
       }
       // Anti-cheat: stateHash per tick + OTEL trace
-      for (const e of this.region["entities"].values()) if (e.kind === "vessel") this.log("state_hash", e.id, { hash: computeEntityHash(e as VesselEntity) });
+      for (const e of this.region.values()) if (e.kind === "vessel") this.log("state_hash", e.id, { hash: computeEntityHash(e as VesselEntity) });
       recordTickTrace({ tick: this.region.tick, regionId: this.region.regionId, durationMs: Date.now() - start, entityCount: this.region.snapshot().entities.length, eventCount: accepted.length + rejected.length, timestamp: new Date().toISOString() });
     }
     this.region.advanceTick();
@@ -424,7 +424,7 @@ export class SimulationEngine {
         // Kapal milik pembeli — buyer itu PLAYER-id, bukan vessel-id
         // (getVessel(buyer) salah; cari vessel yang owner-nya pembeli).
         let buyerVessel: VesselEntity | undefined;
-        for (const e of this.region["entities"].values()) {
+        for (const e of this.region.values()) {
           if (e.kind === "vessel" && e.owner === buyer) { buyerVessel = e; break; }
         }
         if (!buyerVessel) {
@@ -588,7 +588,7 @@ export class SimulationEngine {
    *  powerDraw fit, regen dari reactor — formula capStep (universe)
    *  yang sama dengan proyeksi klien. */
   private stepCapacitors(): void {
-    for (const e of this.region["entities"].values()) {
+    for (const e of this.region.values()) {
       if (e.kind !== "vessel") continue;
       const res = stepCapacitor(e);
       if (res.newlyDepleted) {
@@ -604,7 +604,7 @@ export class SimulationEngine {
     if (stab.ok) return;
     this.log("stability_trip", "server", {
       reason: stab.reason,
-      entities: this.region["entities"].size,
+      entities: this.region.size(),
       eventLog: this.eventLog.length,
       lastTickMs: this.lastTickMs,
     });
@@ -616,7 +616,7 @@ export class SimulationEngine {
 
   /** Entity cap (STABILITY_LIMITS.maxEntities) — spawn baru wajib ditolak. */
   private entityCapExceeded(): boolean {
-    return this.region["entities"].size >= STABILITY_LIMITS.maxEntities;
+    return this.region.size() >= STABILITY_LIMITS.maxEntities;
   }
 
   private integratePhysics(): void {
@@ -625,7 +625,7 @@ export class SimulationEngine {
     // machine (drift decay / gravity fall / grounded) instead of free flight.
     const planetPos = this.nearestPlanetPosition();
     const planetMass = this.nearestPlanetBody()?.mass ?? 5.972e24;
-    for (const e of this.region["entities"].values()) {
+    for (const e of this.region.values()) {
       if (e.kind === "vessel") {
         if (this.stepEmergency(e, planetPos, planetMass) !== "nominal") continue;
       }
@@ -709,7 +709,7 @@ export class SimulationEngine {
   }
 
   private decrementCooldowns(): void {
-    for (const e of this.region["entities"].values()) {
+    for (const e of this.region.values()) {
       if (e.kind !== "vessel") continue;
       for (const key of Object.keys(e.cooldowns)) {
         e.cooldowns[key] = Math.max(0, (e.cooldowns[key] ?? 1) - 1);
