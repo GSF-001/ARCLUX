@@ -245,6 +245,7 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 ### PR #775 ✅ Sprint 1 server hardening — auth.ts (login+handoff HMAC) + E-1..E-5 + rate limit/1MB + /servers TTL + lifecycle persistence — SUDAH (2026-10-06)
 ### PR #779 ✅ Sprint 2 otoritas fitur — economy/wanted/session/claims/hack/visibility + validator/sim P1-2..P1-9 + P2-4 sanitize snapshot + mode gate — SUDJAH (2026-10-08)
 ### PR #785 ✅ Docs spec Sprint 7 combat depth — `ue/09-combat-depth.md` (lock-on, projectile bisa-dielak, NPC AI, damage pipeline) + slot Sprint 7 di 08 §4 — SUDAH (2026-10-08, docs-only, eksekusi menyusul)
+### PR #786 ✅ Docs blueprint Cangyuan — `ue/10-cangyuan.md` (gabungan 2 draft user: politik otonom+suksesi, faction entity, kontrak Biao Ren encounter-abstrak, perang+logistik, eksekusi publik world-event, Phase A–E) + baris indeks README — SUDAH (2026-10-09, docs-only, eksekusi menyusul)
 ### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs — SELESAI
@@ -349,4 +350,5 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 | 2026-10-06 | #775 | Sprint 1 server hardening (08 §4): auth.ts login+handoff HMAC, E-1..E-5, rate limit/1MB/403/409, /servers TTL, lifecycle persistence, 20 regresi test | in progress |
 | 2026-10-08 | #779 | Sprint 2 otoritas fitur (08 §4): packages/economy+wanted, session/claims/hack/visibility, validator/sim P1-2..P1-9 + P2-4 sanitize snapshot, 23 regresi test | in progress |
 | 2026-10-08 | #785 | Docs spec Sprint 7 combat depth (riset 3 repo UE5, ideas-only): ue/09-combat-depth.md + slot Sprint 7 di 08 §4 + README indeks | in progress |
+| 2026-10-09 | #786 | Docs blueprint Cangyuan (gabungan 2 draft): politik makro+suksesi permanen, faction entity dua-layer, kontrak Biao Ren encounter-abstrak, perang logistik agregat, eksekusi publik world-event hukum, Phase A–E + acceptance | in progress |
 
