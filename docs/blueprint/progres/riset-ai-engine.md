@@ -42,6 +42,8 @@ MIT/Zlib, wajib NOTICE di file package penerima. Riset combat batch awal
 | **Tactix** (CanReader) | **NONE → IDE ONLY** | Utility/GOAP/HTN/cover/influence map/squad, core bebas engine | Arsitektur layering (core testable tanpa engine), influence maps |
 | **HeliosEngine** (PageMastr) | MIT (dokumen) | MMO engine Phase-0: **10 laporan riset** (EVE, SWG, server meshing, authority handoff, backends), ADR, AAA scorecard | **Bacaan perencanaan Sprint 3–4** (jaringan/skala/federasi) |
 | **recastnavigation** | Zlib | Navmesh toolset industry-standard | **Back pocket**: gerakan per-meter NPC darat saat route graph gak cukup |
+| **Akuma RPG Framework** (AkumaVenom) | MIT · C++/UE5 | Framework RPG: **lock-on Z-target** (LOS/range), AI spawner (aggro/spline/day-night/**performance**), combat block/parry/guard-break, server-auth + persistence akun | **Referensi PR-A lock-on (`09` §2)**, spawner/wave (`09` §4.3), FPS skills Sprint 5, pola persistence |
+| **open-theft-auto** (mehulkapadia5) | MIT · Godot | Sandbox GTA: **wanted/police escalation**, distrik kota prosedural, ekonomi | Referensi implementasi `05` (kenaikan heat, patroli per distrik) — ideas (bahasa beda) |
 | **O3DE** (Amazon) | Apache-2.0 | Engine 3D penuh | **SKIP** — client udah FINAL UE5 (`00-migrasi`) |
 
 Batch combat awal (license NONE, ideas-only): SpaceInvader3D (lock-on/grace/
@@ -135,6 +137,31 @@ Navmesh per-meter. **Sekarang GAK dipakai** — rute NPC = route graph per
 segmen (desain Phase A). Relevan saat: NPC jalan granular di kota,
 pejalan kaki, konvoi menikung detail. (Drone = ruang 3D → beda masalah:
 collision avoidance 3D, bukan navmesh darat.)
+
+### 2.9 Akuma RPG Framework — referensi lock-on & spawner (MIT, C++/UE5)
+
+Framework RPG Blueprint-first yang **server-authoritative** (inventory,
+combat, crafting divalidasi di authority) — prinsipnya sejajar D-008.
+
+- **Lock-on Z-target**: acquisition, camera tracking, facing/strafe,
+  switching, **LOS + range validation** — pembanding kode pas implementasi
+  lock-on `09-combat-depth.md` §2 (PR-A Sprint 7). MIT = boleh diport.
+- **Dokumen AI spawner**: `AI_SPAWNER_PERFORMANCE`, `AI_AGGRO_ASSIST`,
+  `AI_SOCIAL_INTERACTIONS`, `AI_SPLINE` — bacaan buat wave spawner
+  (`09` §4.3) & gerakan patroli.
+- Combat: combo, block/parry/dodge/**guard break**, crit/armor — peta buat
+  FPS skills Sprint 5 & wuxia (Cangyuan parked).
+- **Persistence lesson**: save dunia di-scope per akun (fix kebocoran
+  campur-akun di rilis v2.18.5) — peringatan buat persistence kita
+  (ownership/state per akun jangan pernah nyampur).
+
+### 2.10 open-theft-auto — referensi wanted/kota (MIT, Godot/GDScript)
+
+Sandbox GTA dengan **wanted/police system**, distrik kota prosedural,
+ekonomi, reputasi. Nilainya sebagai **pola implementasi** buat `05`
+(escalation heat, patroli per distrik, interaksi polisi–kota) — bahasa
+GDScript, jadi **port ide, bukan kode**. Repo besar (437MB, penuh aset) —
+cukup baca README/dokumennya, gak perlu clone.
 
 ---
 

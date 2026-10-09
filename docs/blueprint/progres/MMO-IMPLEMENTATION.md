@@ -246,7 +246,7 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 ### PR #779 ✅ Sprint 2 otoritas fitur — economy/wanted/session/claims/hack/visibility + validator/sim P1-2..P1-9 + P2-4 sanitize snapshot + mode gate — SUDJAH (2026-10-08)
 ### PR #785 ✅ Docs spec Sprint 7 combat depth — `ue/09-combat-depth.md` (lock-on, projectile bisa-dielak, NPC AI, damage pipeline) + slot Sprint 7 di 08 §4 — SUDAH (2026-10-08, docs-only, eksekusi menyusul)
 ### PR #786 ✅ Docs blueprint Cangyuan — `ue/10-cangyuan.md` (gabungan 2 draft user: politik otonom+suksesi, faction entity, kontrak Biao Ren encounter-abstrak, perang+logistik, eksekusi publik world-event, Phase A–E) + baris indeks README — SUDAH (2026-10-09, docs-only). **Status: PARKED** — perkuat planet existing dulu, tanpa eksekusi sampai dibuka lagi
-### PR #787 ✅ Pustaka riset AI lintas fitur — `progres/riset-ai-engine.md` (9 repo + tier lisensi MIT/port vs NC-NONE/ideas-only, pola budget/LOD/two-layer/GOAP, daftar ditolak + aturan "profile first, native last") + index README — SUDAH (2026-10-09, docs-only)
+### PR #787 ✅ Pustaka riset AI lintas fitur — `progres/riset-ai-engine.md` (11 repo + tier lisensi MIT/port vs NC-NONE/ideas-only, pola budget/LOD/two-layer/GOAP/lock-on-Z-target, daftar ditolak + aturan "profile first, native last") + index README — SUDAH (2026-10-09, docs-only)
 ### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs — SELESAI
@@ -352,5 +352,5 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 | 2026-10-08 | #779 | Sprint 2 otoritas fitur (08 §4): packages/economy+wanted, session/claims/hack/visibility, validator/sim P1-2..P1-9 + P2-4 sanitize snapshot, 23 regresi test | in progress |
 | 2026-10-08 | #785 | Docs spec Sprint 7 combat depth (riset 3 repo UE5, ideas-only): ue/09-combat-depth.md + slot Sprint 7 di 08 §4 + README indeks | in progress |
 | 2026-10-09 | #786 | Docs blueprint Cangyuan (gabungan 2 draft): politik makro+suksesi permanen, faction entity dua-layer, kontrak Biao Ren encounter-abstrak, perang logistik agregat, eksekusi publik world-event hukum, Phase A–E + acceptance | in progress |
-| 2026-10-09 | #787 | Pustaka riset AI lintas fitur: 9 repo (MIT port / NC-NONE ideas-only), pola budget/LOD/relasi/GOAP, daftar ditolak (LLM/RL/native/engine-2) + aturan profile-first | in progress |
+| 2026-10-09 | #787 | Pustaka riset AI lintas fitur: 11 repo (MIT port / NC-NONE ideas-only) termasuk Akuma (lock-on Z-target) + open-theft-auto (wanted polisi), pola budget/LOD/relasi/GOAP, daftar ditolak (LLM/RL/native/engine-2) + aturan profile-first | in progress |
 
