@@ -23,6 +23,7 @@ keputusan engine.
 | [decisions-mmo.md](decisions-mmo.md) | Semua keputusan desain MMO yang diambil (visi, arsitektur, stack, model) |
 | [arsitektur.md](arsitektur.md) | Peta arsitektur MMO (server authoritative, client, shard registry) |
 | [MMO-IMPLEMENTATION.md](MMO-IMPLEMENTATION.md) | **Peta implementasi anti-lupa** (status tiap modul + arah + checklist + TODO). Baca ini DULU sebelum ngoding MMO |
+| [riset-ai-engine.md](riset-ai-engine.md) | **Pustaka riset AI & engine lintas-fitur**: temuan repo luar + tier lisensi (MIT port / NONE-NC ideas-only) + yang ditolak — buat NPC, drone, autopilot, planner |
 | [ue/08-server-hardening.md](ue/08-server-hardening.md) | Audit gap server (EVE-grade) + sprint hardening |
 
 ## Files blueprint terkait
