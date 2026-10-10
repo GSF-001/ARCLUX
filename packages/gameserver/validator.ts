@@ -78,7 +78,7 @@ export function resolveTradeSeller(
   region: WorldRegion,
   componentId: string
 ): { seller: VesselEntity; compIdx: number } | undefined {
-  for (const e of region["entities"].values()) {
+  for (const e of region.values()) {
     if (e.kind !== "vessel") continue;
     const idx = e.vessel.components.findIndex((c) => c.id === componentId);
     if (idx !== -1) return { seller: e, compIdx: idx };
@@ -204,7 +204,7 @@ export function validateIntent(
         return { decision: "reject", reason: "buyer has insufficient OC" };
       }
       // Komponen butuh kapal pembeli untuk dititipkan (06 §1.4).
-      const hasBuyerVessel = [...region["entities"].values()].some((e) => e.kind === "vessel" && e.owner === p.toPlayerId);
+      const hasBuyerVessel = region.vessels().some((e) => e.owner === p.toPlayerId);
       if (!hasBuyerVessel) return { decision: "reject", reason: "buyer has no vessel" };
       return { decision: "accept" };
     }
@@ -272,6 +272,13 @@ export function validateIntent(
     case "spawn_station": {
       const p = intent.payload as { name?: string };
       if (!p?.name) return { decision: "reject", reason: "spawn_station requires name" };
+      return { decision: "accept" };
+    }
+    case "verify_hash": {
+      // P2-5: client kirim hash prediksi — pemilik entity (sudah dicek di
+      // guard global) + payload hash string; pembandingan di server.ts.
+      const p = intent.payload as { hash?: string };
+      if (typeof p?.hash !== "string" || !p.hash) return { decision: "reject", reason: "verify_hash requires client hash" };
       return { decision: "accept" };
     }
     default:
@@ -348,12 +355,10 @@ function validateDock(
 }
 
 function safeZoneBlocked(region: WorldRegion, target: WorldEntity): string | undefined {
-  const stations = region.entitiesWithin(target.position, 1_000_000);
-  for (const s of stations) {
-    if (s.kind === "station") {
-      if (distanceBetween(target, s) <= s.safeZoneRadius) {
-        return s.id;
-      }
+  // P3-3: cached stations() — O(stations), bukan O(entitas) radius 1e6m.
+  for (const s of region.stations()) {
+    if (distanceBetween(target, s) <= s.safeZoneRadius) {
+      return s.id;
     }
   }
   return undefined;

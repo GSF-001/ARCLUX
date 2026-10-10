@@ -25,7 +25,9 @@ import type { AddressInfo } from "node:net";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { WorldRegion } from "./world";
-import { SimulationEngine, type SimulationOptions } from "./simulation";
+import { SimulationEngine, computeEntityHash, verifyClientPrediction, type SimulationOptions } from "./simulation";
+import { createJsonlEventStore, type EventStore } from "./eventStore";
+import { attachWebSocketGateway, type WsGatewayHandle } from "./wsGateway";
 import { createEnvirons, type SystemBody } from "./environs";
 import { createTickScheduler } from "./tickScheduler";
 import type { PlayerIntent, Vec3, VesselEntity } from "./types";
@@ -99,6 +101,11 @@ export interface GameServerOptions {
    *  stat, bukan wire). Return null → deliver ditolak. Default tanpa hook =
    *  sanitizeVesselModel (clamp + agregat dihitung ulang dari systems). */
   rederiveVessel?: (model: VesselModel) => VesselModel | null | Promise<VesselModel | null>;
+  /** P2-2: event store append-only. String = direktori JSONL (default
+   *  `$ARCLUX_EVENTS_DIR ?? ./.arclux/events`); instance = custom; false = off. */
+  eventStore?: string | EventStore | false;
+  /** P2-7: WebSocket gateway (default ON, path /ws). false = matikan. */
+  ws?: boolean | { radiusM?: number };
 }
 
 export interface GameServerHandle {
@@ -234,6 +241,19 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
     hacks: createHackStore(),
     claims: createClaimStore(),
   };
+  // P2-2: event store append-only — OPT-IN: ON bila ARCLUX_EVENTS_DIR di-set
+  // (production host set ke disk persistent); opts.eventStore string =
+  // direktori; instance = custom store; selain itu = off (tanpa I/O).
+  let eventStore: EventStore | undefined;
+  if (opts.eventStore !== false && (typeof opts.eventStore === "object" || typeof opts.eventStore === "string" || process.env.ARCLUX_EVENTS_DIR)) {
+    eventStore =
+      typeof opts.eventStore === "object"
+        ? opts.eventStore
+        : createJsonlEventStore({
+            dir: typeof opts.eventStore === "string" ? opts.eventStore : process.env.ARCLUX_EVENTS_DIR as string,
+            regionId,
+          });
+  }
   const engine = new SimulationEngine({
     region,
     dt,
@@ -241,6 +261,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
     enableEnvirons: true,
     authProvider: defaultAuthProvider(),
     authority,
+    eventStore,
   });
 
   // Sprint 1 state (08 hardening): rate limit P0-4, idempotency E-4, auth P0-2.
@@ -265,11 +286,57 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
           if (payload) viewer = payload.sub;
         }
         if (!viewer) viewer = u.searchParams.get("playerId") ?? undefined;
-        sendJson(res, 200, sanitizeSnapshot(region.snapshot(), viewer));
+        // P2-1: ?lastTick=N → delta (entity berubah sejak N + removed);
+        // ?radius=&cx&cy&cz (atau radius saja, center=vessel viewer) → interest.
+        const lastTickRaw = u.searchParams.get("lastTick");
+        const lastTick = lastTickRaw !== null && Number.isFinite(Number(lastTickRaw)) ? Number(lastTickRaw) : undefined;
+        let base = region.snapshot();
+        let removed: string[] | undefined;
+        if (lastTick !== undefined) {
+          removed = region.removedSince(lastTick);
+          // Delta: JANGAN bangun array full dulu — hanya entity berubah.
+          base = {
+            regionId: base.regionId,
+            name: base.name,
+            tick: base.tick,
+            createdAt: base.createdAt,
+            schemaVersion: base.schemaVersion,
+            dilation: base.dilation,
+            entities: region.changedSince(lastTick),
+          };
+        }
+        const radiusRaw = u.searchParams.get("radius");
+        if (radiusRaw !== null && Number.isFinite(Number(radiusRaw))) {
+          const radius = Number(radiusRaw);
+          let cx = Number(u.searchParams.get("cx"));
+          let cy = Number(u.searchParams.get("cy"));
+          let cz = Number(u.searchParams.get("cz"));
+          if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(cz)) {
+            // Default: posisi vessel milik viewer (interest per pemain).
+            const mine = viewer ? region.vessels().find((v) => v.owner === viewer) : undefined;
+            if (mine) {
+              cx = mine.position.x;
+              cy = mine.position.y;
+              cz = mine.position.z;
+            } else {
+              cx = 0;
+              cy = 0;
+              cz = 0;
+            }
+          }
+          base = { ...base, entities: base.entities.filter((e) => {
+            const dx = e.position.x - cx;
+            const dy = e.position.y - cy;
+            const dz = e.position.z - cz;
+            return Math.sqrt(dx * dx + dy * dy + dz * dz) <= radius;
+          }) };
+        }
+        const sanitized = sanitizeSnapshot(base, viewer);
+        sendJson(res, 200, removed ? { ...sanitized, removed } : sanitized);
         return;
       }
       if (req.method === "GET" && u.pathname === "/health") {
-        sendJson(res, 200, { ok: true, tick: region.tick, entities: region.snapshot().entities.length, regionId });
+        sendJson(res, 200, { ok: true, tick: region.tick, entities: region.size(), regionId, dilation: region.dilation });
         return;
       }
       if (req.method === "GET" && u.pathname === "/servers") {
@@ -343,6 +410,29 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
           return;
         }
         if (typeof intent.seq === "number") lastSeqByEntity.set(seqKey, intent.seq);
+        // P2-5: verify_hash — client kirim hash prediksi tiap N tick; server
+        // bandingkan dengan computeEntityHash (heading+emergency included).
+        // Mismatch → verdict desync_mismatch + resync: true (client wajib
+        // tarik snapshot penuh & reset prediksi).
+        if (intent.type === "verify_hash") {
+          const e = region.get(intent.entityId);
+          if (!e || e.kind !== "vessel" || e.owner !== ctxPlayerId) {
+            sendJson(res, 200, { ok: false, seq: intent.seq ?? 0, verdict: "rejected", reason: "verify_hash: vessel not owned" });
+            return;
+          }
+          const serverHash = computeEntityHash(e);
+          const clientHash = String((intent.payload as { hash?: string })?.hash ?? "");
+          const match = verifyClientPrediction(serverHash, clientHash);
+          engine.recordDesyncCheck(ctxPlayerId, e.id, match, serverHash);
+          sendJson(res, 200, {
+            ok: true,
+            seq: intent.seq ?? 0,
+            verdict: match ? "desync_ok" : "desync_mismatch",
+            resync: !match,
+            ...(match ? {} : { serverHash }),
+          });
+          return;
+        }
         engine.enqueue(intent as PlayerIntent);
         sendJson(res, 200, { ok: true, seq: intent.seq ?? 0, verdict: "accepted" });
         return;
@@ -390,6 +480,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
 
   let scheduler: ReturnType<typeof createTickScheduler> | null = null;
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let wsGateway: WsGatewayHandle | null = null;
   let running = false;
   const host = opts.host ?? "127.0.0.1";
 
@@ -419,11 +510,22 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
       const actualPort = addr && typeof addr === "object" ? addr.port : port;
       handle.port = actualPort;
       handle.url = `http://${host}:${actualPort}`;
+      // P2-7: WS gateway (path /ws) — delta real-time per tick, interest
+      // radius per viewer vessel. Auth token diverifikasi bila auth ON.
+      if (opts.ws !== false) {
+        wsGateway = attachWebSocketGateway(server, {
+          region,
+          engine,
+          radiusM: typeof opts.ws === "object" ? opts.ws.radiusM : undefined,
+          verifyToken: authEnabled ? (token) => verifyLoginToken(token, authSecret)?.sub : undefined,
+        });
+      }
       scheduler = createTickScheduler({
         tickMs: dt * 1000,
         onTick: () => {
           const result = engine.step();
           opts.onTick?.(result.tick, result.snapshot);
+          wsGateway?.broadcast();
           // E-3 autosave tiap 100 tick — kill -9 kehilangan ≤100 tick,
           // world tetap utuh & tidak corrupt (stability.shouldSnapshot).
           if (opts.persistence && shouldSnapshot(region.tick)) {
@@ -467,6 +569,8 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
     stop: async () => {
       scheduler?.stop();
       scheduler = null;
+      wsGateway?.close();
+      wsGateway = null;
       if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
       // E-3 save-on-stop (D-013): restart ≠ world reset.
       if (opts.persistence) {

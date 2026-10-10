@@ -29,7 +29,7 @@ export function getEffectiveSafeZone(station: StationEntity): number {
 }
 
 export function isInSafeZone(region: WorldRegion, pos: { x: number; y: number; z: number }): StationEntity | null {
-  for (const e of region["entities"].values()) {
+  for (const e of region.values()) {
     if (e.kind !== "station") continue;
     const s = e as StationEntity;
     const r = getEffectiveSafeZone(s);

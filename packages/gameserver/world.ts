@@ -10,7 +10,16 @@
 // simulation engine). The region owns its entities; external code never
 // mutates the map directly.
 
-import type { CharacterEntity, GameEntity, RegionSnapshot, StationEntity, VesselEntity, WorldEntity } from "./types";
+import {
+  SNAPSHOT_SCHEMA_VERSION,
+  type CharacterEntity,
+  type DilationState,
+  type GameEntity,
+  type RegionSnapshot,
+  type StationEntity,
+  type VesselEntity,
+  type WorldEntity,
+} from "./types";
 
 export interface SpawnVesselOptions {
   id: string;
@@ -45,8 +54,19 @@ export class WorldRegion {
   readonly name: string;
   readonly createdAt: string;
   tick: number;
+  /** P2-3: status time-dilation (di-set engine, dibroadcast via snapshot). */
+  dilation: DilationState = { level: 0, scale: 1 };
 
   private entities = new Map<string, WorldEntity>();
+
+  /** Cache stations (invalidated on mutation) — safe-zone O(stations), bukan O(n). */
+  private stationsCache: StationEntity[] | null = null;
+
+  /** P2-1 delta snapshot: perubahan menunggu di-flush saat advanceTick. */
+  private pendingChanges = new Set<string>();
+  private pendingRemovals = new Set<string>();
+  private changedAt = new Map<string, number>();
+  private removals: Array<{ id: string; tick: number }> = [];
 
   constructor(regionId: string, name: string) {
     this.regionId = regionId;
@@ -55,9 +75,84 @@ export class WorldRegion {
     this.tick = 0;
   }
 
-  /** Advance tick counter (called by simulation loop). */
+  /** Advance tick counter (called by simulation loop). Flush delta stamps. */
   advanceTick(): void {
     this.tick += 1;
+    for (const id of this.pendingChanges) this.changedAt.set(id, this.tick);
+    this.pendingChanges.clear();
+    for (const id of this.pendingRemovals) {
+      this.removals.push({ id, tick: this.tick });
+      this.changedAt.delete(id);
+    }
+    this.pendingRemovals.clear();
+    if (this.removals.length > 1000) this.removals.splice(0, this.removals.length - 1000);
+  }
+
+  /** Tandai entity berubah pada tick berikutnya (untuk delta snapshot). */
+  noteChange(id: string): void {
+    this.pendingChanges.add(id);
+  }
+
+  /** Tandai entity dihapus (klien dengan lastTick < tick ini bakal diberi tahu). */
+  noteRemoval(id: string): void {
+    this.pendingRemovals.add(id);
+  }
+
+  /** Entity yang berubah setelah `tick` (delta snapshot P2-1). */
+  changedSince(tick: number): WorldEntity[] {
+    const out: WorldEntity[] = [];
+    for (const [id, at] of this.changedAt) {
+      if (at <= tick) continue;
+      const e = this.entities.get(id);
+      if (e) out.push(e);
+    }
+    return out;
+  }
+
+  /** ID yang dihapus setelah `tick` (delta snapshot P2-1). */
+  removedSince(tick: number): string[] {
+    const out: string[] = [];
+    for (const r of this.removals) if (r.tick > tick) out.push(r.id);
+    return out;
+  }
+
+  /** P2-9: API iterasi resmi — jangan akses private map via bracket. */
+  eachEntity(cb: (e: WorldEntity) => void): void {
+    for (const e of this.entities.values()) cb(e);
+  }
+
+  /** P2-9: iterable view (untuk for-of). */
+  values(): IterableIterator<WorldEntity> {
+    return this.entities.values();
+  }
+
+  /** P2-9: jumlah entity. */
+  size(): number {
+    return this.entities.size;
+  }
+
+  /** P2-9: semua vessel (cached-array tidak perlu — hasil langsung). */
+  vessels(): VesselEntity[] {
+    const out: VesselEntity[] = [];
+    for (const e of this.entities.values()) if (e.kind === "vessel") out.push(e);
+    return out;
+  }
+
+  /** P2-9/P3-3: semua station — cached, invalidasi di spawn/remove/restore. */
+  stations(): StationEntity[] {
+    if (!this.stationsCache) {
+      const out: StationEntity[] = [];
+      for (const e of this.entities.values()) if (e.kind === "station") out.push(e);
+      this.stationsCache = out;
+    }
+    return this.stationsCache;
+  }
+
+  /** P2-9: semua karakter onboard. */
+  characters(): CharacterEntity[] {
+    const out: CharacterEntity[] = [];
+    for (const e of this.entities.values()) if (e.kind === "character") out.push(e);
+    return out;
   }
 
   has(id: string): boolean {
@@ -80,6 +175,8 @@ export class WorldRegion {
       name: this.name,
       tick: this.tick,
       createdAt: this.createdAt,
+      schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+      dilation: this.dilation,
       entities: Array.from(this.entities.values()),
     };
   }
@@ -117,6 +214,7 @@ export class WorldRegion {
       heading: { yaw: 0, pitch: 0 },
     };
     this.entities.set(entity.id, entity);
+    this.changedAt.set(entity.id, this.tick + 1);
     return entity;
   }
 
@@ -136,6 +234,8 @@ export class WorldRegion {
       heading: { yaw: 0, pitch: 0 },
     };
     this.entities.set(entity.id, entity);
+    this.stationsCache = null;
+    this.changedAt.set(entity.id, this.tick + 1);
     return entity;
   }
 
@@ -154,6 +254,7 @@ export class WorldRegion {
       heading: { yaw: 0, pitch: 0 },
     };
     this.entities.set(entity.id, entity);
+    this.changedAt.set(entity.id, this.tick + 1);
     return entity;
   }
 
@@ -163,7 +264,10 @@ export class WorldRegion {
   }
 
   remove(id: string): boolean {
-    return this.entities.delete(id);
+    if (!this.entities.delete(id)) return false;
+    this.stationsCache = null;
+    this.noteRemoval(id);
+    return true;
   }
 
   /**
@@ -175,6 +279,11 @@ export class WorldRegion {
   restore(state: RegionSnapshot): void {
     this.tick = state.tick;
     this.entities.clear();
+    this.stationsCache = null;
+    this.pendingChanges.clear();
+    this.pendingRemovals.clear();
+    this.changedAt.clear();
+    this.removals = [];
     for (const e of state.entities) this.entities.set(e.id, e);
   }
 }
@@ -182,10 +291,7 @@ export class WorldRegion {
 /** Rebuild a WorldRegion from a persisted RegionSnapshot (for recovery). */
 export function regionFromState(state: RegionSnapshot): WorldRegion {
   const region = new WorldRegion(state.regionId, state.name);
-  region.tick = state.tick;
-  for (const e of state.entities) {
-    region["entities"].set(e.id, e);
-  }
+  region.restore(state);
   return region;
 }
 

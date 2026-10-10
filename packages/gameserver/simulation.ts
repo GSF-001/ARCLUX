@@ -16,8 +16,9 @@
 // This is the authoritative sim (D-008): clients send intent, server computes
 // truth.
 
-import type { GameEvent, PlayerIntent, Vec3, VesselEntity, WorldEntity } from "./types";
+import type { DilationState, GameEvent, PlayerIntent, Vec3, VesselEntity, WorldEntity } from "./types";
 import { WorldRegion } from "./world";
+import type { EventStore } from "./eventStore";
 import {
   validateIntent,
   resolveTradeSeller,
@@ -64,6 +65,9 @@ import {
   type VesselState,
 } from "./vesselState";
 
+/** P2-3: ladder skala waktu (08 §4) — level 0=1×, 1=0.5×, 2=0.25×. */
+export const DILATION_SCALES = [1, 0.5, 0.25];
+
 export interface SimulationOptions {
   /** Region the server owns. */
   region: WorldRegion;
@@ -78,12 +82,20 @@ export interface SimulationOptions {
   environs?: EnvironsState;
   /** Enable thermal/collision checks (default true if environs provided). */
   enableEnvirons?: boolean;
+  /** P2-2: append-only event store (disk/memory) untuk replay penuh. */
+  eventStore?: EventStore;
+  /** P2-3: budget tick (ms) sebelum time-dilation naik level (default 80). */
+  tickBudgetMs?: number;
+  /** P2-3: tick under-budget berturut-turut sebelum dilation turun (default 10). */
+  dilationRecoverTicks?: number;
 }
 
 export interface TickResult {
   accepted: GameEvent[];
   rejected: GameEvent[];
   tick: number;
+  /** P2-3: status dilation tick ini (client slow-motion adil via scale). */
+  dilation: DilationState;
   snapshot: ReturnType<WorldRegion["snapshot"]>;
 }
 
@@ -103,6 +115,18 @@ export class SimulationEngine {
   private eventSeq = 0;
   /** Durasi step sebelumnya (ms) — input checkStability tick_overbudget. */
   private lastTickMs = 0;
+  /** P2-2: store append-only (opsional — memory ring selalu ada). */
+  private readonly eventStore?: EventStore;
+  /** P2-3: ladder time-dilation — 0=1×, 1=0.5×, 2=0.25× (08 §4). */
+  private readonly tickBudgetMs: number;
+  private readonly dilationRecoverTicks: number;
+  private dilationLevel = 0;
+  private underBudgetStreak = 0;
+
+  /** Skema waktu efektif sekarang (dt × scale) — client ikut melambat. */
+  private get effDt(): number {
+    return this.dt * DILATION_SCALES[Math.min(this.dilationLevel, DILATION_SCALES.length - 1)];
+  }
 
   constructor(opts: SimulationOptions) {
     this.region = opts.region;
@@ -111,6 +135,9 @@ export class SimulationEngine {
     this.authority = opts.authority;
     this.environs = opts.environs;
     this.enableEnvirons = opts.enableEnvirons ?? !!opts.environs;
+    this.eventStore = opts.eventStore;
+    this.tickBudgetMs = opts.tickBudgetMs ?? STABILITY_LIMITS.maxTickMs;
+    this.dilationRecoverTicks = opts.dilationRecoverTicks ?? 10;
   }
 
   /** Enqueue a client intent for the NEXT tick. */
@@ -165,34 +192,77 @@ export class SimulationEngine {
       const bodies = getBodiesArray(this.environs);
       const collisions = checkCollisions(this.region, bodies);
       for (const c of collisions) this.log("collision", "env", { bodyId: c.bodyId, damage: c.damage, destroyed: c.destroyed });
-      const thermals = computeThermal(this.region, bodies.filter((b) => b.kind === "star"));
-      for (const t of thermals) if (t.overheat) this.log("thermal_overheat", "env", { vesselId: t.vesselId, temperature: t.temperature });
+      // P2-3 degradation ladder: thermal off di level ≥ 2 (charge penuh ke
+      // simulasi inti); cosmic events off di level ≥ 1.
+      if (this.dilationLevel < 2) {
+        const thermals = computeThermal(this.region, bodies.filter((b) => b.kind === "star"));
+        for (const t of thermals) if (t.overheat) this.log("thermal_overheat", "env", { vesselId: t.vesselId, temperature: t.temperature });
+      }
       // Cosmic events: solarWind + anomaly gravity — blueprint 01 §2.5 strengthening
-      const events = generateCosmicEvents(this.environs, this.region.regionId, this.region.tick);
-      for (const ev of events) this.log(`cosmic_${ev.kind}`, "env", { severity: ev.severity, payload: ev.payload });
+      if (this.dilationLevel < 1) {
+        const events = generateCosmicEvents(this.environs, this.region.regionId, this.region.tick);
+        for (const ev of events) this.log(`cosmic_${ev.kind}`, "env", { severity: ev.severity, payload: ev.payload });
+      }
       // Baseline per-region time dilation — D-019
-      for (const e of this.region["entities"].values()) {
+      for (const e of this.region.values()) {
         const speed = Math.sqrt(e.velocity.x * e.velocity.x + e.velocity.y * e.velocity.y + e.velocity.z * e.velocity.z);
         if (!isWithinBaseline(speed)) this.log("baseline_breach", e.id, { speed, region: this.region.regionId });
         void perRegionTimeDilation(this.region.regionId, this.region.tick, speed);
       }
       // Anti-cheat: stateHash per tick + OTEL trace
-      for (const e of this.region["entities"].values()) if (e.kind === "vessel") this.log("state_hash", e.id, { hash: computeEntityHash(e as VesselEntity) });
+      for (const e of this.region.values()) if (e.kind === "vessel") this.log("state_hash", e.id, { hash: computeEntityHash(e as VesselEntity) });
       recordTickTrace({ tick: this.region.tick, regionId: this.region.regionId, durationMs: Date.now() - start, entityCount: this.region.snapshot().entities.length, eventCount: accepted.length + rejected.length, timestamp: new Date().toISOString() });
     }
     this.region.advanceTick();
     this.lastTickMs = Date.now() - stepStart;
+    // P2-3: ukur durasi tick → ladder time-dilation (broadcast via
+    // region.dilation + log region_dilated).
+    this.observeTickDuration(this.lastTickMs);
 
     return {
       accepted,
       rejected,
       tick: this.region.tick,
+      dilation: this.dilation,
       snapshot: this.region.snapshot(),
     };
   }
 
-  /** The full event log (replay foundation). */
+  /** P2-3: status dilation sekarang. */
+  get dilation(): DilationState {
+    return { level: this.dilationLevel, scale: DILATION_SCALES[Math.min(this.dilationLevel, DILATION_SCALES.length - 1)] };
+  }
+
+  /** P2-3: catat durasi tick → naik/turun level ladder. Public supaya
+   *  harness & test bisa drive tanpa step berat. */
+  observeTickDuration(ms: number): void {
+    if (ms > this.tickBudgetMs) {
+      const prev = this.dilationLevel;
+      this.dilationLevel = Math.min(this.dilationLevel + 1, DILATION_SCALES.length - 1);
+      this.underBudgetStreak = 0;
+      if (this.dilationLevel !== prev) {
+        this.region.dilation = this.dilation;
+        this.log("region_dilated", "server", { level: this.dilationLevel, scale: this.dilation.scale, cause: `tick ${ms}ms > budget ${this.tickBudgetMs}ms` });
+      }
+      return;
+    }
+    this.underBudgetStreak += 1;
+    if (this.underBudgetStreak >= this.dilationRecoverTicks && this.dilationLevel > 0) {
+      this.dilationLevel -= 1;
+      this.underBudgetStreak = 0;
+      this.region.dilation = this.dilation;
+      this.log("region_dilated", "server", { level: this.dilationLevel, scale: this.dilation.scale, cause: "recovered" });
+    }
+  }
+
+  /** P2-5: catat hasil verifikasi prediksi klien (desync_ok / desync_mismatch). */
+  recordDesyncCheck(playerId: string, entityId: string, match: boolean, serverHash?: string): GameEvent {
+    return this.log("desync_check", playerId, { entityId, match, serverHash: match ? undefined : serverHash });
+  }
+
+  /** The full event log (replay foundation). P2-2: baca dari store bila ada. */
   replayLog(): GameEvent[] {
+    if (this.eventStore) return this.eventStore.replay();
     return [...this.eventLog];
   }
 
@@ -207,19 +277,22 @@ export class SimulationEngine {
       timestamp: new Date().toISOString(),
     };
     this.eventLog.push(ev);
+    this.eventStore?.append(ev);
     return ev;
   }
 
   private applyIntent(intent: PlayerIntent, ctx: ValidatorContext): void {
     const entity = this.region.get(intent.entityId);
     if (!entity) return;
+    // P2-1: intent yang diterima = klien perlu tahu entity ini berubah.
+    this.region.noteChange(intent.entityId);
     // Governance: no player pause, safe-zone check for combat
     try { assertNotPaused(); } catch { return; }
     switch (intent.type) {
       case "move": {
         const to = intent.payload as unknown as Vec3;
         // Block move if in safe-zone and trying to leave? — governed by validator, not here
-        moveToward(entity, to, this.dt);
+        moveToward(entity, to, this.effDt);
         break;
       }
       case "attack": {
@@ -233,6 +306,7 @@ export class SimulationEngine {
           // (05 §2.2: tanpa saksi = tanpa record).
           const targetId = intent.payload?.targetId as string | undefined;
           const target = targetId ? this.region.get(targetId) : undefined;
+          if (target) this.region.noteChange(target.id); // P2-1: damage → klien target
           if (target && target.kind === "vessel" && hullOf(target.vessel) <= 0) {
             this.log("vessel_destroyed", intent.playerId, { entityId: target.id });
             this.escalateCrime(intent.playerId, target, { crime: "kill" });
@@ -424,7 +498,7 @@ export class SimulationEngine {
         // Kapal milik pembeli — buyer itu PLAYER-id, bukan vessel-id
         // (getVessel(buyer) salah; cari vessel yang owner-nya pembeli).
         let buyerVessel: VesselEntity | undefined;
-        for (const e of this.region["entities"].values()) {
+        for (const e of this.region.values()) {
           if (e.kind === "vessel" && e.owner === buyer) { buyerVessel = e; break; }
         }
         if (!buyerVessel) {
@@ -588,10 +662,11 @@ export class SimulationEngine {
    *  powerDraw fit, regen dari reactor — formula capStep (universe)
    *  yang sama dengan proyeksi klien. */
   private stepCapacitors(): void {
-    for (const e of this.region["entities"].values()) {
+    for (const e of this.region.values()) {
       if (e.kind !== "vessel") continue;
       const res = stepCapacitor(e);
       if (res.newlyDepleted) {
+        this.region.noteChange(e.id); // P2-1: kapasitor habis = state penting
         this.log("capacitor_depleted", "server", { entityId: e.id, current: res.current });
       }
     }
@@ -604,19 +679,21 @@ export class SimulationEngine {
     if (stab.ok) return;
     this.log("stability_trip", "server", {
       reason: stab.reason,
-      entities: this.region["entities"].size,
+      entities: this.region.size(),
       eventLog: this.eventLog.length,
       lastTickMs: this.lastTickMs,
     });
     if (stab.reason === "eventlog_overflow") {
-      // Rotate: buang separuh event lama — replay tetap jalan, memori stabil.
+      // P2-2: rotate store (tutup file aktif, buka sequence baru) + buang
+      // separuh memory ring — replay penuh tetap ada di disk.
+      this.eventStore?.rotate();
       this.eventLog = this.eventLog.slice(Math.floor(this.eventLog.length / 2));
     }
   }
 
   /** Entity cap (STABILITY_LIMITS.maxEntities) — spawn baru wajib ditolak. */
   private entityCapExceeded(): boolean {
-    return this.region["entities"].size >= STABILITY_LIMITS.maxEntities;
+    return this.region.size() >= STABILITY_LIMITS.maxEntities;
   }
 
   private integratePhysics(): void {
@@ -625,20 +702,23 @@ export class SimulationEngine {
     // machine (drift decay / gravity fall / grounded) instead of free flight.
     const planetPos = this.nearestPlanetPosition();
     const planetMass = this.nearestPlanetBody()?.mass ?? 5.972e24;
-    for (const e of this.region["entities"].values()) {
+    for (const e of this.region.values()) {
       if (e.kind === "vessel") {
         if (this.stepEmergency(e, planetPos, planetMass) !== "nominal") continue;
       }
       const drag = 0.02;
+      const dt = this.effDt;
       const ax = -e.velocity.x * drag;
       const ay = -e.velocity.y * drag;
       const az = -e.velocity.z * drag;
-      const nextVel = { x: e.velocity.x + ax * this.dt, y: e.velocity.y + ay * this.dt, z: e.velocity.z + az * this.dt };
+      const nextVel = { x: e.velocity.x + ax * dt, y: e.velocity.y + ay * dt, z: e.velocity.z + az * dt };
       const clamped = clampSpeed(nextVel, 500);
       e.velocity = clamped;
-      e.position.x += e.velocity.x * this.dt;
-      e.position.y += e.velocity.y * this.dt;
-      e.position.z += e.velocity.z * this.dt;
+      e.position.x += e.velocity.x * dt;
+      e.position.y += e.velocity.y * dt;
+      e.position.z += e.velocity.z * dt;
+      // P2-1: gerak → masuk delta snapshot.
+      if (e.velocity.x !== 0 || e.velocity.y !== 0 || e.velocity.z !== 0) this.region.noteChange(e.id);
     }
   }
 
@@ -667,6 +747,7 @@ export class SimulationEngine {
     if (changed) {
       if (state === "nominal") delete v.emergency;
       else v.emergency = { state, updatedTick: this.region.tick, cause };
+      this.region.noteChange(v.id); // P2-1: transisi emergency → klien
       this.log(`emergency_${state}`, v.id, { hull: Math.round(hullOf(v.vessel) * 10) / 10, cause });
     }
     // F1: settle is MEASURED, not assumed — touchdown verdict from real
@@ -696,24 +777,30 @@ export class SimulationEngine {
     }
     if (state === "falling" && planetPos) {
       // F4: real planet mass from environs — Mars pulls less than Earth.
-      v.velocity = applyGravity(v.position, v.velocity, planetPos, this.dt, planetMass);
+      v.velocity = applyGravity(v.position, v.velocity, planetPos, this.effDt, planetMass);
     } else if (state === "adrift") {
-      const damp = Math.max(0, 1 - ADRIFT_DAMPING * this.dt);
+      const damp = Math.max(0, 1 - ADRIFT_DAMPING * this.effDt);
       v.velocity = { x: v.velocity.x * damp, y: v.velocity.y * damp, z: v.velocity.z * damp };
     }
     v.velocity = clampSpeed(v.velocity, state === "falling" ? FALL_SPEED_MAX : 500);
-    v.position.x += v.velocity.x * this.dt;
-    v.position.y += v.velocity.y * this.dt;
-    v.position.z += v.velocity.z * this.dt;
+    v.position.x += v.velocity.x * this.effDt;
+    v.position.y += v.velocity.y * this.effDt;
+    v.position.z += v.velocity.z * this.effDt;
+    if (v.velocity.x !== 0 || v.velocity.y !== 0 || v.velocity.z !== 0) this.region.noteChange(v.id); // P2-1
     return state;
   }
 
   private decrementCooldowns(): void {
-    for (const e of this.region["entities"].values()) {
+    for (const e of this.region.values()) {
       if (e.kind !== "vessel") continue;
+      let touched = false;
       for (const key of Object.keys(e.cooldowns)) {
-        e.cooldowns[key] = Math.max(0, (e.cooldowns[key] ?? 1) - 1);
+        if ((e.cooldowns[key] ?? 0) > 0) {
+          e.cooldowns[key] = Math.max(0, (e.cooldowns[key] ?? 1) - 1);
+          touched = true;
+        }
       }
+      if (touched) this.region.noteChange(e.id); // P2-1: cooldown = state hash
     }
   }
 }
@@ -762,7 +849,11 @@ export function computeEntityHash(e: VesselEntity): string {
   const { x: vx, y: vy, z: vz } = e.velocity;
   const sys = e.vessel.systems.map((s) => `${s.id}:${Math.round(s.health)}`).join(",");
   const cd = Object.entries(e.cooldowns).map(([k,v]) => `${k}:${v}`).join(",");
-  return `${e.id}|${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}|${vx.toFixed(1)},${vy.toFixed(1)},${vz.toFixed(1)}|${sys}|${cd}`;
+  // P2-5: heading + emergency masuk hash — proyeksi klien wajib membawa
+  // field yang sama, mismatch = resync.
+  const hd = `${e.heading.yaw.toFixed(3)},${e.heading.pitch.toFixed(3)}`;
+  const em = e.emergency?.state ?? "nominal";
+  return `${e.id}|${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}|${vx.toFixed(1)},${vy.toFixed(1)},${vz.toFixed(1)}|${hd}|${em}|${sys}|${cd}`;
 }
 
 export function verifyClientPrediction(serverHash: string, clientHash: string): boolean {

@@ -91,7 +91,7 @@ function applyStructuralDamage(vessel: VesselEntity, damage: number): number {
 
 export function checkCollisions(region: WorldRegion, bodies: SystemBody[]): CollisionResult[] {
   const results: CollisionResult[] = [];
-  for (const entity of region["entities"].values()) {
+  for (const entity of region.values()) {
     if (entity.kind !== "vessel") continue;
     const vessel = entity as VesselEntity;
     for (const body of bodies) {

@@ -27,7 +27,7 @@ function dist(a: Vec3, b: Vec3): number {
 
 export function computeThermal(region: WorldRegion, stars: SystemBody[]): ThermalState[] {
   const out: ThermalState[] = [];
-  for (const e of region["entities"].values()) {
+  for (const e of region.values()) {
     if (e.kind !== "vessel") continue;
     const v = e as VesselEntity;
     let irradiance = 0;
