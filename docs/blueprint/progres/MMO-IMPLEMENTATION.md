@@ -248,6 +248,7 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 ### PR #786 ✅ Docs blueprint Cangyuan — `ue/10-cangyuan.md` (gabungan 2 draft user: politik otonom+suksesi, faction entity, kontrak Biao Ren encounter-abstrak, perang+logistik, eksekusi publik world-event, Phase A–E) + baris indeks README — SUDAH (2026-10-09, docs-only). **Status: PARKED** — perkuat planet existing dulu, tanpa eksekusi sampai dibuka lagi
 ### PR #787 ✅ Pustaka riset AI lintas fitur — `progres/riset-ai-engine.md` (11 repo + tier lisensi MIT/port vs NC-NONE/ideas-only, pola budget/LOD/two-layer/GOAP/lock-on-Z-target, daftar ditolak + aturan "profile first, native last") + index README — SUDAH (2026-10-09, docs-only)
 ### PR #788 ✅ Riset susulan #787 — tambah Akuma RPG (lock-on Z-target → Sprint 7 PR-A) + open-theft-auto (pola wanted/polisi → 05), tabel 9→11 repo — SUDAH (2026-10-09, docs-only)
+### PR #789 ✅ Sprint 3 skala — eventStore (P2-2) + delta/interest (P2-1) + TiDi ladder (P2-3) + anti-desync hash/verify_hash (P2-5) + re-sim harness (P2-6) + WS gateway RFC6455 (P2-7) + schemaVersion (P2-8) + API iterasi entity (P2-9) + safe-zone cached (P3-3), 15 regresi — SUDAH (2026-10-10)
 ### PR berikutnya (urutan) — 09 Part A sisa + Part B (09-client-polish.md 12 fase)
 - [x] transport terpisah — SELESAI
 - [x] Cosmic environs — SELESAI
@@ -293,6 +294,10 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 - [x] `claims.ts` — klaim 100x100 radius tanam 500m maks 3 petak + overlap + anti-serakah — SELESAI (PR #779)
 - [x] `hack.ts` — attempt FNV-1a 4-6 tombol + cooldown 600 tick + engine-disable/wanted delta/3-fail alarm — SELESAI (PR #779)
 - [x] `visibility.ts` — sanitizeSnapshot per-pemirsa (owner penuh, redact {id,capability}, anonim legacy) — SELESAI (PR #779)
+- [x] `eventStore.ts` — append-only JSONL + rotate (10k event/file, 24 jam, retensi 8 file) + memory store; opt-in via ARCLUX_EVENTS_DIR — SELESAI (PR #789)
+- [x] `replay.ts` — harness re-simulasi determinisme CI (resimulate → worldHash; 2 replika log sama wajib identik) — SELESAI (PR #789)
+- [x] `wsGateway.ts` — WebSocket RFC6455 zero-dep sungguhan (handshake+frame), snapshot on-connect + delta broadcast interest 5km, default ON /ws — SELESAI (PR #789)
+- [x] Sprint 3 skala (08 §4): delta snapshot `?lastTick`/`?radius` (P2-1), event store (P2-2), TiDi ladder 80ms→0.5×/0.25× + region.dilated (P2-3), verify_hash+hash heading/emergency (P2-5), re-sim harness (P2-6), WS (P2-7), schemaVersion+migrateSnapshot (P2-8), API iterasi entity (P2-9), safe-zone cached stations (P3-3) — SELESAI (PR #789, 15 regresi tests/server-sprint3.test.ts)
 - [ ] 09 Part B Fase 9 karakter repo (CharacterEntity + spawnCharacter)
 - [ ] 09 Part B Fase 10 hangar 32 slot + docking film 3s (gate.ts + bridge.ts)
 - [ ] 09 Part B Fase 11 bazaar 16 lapak (component.ts + validator)
@@ -355,4 +360,5 @@ benar (proses/host berbeda) masih TODO — self-host per shard (D-009).
 | 2026-10-09 | #786 | Docs blueprint Cangyuan (gabungan 2 draft): politik makro+suksesi permanen, faction entity dua-layer, kontrak Biao Ren encounter-abstrak, perang logistik agregat, eksekusi publik world-event hukum, Phase A–E + acceptance | in progress |
 | 2026-10-09 | #787 | Pustaka riset AI lintas fitur: 11 repo (MIT port / NC-NONE ideas-only) termasuk Akuma (lock-on Z-target) + open-theft-auto (wanted polisi), pola budget/LOD/relasi/GOAP, daftar ditolak (LLM/RL/native/engine-2) + aturan profile-first | in progress |
 | 2026-10-09 | #788 | Riset susulan pasca-merge #787: Akuma (referensi lock-on PR-A) + open-theft-auto (pola wanted 05) masuk tabel, 9→11 repo | in progress |
+| 2026-10-10 | #789 | Sprint 3 skala (08 §4): eventStore/replay/wsGateway, delta snapshot+interest, TiDi ladder, verify_hash, re-sim determinisme, schemaVersion, API iterasi entity, safe-zone cached, 15 regresi | in progress |
 
