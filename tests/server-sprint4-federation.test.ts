@@ -21,13 +21,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { createPrivateKey, sign } from "node:crypto";
+import { createPrivateKey, randomBytes, sign } from "node:crypto";
 
 // ARCLUX_ROOT temp — relay persistence (JSON-per-record) menulis ke sini.
 const TMP_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "arclux-sprint4-"));
 process.env.ARCLUX_ROOT = TMP_ROOT;
-process.env.ARCLUX_HANDOFF_SECRET = "sprint4-handoff-secret";
-process.env.ARCLUX_AUTH_SECRET = "sprint4-auth-secret";
+// Secret acak per-run (bukan literal — ThreatCrush hardcoded-credential).
+const HANDOFF_SECRET = randomBytes(32).toString("hex");
+process.env.ARCLUX_HANDOFF_SECRET = HANDOFF_SECRET;
+process.env.ARCLUX_AUTH_SECRET = randomBytes(32).toString("hex");
 
 import { WorldRegion } from "../mmo/packages/gameserver/world";
 import { createGameServer, type GameServerHandle } from "../mmo/packages/gameserver/server";
@@ -240,7 +242,6 @@ describe("Sprint 4 — gate e2e lintas shard (2 region, HTTP)", () => {
   let A: GameServerHandle;
   let B: GameServerHandle;
   const keys = generateHandoffKeyPair();
-  const HANDOFF_SECRET = "sprint4-handoff-secret";
 
   beforeAll(async () => {
     const registry = createPersistentRelayRegistry();
