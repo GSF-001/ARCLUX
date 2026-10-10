@@ -16,7 +16,9 @@
 // ```
 //
 // Ini dipakai untuk: routing intent antar shard, pasangan di gate handoff,
-// dan mencari entity pemain di region lain.
+//  dan mencari entity pemain di region lain.
+
+import { putRelayIdentity, deleteRelayIdentity, listRelayIdentities } from "../db/repositories/RelayStore";
 
 export interface ShardPresence {
   shardId: string;
@@ -79,3 +81,45 @@ export function createIdentityMap(): IdentityMap {
 
 //
 // Live — persist/relay/event wired, verified smoke (PR #590/#591).
+
+/**
+ * Live — identity PERSIST ke packages/db (Sprint 4 / P0-6): playerId global
+ * tetap dikenal setelah relay restart (routing intent + pasangan gate handoff
+ * tidak butuh re-login). Interface sama dengan createIdentityMap (drop-in).
+ */
+export function createPersistentIdentityMap(): IdentityMap {
+  const mem = createIdentityMap();
+
+  // hydrate dari disk.
+  for (const rec of listRelayIdentities()) {
+    for (const p of rec.presence) {
+      mem.attach(rec.id, { shardId: p.shardId, entityIds: [...p.entityIds], lastSeen: p.lastSeen });
+    }
+  }
+
+  const persist = (playerId: string) => {
+    const list = mem.resolve(playerId);
+    if (list.length) {
+      putRelayIdentity({ id: playerId, presence: list.map((p) => ({ shardId: p.shardId, entityIds: [...p.entityIds], lastSeen: p.lastSeen })) });
+    } else {
+      deleteRelayIdentity(playerId);
+    }
+  };
+
+  return {
+    attach(playerId, presence) {
+      mem.attach(playerId, presence);
+      persist(playerId);
+    },
+    detach(playerId, shardId) {
+      mem.detach(playerId, shardId);
+      persist(playerId);
+    },
+    move(playerId, fromShardId, toShardId, entityId) {
+      mem.move(playerId, fromShardId, toShardId, entityId);
+      persist(playerId);
+    },
+    resolve: (playerId) => mem.resolve(playerId),
+    has: (playerId) => mem.has(playerId),
+  };
+}

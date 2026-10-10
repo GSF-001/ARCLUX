@@ -7,7 +7,8 @@
 // packages/relay — SHARD REGISTRY + BRIDGE (D-005 multi-shard, D-009 self-host).
 //
 // Relay pusat (registry + gate config + identity lintas shard) — BUKAN game
-// server. Scan MMO-IMPLEMENTATION.md §2.3 sebelum implementasi.
+// server. Sprint 4: registry/identity/ledger persist ke packages/db +
+// handoff token Ed25519 (handoffToken.ts).
 //
 // Barrel: expose semua API relay.
 
@@ -15,3 +16,5 @@ export * from "./types";
 export * from "./registry";
 export * from "./gate";
 export * from "./identity";
+export * from "./handoffToken";
+export * from "./handoffLedger";

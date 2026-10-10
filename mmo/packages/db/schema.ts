@@ -89,4 +89,63 @@ export interface PendingHandoffRecord {
   updatedAt: string;
 }
 
-export type CollectionName = "repos" | "analyses" | "issues" | "regions" | "handoffs";
+/**
+ * Relay shard registry (Sprint 4 / P0-6) — relay adalah registry TERPUSAT:
+ * 1 proses per region, daftar shard + claim region persist ke sini (bukan
+ * Map in-memory yang hilang saat relay restart).
+ */
+export interface RelayShardRecord {
+  id: string; // = shardId
+  shardId: string;
+  address: string;
+  regionIds: string[];
+  status: "up" | "down" | "draining";
+  meta?: Record<string, unknown>;
+  updatedAt: string;
+}
+
+/** Claim region → shard (anti bentrok 2 server). id = regionId. */
+export interface RelayClaimRecord {
+  id: string; // = regionId
+  regionId: string;
+  shardId: string;
+  claimedAt: number;
+  ttlMs?: number;
+}
+
+/** Identity lintas shard persist (Sprint 4) — id = playerId (global handle). */
+export interface RelayIdentityRecord {
+  id: string; // = playerId
+  presence: Array<{ shardId: string; entityIds: string[]; lastSeen: number }>;
+}
+
+/**
+ * Event record handoff lintas shard (Sprint 4) — append-only audit trail:
+ * requested/delivered/rejected + seq (sumber rehydrate lastSeq idempotency
+ * setelah relay restart — event-sourced, bukan Map terpisah).
+ */
+export interface RelayEventRecord {
+  id: string;
+  /** idempotency key `${vesselId}:${toRegionId}` (mirror relay/gate). */
+  key: string;
+  type: "requested" | "delivered" | "rejected";
+  vesselId: string;
+  fromShardId: string;
+  toShardId: string;
+  toRegionId: string;
+  seq: number;
+  ok: boolean;
+  reason?: string;
+  at: string;
+}
+
+export type CollectionName =
+  | "repos"
+  | "analyses"
+  | "issues"
+  | "regions"
+  | "handoffs"
+  | "relayShards"
+  | "relayClaims"
+  | "relayIdentities"
+  | "relayEvents";

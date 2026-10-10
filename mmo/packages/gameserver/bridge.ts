@@ -33,6 +33,12 @@ import {
 } from "../relay/gate";
 import type { RelayRegistry } from "../relay/registry";
 import type { IdentityMap } from "../relay/identity";
+import {
+  buildHandoffPayload,
+  signHandoffToken,
+  verifyHandoffToken,
+  type HandoffKeyPair,
+} from "../relay/handoffToken";
 import type { VesselModel } from "../universe/types";
 import type { HandoffRequest, HandoffResult } from "../relay/types";
 
@@ -56,6 +62,13 @@ export interface GameBridgeOptions {
   shards: GameBridgeShard[];
   /** Opsional: persistence untuk handoff token crash-safe (diteruskan ke gate). */
   persistence?: PersistenceStore;
+  /**
+   * Sprint 4 (P0-6): keypair Ed25519 untuk token handoff cryptograph.
+   * Bila di-set, transferToken berupa token signed (bukan string polos) dan
+   * deliver memverifikasi signature sebelum spawn (playerId dari payload
+   * terverifikasi — bukan split string yang bisa dipalsukan).
+   */
+  handoffKeys?: HandoffKeyPair;
 }
 
 export interface GameBridgeShardRuntime {
@@ -75,6 +88,7 @@ export interface GameBridge {
 export function createGameBridge(opts: GameBridgeOptions): GameBridge {
   const runtimes = new Map<string, GameBridgeShardRuntime>();
   const pendingPositions = new Map<string, Vec3>();
+  const handoffKeys = opts.handoffKeys;
   let seq = 0;
 
   // daftarkan & claim semua shard ke relay registry.
@@ -96,17 +110,33 @@ export function createGameBridge(opts: GameBridgeOptions): GameBridge {
     const model = opts.vesselModels.get(req.vesselId);
     if (!model) return { ok: false, reason: `no vessel model for ${req.vesselId}` };
 
+    // Sprint 4: token Ed25519 diverifikasi sebelum spawn — playerId dari
+    // payload terverifikasi (bukan split string yang bisa dipalsukan).
+    let owner: string | undefined;
+    if (opts.handoffKeys) {
+      const verdict = verifyHandoffToken(req.transferToken, opts.handoffKeys.publicKey);
+      if (!verdict.ok) return { ok: false, reason: `handoff token rejected: ${verdict.reason}` };
+      if (verdict.payload.vesselId !== req.vesselId) {
+        return { ok: false, reason: "handoff token vesselId mismatch" };
+      }
+      if (verdict.payload.seq !== req.seq) {
+        return { ok: false, reason: "handoff token seq mismatch" };
+      }
+      owner = verdict.payload.playerId || undefined;
+    } else {
+      owner = req.transferToken.split(":")[2] || undefined;
+    }
+
     const position = pendingPositions.get(req.vesselId) ?? { x: 0, y: 0, z: 0 };
     shard.region.spawnVessel({
       id: req.vesselId,
-      owner: req.transferToken.split(":")[2] ?? undefined,
+      owner,
       vessel: model,
       position,
     });
 
-    // update presence lintas shard (asal → tujuan). playerId = token[2] lihat notifyTarget.
-    const playerId = req.transferToken.split(":")[2] ?? "";
-    opts.identity.move(playerId, req.fromShardId, req.toShardId, req.vesselId);
+    // update presence lintas shard (asal → tujuan).
+    opts.identity.move(owner ?? "", req.fromShardId, req.toShardId, req.vesselId);
 
     pendingPositions.delete(req.vesselId);
     return { ok: true };
@@ -118,6 +148,14 @@ export function createGameBridge(opts: GameBridgeOptions): GameBridge {
       registry: opts.registry,
       fromShardId: shard.shardId,
       deliver,
+      // Sprint 4: relay menolak token yang gagal verifikasi Ed25519 (P0-6 —
+      // bukan lagi sanitizeToken heuristik).
+      verifyToken: handoffKeys
+        ? (token) => {
+            const v = verifyHandoffToken(token, handoffKeys.publicKey);
+            return v.ok ? { ok: true } : { ok: false, reason: v.reason };
+          }
+        : undefined,
     });
 
     const router = createGateRouter(shard.gateLinks, {
@@ -128,6 +166,22 @@ export function createGameBridge(opts: GameBridgeOptions): GameBridge {
         const toShard = coordinator.resolveTarget(targetRegionId);
         if (!toShard || toShard === shard.shardId) return { ok: false, reason: "target not a known/remote shard" };
         pendingPositions.set(handoff.vesselId, handoff.position);
+        // Sprint 4: token Ed25519 signed (bukan string polos) — payload hanya
+        // id routing (anti-clone structural), playerId = owner vessel asli.
+        const handoffSeq = ++seq;
+        const transferToken = opts.handoffKeys
+          ? signHandoffToken(
+              buildHandoffPayload({
+                vesselId: handoff.vesselId,
+                playerId: handoff.owner ?? "",
+                fromShardId: shard.shardId,
+                toShardId: toShard,
+                toRegionId: targetRegionId,
+                seq: handoffSeq,
+              }),
+              opts.handoffKeys.privateKey,
+            )
+          : `v:${handoff.vesselId}:${handoff.owner ?? ""}:${targetRegionId}`;
         // Tunggu ACK relay (transactional): requestHandoff → ack {ok:true} hanya
         // kalau server tujuan benar-benar materialized vessel. Bukan fire-and-forget.
         try {
@@ -137,8 +191,8 @@ export function createGameBridge(opts: GameBridgeOptions): GameBridge {
             fromShardId: shard.shardId,
             toRegionId: targetRegionId,
             toShardId: toShard,
-            transferToken: `v:${handoff.vesselId}:${handoff.owner ?? ""}:${targetRegionId}`,
-            seq: ++seq,
+            transferToken,
+            seq: handoffSeq,
           });
           return res;
         } catch (err) {
