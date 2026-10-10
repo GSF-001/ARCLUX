@@ -14,7 +14,7 @@
 import { randomUUID } from "node:crypto";
 import { putRecord, listRecords, deleteRecord } from "../client";
 import type { IssueRecord } from "../schema";
-import type { Issue } from "../../engine/contract";
+import type { Issue } from "../../../../packages/engine/contract";
 
 export function saveIssues(repoId: string, analysisId: string, issues: Issue[]): IssueRecord[] {
   const now = new Date().toISOString();

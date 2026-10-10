@@ -15,7 +15,7 @@
 // + OutputPass (core THREE, no CDN — CSP default-src 'self').
 
 import * as THREE from "three";
-import type { RegionState, StationEntity, VesselEntity } from "../../../../../packages/gameserver/types";
+import type { RegionState, StationEntity, VesselEntity } from "../../../../../mmo/packages/gameserver/types";
 import type { GameSettings } from "../settings";
 import { createBase, disposeGroup, type SceneContext } from "./bootstrap";
 import { createCamera, setCameraMode, setLookYawPitch, updateCamera, type CameraMode } from "./camera";
@@ -37,9 +37,9 @@ import { lerpSpaceToSurface, canAutoLand, raycastCrash } from "./planetary/surfa
 import { createFacilityMesh, updateFacilityHealth, canBuildOnEmptyLand, clampCharacterSpeed } from "./planetary/facilities";
 import { attachNightLights, updateNightVisibility } from "./planetary/night";
 import { createGeographyMarker, NICHE_COLOR } from "./planetary/geography";
-import { createEnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
-import type { EnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
-import { generateCosmicEventsForTick } from "../../../../../packages/gameserver/cosmicEvent";
+import { createEnvironmentalContext } from "../../../../../mmo/packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../mmo/packages/gameserver/planetary/environment";
+import { generateCosmicEventsForTick } from "../../../../../mmo/packages/gameserver/cosmicEvent";
 import { createPlanetary10X, tickPlanetary10X, disposePlanetary10X } from "./planetary/wireX";
 import { strikeDistanceTo } from "./planetary/lightning";
 import { createPlanetary10G, tickPlanetary10G, disposePlanetary10G } from "./planetary/wireG";

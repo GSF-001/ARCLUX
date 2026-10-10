@@ -14,7 +14,7 @@
 
 import * as THREE from "three";
 import { colors, threeColor } from "../../ui/tokens";
-import type { SystemState } from "../../../../../packages/universe/types";
+import type { SystemState } from "../../../../../mmo/packages/universe/types";
 import type { SceneContext } from "./bootstrap";
 import { makeGlowTexture } from "./bootstrap";
 

@@ -10,7 +10,7 @@
 // Visual-only: reads EnvironmentalContext wind and precipitation.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 export type VegetationKind = "grass" | "small" | "bush" | "branch" | "tree";
 

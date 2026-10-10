@@ -5,7 +5,7 @@
 //
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 export type DiscoveryPhase = "DISTANT" | "FOG" | "SILHOUETTE" | "LIGHT" | "DETAIL" | "HANGAR";
 

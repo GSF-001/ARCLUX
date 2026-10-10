@@ -49,7 +49,7 @@ content, searchable and organized
 
 Under active development. This section stays high-level on purpose — for the current, detailed breakdown see [progres/status-core.md](https://github.com/GSF-001/ARCLUX/blob/main/progres/status-core.md), [status-web.md](https://github.com/GSF-001/ARCLUX/blob/main/progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
 
-Core engine (parse / index / graph / impact / call graph / detectors / framework rules / DSL / search / security) is solid and verified against real repos (vscode, react, vite, laravel, flask). Platform layers (daemon + SSE bridge, persistence via `packages/db`, content-hash caches, watcher) are wired and used in production. Per-file incremental re-index is built but still coarse (full rebuild per change) — see `progres/status-core.md`. MMO product (`apps/game` + `packages/gameserver` + `packages/universe`) is in alpha — see `docs/blueprint/`.
+Core engine (parse / index / graph / impact / call graph / detectors / framework rules / DSL / search / security) is solid and verified against real repos (vscode, react, vite, laravel, flask). Platform layers (daemon + SSE bridge, persistence via `mmo/packages/db`, content-hash caches, watcher) are wired and used in production. Per-file incremental re-index is built but still coarse (full rebuild per change) — see `progres/status-core.md`. MMO product (`apps/game` + `mmo/packages/gameserver` + `mmo/packages/universe`) is in alpha — see `docs/blueprint/`.
 
 ## What it does
 
@@ -203,7 +203,7 @@ hooks/useDebounce+useTheme+useClipboard+useCommandPalette+useMediaQuery
  package-manager, ui, web-intake — arah platform, belum ada konsumen
 
 ## Yang udah wired (jangan dikira stub lagi — audit 08-21)
-- `packages/db` — client + schema v1 + 3 store (RepoStore/AnalysisStore/
+- `mmo/packages/db` — client + schema v1 + 3 store (RepoStore/AnalysisStore/
  IssueStore, CRUD lengkap), DIPAKAI daemon (`saveRepo`/`saveAnalysis`
  per re-analysis, apps/cli/daemon.ts:21-22)
 - `packages/cache` — CacheProvider (getCacheStats/clearAllCaches) +

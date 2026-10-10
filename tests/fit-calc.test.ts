@@ -26,12 +26,12 @@ import {
   FIT_DAMAGE_CEILING,
   MAX_RESIST,
   type FitInput,
-} from "../packages/universe/fitCalc";
+} from "../mmo/packages/universe/fitCalc";
 import type {
   ComponentBinding,
   ComponentDefinition,
   SystemState,
-} from "../packages/universe/types";
+} from "../mmo/packages/universe/types";
 
 // ── fixtures ────────────────────────────────────────────
 

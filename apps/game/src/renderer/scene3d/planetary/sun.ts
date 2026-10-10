@@ -10,7 +10,7 @@
 // Visual-only: reads authority state, never writes it.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 // Sun uniforms consumed by terrain, ocean, vegetation, and cloud resolvers.
 export interface SunUniforms {

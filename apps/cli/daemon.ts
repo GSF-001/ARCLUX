@@ -18,8 +18,8 @@ import { ArcluxDaemon } from "../../packages/daemon/ArcluxDaemon";
 import { resolveWorkingRepositoryRoot } from "../../packages/environment/EnvironmentDetector";
 import { resolve } from "node:path";
 import { spawnDetached, stopDetached, getDaemonStatus, getDaemonHealth } from "../../packages/daemon/DaemonProcess";
-import { saveRepo } from "../../packages/db/repositories/RepoStore";
-import { saveAnalysis } from "../../packages/db/repositories/AnalysisStore";
+import { saveRepo } from "../../mmo/packages/db/repositories/RepoStore";
+import { saveAnalysis } from "../../mmo/packages/db/repositories/AnalysisStore";
 import { fileURLToPath } from "node:url";
 
 export function registerDaemonCommand(program: Command): void {
@@ -86,8 +86,8 @@ export function registerDaemonCommand(program: Command): void {
       daemon.kernel.signalBus.on("daemon:analysis:updated", (data: any) => {
         p.log.info(`Re-analyzed: ${data.moduleCount} modules`);
 
-        // Persist each re-analysis to packages/db/ so history survives past
-        // this daemon process (see packages/db/repositories/AnalysisStore.ts).
+        // Persist each re-analysis to mmo/packages/db/ so history survives past
+        // this daemon process (see mmo/packages/db/repositories/AnalysisStore.ts).
         // getAnalysis() here is cheap (cached, see watchRepository.ts) since
         // this fires right after a real re-analysis already happened.
         daemon.getAnalysis().then((result) => {

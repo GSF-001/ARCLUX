@@ -12,8 +12,8 @@
 // touches gameplay state.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
-import type { VesselState } from "../../../../../../packages/gameserver/vesselState";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
+import type { VesselState } from "../../../../../../mmo/packages/gameserver/vesselState";
 import type { CinematicContext } from "./CinematicContext";
 import { CinematicEventDirector } from "./CinematicEventDirector";
 import {

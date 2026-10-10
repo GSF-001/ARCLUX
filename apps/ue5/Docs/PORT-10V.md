@@ -55,6 +55,6 @@
 - [x] `FUE5Colony` (mirror 07 §6, sudah di UE5Types.h Slice 0)
 - [x] 5 intent builders `UE5IntentFactory` (colony_claim/colony_submit/colony_rollback/studio_publish/studio_fork, key SAMA)
 - [x] `World/UE5RegionWatcher.h/.cpp` (ganti RegionId snapshot = handoff, UE cuma render — Replication DILARANG)
-- [ ] Directory over HTTP — BELUM ADA di server (`packages/directory` in-process only); UE sementara titik lewat `ServerBaseUrl` config. Butuh GET /servers di server dulu.
+- [ ] Directory over HTTP — BELUM ADA di server (`mmo/packages/directory` in-process only); UE sementara titik lewat `ServerBaseUrl` config. Butuh GET /servers di server dulu.
 - [ ] Gate transit 2 pemain 2 region teruji di PC (Replication MMO dalam bentuk apa pun = DILARANG)
 - Gate: 2 pemain 2 region + handoff tanpa duplikat.

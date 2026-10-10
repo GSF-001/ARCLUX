@@ -12,9 +12,9 @@
 //   npx tsx scripts/mmo-bot-harness.ts --url http://127.0.0.1:24001
 // Exit 0 = semua check PASS. Exit 1 = ada yang FAIL (lihat log).
 
-import { createGameServer } from "../packages/gameserver/server";
-import type { PlayerIntent, RegionSnapshot } from "../packages/gameserver/types";
-import type { VesselModel } from "../packages/universe/types";
+import { createGameServer } from "../mmo/packages/gameserver/server";
+import type { PlayerIntent, RegionSnapshot } from "../mmo/packages/gameserver/types";
+import type { VesselModel } from "../mmo/packages/universe/types";
 
 const args = process.argv.slice(2);
 const urlFlag = args.find((a) => a.startsWith("--url="))?.split("=")[1] ?? null;

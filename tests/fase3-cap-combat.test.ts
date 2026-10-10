@@ -16,21 +16,21 @@
 // resistensi fit mengurangi damage di combat.
 
 import { describe, expect, it } from "vitest";
-import { capStep, simulateCapacitor, capacitorBudget } from "../packages/universe/capSim";
-import { computeResists, deriveComponentDefinition } from "../packages/universe/fitCalc";
-import { WorldRegion } from "../packages/gameserver/world";
-import { SimulationEngine } from "../packages/gameserver/simulation";
-import { applyCombatIntent, DAMAGE_CEILING } from "../packages/gameserver/combat";
-import { stepCapacitor, fitDefinitionsOf, CAP_REGEN_AT_FULL } from "../packages/gameserver/fitting";
-import { registerCapability, getCapability } from "../packages/gameserver/capability";
-import type { VesselEntity, PlayerIntent } from "../packages/gameserver/types";
+import { capStep, simulateCapacitor, capacitorBudget } from "../mmo/packages/universe/capSim";
+import { computeResists, deriveComponentDefinition } from "../mmo/packages/universe/fitCalc";
+import { WorldRegion } from "../mmo/packages/gameserver/world";
+import { SimulationEngine } from "../mmo/packages/gameserver/simulation";
+import { applyCombatIntent, DAMAGE_CEILING } from "../mmo/packages/gameserver/combat";
+import { stepCapacitor, fitDefinitionsOf, CAP_REGEN_AT_FULL } from "../mmo/packages/gameserver/fitting";
+import { registerCapability, getCapability } from "../mmo/packages/gameserver/capability";
+import type { VesselEntity, PlayerIntent } from "../mmo/packages/gameserver/types";
 import type {
   ComponentBinding,
   SlotLayout,
   SystemState,
   VesselModel,
   VesselStatDerivation,
-} from "../packages/universe/types";
+} from "../mmo/packages/universe/types";
 
 const SUBSYSTEMS: SystemState[] = [
   { id: "engine", label: "Engine", health: 70, baseStat: 70 },

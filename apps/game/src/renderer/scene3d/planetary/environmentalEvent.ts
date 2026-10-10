@@ -8,7 +8,7 @@
 
 // Wired via planetary/wireG — ticked per frame from EnvironmentalContext.
 
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 export type EventPhase = "clear" | "pre" | "storm" | "landing" | "post" | "recovery";
 

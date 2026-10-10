@@ -237,7 +237,7 @@ export function initLanding(opts: { onLaunch: () => void; onTrailer?: () => void
   const footRight = document.createElement("div");
   const links2 = [
     ["POWERED BY THREE.JS", "https://threejs.org/"],
-    ["DEDICATED SERVERS", "https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/packages/gameserver"],
+    ["DEDICATED SERVERS", "https://github.com/GSF-001/ARCLUX/tree/ARCLUX.main/mmo/packages/gameserver"],
     ["SECURE & FAIR", "https://github.com/GSF-001/ARCLUX/blob/ARCLUX.main/SECURITY.md"],
   ] as const;
   for (const [label, href] of links2) {

@@ -11,7 +11,7 @@
 // Visual-only: reads EnvironmentalContext, never writes authority state.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 const SHAFT_COUNT = 6;
 const SHAFT_BASE_HEIGHT = 800;

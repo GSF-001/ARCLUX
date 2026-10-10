@@ -9,7 +9,7 @@
 // Wired via planetary/wireG — ticked per frame from EnvironmentalContext.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 export interface AtmosphericContinuity {
   haze: number;

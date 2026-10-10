@@ -14,7 +14,7 @@
 //
 // Ini BUKAN scaffold lagi — dua mode nyata: server self-host & client Electron.
 
-import { createGameServer } from "../../packages/gameserver/server";
+import { createGameServer } from "../../mmo/packages/gameserver/server";
 import { startMain } from "./src/main/main";
 
 async function main(): Promise<void> {

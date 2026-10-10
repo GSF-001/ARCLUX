@@ -17,30 +17,30 @@
 // klaim radius P1-7, hapus dead code spawn P1-2, snapshot P2-4.
 
 import { afterEach, describe, expect, it } from "vitest";
-import { WorldRegion } from "../packages/gameserver/world";
-import { SimulationEngine } from "../packages/gameserver/simulation";
+import { WorldRegion } from "../mmo/packages/gameserver/world";
+import { SimulationEngine } from "../mmo/packages/gameserver/simulation";
 import {
   validateIntent,
   SCAN_RANGE_MAX,
   FPS_TETHER_RADIUS_M,
   type AuthorityDeps,
-} from "../packages/gameserver/validator";
-import { createSessionStore, SHIP_ONLY_INTENTS } from "../packages/gameserver/session";
-import { createClaimStore, CLAIM_PLANT_RADIUS_M, CLAIM_MAX_PER_PLAYER } from "../packages/gameserver/claims";
+} from "../mmo/packages/gameserver/validator";
+import { createSessionStore, SHIP_ONLY_INTENTS } from "../mmo/packages/gameserver/session";
+import { createClaimStore, CLAIM_PLANT_RADIUS_M, CLAIM_MAX_PER_PLAYER } from "../mmo/packages/gameserver/claims";
 import {
   createHackStore,
   HACK_COOLDOWN_TICKS,
   HACK_MAX_FAILS,
   HACK_FAIL_ALARM_DELTA,
   HACK_WANTED_DELTA,
-} from "../packages/gameserver/hack";
-import { sanitizeSnapshot } from "../packages/gameserver/visibility";
-import { createEconomy, ARCLUX_STORE, TAX_RATE, TREASURY_ID, TOPUP_MIN } from "../packages/economy";
-import { createWantedStore, WANTED_DECAY_INTERVAL_TICKS, CRIME_WEIGHT, WANTED_MAX } from "../packages/wanted";
-import { createGameServer, type GameServerHandle } from "../packages/gameserver/server";
-import { clearDirectory } from "../packages/directory/registry";
-import type { PlayerIntent, VesselEntity } from "../packages/gameserver/types";
-import type { ComponentBinding, SlotLayout, SystemState, VesselModel, VesselStatDerivation } from "../packages/universe/types";
+} from "../mmo/packages/gameserver/hack";
+import { sanitizeSnapshot } from "../mmo/packages/gameserver/visibility";
+import { createEconomy, ARCLUX_STORE, TAX_RATE, TREASURY_ID, TOPUP_MIN } from "../mmo/packages/economy";
+import { createWantedStore, WANTED_DECAY_INTERVAL_TICKS, CRIME_WEIGHT, WANTED_MAX } from "../mmo/packages/wanted";
+import { createGameServer, type GameServerHandle } from "../mmo/packages/gameserver/server";
+import { clearDirectory } from "../mmo/packages/directory/registry";
+import type { PlayerIntent, VesselEntity } from "../mmo/packages/gameserver/types";
+import type { ComponentBinding, SlotLayout, SystemState, VesselModel, VesselStatDerivation } from "../mmo/packages/universe/types";
 
 const SUBSYSTEMS: SystemState[] = [
   { id: "engine", label: "Engine", health: 70, baseStat: 70 },

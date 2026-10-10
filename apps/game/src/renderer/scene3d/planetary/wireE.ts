@@ -11,12 +11,12 @@
 // Visual-only: reads authority state, never writes it.
 
 import * as THREE from "three";
-import type { VesselEntity } from "../../../../../../packages/gameserver/types";
+import type { VesselEntity } from "../../../../../../mmo/packages/gameserver/types";
 import {
   hullOf,
   ADRIFT_BELOW,
   type VesselState,
-} from "../../../../../../packages/gameserver/vesselState";
+} from "../../../../../../mmo/packages/gameserver/vesselState";
 import {
   createEmergencyVisuals,
   tickEmergency,

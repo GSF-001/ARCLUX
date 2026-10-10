@@ -17,14 +17,14 @@
 // unauthorized) dan memverifikasi fitHash (anti-cheat).
 
 import { describe, expect, it } from "vitest";
-import { WorldRegion } from "../packages/gameserver/world";
-import { validateIntent } from "../packages/gameserver/validator";
+import { WorldRegion } from "../mmo/packages/gameserver/world";
+import { validateIntent } from "../mmo/packages/gameserver/validator";
 import {
   fittedComponents,
   liveFit,
   projectFitAction,
-} from "../packages/gameserver/fitting";
-import type { VesselEntity } from "../packages/gameserver/types";
+} from "../mmo/packages/gameserver/fitting";
+import type { VesselEntity } from "../mmo/packages/gameserver/types";
 import type {
   ComponentBinding,
   DerivationSignal,
@@ -32,7 +32,7 @@ import type {
   SystemState,
   VesselModel,
   VesselStatDerivation,
-} from "../packages/universe/types";
+} from "../mmo/packages/universe/types";
 
 const SUBSYSTEMS: SystemState[] = [
   { id: "engine", label: "Engine", health: 70, baseStat: 70 },

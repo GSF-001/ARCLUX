@@ -1,6 +1,6 @@
 // Copyright 2026 GSF-001. ARCLUX MMO License v1 — see LICENSE-MMO.
 // UE5StationActor.h — Slice 2 (hub + ring + safe-zone visual).
-// Mirror packages/gameserver: StationEntity (types.ts:72) + validateDock
+// Mirror mmo/packages/gameserver: StationEntity (types.ts:72) + validateDock
 // (validator.ts:140: station valid + wreck tidak bisa + jarak ≤ safeZone*2).
 // Dock = intent "dock" {stationId} → server teleport kapal ke stasiun
 // (simulation.ts:211). Visual safe-zone = sphere, bukan otoritas.

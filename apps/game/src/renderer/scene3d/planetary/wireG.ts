@@ -9,8 +9,8 @@
 // and advances them from the one EnvironmentalContext. Visual-only.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
-import type { VesselEntity } from "../../../../../../packages/gameserver/types";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
+import type { VesselEntity } from "../../../../../../mmo/packages/gameserver/types";
 import { deriveEnvironmentalEvent, tickEnvironmentalEvent, type EnvironmentalEvent } from "./environmentalEvent";
 import { getCoastalZone, createCoastalSystem, tickCoastal, type CoastalSystem } from "./coastal";
 import { getRiverFlow, createRiverSystem, tickRiver, type RiverSystem } from "./hydrological";

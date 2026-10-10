@@ -10,7 +10,7 @@
 // it, gameplay never reads it back. All cinematic motion stays bounded so
 // player control is never overridden.
 
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 export type CinematicEventType =
   | "ATMOSPHERIC_ENTRY"

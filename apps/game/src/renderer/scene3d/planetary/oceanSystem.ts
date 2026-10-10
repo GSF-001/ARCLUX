@@ -12,7 +12,7 @@
 // Visual-only: reads state, never writes authority.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 const WAKE_SPEED_MIN = 2;
 const WAKE_LENGTH = 14;

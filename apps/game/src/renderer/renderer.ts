@@ -23,7 +23,7 @@ import { initLanding } from "./landing";
 import { initNpe } from "./npe";
 import { loadSettings } from "./settings";
 import { buildArkInterior } from "./interior";
-import type { RegionSnapshot, VesselEntity, WorldEntity } from "../../../../packages/gameserver/types";
+import type { RegionSnapshot, VesselEntity, WorldEntity } from "../../../../mmo/packages/gameserver/types";
 
 export type DockingState = "EXTERIOR" | "ENTERING" | "INTERIOR";
 
@@ -90,7 +90,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       seq: Date.now() % 100000,
       payload: { ...data, vesselId, deck: "plaza" },
     };
-    void net.send(intent as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    void net.send(intent as unknown as import("../../../../mmo/packages/gameserver/types").PlayerIntent);
   });
 
   // Fase 11 — Bazaar (16 lapak promenade)
@@ -103,7 +103,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       type: "trade_component",
       seq: Date.now() % 100000,
       payload: { componentId: listing.componentId, fromVesselId: listing.vesselId, toVesselId: vesselId },
-    } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    } as unknown as import("../../../../mmo/packages/gameserver/types").PlayerIntent);
     bazaarOverlay.hide();
   });
 
@@ -116,7 +116,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       type: "spawn_station",
       seq: Date.now() % 100000,
       payload: { name: data.name, rings: data.rings, habitatsPerRing: data.habitatsPerRing, dockingPerRing: data.dockingPerRing, communityId: data.communityId },
-    } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+    } as unknown as import("../../../../mmo/packages/gameserver/types").PlayerIntent);
     // Visual preview: buildStadiumFromConfig preview (not yet persistent, just demo)
     try { const preview = buildStadiumFromConfig(data); preview.position.set(5000, 0, 0); scene.addGroup(preview); setTimeout(() => scene.removeGroup(preview), 5000); } catch {}
   });
@@ -203,7 +203,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     tick();
     // Server 2-phase: send dock intent (gate.ts + bridge.ts transactional)
     if (lastLocalVessel) {
-      void net.send({ playerId: lastPlayerId, entityId: lastLocalVessel.id, type: "dock", seq: Date.now() % 100000, payload: { stationId: "ark-hangar" } } as unknown as import("../../../../packages/gameserver/types").PlayerIntent);
+      void net.send({ playerId: lastPlayerId, entityId: lastLocalVessel.id, type: "dock", seq: Date.now() % 100000, payload: { stationId: "ark-hangar" } } as unknown as import("../../../../mmo/packages/gameserver/types").PlayerIntent);
     }
   };
 

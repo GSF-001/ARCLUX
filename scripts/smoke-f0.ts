@@ -6,16 +6,16 @@ import {
   nextEmergencyState,
   applyGravity,
   surfaceGravity,
-} from "../packages/gameserver/vesselState";
-import { vesselMass } from "../packages/gameserver/collision";
+} from "../mmo/packages/gameserver/vesselState";
+import { vesselMass } from "../mmo/packages/gameserver/collision";
 import {
   generateCosmicEventsForTick,
-} from "../packages/gameserver/cosmicEvent";
+} from "../mmo/packages/gameserver/cosmicEvent";
 import {
   createEnvironmentalContext,
   localHour,
   chunkLonDeg,
-} from "../packages/gameserver/planetary/environment";
+} from "../mmo/packages/gameserver/planetary/environment";
 import {
   discoverViaRadar,
   formatRadarHud,

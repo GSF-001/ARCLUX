@@ -10,7 +10,7 @@
 
 import * as THREE from "three";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
-import type { EnvironmentalContext } from "../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../mmo/packages/gameserver/planetary/environment";
 
 /** Mood 0..1: warm (dusk), storm, night. Murni fungsi (testable). */
 export interface GradeMood {

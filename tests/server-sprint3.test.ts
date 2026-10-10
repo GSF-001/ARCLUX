@@ -22,26 +22,26 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import net from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { WorldRegion } from "../packages/gameserver/world";
+import { WorldRegion } from "../mmo/packages/gameserver/world";
 import {
   SimulationEngine,
   DILATION_SCALES,
   computeEntityHash,
-} from "../packages/gameserver/simulation";
-import { validateIntent } from "../packages/gameserver/validator";
-import { createMemoryEventStore, createJsonlEventStore } from "../packages/gameserver/eventStore";
-import { resimulate } from "../packages/gameserver/replay";
-import { worldHash, STABILITY_LIMITS } from "../packages/gameserver/stability";
+} from "../mmo/packages/gameserver/simulation";
+import { validateIntent } from "../mmo/packages/gameserver/validator";
+import { createMemoryEventStore, createJsonlEventStore } from "../mmo/packages/gameserver/eventStore";
+import { resimulate } from "../mmo/packages/gameserver/replay";
+import { worldHash, STABILITY_LIMITS } from "../mmo/packages/gameserver/stability";
 import {
   SNAPSHOT_SCHEMA_VERSION,
   type PlayerIntent,
   type RegionSnapshot,
-} from "../packages/gameserver/types";
-import { isValidResume, migrateSnapshot, loadAndResume } from "../packages/gameserver/regionState";
-import { createInMemoryPersistence } from "../packages/gameserver/persistence";
-import { createGameServer, type GameServerHandle } from "../packages/gameserver/server";
-import { clearDirectory } from "../packages/directory/registry";
-import type { VesselModel } from "../packages/universe/types";
+} from "../mmo/packages/gameserver/types";
+import { isValidResume, migrateSnapshot, loadAndResume } from "../mmo/packages/gameserver/regionState";
+import { createInMemoryPersistence } from "../mmo/packages/gameserver/persistence";
+import { createGameServer, type GameServerHandle } from "../mmo/packages/gameserver/server";
+import { clearDirectory } from "../mmo/packages/directory/registry";
+import type { VesselModel } from "../mmo/packages/universe/types";
 
 const SUBSYSTEMS = [
   { id: "engine", label: "Engine", health: 70, baseStat: 70 },

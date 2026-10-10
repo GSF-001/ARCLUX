@@ -5,8 +5,8 @@
 //
 
 import * as THREE from "three";
-import type { GeographySample, GeographyNiche } from "../../../../../../packages/gameserver/planetary/geography";
-import { analyzeGeography, suggestFacilityKind, latitudeFromPosition } from "../../../../../../packages/gameserver/planetary/geography";
+import type { GeographySample, GeographyNiche } from "../../../../../../mmo/packages/gameserver/planetary/geography";
+import { analyzeGeography, suggestFacilityKind, latitudeFromPosition } from "../../../../../../mmo/packages/gameserver/planetary/geography";
 
 export const NICHE_COLOR: Record<GeographyNiche, number> = {
   mountain_military: 0x6b7280,

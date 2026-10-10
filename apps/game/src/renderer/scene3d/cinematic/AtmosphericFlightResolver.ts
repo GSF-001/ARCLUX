@@ -11,7 +11,7 @@
 // snapping, and output is smoothed toward targets so frames stay stable.
 // Presentation only: never a physics force.
 
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 import { MOTION_MAX_DEG } from "./CinematicContext";
 
 export interface FlightTurbulence {

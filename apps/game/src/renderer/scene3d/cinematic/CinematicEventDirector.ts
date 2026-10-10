@@ -12,7 +12,7 @@
 
 import type { CinematicContext, CinematicEventType, CinematicPhase } from "./CinematicContext";
 import { deriveCinematicContext } from "./CinematicContext";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 // Phase schedule as fractions of event duration.
 const PHASE_EDGES: { until: number; phase: CinematicPhase }[] = [

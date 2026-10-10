@@ -15,7 +15,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { writeTransactional } from "../storage/RecoveryManager";
+import { writeTransactional } from "../../../packages/storage/RecoveryManager";
 import { SCHEMA_VERSION, type CollectionName } from "./schema";
 
 function arcluxRoot(): string {

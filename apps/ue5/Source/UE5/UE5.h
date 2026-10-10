@@ -14,7 +14,7 @@ class UE5_API UUE5GameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
-	// Server otoritatif tunggal (packages/gameserver :24001). Diisi dari DefaultGame.ini.
+	// Server otoritatif tunggal (mmo/packages/gameserver :24001). Diisi dari DefaultGame.ini.
 	UPROPERTY(Config)
 	FString ServerBaseUrl = TEXT("http://127.0.0.1:24001");
 

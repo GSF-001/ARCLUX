@@ -2,7 +2,7 @@
 // ter-update, tick smoothing jalan.
 // Run: ./node_modules/.bin/tsx scripts/smoke-cockpit.ts (exit 1 = FAIL)
 
-import type { EnvironmentalContext } from "../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../mmo/packages/gameserver/planetary/environment";
 import type { FlightTurbulence } from "../apps/game/src/renderer/scene3d/cinematic/AtmosphericFlightResolver";
 import {
   deriveCockpitState,

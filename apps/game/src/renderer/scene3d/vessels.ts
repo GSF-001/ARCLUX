@@ -9,7 +9,7 @@
 
 import * as THREE from "three";
 import { colors, threeColor } from "../../ui/tokens";
-import type { VesselEntity } from "../../../../../packages/gameserver/types";
+import type { VesselEntity } from "../../../../../mmo/packages/gameserver/types";
 import type { SceneContext } from "./bootstrap";
 import { makeGlowTexture } from "./bootstrap";
 import {

@@ -1,7 +1,7 @@
 // 10.V P1 smoke: mood derivasi, uniform grade/touch, urutan pass final.
 // Run: ./node_modules/.bin/tsx scripts/smoke-post.ts (exit 1 = FAIL)
 
-import type { EnvironmentalContext } from "../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../mmo/packages/gameserver/planetary/environment";
 import { POST_PASS_ORDER } from "../apps/game/src/renderer/scene3d/post";
 import {
   createGradePass,

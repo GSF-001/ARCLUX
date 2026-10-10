@@ -17,7 +17,7 @@
 import * as THREE from "three";
 import { colors, nebulaSeed, threeColor } from "../../ui/tokens";
 import type { GameSettings } from "../settings";
-import type { VesselEntity } from "../../../../../packages/gameserver/types";
+import type { VesselEntity } from "../../../../../mmo/packages/gameserver/types";
 import { mulberry32 } from "./rng";
 import type { OrbitSpec } from "./orbital";
 import type { Planet3D } from "./planets";
