@@ -56,6 +56,8 @@ import { createWantedStore } from "../wanted";
 import { shouldSnapshot } from "./stability";
 import { isValidResume, saveSnapshot } from "./regionState";
 import type { PersistenceStore } from "./persistence";
+import type { RelayRegistry } from "../relay/registry";
+import { verifyHandoffToken } from "../relay/handoffToken";
 
 /** Heartbeat directory tiap 10s — TTL registry 30s (P0-5): mati → OFFLINE. */
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -106,6 +108,18 @@ export interface GameServerOptions {
   eventStore?: string | EventStore | false;
   /** P2-7: WebSocket gateway (default ON, path /ws). false = matikan. */
   ws?: boolean | { radiusM?: number };
+  /**
+   * Sprint 4 (P0-6): wiring relay — 1 proses per region, registry terpusat.
+   * Saat start server register shard + claim region di registry (persist ke
+   * packages/db); saat stop status→down. `handoffPublicKey` (Ed25519 SPKI
+   * base64) mengaktifkan verifikasi `handoffToken` di `/deliver` — token
+   * wajib valid & vesselId-nya cocok dengan payload deliver.
+   */
+  relay?: {
+    shardId: string;
+    registry: RelayRegistry;
+    handoffPublicKey?: string;
+  };
 }
 
 export interface GameServerHandle {
@@ -450,6 +464,24 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
           return;
         }
         if (!h || typeof h.vesselId !== "string" || !h.vesselId || !h.vessel) { sendJson(res, 400, { ok: false, reason: "invalid handoff payload" }); return; }
+        // Sprint 4 (P0-6): Ed25519 handoff token — bila dikonfigurasi, body
+        // wajib membawa `handoffToken` valid (signature + vesselId cocok).
+        if (opts.relay?.handoffPublicKey) {
+          const token = typeof (h as { handoffToken?: unknown }).handoffToken === "string"
+            ? (h as { handoffToken: string }).handoffToken
+            : "";
+          const verdict = token
+            ? verifyHandoffToken(token, opts.relay.handoffPublicKey)
+            : ({ ok: false as const, reason: "missing handoffToken" });
+          if (!verdict.ok) {
+            sendJson(res, 403, { ok: false, reason: `deliver: handoff token rejected: ${verdict.reason}` });
+            return;
+          }
+          if (verdict.payload.vesselId !== h.vesselId) {
+            sendJson(res, 403, { ok: false, reason: "deliver: handoff token vesselId mismatch" });
+            return;
+          }
+        }
         // D-008: stat TIDAK dipercaya dari wire — sanitize (agregat dihitung
         // ulang) + opsional re-derivation penuh dari source repo.
         let model = sanitizeVesselModel(h.vessel as VesselModel);
@@ -553,6 +585,17 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
         beat();
         heartbeatTimer = setInterval(beat, HEARTBEAT_INTERVAL_MS);
       }
+      // Sprint 4 (P0-6): relay registry terpusat — 1 proses per region,
+      // register shard + claim region (persist; relay restart ≠ registry hilang).
+      if (opts.relay) {
+        opts.relay.registry.registerShard({
+          shardId: opts.relay.shardId,
+          address: `http://${host}:${actualPort}`,
+          regionIds: [regionId],
+          status: "up",
+        });
+        opts.relay.registry.claimRegion(regionId, opts.relay.shardId);
+      }
       return { url: handle.url, port: actualPort };
     },
     submit(intent) {
@@ -577,6 +620,9 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
         try { await saveSnapshot(opts.persistence, region); } catch (e) { console.error("[arclux:gameserver] save-on-stop failed", e); }
       }
       if (opts.register !== false) unregisterServer(regionId);
+      // Sprint 4: relay tahu shard ini berhenti (status down — claim region
+      // tetap tersimpan agar tidak direbut server lain saat restart cepat).
+      if (opts.relay) opts.relay.registry.setShardStatus(opts.relay.shardId, "down");
       running = false;
       await new Promise<void>((resolve) => {
         server.close(() => resolve());

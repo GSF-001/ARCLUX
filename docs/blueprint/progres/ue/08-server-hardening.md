@@ -449,24 +449,34 @@ test; `npx tsc --noEmit` scoped bersih; gate mode HANYA aktif saat
 `ctx.authority` ada (engine + /intent HTTP), test tanpa authority tak
 terpengaruh.
 
-### Sprint 3 — Skala (P2)
-- [ ] Interest management + delta snapshot (pakai `interestFiltered`,
+### Sprint 3 — Skala (P2) — DONE (PR #789)
+- [x] Interest management + delta snapshot (pakai `interestFiltered`,
       client kirim `lastTick`).
-- [ ] Event store append-only JSONL + rotate (P2-2).
-- [ ] Time Dilation + degradation ladder + broadcast `region.dilated` (P2-3).
-- [ ] Anti-desync: hash cover emergency, client prediction check, re-simulation
+- [x] Event store append-only JSONL + rotate (P2-2).
+- [x] Time Dilation + degradation ladder + broadcast `region.dilated` (P2-3).
+- [x] Anti-desync: hash cover emergency, client prediction check, re-simulation
       harness (P2-5/P2-6, masuk CI).
-- [ ] WebSocket transport sungguhan (P2-7).
-- [ ] Snapshot `schemaVersion` + migrasi (P2-8).
-- [ ] API resmi entity iteration (P2-9).
-- [ ] Spatial index untuk safe-zone (P3-3).
+- [x] WebSocket transport sungguhan (P2-7).
+- [x] Snapshot `schemaVersion` + migrasi (P2-8).
+- [x] API resmi entity iteration (P2-9).
+- [x] Spatial index untuk safe-zone (P3-3).
 
-### Sprint 4 — Multi-proses & federation (P0-6)
-- [ ] 1 proses per region; relay sebagai registry terpusat (persist ke
-      `packages/db`, bukan Map in-memory).
-- [ ] Token handoff cryptograph (Ed25519), in-flight recovery, event record.
-- [ ] Identity lintas shard persist + auth playerId.
-- [ ] Integration test lintas shard (docker-compose 2 region + gate e2e).
+### Sprint 4 — Multi-proses & federation (P0-6) — DONE (PR #791)
+- [x] 1 proses per region; relay sebagai registry terpusat (persist ke
+      `packages/db`, bukan Map in-memory) — `createPersistentRelayRegistry`
+      + `opts.relay` wiring di `createGameServer` (register/claim saat
+      start, status down saat stop).
+- [x] Token handoff cryptograph (Ed25519), in-flight recovery, event record —
+      `relay/handoffToken.ts` (sign/verify, structural anti-clone), `relay/
+      handoffLedger.ts` (append-only + lastSeq event-sourced), in-flight
+      crash-safe via `gate.ts` pending persist + `recoverPendingHandoffs`.
+- [x] Identity lintas shard persist + auth playerId —
+      `createPersistentIdentityMap`; playerId dari payload token
+      terverifikasi (bukan split string) di bridge + `/deliver`.
+- [x] Integration test lintas shard — `tests/server-sprint4-federation.test.ts`
+      19 test (token/registry/identity/ledger/e2e gate 2 server HTTP
+      `/deliver`/recovery). Adapter: 2 `createGameServer` real + HTTP —
+      cakupan "docker-compose 2 region" tanpa docker (Termux/CI).
 
 ### Sprint 5 — Dunia MMO (P1 lanjutan + P3)
 - [ ] Wanted/prison/bounty (`05-hukum-kota.md`).
@@ -729,27 +739,35 @@ determinisme identik; ceiling 12 berlaku di SEMUA jalur damage baru; `npx tsc
 
 ## 5. Rencana eksekusi (sprint — satu PR per sprint)
 
-**Sprint 1 — "Waras dulu"**
-- [ ] P0-1 auth token + POST /login
-- [ ] P0-2 wire rateLimiter + stability + OTEL counter
-- [ ] P0-3 GET /servers
-- [ ] P3-1 body size cap, P3-3 rate-limit /deliver
+> Checklist DETAIL per sprint ada di §4 di atas — blok ini ringkasan status.
 
-**Sprint 2 — "Otoritas fitur"**
-- [ ] P1-1 tether, P1-2 wanted gerbang, P1-3 economy OC, P1-4 klaim
-- [ ] P1-5 activeMode, P1-6 hack
-- [ ] P3-2 schema check PayloadJson
+**Sprint 1 — "Waras dulu"** — DONE (PR #775)
+- [x] P0-1 auth token + POST /login
+- [x] P0-2 wire rateLimiter + stability + OTEL counter
+- [x] P0-3 GET /servers
+- [x] P3-1 body size cap, P3-3 rate-limit /deliver
 
-**Sprint 3 — "Skala"**
-- [ ] P2-1 interest management + WS default
-- [ ] P2-2 event store, P2-3 replica hash, P2-4/5 handoff & identity crypto+persist
-- [ ] P3-4 tick drift, P3-5 metrics
+**Sprint 2 — "Otoritas fitur"** — DONE (PR #779)
+- [x] P1-1 tether, P1-2 wanted gerbang, P1-3 economy OC, P1-4 klaim
+- [x] P1-5 activeMode, P1-6 hack
+- [x] P3-2 schema check PayloadJson
 
-**Sprint 4 — "Dunia MMO"**
+**Sprint 3 — "Skala"** — DONE (PR #789)
+- [x] P2-1 interest management + WS default
+- [x] P2-2 event store, P2-3 replica hash, P2-5 anti-desync + replay, P2-7 WS
+- [x] P2-8 schemaVersion, P2-9 entity iteration API, P3-3 safe-zone cache
+
+**Sprint 4 — "Federasi"** — DONE (PR #791)
+- [x] P0-6 relay registry terpusat persist + 1 proses per region wiring
+- [x] Handoff token Ed25519 + in-flight recovery + event record
+- [x] Identity lintas shard persist + playerId terverifikasi
+- [x] Gate e2e lintas shard (2 server HTTP)
+
+**Sprint 5 — "Dunia MMO"** (lihat §4)
 - [ ] Wanted full (prison, bounty, blacklist)
 - [ ] Dual skill lengkap + FPS skills
 - [ ] Crafting queue + lifecycle 30h / 1–2 th
-- [ ] Perang & puing, discovery/plaque
+- [ ] Klaim tanah lanjutan + Prometheus/backup/audit trail (P3)
 
 ---
 

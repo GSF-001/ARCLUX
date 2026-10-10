@@ -13,6 +13,14 @@
 //   - `claims`: region mana dipegang server mana (anti bentrok)
 
 import type { RegionClaim, ShardRecord, ShardStatus } from "./types";
+import {
+  putRelayShard,
+  deleteRelayShard,
+  listRelayShards,
+  putRelayClaim,
+  deleteRelayClaim,
+  listRelayClaims,
+} from "../db/repositories/RelayStore";
 
 export interface RelayRegistry {
   registerShard(shard: ShardRecord): void;
@@ -76,6 +84,76 @@ export function createRelayRegistry(): RelayRegistry {
     claimRegion,
     releaseRegion,
     resolveRegion,
+  };
+}
+
+/**
+ * Live — registry PERSIST ke packages/db (Sprint 4 / P0-6): relay adalah
+ * registry terpusat untuk topology 1-proses-per-region. Mutasi di-mirror ke
+ * store (sync fs) + state di-hydrate saat create → relay restart ≠ registry
+ * hilang. Interface sama dengan createRelayRegistry (drop-in).
+ */
+export function createPersistentRelayRegistry(): RelayRegistry {
+  const mem = createRelayRegistry();
+
+  // hydrate dari disk (shard dulu — claim butuh shard terdaftar).
+  for (const s of listRelayShards()) {
+    mem.registerShard({
+      shardId: s.shardId,
+      address: s.address,
+      regionIds: [...s.regionIds],
+      status: s.status,
+      meta: s.meta,
+    });
+  }
+  for (const c of listRelayClaims()) {
+    mem.claimRegion(c.regionId, c.shardId);
+  }
+
+  const persistShard = (shardId: string) => {
+    const s = mem.getShard(shardId);
+    if (!s) return;
+    putRelayShard({
+      id: s.shardId,
+      shardId: s.shardId,
+      address: s.address,
+      regionIds: [...s.regionIds],
+      status: s.status,
+      meta: s.meta,
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  return {
+    registerShard(shard) {
+      mem.registerShard(shard);
+      persistShard(shard.shardId);
+    },
+    unregisterShard(shardId) {
+      mem.unregisterShard(shardId);
+      deleteRelayShard(shardId);
+      // claims milik shard ini sudah dihapus dari mem; bersihkan dari disk juga.
+      for (const c of listRelayClaims()) {
+        if (c.shardId === shardId) deleteRelayClaim(c.regionId);
+      }
+    },
+    setShardStatus(shardId, status) {
+      mem.setShardStatus(shardId, status);
+      persistShard(shardId);
+    },
+    listShards: () => mem.listShards(),
+    getShard: (shardId) => mem.getShard(shardId),
+    claimRegion(regionId, shardId) {
+      const ok = mem.claimRegion(regionId, shardId);
+      if (ok) putRelayClaim({ id: regionId, regionId, shardId, claimedAt: Date.now() });
+      return ok;
+    },
+    releaseRegion(regionId, shardId) {
+      const ok = mem.releaseRegion(regionId, shardId);
+      if (ok) deleteRelayClaim(regionId);
+      return ok;
+    },
+    resolveRegion: (regionId) => mem.resolveRegion(regionId),
   };
 }
 
