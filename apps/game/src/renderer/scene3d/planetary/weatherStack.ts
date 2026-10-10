@@ -11,7 +11,7 @@
 // so borderline density does not flicker between frames.
 // Visual-only: derives from EnvironmentalContext, never writes authority state.
 
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 export type WeatherStackPhase = "clear" | "overcast" | "rain" | "storm";
 

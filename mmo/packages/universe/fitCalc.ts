@@ -29,7 +29,7 @@
 // pipeline (GPL-3.0) — reimplemented from scratch in TS. No Pyfa
 // code, no EVE data.
 
-import type { AnalyzeRepositoryResult } from "../engine/pipeline";
+import type { AnalyzeRepositoryResult } from "../../../packages/engine/pipeline";
 import type {
   ComponentBinding,
   ComponentDefinition,

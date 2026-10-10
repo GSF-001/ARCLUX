@@ -12,7 +12,7 @@
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
 import { analyzeRepository } from "../../packages/engine/pipeline";
-import { connectRepository, buildVesselModel } from "../../packages/universe";
+import { connectRepository, buildVesselModel } from "../../mmo/packages/universe";
 
 export function registerConnectCommand(program: Command): void {
   program

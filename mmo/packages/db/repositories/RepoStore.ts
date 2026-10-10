@@ -12,7 +12,7 @@
 
 import { putRecord, getRecord, listRecords, deleteRecord } from "../client";
 import type { RepoRecord } from "../schema";
-import type { RepositoryMeta } from "../../shared/types";
+import type { RepositoryMeta } from "../../../../packages/shared/types";
 
 export function saveRepo(meta: RepositoryMeta): void {
   const record: RepoRecord = {

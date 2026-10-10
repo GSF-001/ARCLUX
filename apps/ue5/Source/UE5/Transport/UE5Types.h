@@ -1,6 +1,6 @@
 // Copyright 2026 GSF-001. ARCLUX MMO License v1 — see LICENSE-MMO.
 // UE5Types.h — KONTRAK SUCI (03-implementasi.md §2). Field 1:1 dengan
-// packages/gameserver/types.ts. TIPE + SATUAN sama (meter, m/s, tick).
+// mmo/packages/gameserver/types.ts. TIPE + SATUAN sama (meter, m/s, tick).
 // Ubah format = DILARANG (00-migrasi.md §0 butir 1). Nama boleh gaya UE.
 
 #pragma once

@@ -15,7 +15,7 @@
 import { randomUUID } from "node:crypto";
 import { putRecord, getRecord, listRecords } from "../client";
 import type { AnalysisRecord } from "../schema";
-import type { AnalyzeRepositoryResult } from "../../engine/pipeline";
+import type { AnalyzeRepositoryResult } from "../../../../packages/engine/pipeline";
 
 export function saveAnalysis(repoId: string, result: AnalyzeRepositoryResult): AnalysisRecord {
   const record: AnalysisRecord = {

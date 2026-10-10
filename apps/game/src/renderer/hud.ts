@@ -12,7 +12,7 @@
 // Mengkonsumsi tokens (src/ui/tokens.ts) sebagai satu sumber — FIGMA nanti
 // re-skin tokens, bukan reverse-engineer komponen.
 
-import type { RegionState, VesselEntity, StationEntity } from "../../../../packages/gameserver/types";
+import type { RegionState, VesselEntity, StationEntity } from "../../../../mmo/packages/gameserver/types";
 import { colors, typography, spacing, glow } from "../ui/tokens";
 
 export interface Hud {

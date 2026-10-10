@@ -14,8 +14,8 @@
 // sun only drives ambient and material tint through applySunToAmbientFog.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
-import type { VesselEntity } from "../../../../../../packages/gameserver/types";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
+import type { VesselEntity } from "../../../../../../mmo/packages/gameserver/types";
 import {
   sunUniformsFromContext,
   applySunToAmbientFog,

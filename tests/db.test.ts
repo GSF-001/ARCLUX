@@ -6,7 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Real-mechanics tests for packages/db/ (issue #455) — the JSON-file-per-
+// Real-mechanics tests for mmo/packages/db/ (issue #455) — the JSON-file-per-
 // record client and its RepoStore/AnalysisStore/IssueStore wrappers.
 // ARCLUX_ROOT is pointed at a temp dir so nothing touches the real home
 // directory.
@@ -15,10 +15,10 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { putRecord, getRecord, listRecords, deleteRecord } from "../packages/db/client";
-import { saveRepo, getRepo, listRepos, deleteRepo } from "../packages/db/repositories/RepoStore";
-import { saveAnalysis, getAnalysis, listAnalysesForRepo } from "../packages/db/repositories/AnalysisStore";
-import { saveIssues, listIssuesForAnalysis, listIssuesForRepo, clearIssuesForAnalysis } from "../packages/db/repositories/IssueStore";
+import { putRecord, getRecord, listRecords, deleteRecord } from "../mmo/packages/db/client";
+import { saveRepo, getRepo, listRepos, deleteRepo } from "../mmo/packages/db/repositories/RepoStore";
+import { saveAnalysis, getAnalysis, listAnalysesForRepo } from "../mmo/packages/db/repositories/AnalysisStore";
+import { saveIssues, listIssuesForAnalysis, listIssuesForRepo, clearIssuesForAnalysis } from "../mmo/packages/db/repositories/IssueStore";
 import type { RepositoryMeta } from "../packages/shared/types";
 import type { AnalyzeRepositoryResult } from "../packages/engine/pipeline";
 import type { Issue } from "../packages/engine/contract";

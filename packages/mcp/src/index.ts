@@ -76,8 +76,8 @@ import { resolveProviders } from "../../indexer/resolveProviders.ts";
 import { getDaemonStatus, getDaemonHealth } from "../../daemon/DaemonProcess.ts";
 
 // ── db ────────────────────────────────────────────────────────────────────
-import { listRepos, getRepo } from "../../db/repositories/RepoStore.ts";
-import { listAnalysesForRepo, getAnalysis } from "../../db/repositories/AnalysisStore.ts";
+import { listRepos, getRepo } from "../../../mmo/packages/db/repositories/RepoStore.ts";
+import { listAnalysesForRepo, getAnalysis } from "../../../mmo/packages/db/repositories/AnalysisStore.ts";
 
 // ── cache ─────────────────────────────────────────────────────────────────
 import { getCacheStats, clearAllCaches } from "../../cache/CacheProvider.ts";

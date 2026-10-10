@@ -6,8 +6,8 @@
 //
 // src/renderer/net.ts — wrapper netcode: kirim intent, terima snapshot/events dari server (D-008 authoritative).
 
-import type { PlayerIntent, RegionSnapshot } from "../../../../packages/gameserver/types";
-import { createHttpClientTransport } from "../../../../packages/gameserver/transport/HttpClientTransport";
+import type { PlayerIntent, RegionSnapshot } from "../../../../mmo/packages/gameserver/types";
+import { createHttpClientTransport } from "../../../../mmo/packages/gameserver/transport/HttpClientTransport";
 
 /** Resolve shard URL — dynamic ARCLUX_GAME_PORT (env) atau fallback 24001. */
 function resolveShardUrl(): string {
@@ -30,7 +30,7 @@ function resolveShardUrl(): string {
 
 export interface NetHandle {
   /** Client transport ke shard (requestSnapshot/sendIntent). */
-  client: import("../../../../packages/gameserver/transport/HttpClientTransport").HttpClientTransport;
+  client: import("../../../../mmo/packages/gameserver/transport/HttpClientTransport").HttpClientTransport;
   /** URL shard yang dipakai. */
   url: string;
   /** Kirim intent via HTTP POST /intent — server-authoritative (D-008). */
@@ -49,7 +49,7 @@ export function connectNet(url?: string, directoryUrl?: string): NetHandle {
   // Wire: try directory listServers public → first ONLINE endpoint (live, not yatim)
   const dirEndpoint = (() => {
     if (url) return undefined;
-    try { const { listServers } = require("../../../../packages/directory/registry"); const s = listServers({ status: "ONLINE" as any })?.[0]; return s?.endpoint; } catch { return undefined; }
+    try { const { listServers } = require("../../../../mmo/packages/directory/registry"); const s = listServers({ status: "ONLINE" as any })?.[0]; return s?.endpoint; } catch { return undefined; }
   })();
   const resolvedUrl = url ?? dirEndpoint ?? directoryUrl ?? resolveShardUrl();
   const client = createHttpClientTransport(resolvedUrl);

@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const impl = fs.readFileSync(path.join(root, "docs/blueprint/progres/MMO-IMPLEMENTATION.md"), "utf8");
-const files = fs.readdirSync(path.join(root, "packages/gameserver")).filter(f => f.endsWith(".ts") && f !== "index.ts").sort();
+const files = fs.readdirSync(path.join(root, "mmo/packages/gameserver")).filter(f => f.endsWith(".ts") && f !== "index.ts").sort();
 
 // Extract checklist x items
 const checklist = [...impl.matchAll(/-\s*\[x\].*?`([^`]+)`/g)].map(m => m[1]);

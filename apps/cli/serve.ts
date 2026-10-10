@@ -15,16 +15,16 @@
 //
 // World boot: star + planets, vessel default (kalau --vessel-model diberikan),
 // tick 10/s, HTTP /snapshot /intent /deliver + static client. Terdaftar di
-// packages/directory → discoverable via listServers (DIRECTORY ≠ AUTHORITY).
+// mmo/packages/directory → discoverable via listServers (DIRECTORY ≠ AUTHORITY).
 
 import type { Command } from "commander";
 import * as p from "@clack/prompts";
-import { createGameServer } from "../../packages/gameserver/server";
-import { createDbPersistence } from "../../packages/gameserver/persistence";
+import { createGameServer } from "../../mmo/packages/gameserver/server";
+import { createDbPersistence } from "../../mmo/packages/gameserver/persistence";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { analyzeRepository } from "../../packages/engine/pipeline";
-import { buildVesselModel } from "../../packages/universe";
+import { buildVesselModel } from "../../mmo/packages/universe";
 
 export function registerServeCommand(program: Command): void {
   program

@@ -14,7 +14,7 @@
 // shared wind field; nothing here writes gameplay state.
 
 import * as THREE from "three";
-import type { VesselState } from "../../../../../../packages/gameserver/vesselState";
+import type { VesselState } from "../../../../../../mmo/packages/gameserver/vesselState";
 
 export type LandingPhase = "approach" | "hover" | "touchdown" | "settlement" | "idle";
 

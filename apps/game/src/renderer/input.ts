@@ -9,7 +9,7 @@
 // pointer-look (mouse). Configurable via settings (rebind dari controls panel).
 // Server-authoritative (D-008): client ngirim intent `move`, server yang integrasi.
 
-import type { PlayerIntent, Vec3, VesselEntity } from "../../../../packages/gameserver/types";
+import type { PlayerIntent, Vec3, VesselEntity } from "../../../../mmo/packages/gameserver/types";
 import { loadSettings } from "./settings";
 
 export type InteriorMode = "EXTERIOR" | "FPS_INTERIOR";

@@ -18,9 +18,9 @@ import {
   sustainableDraw,
   CAP_WARNING_THRESHOLD,
   type CapacitorState,
-} from "../packages/universe/capSim";
-import { deriveComponentDefinition } from "../packages/universe/fitCalc";
-import type { ComponentBinding } from "../packages/universe/types";
+} from "../mmo/packages/universe/capSim";
+import { deriveComponentDefinition } from "../mmo/packages/universe/fitCalc";
+import type { ComponentBinding } from "../mmo/packages/universe/types";
 
 function state(current: number, capacity = 100, regenPerTick = 0): CapacitorState {
   return { capacity, current, regenPerTick };

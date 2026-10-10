@@ -17,33 +17,33 @@
 // Tiap eksploit wajib punya test merah-ke-hijau (invariant §5.8).
 
 import { afterEach, describe, expect, it } from "vitest";
-import { createGameServer, sanitizeVesselModel, type GameServerHandle } from "../packages/gameserver/server";
-import { createInMemoryPersistence } from "../packages/gameserver/persistence";
+import { createGameServer, sanitizeVesselModel, type GameServerHandle } from "../mmo/packages/gameserver/server";
+import { createInMemoryPersistence } from "../mmo/packages/gameserver/persistence";
 import {
   isDeliverAllowed,
   resolveAuthSecret,
   resolveHandoffSecret,
   signHandoff,
   signLoginToken,
-} from "../packages/gameserver/auth";
-import { WorldRegion } from "../packages/gameserver/world";
-import { SimulationEngine } from "../packages/gameserver/simulation";
-import { validateIntent, resolveTradeSeller } from "../packages/gameserver/validator";
-import { STABILITY_LIMITS } from "../packages/gameserver/stability";
+} from "../mmo/packages/gameserver/auth";
+import { WorldRegion } from "../mmo/packages/gameserver/world";
+import { SimulationEngine } from "../mmo/packages/gameserver/simulation";
+import { validateIntent, resolveTradeSeller } from "../mmo/packages/gameserver/validator";
+import { STABILITY_LIMITS } from "../mmo/packages/gameserver/stability";
 import {
   clearDirectory,
   effectiveStatus,
   heartbeat,
   listServersWithHealth,
-} from "../packages/directory/registry";
-import type { PlayerIntent } from "../packages/gameserver/types";
+} from "../mmo/packages/directory/registry";
+import type { PlayerIntent } from "../mmo/packages/gameserver/types";
 import type {
   ComponentBinding,
   SlotLayout,
   SystemState,
   VesselModel,
   VesselStatDerivation,
-} from "../packages/universe/types";
+} from "../mmo/packages/universe/types";
 
 const SUBSYSTEMS: SystemState[] = [
   { id: "engine", label: "Engine", health: 70, baseStat: 70 },

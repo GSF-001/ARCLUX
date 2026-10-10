@@ -52,9 +52,9 @@ mkdir ~/my-vessel && cd ~/my-vessel && git init
 
 ## Tech — Why It Feels Heavy-Stable Like EVE
 
-* `packages/gameserver` 31 files — `simulation.ts` 10 tick/s fixed `dt 0.1`, `world.ts` authoritative `Map`, `validator.ts` owner/range/license, `combat.ts` `DAMAGE_CEILING=12` per-subsystem, `collision.ts` `KE=½mv²×angle×penetration`, `thermics.ts` `∝1/r²`, `environs.ts` Kepler `r=a(1-e²)/(1+e cosθ)`, `physics.ts` `G, σ, c, AU`
-* `packages/relay` registry + `gate.ts` transactional `notifyTarget→ACK` + `bridge.ts` `identity.move`
-* `packages/universe` `connect.ts` → `analyzeRepository` → `buildVesselModel` → `server --vessel` auto-spawn (`apps/cli/serve.ts:36`)
+* `mmo/packages/gameserver` 31 files — `simulation.ts` 10 tick/s fixed `dt 0.1`, `world.ts` authoritative `Map`, `validator.ts` owner/range/license, `combat.ts` `DAMAGE_CEILING=12` per-subsystem, `collision.ts` `KE=½mv²×angle×penetration`, `thermics.ts` `∝1/r²`, `environs.ts` Kepler `r=a(1-e²)/(1+e cosθ)`, `physics.ts` `G, σ, c, AU`
+* `mmo/packages/relay` registry + `gate.ts` transactional `notifyTarget→ACK` + `bridge.ts` `identity.move`
+* `mmo/packages/universe` `connect.ts` → `analyzeRepository` → `buildVesselModel` → `server --vessel` auto-spawn (`apps/cli/serve.ts:36`)
 * `three@0.185` + `InstancedMesh` everywhere, `CanvasTexture` only (CSP `default-src 'self'`), `disposeGroup` Set dedup
 
 ## Architecture
@@ -66,7 +66,7 @@ ARCLUX (clone once) ──► pnpm install ──► build-cli + build-game
         │
         └─► arclux serve --client dist/renderer --vessel ~/my-vessel
                 │
-                └─► packages/gameserver (authoritative, D-008)
+                └─► mmo/packages/gameserver (authoritative, D-008)
                         │
                         └─► apps/game (Electron) ──► landing live CCTV ──► scene3d + net + input + audio
 ```

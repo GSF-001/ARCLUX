@@ -10,7 +10,7 @@
 // Visual-only: derives from EnvironmentalContext, never writes authority state.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 const PARTICLE_COUNT = 2000;
 const FIELD_HALF = 300;

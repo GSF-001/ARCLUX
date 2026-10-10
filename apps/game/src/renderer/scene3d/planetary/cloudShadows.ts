@@ -10,7 +10,7 @@
 // Visual-only: reads EnvironmentalContext, never writes authority state.
 
 import * as THREE from "three";
-import type { EnvironmentalContext } from "../../../../../../packages/gameserver/planetary/environment";
+import type { EnvironmentalContext } from "../../../../../../mmo/packages/gameserver/planetary/environment";
 
 const PLANE_COUNT = 4;
 const PLANE_SIZE = 4000;

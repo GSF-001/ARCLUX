@@ -49,7 +49,7 @@ content, searchable and organized
 
 Under active development. This section stays high-level on purpose — for the current, detailed breakdown see [progres/status-core.md](progres/status-core.md), [status-web.md](progres/status-web.md), and the [docs site](https://arclux-os.mintlify.site/status) (updated continuously, this README is not).
 
-Core engine (parse / index / graph / impact / call graph / detectors / framework rules / DSL / search / security) is solid and verified against real repos (vscode, react, vite, laravel, flask). Platform layers (daemon + SSE bridge, persistence via `packages/db`, content-hash caches, watcher) are wired and used in production. Per-file incremental re-index is built but still coarse (full rebuild per change) — see `progres/status-core.md`. MMO product (`apps/game` + `packages/gameserver` + `packages/universe`) is in alpha — see `docs/blueprint/`.
+Core engine (parse / index / graph / impact / call graph / detectors / framework rules / DSL / search / security) is solid and verified against real repos (vscode, react, vite, laravel, flask). Platform layers (daemon + SSE bridge, persistence via `mmo/packages/db`, content-hash caches, watcher) are wired and used in production. Per-file incremental re-index is built but still coarse (full rebuild per change) — see `progres/status-core.md`. MMO product (`apps/game` + `mmo/packages/gameserver` + `mmo/packages/universe`) is in alpha — see `docs/blueprint/`.
 
 ## What it does
 
@@ -168,7 +168,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for conventions, and [`PROGRES.md`](PRO
 
 ## License — Dual
 - **ARCLUX Platform** (`apps/web`, `apps/cli`, `packages/engine/parser/graph` etc.) — **Apache License 2.0** (see [`LICENSE-ENGINE`](LICENSE-ENGINE)) — graph tetap open, boleh contribute
-- **ARCLUX MMO** (`packages/gameserver`, `packages/relay`, `packages/universe`, `apps/game`) — **ARCLUX MMO License v1 (GSF-001)** — **source-available, boleh baca & PR, dilarang deploy/host game komersial clone** tanpa izin tertulis (see [`LICENSE-MMO`](LICENSE-MMO), `SPDX: LicenseRef-ARCLUX-MMO`)
+- **ARCLUX MMO** (`mmo/packages/gameserver`, `mmo/packages/relay`, `mmo/packages/universe`, `apps/game`) — **ARCLUX MMO License v1 (GSF-001)** — **source-available, boleh baca & PR, dilarang deploy/host game komersial clone** tanpa izin tertulis (see [`LICENSE-MMO`](LICENSE-MMO), `SPDX: LicenseRef-ARCLUX-MMO`)
 - [`SECURITY.md`](SECURITY.md) 
 
 ## Citation

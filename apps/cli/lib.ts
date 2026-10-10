@@ -59,14 +59,14 @@ export {
   deriveBaseStats,
   mergeManifest,
   buildVesselModel,
-} from "../../packages/universe/stats";
-export { connectRepository } from "../../packages/universe/connect";
+} from "../../mmo/packages/universe/stats";
+export { connectRepository } from "../../mmo/packages/universe/connect";
 export {
   checkComponent,
   validateVesselComponents,
   OVERRIDE_CAP_OFFSET,
-} from "../../packages/universe/license";
-export { validateManifest, capOverride } from "../../packages/universe/schema";
+} from "../../mmo/packages/universe/license";
+export { validateManifest, capOverride } from "../../mmo/packages/universe/schema";
 export type {
   VesselModel,
   SystemState,
@@ -75,19 +75,19 @@ export type {
   ArcluxManifest,
   LicenseTier,
   VesselStatDerivation,
-} from "../../packages/universe/types";
+} from "../../mmo/packages/universe/types";
 
 // ── gameserver (authoritative MMO server core) ────────────────────────────
-export { WorldRegion, distanceBetween, regionFromState } from "../../packages/gameserver/world";
-export { validateIntent } from "../../packages/gameserver/validator";
-export { SimulationEngine, computeEntityHash } from "../../packages/gameserver/simulation";
+export { WorldRegion, distanceBetween, regionFromState } from "../../mmo/packages/gameserver/world";
+export { validateIntent } from "../../mmo/packages/gameserver/validator";
+export { SimulationEngine, computeEntityHash } from "../../mmo/packages/gameserver/simulation";
 export {
   applyCombatIntent,
   DAMAGE_CEILING,
-} from "../../packages/gameserver/combat";
+} from "../../mmo/packages/gameserver/combat";
 export {
   WorldRegion as WorldRegionType,
-} from "../../packages/gameserver/world";
+} from "../../mmo/packages/gameserver/world";
 export type {
   GameEntity,
   VesselEntity,
@@ -99,51 +99,51 @@ export type {
   Vec3,
   FactionId,
   EntityKind,
-} from "../../packages/gameserver/types";
+} from "../../mmo/packages/gameserver/types";
 export type {
   SimulationOptions,
   TickResult,
-} from "../../packages/gameserver/simulation";
+} from "../../mmo/packages/gameserver/simulation";
 export type {
   ValidationResult,
   ValidatorDecision,
   ValidatorContext,
-} from "../../packages/gameserver/validator";export type {
+} from "../../mmo/packages/gameserver/validator";export type {
   CombatImpact,
   CombatLogger,
-} from "../../packages/gameserver/combat";
-export { createGateRouter } from "../../packages/gameserver/gate";
-export { createInProcessTransport } from "../../packages/gameserver/netcode";
+} from "../../mmo/packages/gameserver/combat";
+export { createGateRouter } from "../../mmo/packages/gameserver/gate";
+export { createInProcessTransport } from "../../mmo/packages/gameserver/netcode";
 export {
   createInMemoryPersistence,
   createDbPersistence,
-} from "../../packages/gameserver/persistence";
+} from "../../mmo/packages/gameserver/persistence";
 export type {
   GateLink,
   GateTransitRequest,
   GateTransitResult,
   GateRouter,
-} from "../../packages/gameserver/gate";
+} from "../../mmo/packages/gameserver/gate";
 export type {
   NetcodeTransport,
   NetcodeOptions,
   NetEvent,
-} from "../../packages/gameserver/netcode";
+} from "../../mmo/packages/gameserver/netcode";
 export type {
   PersistenceStore,
-} from "../../packages/gameserver/persistence";
+} from "../../mmo/packages/gameserver/persistence";
 
 // ── relay (shard registry + bridge, multi-shard) ──────────────────────────
-export { createRelayRegistry } from "../../packages/relay/registry";
-export { createGateCoordinator } from "../../packages/relay/gate";
-export { createIdentityMap } from "../../packages/relay/identity";
+export { createRelayRegistry } from "../../mmo/packages/relay/registry";
+export { createGateCoordinator } from "../../mmo/packages/relay/gate";
+export { createIdentityMap } from "../../mmo/packages/relay/identity";
 export type {
   ShardRecord,
   ShardStatus,
   RegionClaim,
   HandoffRequest,
   HandoffResult,
-} from "../../packages/relay/types";
+} from "../../mmo/packages/relay/types";
 
 // ── types ─────────────────────────────────────────────────────────────────
 export type {

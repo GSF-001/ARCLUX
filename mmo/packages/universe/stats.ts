@@ -16,7 +16,7 @@
 // automatically from analysis; user overrides (validated/anti-abuse) come
 // later and must never exceed the cap enforced by the validator.
 
-import type { AnalyzeRepositoryResult } from "../engine/pipeline";
+import type { AnalyzeRepositoryResult } from "../../../packages/engine/pipeline";
 import { deriveSlotLayout } from "./fitCalc";
 import type {
   ArcluxManifest,

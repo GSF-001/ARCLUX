@@ -5,9 +5,9 @@ import path from "node:path";
 
 const root = process.cwd();
 const mmoPaths = [
-  "packages/gameserver",
-  "packages/relay",
-  "packages/universe",
+  "mmo/packages/gameserver",
+  "mmo/packages/relay",
+  "mmo/packages/universe",
   "apps/game",
 ];
 const apachePaths = [
