@@ -139,6 +139,18 @@ export interface RelayEventRecord {
   at: string;
 }
 
+/**
+ * Sprint 5: blob otoritas — semua store authority gameserver (wanted,
+ * economy, sessions, claims, hacks, prison, bounty, skills, crafting,
+ * lifecycle) diserIALIZASI sebagai SATU record. Restart ≠ reset ekonomi/
+ * vonis/antrean (D-013).
+ */
+export interface AuthorityRecord {
+  id: string; // selalu "authority" (singleton per ARCLUX_ROOT)
+  state: Record<string, unknown>;
+  updatedAt: string;
+}
+
 export type CollectionName =
   | "repos"
   | "analyses"
@@ -148,4 +160,5 @@ export type CollectionName =
   | "relayShards"
   | "relayClaims"
   | "relayIdentities"
-  | "relayEvents";
+  | "relayEvents"
+  | "authority";

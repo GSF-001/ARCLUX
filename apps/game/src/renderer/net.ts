@@ -58,10 +58,23 @@ export function connectNet(url?: string, directoryUrl?: string): NetHandle {
 
   const onState = (cb: (region: RegionSnapshot) => void): (() => void) => {
     let stopped = false;
+    // P3-9 (08 audit): exponential backoff + jitter saat server error/5xx —
+    // 500ms → 5s max. Sukses = reset ke 100ms normal.
+    let backoffMs = 0;
+    const BACKOFF_MIN_MS = 500;
+    const BACKOFF_MAX_MS = 5_000;
+    const NORMAL_MS = 100;
     const poll = async () => {
       if (stopped) return;
-      try { cb(await client.requestSnapshot()); } catch {}
-      if (!stopped) setTimeout(poll, 100);
+      try {
+        cb(await client.requestSnapshot());
+        backoffMs = 0;
+      } catch {
+        backoffMs = backoffMs === 0 ? BACKOFF_MIN_MS : Math.min(backoffMs * 2, BACKOFF_MAX_MS);
+      }
+      if (stopped) return;
+      const delay = backoffMs > 0 ? backoffMs + Math.floor(Math.random() * 250) : NORMAL_MS;
+      setTimeout(poll, delay);
     };
     poll();
     return () => { stopped = true; };

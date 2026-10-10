@@ -27,11 +27,26 @@ export const SHIP_ONLY_INTENTS = new Set<string>([
   "spawn_station",
   "equip_component",
   "unequip_component",
+  "arrest",
+  "bounty_claim",
+  "craft_enqueue",
+  "craft_collect",
+  "claim_confirm",
 ]);
 
-/** Intent yang HANYA legal di fps mode (skill FPS — 06 §2.3). */
+/**
+ * Intent yang HANYA legal di fps mode (skill FPS — 06 §2.3).
+ * `use_skill` = skill FPS aktif (06 §2 — antrean skill queue server-side
+ * lewat `skill_train`; skill FPS aktif dipakai saat fps mode).
+ */
 export const FPS_ONLY_INTENTS = new Set<string>([
-  "use_skill", // skill FPS (belum diimplement; gate-nya sudah ada di sini)
+  "use_skill",
+]);
+
+/** Intent yang legal di KEDUA mode — skill train mengikuti mode skill-nya. */
+export const BOTH_MODE_INTENTS = new Set<string>([
+  "skill_train",
+  "skill_cancel",
 ]);
 
 export function createSessionStore(initial?: Record<string, ActiveMode>) {

@@ -479,12 +479,37 @@ terpengaruh.
       cakupan "docker-compose 2 region" tanpa docker (Termux/CI).
 
 ### Sprint 5 — Dunia MMO (P1 lanjutan + P3)
-- [ ] Wanted/prison/bounty (`05-hukum-kota.md`).
-- [ ] Dual skill + FPS skills (`06-gameplay-systems.md` §2).
-- [ ] Crafting queue + lifecycle 30h / 1–2 th (`02-asset-pipeline.md` §3–4).
-- [ ] Klaim tanah (patok 7 hari, sertifikat, anti-serakah, pantai 10m).
-- [ ] Prometheus metrics lengkap (P3-4), backup rotation (P3-7), admin audit
-      trail (P3-8), client backoff (P3-9), static ETag (P3-10).
+- [x] Wanted/prison/bounty (`05-hukum-kota.md`). — PR #792: `prison.ts` (kelas
+      ringan/sedang/berat, tahanan tak bisa keluar, bebas = bersih wanted),
+      `bounty.ts` (kontrak auto ≥level 4, hadiah 2× di level 5, claim hanya
+      bila target netral, payout dari kas), intent `arrest`/`bounty_claim`.
+- [x] Dual skill + FPS skills (`06-gameplay-systems.md` §2). — `skills.ts`:
+      skill ship (engine/weapons/shield/navigation/repair) + FPS
+      (combat/stealth/survival/technical) TERPISAH; antrean EVE-style 1 aktif
+      + 3 menunggu, selesai berdasarkan tick server; intent
+      `skill_train`/`skill_cancel` (mode gate validator).
+- [x] Crafting queue + lifecycle 30h / 1–2 th (`02-asset-pipeline.md` §3–4). —
+      `crafting.ts`: 4 kelas durasi nyata (small 1m → capital 3h), 1 slot +
+      veteran, spam menumpuk tak mempercepat, persist; `lifecycle.ts`:
+      `lastActiveTick` server otoritatif, 30 hari → monumen permanen
+      (owner→world), reruntuhan seeded deterministik 1–2 th.
+- [x] Klaim tanah (patok 7 hari, sertifikat, anti-serakah, pantai 10m). —
+      `claims.ts` upgrade: tier patok/sertifikat, patok kosong >7 hari hangus
+      otomatis, `confirm` (berdiri di petak) → sertifikat invisible (02 §9.1),
+      hook `coastDistanceAt` + pita pantai 10m publik (02 §8.6).
+- [x] Prometheus metrics lengkap (P3-4), backup rotation (P3-7), admin audit
+      trail (P3-8), client backoff (P3-9), static ETag (P3-10). — P3-4:
+      `arclux_intent_accepted/rejected_total` + reject-reason histogram + tick
+      p99 + dilated ticks di `observability.ts`, route `GET /metrics`; P3-7:
+      `backup.ts` rotasi `region-<id>-<stamp>.json` retensi 7 hari (autosave);
+      P3-8: `adminAudit.ts` JSONL append-only (deliver/teleport/spawn_station);
+      P3-9: `net.ts` exponential backoff 500ms→5s + jitter saat error; P3-10:
+      static ETag (mtime+size) + 304 + HEAD + immutable untuk aset ber-hash +
+      size cap 10MB.
+- [x] Authority persist (D-013 lanjutan) — blob otoritas
+      (wanted/economy/sessions/claims/hacks/prison/bounty/skills/crafting)
+      ikut autosave/save-on-stop, resume saat start — restart ≠ reset ekonomi/
+      vonis/antrean. Test: 39/39 (`server-sprint5-dunia-mmo.test.ts`).
 
 ### Sprint 6 — Load & verifikasi AAA
 - [ ] Load-test harness (mass-testing ala EVE Singularity): 500 entity,
@@ -763,11 +788,14 @@ determinisme identik; ceiling 12 berlaku di SEMUA jalur damage baru; `npx tsc
 - [x] Identity lintas shard persist + playerId terverifikasi
 - [x] Gate e2e lintas shard (2 server HTTP)
 
-**Sprint 5 — "Dunia MMO"** (lihat §4)
-- [ ] Wanted full (prison, bounty, blacklist)
-- [ ] Dual skill lengkap + FPS skills
-- [ ] Crafting queue + lifecycle 30h / 1–2 th
-- [ ] Klaim tanah lanjutan + Prometheus/backup/audit trail (P3)
+**Sprint 5 — "Dunia MMO"** — DONE (PR #792)
+- [x] Prison + bounty (kelas vonis, tahanan tak bisa keluar, kontrak auto ≥4)
+- [x] Dual skill ship/FPS + antrean EVE-style 1+3 (tick server)
+- [x] Crafting queue 4 kelas + lifecycle 30h monumen / 1–2th reruntuhan
+- [x] Klaim: patok 7 hari hangus, sertifikat invisible, pantai 10m publik
+- [x] P3-4 /metrics · P3-7 rotasi backup 7 hari · P3-8 audit JSONL ·
+      P3-9 net backoff · P3-10 static ETag/HEAD/immutable
+- [x] Authority blob persist — restart ≠ reset ekonomi/vonis/antrean
 
 ---
 

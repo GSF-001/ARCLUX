@@ -6,11 +6,14 @@
 //
 // registry.ts — daftar shard server + claim region (mapping region → server).
 //
-// 🚧 SCAFFOLD — kerangka implementasi. Bagian jadi ditandai `// IMPL:`.
-//
 // Relay menjaga:
 //   - `shards`: siapa yang online & alamatnya
 //   - `claims`: region mana dipegang server mana (anti bentrok)
+//
+// Dua implementasi:
+//   - createRelayRegistry() — in-memory (test / self-host 1 proses).
+//   - createPersistentRelayRegistry() — persist ke packages/db (production
+//     1-proses-per-region; relay restart ≠ registry hilang).
 
 import type { RegionClaim, ShardRecord, ShardStatus } from "./types";
 import {
@@ -35,8 +38,9 @@ export interface RelayRegistry {
 }
 
 /**
- * 🚧 In-memory registry — jalurnya pass utk 1 proses (prototype/self-host).
- * Saat multi-process, ganti state ke pakai packages/db atau key-value terpusat
+ * In-memory registry — jalurnya pass utk 1 proses (test/self-host).
+ * Production multi-proses pakai createPersistentRelayRegistry() di bawah
+ * (persist ke packages/db — Sprint 4 / P0-6).
  */
 export function createRelayRegistry(): RelayRegistry {
   const shards = new Map<string, ShardRecord>();

@@ -19,6 +19,12 @@ import { WorldRegion, distanceBetween } from "./world";
 import { hullOf, ADRIFT_BELOW } from "./vesselState";
 import { fittedComponents, validateFitIntent } from "./fitting";
 import { SHIP_ONLY_INTENTS, FPS_ONLY_INTENTS, type SessionStore } from "./session";
+import type { PrisonStore } from "./prison";
+import { prisonBlocksIntent } from "./prison";
+import type { BountyStore } from "./bounty";
+import type { SkillStore } from "./skills";
+import type { CraftingStore } from "./crafting";
+import { skillModeOf } from "./skills";
 import {
   HACK_RANGE_SHIP_M,
   HACK_RANGE_FPS_M,
@@ -57,6 +63,11 @@ export interface AuthorityDeps {
   economy: Economy;
   hacks: HackStore;
   claims: ClaimStore;
+  /** Sprint 5 — opsional agar konsumen lama tetap valid. */
+  prison?: PrisonStore;
+  bounty?: BountyStore;
+  skills?: SkillStore;
+  crafting?: CraftingStore;
 }
 
 export interface ValidatorContext {
@@ -125,6 +136,10 @@ export function validateIntent(
     }
     if (mode === "ship" && FPS_ONLY_INTENTS.has(intent.type)) {
       return { decision: "reject", reason: `intent ${intent.type} requires fps mode (06 §2.5)` };
+    }
+    // 05 §5.1: tahanan TIDAK BISA keluar — hanya bergerak (dalam zona).
+    if (ctx.authority.prison?.isLocked(ctx.playerId, region.tick) && prisonBlocksIntent(intent.type)) {
+      return { decision: "reject", reason: "tahanan tidak bisa keluar dari penjara (05 §5.1)" };
     }
   }
 
@@ -226,6 +241,90 @@ export function validateIntent(
       if (claims.overlaps(p.x, p.z)) {
         return { decision: "reject", reason: "claim overlaps existing claim (100x100m)" };
       }
+      return { decision: "accept" };
+    }
+    case "arrest": {
+      // 05 §5.1: tangkap buronan — surat terbuka level ≥3 (sampai profesi
+      // polisi ada, siapa pun boleh menangkap buronan berkelas).
+      const p = intent.payload as { targetId?: string };
+      if (!p?.targetId) return { decision: "reject", reason: "arrest requires targetId" };
+      if (!ctx.authority) return { decision: "accept" };
+      if (p.targetId === ctx.playerId) return { decision: "reject", reason: "tidak bisa menangkap diri sendiri" };
+      // target harus kapal yang terlihat di region yang sama (resolve via
+      // vessel id ATAU pemilik vessel — targetId bisa berupa player).
+      const target = region.get(p.targetId)
+        ?? region.vessels().find((e) => e.owner === p.targetId);
+      if (!target || target.kind !== "vessel") return { decision: "reject", reason: "target vessel tidak ditemukan di region" };
+      // wanted di-key per PEMILIK kapal (bukan id vessel).
+      const targetOwner = target.owner ?? p.targetId;
+      const level = ctx.authority.wanted.levelOf(targetOwner);
+      if (level < 3) return { decision: "reject", reason: `target bukan buronan (level ${level} < 3 — 05 §5.1)` };
+      if (ctx.authority.prison?.isLocked(targetOwner, region.tick)) {
+        return { decision: "reject", reason: "target sudah dipenjara" };
+      }
+      const d = Math.hypot(entity.position.x - target.position.x, entity.position.z - target.position.z);
+      if (d > CLAIM_PLANT_RADIUS_M) return { decision: "reject", reason: "target terlalu jauh untuk ditangkap" };
+      return { decision: "accept" };
+    }
+    case "bounty_claim": {
+      const p = intent.payload as { bountyId?: string };
+      if (!p?.bountyId) return { decision: "reject", reason: "bounty_claim requires bountyId" };
+      if (!ctx.authority?.bounty) return { decision: "accept" };
+      const c = ctx.authority.bounty.get(p.bountyId);
+      if (!c || c.state !== "open") return { decision: "reject", reason: "kontrak tidak terbuka" };
+      if (c.targetId === ctx.playerId) return { decision: "reject", reason: "tidak boleh mengklaim kontrak sendiri" };
+      // target harus sudah tumbang (vessel pemilik hilang) atau dipenjara.
+      const targetAlive = region.vessels().some((e) => e.owner === c.targetId);
+      const targetJailed = !!ctx.authority.prison?.isLocked(c.targetId, region.tick);
+      if (targetAlive && !targetJailed) return { decision: "reject", reason: "target belum tumbang/dipenjara" };
+      return { decision: "accept" };
+    }
+    case "skill_train": {
+      const p = intent.payload as { skillId?: string };
+      if (!p?.skillId) return { decision: "reject", reason: "skill_train requires skillId" };
+      if (!ctx.authority?.skills) return { decision: "accept" };
+      // mode skill harus cocok dengan mode aktif pemain (06 §2.5).
+      const smode = skillModeOf(p.skillId);
+      if (!smode) return { decision: "reject", reason: `skill tidak dikenal: ${p.skillId}` };
+      const mode = ctx.authority.sessions.modeOf(ctx.playerId);
+      if (smode !== mode) return { decision: "reject", reason: `skill ${p.skillId} butuh mode ${smode}` };
+      const current = ctx.authority.skills.levelOf(ctx.playerId, p.skillId as import("./skills").SkillId);
+      if (current >= 5) return { decision: "reject", reason: "skill sudah level maksimum" };
+      if (ctx.authority.skills.queueOf(ctx.playerId).some((q) => q.skillId === p.skillId)) {
+        return { decision: "reject", reason: "skill sudah dalam antrean" };
+      }
+      return { decision: "accept" };
+    }
+    case "skill_cancel": {
+      const p = intent.payload as { skillId?: string };
+      if (!p?.skillId) return { decision: "reject", reason: "skill_cancel requires skillId" };
+      return { decision: "accept" };
+    }    case "craft_enqueue": {
+      const p = intent.payload as { blueprintId?: string; klass?: string };
+      if (!p?.blueprintId) return { decision: "reject", reason: "craft_enqueue requires blueprintId" };
+      const k = p.klass;
+      if (k !== "small" && k !== "structure" && k !== "large" && k !== "capital") {
+        return { decision: "reject", reason: "craft_enqueue requires klass small|structure|large|capital" };
+      }
+      return { decision: "accept" };
+    }
+    case "craft_collect": {
+      const p = intent.payload as { craftId?: string };
+      if (!p?.craftId) return { decision: "reject", reason: "craft_collect requires craftId" };
+      if (!ctx.authority?.crafting) return { decision: "accept" };
+      const job = ctx.authority.crafting.get(p.craftId);
+      if (!job || job.playerId !== ctx.playerId) return { decision: "reject", reason: "pekerjaan tidak ditemukan" };
+      if (job.state !== "done") return { decision: "reject", reason: "pekerjaan belum selesai" };
+      return { decision: "accept" };
+    }
+    case "claim_confirm": {
+      const p = intent.payload as { claimId?: string };
+      if (!p?.claimId) return { decision: "reject", reason: "claim_confirm requires claimId" };
+      if (!ctx.authority) return { decision: "accept" };
+      const c = ctx.authority.claims.get(p.claimId);
+      if (!c) return { decision: "reject", reason: "klaim tidak ditemukan" };
+      if (c.owner !== ctx.playerId) return { decision: "reject", reason: "hanya pemilik klaim yang bisa menyahkan" };
+      if (c.tier === "sertifikat") return { decision: "reject", reason: "sudah bersertifikat" };
       return { decision: "accept" };
     }
     case "teleport": {
