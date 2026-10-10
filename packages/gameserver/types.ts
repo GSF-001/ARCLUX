@@ -120,6 +120,8 @@ export interface RegionSnapshot {
   createdAt: string;
   /** P2-8: versi skema (undefined = snapshot pra-P2-8, treat sebagai v1). */
   schemaVersion?: number;
+  /** P2-3: status time-dilation region (client slow-motion adil). */
+  dilation?: DilationState;
   entities: WorldEntity[];
 }
 

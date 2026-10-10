@@ -274,6 +274,13 @@ export function validateIntent(
       if (!p?.name) return { decision: "reject", reason: "spawn_station requires name" };
       return { decision: "accept" };
     }
+    case "verify_hash": {
+      // P2-5: client kirim hash prediksi — pemilik entity (sudah dicek di
+      // guard global) + payload hash string; pembandingan di server.ts.
+      const p = intent.payload as { hash?: string };
+      if (typeof p?.hash !== "string" || !p.hash) return { decision: "reject", reason: "verify_hash requires client hash" };
+      return { decision: "accept" };
+    }
     default:
       return { decision: "reject", reason: `unsupported intent: ${intent.type}` };
   }

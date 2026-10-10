@@ -13,6 +13,7 @@
 import {
   SNAPSHOT_SCHEMA_VERSION,
   type CharacterEntity,
+  type DilationState,
   type GameEntity,
   type RegionSnapshot,
   type StationEntity,
@@ -53,6 +54,8 @@ export class WorldRegion {
   readonly name: string;
   readonly createdAt: string;
   tick: number;
+  /** P2-3: status time-dilation (di-set engine, dibroadcast via snapshot). */
+  dilation: DilationState = { level: 0, scale: 1 };
 
   private entities = new Map<string, WorldEntity>();
 
@@ -173,6 +176,7 @@ export class WorldRegion {
       tick: this.tick,
       createdAt: this.createdAt,
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+      dilation: this.dilation,
       entities: Array.from(this.entities.values()),
     };
   }
