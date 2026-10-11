@@ -6,8 +6,6 @@
 //
 // identity.ts — pemetaan player id lintas shard (global handle → per-shard entity).
 //
-// 🚧 SCAFFOLD — kerangka implementasi. Bagian jadi ditandai `// IMPL:`.
-//
 // Karena multi-shard (D-005), satu pemain bisa punya entity di beberapa region
 // sekaligus. Relay memegang pemetaan global:
 //
@@ -16,7 +14,12 @@
 // ```
 //
 // Ini dipakai untuk: routing intent antar shard, pasangan di gate handoff,
-//  dan mencari entity pemain di region lain.
+// dan mencari entity pemain di region lain.
+//
+// Dua implementasi:
+//   - createIdentityMap() — in-memory (test / self-host 1 proses).
+//   - createPersistentIdentityMap() — persist ke packages/db (production
+//     multi-proses; relay restart ≠ identity hilang).
 
 import { putRelayIdentity, deleteRelayIdentity, listRelayIdentities } from "../db/repositories/RelayStore";
 
@@ -36,7 +39,8 @@ export interface IdentityMap {
 }
 
 /**
- * 🚧 In-memory map. Untuk self-host skala kecil cukup; pemetaan persisten /
+ * In-memory map — untuk test & self-host 1 proses. Production multi-proses
+ * pakai createPersistentIdentityMap() di bawah (persist ke packages/db).
  */
 export function createIdentityMap(): IdentityMap {
   const map = new Map<string, ShardPresence[]>();

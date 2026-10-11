@@ -48,7 +48,9 @@ import { useComponent } from "./component";
 import { recordCreation } from "./lineage";
 import { computeRecall } from "./teleport";
 import { clampSpeed } from "./physics";
-import { recordTickTrace } from "./observability";
+import { recordTickTrace, countIntentAccepted, countIntentRejected, countDilatedTick } from "./observability";
+import { BOUNTY_OPEN_LEVEL } from "./bounty";
+import { classifyForWanted } from "./prison";
 // P0-4 stability (08 hardening). Siklus statik simulation ↔ stability AMAN:
 // stability memakai computeEntityHash (function declaration — di-hoist, live
 // binding) hanya saat dipanggil, bukan saat init. `require()` TIDAK dipakai —
@@ -114,7 +116,8 @@ export class SimulationEngine {
   private eventLog: GameEvent[] = [];
   private eventSeq = 0;
   /** Durasi step sebelumnya (ms) — input checkStability tick_overbudget. */
-  private lastTickMs = 0;
+  /** Durasi step terakhir (ms) — dipakai /metrics Prometheus. */
+  lastTickMs = 0;
   /** P2-2: store append-only (opsional — memory ring selalu ada). */
   private readonly eventStore?: EventStore;
   /** P2-3: ladder time-dilation — 0=1×, 1=0.5×, 2=0.25× (08 §4). */
@@ -161,6 +164,7 @@ export class SimulationEngine {
       const ctx = this.authority && !base.authority ? { ...base, authority: this.authority } : base;
       const verdict = validateIntent(this.region, intent, ctx);
       if (verdict.decision === "reject") {
+        countIntentRejected(verdict.reason ?? "unknown");
         rejected.push(this.log("intent_rejected", intent.playerId, {
           entityId: intent.entityId,
           type: intent.type,
@@ -169,6 +173,7 @@ export class SimulationEngine {
         }));
         continue;
       }
+      countIntentAccepted();
 
       accepted.push(this.log(`intent_${intent.type}`, intent.playerId, {
         entityId: intent.entityId,
@@ -186,6 +191,23 @@ export class SimulationEngine {
     this.stepCapacitors();
     // P1-5: decay buronan per tick (05 §2 — interval tunable di wanted.ts).
     this.authority?.wanted.decay(this.region.tick);
+    // Sprint 5 tick hooks — store otoritas berjalan otoritatif per tick:
+    // vonis penjara selesai → bebas + bersihkan status; antrean skill/craft
+    // maju; patok kosong >7 hari hangus; aset 30 hari → monumen/reruntuhan.
+    if (this.authority) {
+      for (const freed of this.authority.prison?.evaluate(this.region.tick) ?? []) {
+        this.log("prisoner_released", freed.playerId, { klass: freed.klass, arrestedBy: freed.arrestedBy });
+      }
+      for (const ev of this.authority.skills?.tick(this.region.tick) ?? []) {
+        this.log("skill_trained", ev.playerId, { skillId: ev.skillId, newLevel: ev.newLevel });
+      }
+      for (const job of this.authority.crafting?.tick(this.region.tick) ?? []) {
+        this.log("craft_done", job.playerId, { craftId: job.craftId, blueprintId: job.blueprintId, klass: job.klass });
+      }
+      for (const c of this.authority.claims.evaluate(this.region.tick)) {
+        this.log("claim_hangus", c.owner, { claimId: c.claimId, plantedTick: c.plantedTick, alasan: "patok kosong >7 hari (02 §9.2)" });
+      }
+    }
     // Cosmic environs per tick (Newton/Kepler, D-020) — deterministic, authoritative + strengthened
     if (this.enableEnvirons && this.environs) {
       integrateEnvirons(this.environs);
@@ -237,6 +259,7 @@ export class SimulationEngine {
    *  harness & test bisa drive tanpa step berat. */
   observeTickDuration(ms: number): void {
     if (ms > this.tickBudgetMs) {
+      countDilatedTick();
       const prev = this.dilationLevel;
       this.dilationLevel = Math.min(this.dilationLevel + 1, DILATION_SCALES.length - 1);
       this.underBudgetStreak = 0;
@@ -535,6 +558,95 @@ export class SimulationEngine {
         this.log("land_claimed", intent.playerId, { x: p.x, z: p.z, size: CLAIM_HALF_M * 2 });
         break;
       }
+      case "claim_confirm": {
+        const p = intent.payload as { claimId?: string };
+        if (!p?.claimId || !ctx.authority) break;
+        const found = ctx.authority.claims.get(p.claimId);
+        if (!found) break;
+        const res = ctx.authority.claims.confirm(p.claimId, entity.position.x, entity.position.z, this.region.tick);
+        if (res.ok) {
+          // sertifikat = record invisible (02 §9.1); ikut lifecycle 30 hari.
+          this.log("claim_certified", intent.playerId, { claimId: p.claimId });
+        } else {
+          this.log("claim_confirm_rejected", intent.playerId, { claimId: p.claimId, reason: res.reason });
+        }
+        break;
+      }
+      case "arrest": {
+        const p = intent.payload as { targetId?: string };
+        if (!p?.targetId || !ctx.authority?.prison) break;
+        // resolve pemilik kapal target (wanted/prison di-key per player).
+        const targetEntity = this.region.get(p.targetId)
+          ?? this.region.vessels().find((e) => e.owner === p.targetId);
+        const targetOwner = targetEntity?.owner ?? p.targetId;
+        const level = ctx.authority.wanted.levelOf(targetOwner);
+        const klass = classifyForWanted(level);
+        const sentence = ctx.authority.prison.incarcerate(targetOwner, {
+          klass,
+          tick: this.region.tick,
+          arrestedBy: intent.playerId,
+        });
+        this.log("prisoner_incarcerated", intent.playerId, {
+          targetId: targetOwner, klass, releaseTick: sentence.releaseTick, wantedLevel: level,
+        });
+        break;
+      }
+      case "bounty_claim": {
+        const p = intent.payload as { bountyId?: string };
+        if (!p?.bountyId || !ctx.authority?.bounty) break;
+        const contract = ctx.authority.bounty.get(p.bountyId);
+        if (!contract) break;
+        const targetNeutral = ctx.authority.prison?.isLocked(contract.targetId, this.region.tick)
+          || !this.region.vessels().some((e) => e.owner === contract.targetId);
+        const res = ctx.authority.bounty.claim(p.bountyId, intent.playerId, this.region.tick, targetNeutral, ctx.authority.economy);
+        if (res.ok) {
+          this.log("bounty_claimed", intent.playerId, { bountyId: p.bountyId, targetId: contract.targetId, rewardOc: res.rewardOc });
+          this.log("wallet_changed", intent.playerId, { playerId: intent.playerId, balance: ctx.authority.economy.balanceOf(intent.playerId) });
+        } else {
+          this.log("bounty_claim_rejected", intent.playerId, { bountyId: p.bountyId, reason: res.reason });
+        }
+        break;
+      }
+      case "skill_train": {
+        const p = intent.payload as { skillId?: string };
+        if (!p?.skillId || !ctx.authority?.skills) break;
+        const mode = ctx.authority.sessions.modeOf(intent.playerId);
+        const res = ctx.authority.skills.train(intent.playerId, p.skillId, mode, this.region.tick);
+        if (res.ok) {
+          this.log("skill_queued", intent.playerId, { skillId: p.skillId, queue: ctx.authority.skills.queueOf(intent.playerId).length });
+        } else {
+          this.log("skill_queue_rejected", intent.playerId, { skillId: p.skillId, reason: res.reason });
+        }
+        break;
+      }
+      case "skill_cancel": {
+        const p = intent.payload as { skillId?: string };
+        if (!p?.skillId || !ctx.authority?.skills) break;
+        if (ctx.authority.skills.cancel(intent.playerId, p.skillId as never)) {
+          this.log("skill_cancelled", intent.playerId, { skillId: p.skillId });
+        }
+        break;
+      }
+      case "craft_enqueue": {
+        const p = intent.payload as { blueprintId?: string; klass?: string };
+        if (!p?.blueprintId || !ctx.authority?.crafting) break;
+        const res = ctx.authority.crafting.enqueue(intent.playerId, p.blueprintId, p.klass as never, this.region.tick);
+        if (res.ok) {
+          this.log("craft_queued", intent.playerId, { craftId: res.craftId, blueprintId: p.blueprintId, klass: p.klass });
+        } else {
+          this.log("craft_queue_rejected", intent.playerId, { reason: res.reason });
+        }
+        break;
+      }
+      case "craft_collect": {
+        const p = intent.payload as { craftId?: string };
+        if (!p?.craftId || !ctx.authority?.crafting) break;
+        const res = ctx.authority.crafting.collect(p.craftId, intent.playerId);
+        if (res.ok && res.job) {
+          this.log("craft_collected", intent.playerId, { craftId: p.craftId, blueprintId: res.job.blueprintId });
+        }
+        break;
+      }
       case "hack_start": {
         if (!ctx.authority) break;
         const p = intent.payload as { targetId?: string; targetType?: HackTargetType };
@@ -618,6 +730,13 @@ export class SimulationEngine {
       reason: res.reason,
       witnessed,
     });
+    // 05 §6.1: kontrak bounty terbuka OTOMATIS saat wanted ≥4.
+    if (res.applied && auth.bounty && res.level >= BOUNTY_OPEN_LEVEL) {
+      const contract = auth.bounty.openForTarget(actorId, res.level, this.region.tick);
+      if (contract) {
+        this.log("bounty_opened", "server", { targetId: actorId, bountyId: contract.bountyId, rewardOc: contract.rewardOc });
+      }
+    }
   }
 
   /** Hack sukses: efek target (06 §3.4) + delta wanted bila ada saksi. */

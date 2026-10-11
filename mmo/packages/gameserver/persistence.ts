@@ -16,10 +16,12 @@
 
 import type { RegionSnapshot } from "./types";
 import { putRecord, getRecord, deleteRecord } from "../db/client";
-import type { CollectionName, RegionRecord, PendingHandoffRecord } from "../db/schema";
+import type { AuthorityRecord, CollectionName, RegionRecord, PendingHandoffRecord } from "../db/schema";
 
 const COLLECTION: CollectionName = "regions";
 const HANDOFF_COLLECTION: CollectionName = "handoffs";
+const AUTHORITY_COLLECTION: CollectionName = "authority";
+const AUTHORITY_ID = "authority";
 
 /**
  * Pending handoff yang disimpan before vessel di-remove dari region asal, supaya
@@ -63,6 +65,15 @@ export interface PersistenceStore {
   deletePendingHandoff(vesselId: string, gateId: string): Promise<void>;
   /** Index — list semua regionId yang pernah disimpan (db index). */
   listRegions(): Promise<string[]>;
+  /**
+   * Sprint 5 (D-013 lanjutan): blob otoritas — semua store authority
+   * (wanted/economy/sessions/claims/hacks + prison/bounty/skills/crafting/
+   * lifecycle) diserIALIZASI sebagai SATU record. Restart ≠ reset ekonomi,
+   * vonis penjara, antrean skill/craft, dst. Opsional (store lama tanpa
+   * method ini tetap valid — authority sekadar tidak dipersist).
+   */
+  saveAuthority?(state: Record<string, unknown>): Promise<void>;
+  loadAuthority?(): Promise<Record<string, unknown> | null>;
 }
 
 /** Validasi snapshot minimal sebelum disimpan (huruf anti-torn/garbage write). */
@@ -83,6 +94,7 @@ export function validateRegion(state: RegionSnapshot): boolean {
 export function createInMemoryPersistence(): PersistenceStore {
   const regions = new Map<string, RegionSnapshot>();
   const pending = new Map<string, PendingHandoff>();
+  let authority: Record<string, unknown> | null = null;
 
   const pendingKey = (vesselId: string, gateId: string) => `${gateId}::${vesselId}`;
 
@@ -109,6 +121,8 @@ export function createInMemoryPersistence(): PersistenceStore {
       pending.delete(pendingKey(vesselId, gateId));
     },
     async listRegions() { return Array.from(regions.keys()); },
+    async saveAuthority(state) { authority = structuredClone(state); },
+    async loadAuthority() { return authority ? structuredClone(authority) : null; },
   };
 }
 
@@ -208,6 +222,18 @@ export function createDbPersistence(
     async listRegions() {
       // db index — in-memory scan fallback (heavy but stable, real db would use index)
       try { const { listRecords } = await import("../db/client"); const recs = (listRecords as any)?.(COLLECTION) ?? []; return (recs as any[]).map((r: any) => r.regionId ?? r.id).filter(Boolean); } catch { return []; }
+    },
+    // Sprint 5: authority blob — collection "authority", satu record.
+    async saveAuthority(state) {
+      putRecord<AuthorityRecord>(AUTHORITY_COLLECTION, {
+        id: AUTHORITY_ID,
+        state: structuredClone(state),
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    async loadAuthority() {
+      const rec = getRecord<AuthorityRecord>(AUTHORITY_COLLECTION, AUTHORITY_ID);
+      return rec?.state ? structuredClone(rec.state) : null;
     },
   };
 }

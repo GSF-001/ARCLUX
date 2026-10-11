@@ -53,9 +53,17 @@ import { createClaimStore } from "./claims";
 import { sanitizeSnapshot } from "./visibility";
 import { createEconomy } from "../economy";
 import { createWantedStore } from "../wanted";
+import { createPrisonStore } from "./prison";
+import { createBountyStore } from "./bounty";
+import { createSkillStore } from "./skills";
+import { createCraftingStore } from "./crafting";
+import { createAdminAudit, type AdminAudit } from "./adminAudit";
+import { rotateBackup } from "./backup";
+import { toPrometheus } from "./observability";
 import { shouldSnapshot } from "./stability";
 import { isValidResume, saveSnapshot } from "./regionState";
 import type { PersistenceStore } from "./persistence";
+import { getRoot } from "./root";
 import type { RelayRegistry } from "../relay/registry";
 import { verifyHandoffToken } from "../relay/handoffToken";
 
@@ -247,13 +255,36 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
 
   const environsState = createEnvirons(bodies);
   // Sprint 2 (08 §4): bundle otoritas — mode SHIP/FPS, buronan, ekonomi OC,
-  // hack attempts, klaim tanah. Dibagikan ke validator (ctx) + sim (opts).
+  // hack attempts, klaim tanah. Sprint 5: penjara, bounty, skill dual-mode,
+  // antrean rakit. Dibagikan ke validator (ctx) + sim (opts).
   const authority: AuthorityDeps = {
     sessions: createSessionStore(),
     wanted: createWantedStore(),
     economy: createEconomy(),
     hacks: createHackStore(),
     claims: createClaimStore(),
+    prison: createPrisonStore(),
+    bounty: createBountyStore(),
+    skills: createSkillStore(),
+    crafting: createCraftingStore(),
+  };
+  // P3-8: jejak audit admin append-only (deliver/teleport/spawn_station).
+  const adminAudit: AdminAudit = createAdminAudit(getRoot());
+
+  /** Sprint 5: serialisasi seluruh bundle authority → persistence blob. */
+  const persistAuthority = async (): Promise<void> => {
+    if (!opts.persistence?.saveAuthority) return;
+    await opts.persistence.saveAuthority({
+      sessions: authority.sessions.serialize(),
+      wanted: authority.wanted.serialize(),
+      economy: authority.economy.serialize(),
+      hacks: authority.hacks.serialize(),
+      claims: authority.claims.serialize(),
+      prison: authority.prison?.serialize(),
+      bounty: authority.bounty?.serialize(),
+      skills: authority.skills?.serialize(),
+      crafting: authority.crafting?.serialize(),
+    });
   };
   // P2-2: event store append-only — OPT-IN: ON bila ARCLUX_EVENTS_DIR di-set
   // (production host set ke disk persistent); opts.eventStore string =
@@ -447,6 +478,10 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
           });
           return;
         }
+        // P3-8: aksi admin (teleport/spawn_station) masuk audit trail.
+        if (intent.type === "teleport" || intent.type === "spawn_station") {
+          adminAudit.audit({ actor: intent.playerId, action: intent.type, target: intent.entityId, tick: region.tick, meta: { payload: intent.payload } });
+        }
         engine.enqueue(intent as PlayerIntent);
         sendJson(res, 200, { ok: true, seq: intent.seq ?? 0, verdict: "accepted" });
         return;
@@ -495,7 +530,21 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
         // P0-4: entity cap — spawn ditolak saat penuh.
         if (region.snapshot().entities.length >= 5000) { sendJson(res, 200, { ok: false, reason: "entity_cap" }); return; }
         region.spawnVessel({ id: h.vesselId, owner: h.owner, vessel: model, position: h.position });
+        // P3-8: deliver = aksi admin antar-shard — catat immutable audit trail.
+        adminAudit.audit({ actor: "shard", action: "deliver", target: h.vesselId, tick: region.tick, meta: { owner: h.owner, from: opts.relay?.shardId } });
         sendJson(res, 200, { ok: true });
+        return;
+      }
+      // P3-4: Prometheus metrics — accepted/rejected rate, reject reason
+      // histogram, tick p99, dilated ticks.
+      if (req.method === "GET" && u.pathname === "/metrics") {
+        res.writeHead(200, { "content-type": "text/plain; version=0.0.4" });
+        res.end(toPrometheus({
+          tickMs: engine.lastTickMs,
+          eventLogSize: 0,
+          entityCount: region.snapshot().entities.length,
+          tick: region.tick,
+        }));
         return;
       }
       // Static client — GET selain route di atas → serve dari staticDir.
@@ -533,6 +582,21 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
           const snap = await opts.persistence.loadRegion(regionId);
           if (snap && isValidResume(snap)) region.restore(snap);
         } catch (e) { console.error("[arclux:gameserver] resume failed", e); }
+        // Sprint 5: authority blob — ekonomi/vonis/antrean tidak reset saat restart.
+        try {
+          const blob = opts.persistence.loadAuthority ? await opts.persistence.loadAuthority() : null;
+          if (blob) {
+            if (blob.sessions) authority.sessions.restore(blob.sessions as never);
+            if (blob.wanted) authority.wanted.restore(blob.wanted as never);
+            if (blob.economy) authority.economy.restore(blob.economy as never);
+            if (blob.hacks) authority.hacks.restore(blob.hacks as never);
+            if (blob.claims) authority.claims.restore(blob.claims as never);
+            if (blob.prison) authority.prison?.restore(blob.prison as never);
+            if (blob.bounty) authority.bounty?.restore(blob.bounty as never);
+            if (blob.skills) authority.skills?.restore(blob.skills as never);
+            if (blob.crafting) authority.crafting?.restore(blob.crafting as never);
+          }
+        } catch (e) { console.error("[arclux:gameserver] authority resume failed", e); }
       }
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
@@ -562,6 +626,16 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
           // world tetap utuh & tidak corrupt (stability.shouldSnapshot).
           if (opts.persistence && shouldSnapshot(region.tick)) {
             void saveSnapshot(opts.persistence, region).catch((e) => console.error("[arclux:gameserver] autosave failed", e));
+            // Sprint 5: authority blob ikut autosave (ekonomi/vonis/antrean).
+            void persistAuthority().catch((e) => console.error("[arclux:gameserver] authority autosave failed", e));
+            // P3-7: rotasi backup region file — retensi 7 hari.
+            try {
+              const root = getRoot();
+              rotateBackup(
+                path.join(root, "db", "regions", `${regionId}.json`),
+                path.join(root, "db", "backups"),
+              );
+            } catch { /* rotasi gagal tidak boleh mematikan tick */ }
           }
         },
         onError: (e) => { console.error("[arclux:gameserver] tick error", e); },
@@ -618,6 +692,8 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
       // E-3 save-on-stop (D-013): restart ≠ world reset.
       if (opts.persistence) {
         try { await saveSnapshot(opts.persistence, region); } catch (e) { console.error("[arclux:gameserver] save-on-stop failed", e); }
+        // Sprint 5: authority blob ikut tersimpan (ekonomi/vonis/antrean).
+        try { await persistAuthority(); } catch (e) { console.error("[arclux:gameserver] authority save-on-stop failed", e); }
       }
       if (opts.register !== false) unregisterServer(regionId);
       // Sprint 4: relay tahu shard ini berhenti (status down — claim region
@@ -663,7 +739,7 @@ const MIME: Record<string, string> = {
 };
 
 /** Sajikan file statis dari staticDir dengan path traversal protection. */
-async function serveStaticFile(_req: IncomingMessage, res: ServerResponse, pathname: string, staticDir: string): Promise<void> {
+async function serveStaticFile(req: IncomingMessage, res: ServerResponse, pathname: string, staticDir: string): Promise<void> {
   try {
     const rel = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
     const safeRel = path.posix.normalize(rel);
@@ -675,8 +751,36 @@ async function serveStaticFile(_req: IncomingMessage, res: ServerResponse, pathn
     const filePath = path.join(staticDir, safeRel);
     const st = await stat(filePath);
     if (!st.isFile()) { sendJson(res, 404, { ok: false, reason: "not found" }); return; }
+    // P3-10: size cap 10MB — file besar dari staticDir bukan aset client.
+    if (st.size > 10 * 1024 * 1024) { sendJson(res, 404, { ok: false, reason: "not found" }); return; }
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { "content-type": MIME[ext] ?? "application/octet-stream", "cache-control": "no-cache" });
+    // P3-10: ETag = mtime+size (cukup untuk immutable assets) + Cache-Control
+    // immutable untuk aset ber-hash (nama file berubah = konten berubah).
+    const etag = `W/"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
+    const isHashed = /[.-][0-9a-f]{8,}\./i.test(safeRel);
+    const cacheControl = isHashed ? "public, max-age=31536000, immutable" : "no-cache";
+    if (req.headers["if-none-match"] === etag) {
+      res.writeHead(304, { etag, "cache-control": cacheControl });
+      res.end();
+      return;
+    }
+    // P3-10: HEAD = header saja (tanpa body) — hemat bandwidth health-check.
+    if (req.method === "HEAD") {
+      res.writeHead(200, {
+        "content-type": MIME[ext] ?? "application/octet-stream",
+        "content-length": String(st.size),
+        etag,
+        "cache-control": cacheControl,
+      });
+      res.end();
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": MIME[ext] ?? "application/octet-stream",
+      "content-length": String(st.size),
+      etag,
+      "cache-control": cacheControl,
+    });
     res.end(await readFile(filePath));
   } catch {
     sendJson(res, 404, { ok: false, reason: "not found" });
