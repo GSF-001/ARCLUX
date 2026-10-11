@@ -30,14 +30,15 @@ export function registerServeCommand(program: Command): void {
   program
     .command("serve")
     .description("Host an ARCLUX MMO region: world sim + HTTP API + game client (self-host, D-009)")
-    .option("--region <id>", "region identifier (unique per shard)", "region-1")
+    .option("--region <id>", "region identifier (unique per shard — default: region-1 live, test-region-1 saat --test)")
     .option("--name <name>", "human-readable region name (defaults to region id)")
+    .option("--test", "public test-region (Sprint 6): environment=test, dunia/persistence terpisah dari live (ala EVE Singularity)")
     .option("--port <port>", "listen port", (v) => Number(v), 0)
     .option("--client <dir>", "static dir of the bundled game client (served at /)")
     .option("--vessel <path>", "path to vessel repo to auto-spawn on boot (analyzed via .arclux/)")
     .option("--no-register", "do NOT register this server in the public directory")
     .option("--no-persist", "disable world persistence (D-013: save-on-stop + autosave tiap 100 tick)")
-    .action(async (options: { region: string; name?: string; port: number; client?: string; vessel?: string; register: boolean; persist: boolean }) => {
+    .action(async (options: { region?: string; name?: string; port: number; client?: string; vessel?: string; register: boolean; persist: boolean; test?: boolean }) => {
       const clientDir = options.client ? resolve(options.client) : null;
       if (clientDir && !existsSync(clientDir as string)) {
         p.log.error(`--client dir not found: ${clientDir}`);
@@ -50,6 +51,9 @@ export function registerServeCommand(program: Command): void {
       }
 
       const gs = createGameServer({
+        // --test → environment=test → default regionId "test-region-1"
+        // (regionId beda = persistence key beda = data live tersentuh nol).
+        environment: options.test ? "test" : "live",
         regionId: options.region,
         regionName: options.name ?? options.region,
         port: options.port || undefined,
@@ -61,11 +65,16 @@ export function registerServeCommand(program: Command): void {
       });
 
       const { url, port } = await gs.start();
-      p.log.success(`🌌 Region "${options.region}" live at ${url}`);
+      const regionLabel = options.region ?? gs.region.regionId;
+      if (options.test) {
+        p.log.warn(`🧪 TEST REGION — "${regionLabel}" @ ${url} (environment=test, terpisah dari live)`);
+      } else {
+        p.log.success(`🌌 Region "${regionLabel}" live at ${url}`);
+      }
       p.log.info(`   API  : ${url}/snapshot · /health · /intent · /deliver · /servers`);
       p.log.info(`   Port : ${port}`);
+      p.log.info(`   Env  : ${options.test ? "test (data terpisah dari live)" : "live"}`);
       if (options.persist) p.log.info(`   World: persistence ON (resume + autosave 100t + save-on-stop) — --no-persist untuk matikan`);
-      p.log.info(`   Port : ${port}`);
       if (clientDir) p.log.info(`   Game : ${url}/ (static client from ${clientDir})`);
       else p.log.info(`   Game : no --client supplied — serve the bundled client with --client dist/renderer`);
 

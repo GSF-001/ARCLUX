@@ -79,7 +79,13 @@ export interface GameServerBodies {
 }
 
 export interface GameServerOptions {
-  /** Region identifier (unik per shard). Default "region-1". */
+  /** Shard environment — pemisahan test vs live (Sprint 6, 08 §4). "test" =
+   *  shard publik terpisah ala EVE Singularity: default regionId
+   *  "test-region-1", manifest directory bertag environment=test. "live" =
+   *  produksi (default; fallback env ARCLUX_GAME_ENV=test). */
+  environment?: "live" | "test";
+  /** Region identifier (unik per shard). Default "region-1" (live) /
+   *  "test-region-1" (test). */
   regionId?: string;
   regionName?: string;
   /** Listen port (default 24001, dari ARCLUX_GAME_PORT bila di-set). */
@@ -231,7 +237,11 @@ function defaultAuthProvider(): SimulationOptions["authProvider"] {
 }
 
 export function createGameServer(opts: GameServerOptions = {}): GameServerHandle {
-  const regionId = opts.regionId ?? "region-1";
+  // Test vs live (Sprint 6): environment menentukan default regionId — beda
+  // regionId = beda persistence key + beda dunia, jadi test tidak pernah
+  // nyentuh data live.
+  const environment = opts.environment ?? (process.env.ARCLUX_GAME_ENV === "test" ? "test" : "live");
+  const regionId = opts.regionId ?? (environment === "test" ? "test-region-1" : "region-1");
   const regionName = opts.regionName ?? regionId;
   const port = opts.port ?? resolvePort();
   const tickRate = opts.tickRate ?? 10;
@@ -381,7 +391,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
         return;
       }
       if (req.method === "GET" && u.pathname === "/health") {
-        sendJson(res, 200, { ok: true, tick: region.tick, entities: region.size(), regionId, dilation: region.dilation });
+        sendJson(res, 200, { ok: true, tick: region.tick, entities: region.size(), regionId, environment, dilation: region.dilation });
         return;
       }
       if (req.method === "GET" && u.pathname === "/servers") {
@@ -394,6 +404,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
             visibility: u.searchParams.get("visibility") ?? undefined,
             federation: u.searchParams.get("federation") ?? undefined,
             status: status ?? undefined,
+            environment: (u.searchParams.get("environment") as "live" | "test" | null) ?? undefined,
           }),
         });
         return;
@@ -652,6 +663,7 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
           regions: 1,
           population: 0,
           federation: "PUBLIC",
+          environment,
         });
         // P0-5: heartbeat loop tiap 10s — heartbeat sekali-di-start membuat
         // directory menampilkan ONLINE selamanya meski server sudah mati

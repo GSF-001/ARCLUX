@@ -49,11 +49,20 @@ export function effectiveStatus(serverId: string, now: number = Date.now()): Ser
   return h.status;
 }
 
-export function listServers(filter?: { visibility?: string; federation?: string; status?: ServerStatus }): ServerManifest[] {
+export interface ServerFilter {
+  visibility?: string;
+  federation?: string;
+  status?: ServerStatus;
+  /** Pisahkan shard test vs live (Sprint 6). */
+  environment?: "live" | "test";
+}
+
+export function listServers(filter?: ServerFilter): ServerManifest[] {
   let out = Array.from(servers.values());
   if (filter?.visibility) out = out.filter((s) => s.visibility === filter.visibility);
   if (filter?.federation) out = out.filter((s) => s.federation === filter.federation);
   if (filter?.status) out = out.filter((s) => effectiveStatus(s.serverId) === filter.status);
+  if (filter?.environment) out = out.filter((s) => (s.environment ?? "live") === filter.environment);
   return out.map((s) => ({ ...s }));
 }
 
@@ -65,7 +74,7 @@ export interface ServerListing extends ServerManifest {
 }
 
 export function listServersWithHealth(
-  filter?: { visibility?: string; federation?: string; status?: ServerStatus },
+  filter?: ServerFilter,
   now: number = Date.now()
 ): ServerListing[] {
   return listServers(filter).map((m) => {
