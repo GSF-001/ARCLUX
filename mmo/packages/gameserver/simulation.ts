@@ -36,6 +36,15 @@ import type { HackAttempt } from "./hack";
 import { createSeedRng } from "./random";
 import { projectFitAction, stepCapacitor } from "./fitting";
 import { applyCombatIntent } from "./combat";
+import {
+  startLock,
+  applyLockNeed,
+  releaseLock,
+  lockNeedFor,
+  stepLocks,
+  LOCK_INTENT_COOLDOWN_TICKS,
+  type LockStore,
+} from "./targeting";
 import type { EnvironsState } from "./environs";
 import { integrateEnvirons, getBodiesArray } from "./environs";
 import { checkCollisions, vesselMass } from "./collision";
@@ -185,6 +194,10 @@ export class SimulationEngine {
       this.applyIntent(intent, ctx);
     }
 
+    // 09 §2.4: stepLocks SETELAH intents, SEBELUM projectile/resolve (§3.2).
+    // Lock NAIK hanya kalau geometry (jarak/cone/mode/safe-zone) terpenuhi.
+    this.stepLocks();
+
     const start = Date.now();
     this.integratePhysics();
     this.decrementCooldowns();
@@ -283,6 +296,26 @@ export class SimulationEngine {
     return this.log("desync_check", playerId, { entityId, match, serverHash: match ? undefined : serverHash });
   }
 
+  /** Store lock (09 §2) — volatile, dibagikan lewat authority bundle. */
+  get lockStore(): LockStore | undefined {
+    return this.authority?.locks;
+  }
+
+  /** 09 §2.4: advance semua lock aktif → event lock_acquired / lock_broken. */
+  private stepLocks(): void {
+    const store = this.authority?.locks;
+    if (!store || store.size === 0) return;
+    for (const tr of stepLocks(this.region, store, this.region.tick, this.authority?.sessions)) {
+      if (tr.type === "lock_acquired") {
+        this.log("lock_acquired", tr.attackerId, { attackerId: tr.attackerId, targetId: tr.targetId, need: tr.need, progress: tr.progress });
+      } else {
+        // Intel privat (§2.4): actor = pemilik lock; payload membawa target.
+        this.log("lock_broken", tr.attackerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason, need: tr.need, progress: tr.progress });
+      }
+      this.region.noteChange(tr.attackerId);
+    }
+  }
+
   /** The full event log (replay foundation). P2-2: baca dari store bila ada. */
   replayLog(): GameEvent[] {
     if (this.eventStore) return this.eventStore.replay();
@@ -335,6 +368,31 @@ export class SimulationEngine {
             this.escalateCrime(intent.playerId, target, { crime: "kill" });
           }
         }
+        break;
+      }
+      case "lock": {
+        // 09 §2.3/§2.4: lock = derived state server; store volatile.
+        const store = ctx.authority?.locks;
+        const targetId = intent.payload?.targetId as string | undefined;
+        if (!store || !targetId) break;
+        const target = this.region.get(targetId);
+        if (!target) break;
+        const res = startLock(store, entity as VesselEntity, targetId, this.region.tick);
+        if (res.started && res.state) {
+          const need = lockNeedFor(target);
+          applyLockNeed(store, entity.id, need);
+          if (entity.kind === "vessel") entity.cooldowns["lock"] = LOCK_INTENT_COOLDOWN_TICKS;
+          this.log("lock_started", intent.playerId, { attackerId: entity.id, targetId, need });
+        } else if (!res.started) {
+          this.log("lock_rejected", intent.playerId, { attackerId: entity.id, targetId, reason: res.reason });
+        }
+        break;
+      }
+      case "unlock": {
+        const store = ctx.authority?.locks;
+        if (!store) break;
+        const tr = releaseLock(store, entity.id);
+        if (tr) this.log(tr.type, intent.playerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason });
         break;
       }
       case "activate_capability": {

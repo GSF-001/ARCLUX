@@ -353,10 +353,11 @@ capture SourceAttackPower / TargetDefensePower → kami capture via `stats.ts`).
 
 ## 6. Kontrak & integrasi (checklist eksekusi)
 
-- [ ] `MMO-CONTRACT.md`: intent `lock`, `unlock`, `intercept`; event `lock_started`,
-      `lock_acquired`, `lock_broken`, `projectile_spawned/hit/fizzle/destroyed`,
-      `npc_killed`, `wave_started/completed` — signature + payload + siapa yang
-      menerima (privat vs region).
+- [x] `MMO-CONTRACT.md`: intent `lock`, `unlock` + event `lock_started`,
+      `lock_acquired`, `lock_broken` (privat — actor = pemilik lock; payload
+      membawa targetId) dicatat PR-A. Sisa: `intercept`,
+      `projectile_spawned/hit/fizzle/destroyed`, `npc_killed`,
+      `wave_started/completed` — PR-B/C.
 - [ ] `visibility.ts` sanitizeSnapshot: proyeksi projectile ringan (§3.5) + lock
       state PEMILIK saja (lock = intel privat).
 - [ ] `types.ts`: `ProjectileEntity` type + `WorldRegion.projectiles`.
