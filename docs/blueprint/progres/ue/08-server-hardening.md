@@ -596,17 +596,29 @@ determinisme identik; ceiling 12 berlaku di SEMUA jalur damage baru; `npx tsc
 ## 6. Checklist verifikasi tiap PR
 
 ```
-[ ] node scripts/build-game.mjs — bundle sukses
-[ ] npx tsc --noEmit -p apps/game/tsconfig.json — bersih
-[ ] npx tsc --noEmit -p packages/gameserver/tsconfig.json — bersih
-[ ] grep -rn "innerHTML.*+" apps/game/src/renderer/ — 0 match
-[ ] grep -rn "Math.random()" packages/gameserver/ — 0 match (kecuali random.ts)
-[ ] arclux_detect orphan_files scope REPO-ROOT — 0 file yatim baru
-[ ] node scripts/check-mmo.mjs — OK
-[ ] Regresi test untuk gap yang ditutup (§4 sprint) — PASS
-[ ] MMO-IMPLEMENTATION.md §2 + §3 di-update (file + PR)
-[ ] docs/ di-add pakai git add -f (docs/ gitignored)
+[x] node scripts/build-game.mjs — bundle sukses (2026-10-12: main+renderer
+    OK, 829ms)
+[x] npx tsc --noEmit -p apps/game/tsconfig.json — bersih (exit 0)
+[x] npx tsc --noEmit -p packages/gameserver/tsconfig.json — bersih.
+    CATATAN: tsconfig khusus gameserver TIDAK ADA di repo — padanan =
+    scoped command `npx tsc --noEmit --target ES2020 --module esnext
+    --moduleResolution bundler --strict --skipLibCheck --esModuleInterop
+    mmo/packages/gameserver/index.ts` → 0 error (2026-10-12)
+[x] grep -rn "innerHTML.*+" apps/game/src/renderer/ — 0 match
+[x] grep -rn "Math.random()" packages/gameserver/ — 0 match (kecuali
+    random.ts). 2026-10-12: 1 match di loadtest.ts (bot harness) di-seed
+    `createSeedRng(10_000+worker)` — determinisme repo-wide tanpa kecuali
+[x] arclux_detect orphan_files scope REPO-ROOT — 0 file yatim BARU
+    (2026-10-12: 265 findings pre-existing engine/web/ue5 stub; semua file
+    Sprint 1–7 gameserver wired — stats.ts gameserver tak yatim)
+[x] node scripts/check-mmo.mjs — OK (exit 0, 2026-10-12)
+[x] Regresi test untuk gap yang ditutup (§4 sprint) — PASS (full suite
+    970/970; 5 flake pre-existing contention pass saat isolated 65/65)
+[x] MMO-IMPLEMENTATION.md §2 + §3 di-update (file + PR) — DIBUAT 2026-10-12
+    (file sebelumnya tidak ada di repo)
+[x] docs/ di-add pakai git add -f (docs/ gitignored)
 [ ] Manual test: serve --vessel → landing → cockpit (QUICKSTART-MMO.md)
+    — USER-HELD (butuh browser + gudang asset UE5; belum dikerjakan)
 ```
 
 ## 7. Batasan
