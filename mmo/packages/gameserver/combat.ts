@@ -54,6 +54,23 @@ export function applyCombatIntent(
   const target = region.getVessel(targetId);
   if (!target) return undefined;
 
+  const impact = applyWeaponDamage(attacker, target, weaponType, logger);
+  // Set a cooldown on the attacker's weapon so it can't fire every tick.
+  if (impact) attacker.cooldowns[weaponType] = cooldownTicks(weaponType);
+  return impact;
+}
+
+/**
+ * Satu pipa damage (D-008): turret hitscan DAN projectile hit (09 §3.2.2)
+ * SEMUA lewat sini — resist target, ceiling 12, subsystem. Tanpa cooldown
+ * (caller yang atur — spawn missile sudah kena cooldown saat ditembak).
+ */
+export function applyWeaponDamage(
+  attacker: VesselEntity,
+  target: VesselEntity,
+  weaponType: string,
+  logger?: CombatLogger
+): CombatImpact | undefined {
   const subsystemId = resolveTargetSubsystem(weaponType);
   const sys = target.vessel.systems.find((s) => s.id === subsystemId);
   if (!sys) return undefined;
@@ -72,11 +89,8 @@ export function applyCombatIntent(
   sys.health = Math.max(SUBSYSTEM_DESTROYED_AT, before - damage);
   const destroyed = sys.health <= SUBSYSTEM_DESTROYED_AT;
 
-  // Set a cooldown on the attacker's weapon so it can't fire every tick.
-  attacker.cooldowns[weaponType] = cooldownTicks(weaponType);
-
   const impact: CombatImpact = {
-    targetId,
+    targetId: target.id,
     subsystemId,
     before,
     after: sys.health,

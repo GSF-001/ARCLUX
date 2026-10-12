@@ -45,6 +45,14 @@ import {
   LOCK_INTENT_COOLDOWN_TICKS,
   type LockStore,
 } from "./targeting";
+import {
+  weaponDefOf,
+  spawnProjectile,
+  stepProjectiles,
+  interceptProjectile,
+  INTERCEPT_COOLDOWN_TICKS,
+  INTERCEPT_COOLDOWN_KEY,
+} from "./projectiles";
 import type { EnvironsState } from "./environs";
 import { integrateEnvirons, getBodiesArray } from "./environs";
 import { checkCollisions, vesselMass } from "./collision";
@@ -198,6 +206,10 @@ export class SimulationEngine {
     // Lock NAIK hanya kalau geometry (jarak/cone/mode/safe-zone) terpenuhi.
     this.stepLocks();
 
+    // 09 §3.2: projectile step SETELAH lock, SEBELUM physics (intents →
+    // locks → projectiles → resolve/physics — urutan spec).
+    this.stepProjectiles();
+
     const start = Date.now();
     this.integratePhysics();
     this.decrementCooldowns();
@@ -316,6 +328,31 @@ export class SimulationEngine {
     }
   }
 
+  /** 09 §3.2: homing + hit resolution projectile — event region-wide. */
+  private stepProjectiles(): void {
+    stepProjectiles(this.region, (event) => {
+      this.log(event.type, event.ownerId, {
+        attackerId: event.ownerId,
+        projectileId: event.projectileId,
+        targetId: event.targetId,
+        weaponType: event.weaponType,
+        ...(event.meta ?? {}),
+      });
+      if (event.type === "projectile_hit") {
+        const target = this.region.get(event.targetId);
+        if (target) this.region.noteChange(target.id);
+        // P1-5: hull target habis via projectile = kill — naikkan buronan
+        // penembak (owner = vessel → owner player), sama dgn jalur turret.
+        if (target && target.kind === "vessel" && hullOf(target.vessel) <= 0) {
+          const shooter = this.region.get(event.ownerId);
+          const shooterPlayer = shooter && shooter.kind === "vessel" ? (shooter.owner ?? event.ownerId) : event.ownerId;
+          this.log("vessel_destroyed", shooterPlayer, { entityId: target.id });
+          this.escalateCrime(shooterPlayer, target, { crime: "kill" });
+        }
+      }
+    });
+  }
+
   /** The full event log (replay foundation). P2-2: baca dari store bila ada. */
   replayLog(): GameEvent[] {
     if (this.eventStore) return this.eventStore.replay();
@@ -355,6 +392,25 @@ export class SimulationEngine {
         if (entity.kind === "vessel") {
           // Safe-zone: station protects
           if (isInSafeZone(this.region, entity.position)) return;
+          const targetIdA = intent.payload?.targetId as string | undefined;
+          const weaponTypeA = intent.payload?.weapon as string | undefined;
+          const def = weaponTypeA ? weaponDefOf(weaponTypeA) : undefined;
+          if (weaponTypeA && def?.projectile && targetIdA) {
+            // 09 §3.3: missile/torpedo = entity terbang (bukan hitscan).
+            const prj = spawnProjectile(this.region, entity.id, weaponTypeA, targetIdA, this.region.tick, intent.seq);
+            if (!prj) {
+              this.log("projectile_rejected", intent.playerId, {
+                attackerId: entity.id, weaponType: weaponTypeA,
+                reason: "region_projectile_cap",
+              });
+              break;
+            }
+            entity.cooldowns[weaponTypeA] = def.cooldownTicks;
+            this.log("projectile_spawned", intent.playerId, {
+              attackerId: entity.id, projectileId: prj.id, targetId: targetIdA, weaponType: weaponTypeA,
+            });
+            break;
+          }
           applyCombatIntent(this.region, entity, intent, (meta) => {
             this.log("combat", intent.playerId, { entityId: entity.id, ...meta });
           });
@@ -393,6 +449,22 @@ export class SimulationEngine {
         if (!store) break;
         const tr = releaseLock(store, entity.id);
         if (tr) this.log(tr.type, intent.playerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason });
+        break;
+      }
+      case "intercept": {
+        // 09 §3.3: point defense — roll deterministik di interceptProjectile.
+        if (entity.kind !== "vessel") break;
+        const projectileId = intent.payload?.projectileId as string | undefined;
+        if (!projectileId) break;
+        const shotDown = interceptProjectile(this.region, entity, projectileId, this.region.tick);
+        entity.cooldowns[INTERCEPT_COOLDOWN_KEY] = INTERCEPT_COOLDOWN_TICKS;
+        if (shotDown) {
+          this.log("projectile_destroyed", intent.playerId, {
+            shooterId: entity.id, projectileId, reason: "point_defense",
+          });
+        } else {
+          this.log("intercept_miss", intent.playerId, { shooterId: entity.id, projectileId });
+        }
         break;
       }
       case "activate_capability": {

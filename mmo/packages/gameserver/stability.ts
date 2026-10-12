@@ -9,11 +9,14 @@
 
 import type { WorldRegion } from "./world";
 import { computeEntityHash } from "./simulation";
+import { MAX_PROJECTILES_PER_REGION } from "./projectiles";
 
 export const STABILITY_LIMITS = {
   maxEntities: 5000,
   maxTickMs: 80,
   maxEventLog: 10000,
+  /** 09 §3.3: cap projectile per region (ladder trim — fizzle dulu). */
+  maxProjectiles: MAX_PROJECTILES_PER_REGION,
 };
 
 export function checkStability(region: WorldRegion, tickMs: number, eventLogSize: number): { ok: boolean; reason?: string } {
@@ -26,7 +29,12 @@ export function checkStability(region: WorldRegion, tickMs: number, eventLogSize
 export function worldHash(region: WorldRegion): string {
   const snap = region.snapshot();
   const hashes = snap.entities.filter(e => e.kind === "vessel").map(e => computeEntityHash(e as any)).sort().join("|");
-  return `${snap.regionId}:${snap.tick}:${hashes.length}:${hashes.slice(0,64)}`;
+  // 09 §3: projectile ikut hash — replay determinisme wajib include langit.
+  const prj = region.projectiles
+    .map((p) => `${p.id}:${p.pos.x},${p.pos.y},${p.pos.z}:${p.ttlTicks}`)
+    .sort()
+    .join("|");
+  return `${snap.regionId}:${snap.tick}:${hashes.length}:${hashes.slice(0,64)}:p${region.projectiles.length}:${prj}`;
 }
 
 export function shouldSnapshot(tick: number, every = 100): boolean { return tick % every === 0; }

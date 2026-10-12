@@ -71,7 +71,8 @@ simulation.ts     = SimulationEngine.tick: SATU-SATUNYA tempat intent
                     dipanggil dari tick sini, bukan jalan sendiri.
 validator.ts      = validateIntent (identity/owner/range/cooldown/safe-zone
                     + universe/license checkComponent + lock gate: missile
-                    wajib locked). Aturan tolak/terima baru = sini. Hasil:
+                    wajib locked + intercept gate: projectile dalam range
+                    5000m + cone 45°). Aturan tolak/terima baru = sini. Hasil:
                     ACCEPT|REJECT, tidak ada setengah.
 combat.ts         = applyCombatIntent + DAMAGE_CEILING + SUBSYSTEM_DESTROYED_AT.
                     Damage baru = sini (satu pipa, tidak ada damage jalur lain).
@@ -81,6 +82,15 @@ targeting.ts      = lock-on server-authoritative (09 §2): LockStore volatile
                     Events `lock_started/lock_acquired/lock_broken` PRIVAT
                     (actor = pemilik lock). Missile wajib phase locked
                     (validator). State lock TIDAK masuk snapshot/persistence.
+projectiles.ts    = projectile server-side (09 §3): WEAPON_DEFS (missile/
+                    torpedo/rocket), homing turn-rate (bisa dielak), arm 2
+                    tick, TTL fizzle, cap 100/region (satu sumber dgn
+                    STABILITY_LIMITS.maxProjectiles). Intent: `attack`
+                    weapon projectile → spawn entity (bukan hitscan) +
+                    `intercept {projectileId}` (point defense, roll seeded).
+                    Events projectile_spawned/hit/fizzle/destroyed/rejected
+                    REGION-WIDE (posisi peluru memang publik). Volatile —
+                    restore() mengosongkan, worldHash ikut include.
 physics.ts        = clampSpeed + gerak. environs.ts = orbit/benda langit
                     (D-016/D-020). collision.ts = tabrakan → damage (D-017).
                     thermics.ts = radiasi/termal. cosmicEvent.ts = event acak.

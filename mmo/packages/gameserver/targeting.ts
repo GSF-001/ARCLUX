@@ -153,15 +153,23 @@ function forwardOf(v: { heading: { yaw: number; pitch: number } }): { x: number;
 }
 
 /** Angle (derajat) antara haluan penyerang dan arah ke target. */
-export function lockAngleDeg(attacker: VesselEntity, target: WorldEntity): number {
-  const f = forwardOf(attacker);
-  const dx = target.position.x - attacker.position.x;
-  const dy = target.position.y - attacker.position.y;
-  const dz = target.position.z - attacker.position.z;
+/** Sudut heading vs posisi absolut (satu sumber cone — lock + point defense). */
+export function angleToPosDeg(
+  v: { heading: { yaw: number; pitch: number }; position: { x: number; y: number; z: number } },
+  pos: { x: number; y: number; z: number }
+): number {
+  const f = forwardOf(v);
+  const dx = pos.x - v.position.x;
+  const dy = pos.y - v.position.y;
+  const dz = pos.z - v.position.z;
   const len = Math.hypot(dx, dy, dz);
   if (len === 0) return 0;
   const cos = (f.x * dx + f.y * dy + f.z * dz) / len;
   return (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+}
+
+export function lockAngleDeg(attacker: VesselEntity, target: WorldEntity): number {
+  return angleToPosDeg(attacker, target.position);
 }
 
 // ── Transisi lock (§2.2-2.4) ──────────────────────────────────────────────
