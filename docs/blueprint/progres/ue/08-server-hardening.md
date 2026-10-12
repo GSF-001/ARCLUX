@@ -549,10 +549,12 @@ terpengaruh.
       `feat/sprint7b-projectile`, 7/7 test §3.6 + determinisme 2 proses hijau;
       homing pakai lerp tanpa re-normalize — turning bleed speed, catat di
       projectiles.ts).
-- [ ] PR-C NPC AI: `npcBrain.ts` (PATROL→DETECT→CHASE→AIM→FIRE, think 3 tick
+- [x] PR-C NPC AI: `npcBrain.ts` (PATROL→DETECT→CHASE→AIM→FIRE, think 3 tick
       stagger, safe-zone no-fire, faction matrix) + wave spawner ala
       GameMode_Survival + budget 20 AI/region; kill NPC tanpa wanted + salvage
-      — §4.
+      — §4. DONE (branch `feat/sprint7c-npc-ai`, 6/6 test §4.4 hijau;
+      `steerToward` pindah ke physics.ts — satu sumber gerak AI & move
+      intent; kill handler tunggal onVesselDestroyed).
 - [ ] PR-D Pipeline: `stats.ts` (attackPower/defensePower/signature derived) +
       refactor `combat.ts` ke pipeline `raw × power/defense × mod-hooks ×
       resist × ceiling` (mod MVP: rangeFalloff, conditionPenalty) — fondasi

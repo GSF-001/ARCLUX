@@ -82,6 +82,14 @@ targeting.ts      = lock-on server-authoritative (09 §2): LockStore volatile
                     Events `lock_started/lock_acquired/lock_broken` PRIVAT
                     (actor = pemilik lock). Missile wajib phase locked
                     (validator). State lock TIDAK masuk snapshot/persistence.
+npcBrain.ts       = NPC AI combat (09 §4): brain store (PATROL→DETECT→CHASE→
+                    AIM→FIRE/RETURN), think 3-tick offset hash(id)%3, faction
+                    matrix (friendly-fire OFF), wave spawner (WAIT→SPAWNING→
+                    IN_PROGRESS→COMPLETED/FAILED, budget 20 AI/region).
+                    Intent `dev_spawn_wave` = guard env ARCLUX_DEV_WAVE=1.
+                    Kill NPC → npc_killed + salvage credits, TANPA wanted
+                    (05 §2) — handler di simulation.onVesselDestroyed.
+                    Damage = applyWeaponDamage SAMA (pipeline tunggal).
 projectiles.ts    = projectile server-side (09 §3): WEAPON_DEFS (missile/
                     torpedo/rocket), homing turn-rate (bisa dielak), arm 2
                     tick, TTL fizzle, cap 100/region (satu sumber dgn

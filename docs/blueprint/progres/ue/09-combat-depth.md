@@ -366,7 +366,8 @@ capture SourceAttackPower / TargetDefensePower → kami capture via `stats.ts`).
       `WorldRegion.projectiles` (PR-B).
 - [x] `stability.ts`: cap projectile (§3.3) masuk `STABILITY_LIMITS.
       maxProjectiles` + `worldHash` ikut include projectile. Cap AI (§4.3) =
-      PR-C.
+      `NPC_MAX_ACTIVE_PER_REGION` (20) di npcBrain + reject event
+      `wave_rejected` (PR-C).
 - [x] `persistence`: TIDAK menyentuh projectile/lock (volatile, §0.6);
       `world.restore` mengosongkan `projectiles[]` (PR-B).
 - [x] `server.ts`: route `/intent` meneruskan intent `intercept` tanpa ubahan

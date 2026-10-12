@@ -77,6 +77,9 @@ export interface AuthorityDeps {
   bounty?: BountyStore;
   skills?: SkillStore;
   crafting?: CraftingStore;
+  /** 09 §4: NPC AI + wave spawner (server-inject, bukan authority pemain). */
+  npcs?: import("./npcBrain").NpcStore;
+  waves?: import("./npcBrain").WaveStore;
 }
 
 export interface ValidatorContext {
@@ -171,6 +174,16 @@ export function validateIntent(
       const v = entity as VesselEntity;
       if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot attack" };
       return validateAttack(region, v, intent, ctx);
+    }
+    case "dev_spawn_wave": {
+      // 09 §4.3: trigger wave = dev/admin ONLY (guard env eksplisit).
+      if (!ctx.authority?.waves || !ctx.authority?.npcs) {
+        return { decision: "reject", reason: "wave spawner offline" };
+      }
+      if (process.env.ARCLUX_DEV_WAVE !== "1") {
+        return { decision: "reject", reason: "dev_spawn_wave disabled (set ARCLUX_DEV_WAVE=1)" };
+      }
+      return { decision: "accept" };
     }
     case "intercept": {
       const v = entity as VesselEntity;

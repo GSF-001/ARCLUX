@@ -218,7 +218,9 @@ export class WorldRegion {
       vessel: opts.vessel,
       stateHash: "",
       cooldowns: {},
-      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      // Defensive copy — caller boleh simpan opts.position (mis. wave
+      // pending); entity bergerak tak boleh mengmutasi array caller.
+      position: opts.position ? { ...opts.position } : { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
       heading: { yaw: 0, pitch: 0 },
     };
@@ -238,7 +240,7 @@ export class WorldRegion {
       owner: opts.owner,
       communityId: opts.communityId,
       safeZoneRadius: opts.safeZoneRadius ?? 1000,
-      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      position: opts.position ? { ...opts.position } : { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
       heading: { yaw: 0, pitch: 0 },
     };
@@ -258,7 +260,7 @@ export class WorldRegion {
       owner: opts.owner,
       vesselId: opts.vesselId,
       deck: opts.deck ?? "plaza",
-      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      position: opts.position ? { ...opts.position } : { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
       heading: { yaw: 0, pitch: 0 },
     };

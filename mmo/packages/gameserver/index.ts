@@ -48,6 +48,7 @@ export * from "./visibility";
 export * from "./observability";
 export * from "./targeting";
 export * from "./projectiles";
+export * from "./npcBrain";
 export * from "./planetary/environment";
 export * from "./planetary/geography";
 export * from "./planetary/chunks";
