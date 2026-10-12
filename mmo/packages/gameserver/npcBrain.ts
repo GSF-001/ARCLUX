@@ -257,9 +257,14 @@ export function stepNpcs(region: Region, store: NpcStore, tick: number, hooks: N
         }
         const cd = npc.cooldowns["weapon.plasma"] ?? 0;
         if (cd > 0) break; // cooldown senjata — tunggu (state tetap fire)
+        const dist = Math.hypot(
+          npc.position.x - target!.position.x,
+          npc.position.y - target!.position.y,
+          npc.position.z - target!.position.z
+        );
         const impact = hooks.applyDamage(npc, target!, "weapon.plasma", (meta) => {
           hooks.log("npc_combat", { attackerId: npc.id, ...meta });
-        });
+        }, { distance: dist });
         npc.cooldowns["weapon.plasma"] = NPC_FIRE_COOLDOWN_TICKS;
         hooks.log("npc_attack", { attackerId: npc.id, targetId: target!.id, hit: !!impact });
         if (impact?.destroyed) hooks.onKill?.(target!, npc.owner);

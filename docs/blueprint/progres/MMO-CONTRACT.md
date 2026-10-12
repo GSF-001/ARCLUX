@@ -90,6 +90,14 @@ npcBrain.ts       = NPC AI combat (09 §4): brain store (PATROL→DETECT→CHASE
                     Kill NPC → npc_killed + salvage credits, TANPA wanted
                     (05 §2) — handler di simulation.onVesselDestroyed.
                     Damage = applyWeaponDamage SAMA (pipeline tunggal).
+stats.ts          = damage pipeline accessors (09 §5): attackPowerOf/
+                    defensePowerOf (0..150, derived — tanpa state baru),
+                    signatureOf (satu sumber targeting), weaponRangeOf,
+                    mod hooks rangeFalloffOf (100%→60% linear) +
+                    conditionPenaltyOf (weapons<50 → ×0.7). Formula:
+                    raw = basePower × atk/100 / max(def/100, 0.5) → mods →
+                    resist → min(CEILING, health). Pure via damageFormulaOf
+                    (combat.ts) untuk assertion per-tahap.
 projectiles.ts    = projectile server-side (09 §3): WEAPON_DEFS (missile/
                     torpedo/rocket), homing turn-rate (bisa dielak), arm 2
                     tick, TTL fizzle, cap 100/region (satu sumber dgn

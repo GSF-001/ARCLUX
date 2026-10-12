@@ -16,6 +16,7 @@ import type { VesselEntity, WorldEntity } from "./types";
 import type { WorldRegion } from "./world";
 import type { SessionStore } from "./session";
 import { distanceBetween } from "./world";
+import { signatureOf } from "./stats";
 import { fitDefinitionsOf } from "./fitting";
 import { isInSafeZone } from "./governance";
 import { hullOf } from "./vesselState";
@@ -104,14 +105,12 @@ export function createLockStore() {
 // ── Derivasi (§2.2) ───────────────────────────────────────────────────────
 
 /**
- * Signature target — proxy massa/kelas dari integrity kapal (0..100):
- * kapal tebal = gampang dilacak, kapal ringan = susah (EVE-like disederhanakan).
- * CATATAN: PR-D (§5.1) memindahkan ini ke `stats.ts::signatureOf` — sementara
- * menempel di sini agar PR-A berdiri sendiri tanpa membuka stats.ts dini.
+ * Signature target — delegasi `stats.ts::signatureOf` (satu sumber, §5.1).
+ * Kapal tebal = gampang dilacak, kapal ringan = susah (EVE-like
+ * disederhanakan).
  */
 export function targetSignatureOf(target: WorldEntity): number {
-  if (target.kind !== "vessel") return 50;
-  return Math.max(0, Math.min(100, target.vessel.integrity));
+  return signatureOf(target);
 }
 
 /** Kelas target untuk tabel akuisisi (§2.2) — deterministik dari signature. */

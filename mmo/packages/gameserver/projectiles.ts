@@ -28,6 +28,10 @@ export interface WeaponDef {
   turnRate: number;
   /** Base damage SEBELUM pipeline (§5) — preview client; resolusi tetap applyWeaponDamage. */
   baseDamage: number;
+  /** Max range untuk mod rangeFalloff (09 §5.2) + validator.
+   * Literal 5000 (bukan import stats::DEFAULT_WEAPON_RANGE_M) — hindari
+   * cycle ESM stats↔projectiles (child tsx crash: TDZ). */
+  maxRange: number;
   ttlTicks: number;
   cooldownTicks: number;
   armTicks: number;
@@ -39,14 +43,17 @@ export const WEAPON_DEFS: Record<string, WeaponDef> = {
   "weapon.missile": {
     id: "weapon.missile", speed: 60, turnRate: 0.12, baseDamage: 10,
     ttlTicks: 50, cooldownTicks: 6, armTicks: 2, projectile: true,
+    maxRange: 5000,
   },
   "weapon.torpedo": {
     id: "weapon.torpedo", speed: 35, turnRate: 0.07, baseDamage: DAMAGE_CEILING,
     ttlTicks: 80, cooldownTicks: 12, armTicks: 2, projectile: true,
+    maxRange: 5000,
   },
   "weapon.rocket": {
     id: "weapon.rocket", speed: 90, turnRate: 0.05, baseDamage: 6,
     ttlTicks: 30, cooldownTicks: 3, armTicks: 2, projectile: true,
+    maxRange: 5000,
   },
 };
 
@@ -220,7 +227,14 @@ export function stepProjectiles(
         const owner = attacker && attacker.kind === "vessel" ? attacker : undefined;
         // applyWeaponDamage TANPA logger internal — event projectile_hit
         // (dengan meta impact) di-log satu kali di bawah (jangan dobel).
-        const impact = owner ? applyWeaponDamage(owner, target, proj.weaponType) : undefined;
+        // ctx distance = jarak projectile→target saat hit (≤ HIT_RADIUS_M,
+        // hampir selalu di sweet-spot falloff).
+        const dist = Math.hypot(
+          proj.pos.x - target.position.x,
+          proj.pos.y - target.position.y,
+          proj.pos.z - target.position.z
+        );
+        const impact = owner ? applyWeaponDamage(owner, target, proj.weaponType, undefined, { distance: dist }) : undefined;
         if (impact) {
           logger?.({
             type: "projectile_hit",
