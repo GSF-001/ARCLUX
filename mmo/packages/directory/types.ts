@@ -24,6 +24,10 @@ export interface ServerManifest {
   community?: string;
   ruleset?: string;
   operator?: string;
+  /** Shard environment (Sprint 6, 08 §4): "test" = shard publik terpisah ala
+   *  EVE Singularity (data/wipe/dunia sendiri), "live" = produksi. Default live
+   *  bila tidak disebut (manifest lama). */
+  environment?: "live" | "test";
 }
 
 export interface ServerIdentity {
