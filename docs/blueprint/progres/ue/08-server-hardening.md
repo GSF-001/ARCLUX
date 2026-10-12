@@ -555,12 +555,15 @@ terpengaruh.
       — §4. DONE (branch `feat/sprint7c-npc-ai`, 6/6 test §4.4 hijau;
       `steerToward` pindah ke physics.ts — satu sumber gerak AI & move
       intent; kill handler tunggal onVesselDestroyed).
-- [ ] PR-D Pipeline: `stats.ts` (attackPower/defensePower/signature derived) +
+- [x] PR-D Pipeline: `stats.ts` (attackPower/defensePower/signature derived) +
       refactor `combat.ts` ke pipeline `raw × power/defense × mod-hooks ×
       resist × ceiling` (mod MVP: rangeFalloff, conditionPenalty) — fondasi
-      Sprint 5 skill — §5.
-- [ ] Kontrak: `MMO-CONTRACT.md` + sanitizeSnapshot proyeksi projectile ringan
-      + stability caps baru — §6.
+      Sprint 5 skill — §5. DONE (branch `feat/sprint7d-pipeline`, 6/6 test
+      §5.3; fase3-cap-combat di-update nilai formula baru; child determinism
+      hijau — hindari cycle ESM stats↔projectiles: maxRange literal 5000).
+- [x] Kontrak: `MMO-CONTRACT.md` + sanitizeSnapshot proyeksi projectile ringan
+      + stability caps baru — §6. DONE (PR-B: kontrak projectiles/validator +
+      light projection + maxProjectiles; PR-C: npcBrain; PR-D: stats).
 
 > Regresi per-PR: `tests/server-sprint7-{lock,projectile,ai,pipeline}.test.ts`
 > (9+7+6+6 test) + determinisme replay 2 proses lock/projectile/AI.
