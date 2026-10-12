@@ -5,6 +5,7 @@
 #include "UE5Transport.h"
 #include "UE5IntentFactory.h"
 #include "UE5StationActor.h"
+#include "Cinematic/UE5CinematicDirector.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
@@ -139,5 +140,15 @@ void AUE5VesselPawn::Tick(float DeltaSeconds)
 				PendingInput.X, PendingInput.Y, PendingInput.Z,
 				bBoostHeld, bBrakeHeld, NextSeq++));
 		}
+	}
+
+	// Slice 7: cinematic director — feed state kapal + advance fase tiap frame.
+	// Speed dari velocity server (bukan input klien — D-008 presentation only).
+	if (CinematicDirector)
+	{
+		const FUE5Vec3& V = VesselState.Base.Velocity;
+		const double SpeedMps = FMath::Sqrt(V.X * V.X + V.Y * V.Y + V.Z * V.Z);
+		CinematicDirector->FeedVesselState(AltitudeMeters, SpeedMps, VesselState.Emergency);
+		CinematicDirector->TickDirector(DeltaSeconds);
 	}
 }

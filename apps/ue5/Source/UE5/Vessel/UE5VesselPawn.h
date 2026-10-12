@@ -15,6 +15,7 @@
 
 class UUE5Transport;
 class AUE5StationActor;
+class UUE5CinematicDirector;
 
 UCLASS()
 class UE5_API AUE5VesselPawn : public APawn
@@ -66,6 +67,16 @@ public:
 	// Shake kokpit dari UE5PlanetaryReader (HANYA mode Cockpit, nol biaya di luarnya).
 	UFUNCTION(BlueprintCallable)
 	void ApplyCockpitShake(double ShakeX, double ShakeY);
+
+	// Slice 7: director cinematic (port CinematicEventDirector.ts). Feed per
+	// Tick: altitude + speed + emergency → trigger ATMO_ENTRY/LANDING/CRASH.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UUE5CinematicDirector* CinematicDirector = nullptr;
+
+	// Ketinggian di atas permukaan planet (meter) — di-set oleh sistem
+	// planetary/terrain (conveyor environment, Slice 8 saat terrain port).
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	double AltitudeMeters = 0;
 
 protected:
 	virtual void BeginPlay() override;

@@ -13,6 +13,8 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUE5WeatherChanged, const FString&, WeatherKind);
 
+class UUE5CinematicDirector;
+
 UCLASS(ClassGroup = (ARCLUX), meta = (BlueprintSpawnableComponent))
 class UE5_API UUE5StormDirector : public UActorComponent
 {
@@ -23,6 +25,11 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnUE5WeatherChanged OnWeatherChanged;
+
+	// Slice 7: forward env lengkap ke cinematic director (kalau di-set) —
+	// StormDirector adalah satu-satunya penerima FUE5Environment.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UUE5CinematicDirector* CinematicDirector = nullptr;
 
 	// Terapkan FUE5Environment terbaru dari server. Broadcast hanya saat berubah.
 	UFUNCTION(BlueprintCallable)

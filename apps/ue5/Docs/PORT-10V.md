@@ -58,3 +58,20 @@
 - [ ] Directory over HTTP — BELUM ADA di server (`mmo/packages/directory` in-process only); UE sementara titik lewat `ServerBaseUrl` config. Butuh GET /servers di server dulu.
 - [ ] Gate transit 2 pemain 2 region teruji di PC (Replication MMO dalam bentuk apa pun = DILARANG)
 - Gate: 2 pemain 2 region + handoff tanpa duplikat.
+
+## Slice 7 — Cinematic director (08 §4 / scene3d/cinematic port) (code DONE, belum compile)
+- [x] `Cinematic/UE5CinematicDirector.h/.cpp` — port 1:1 `CinematicEventDirector.ts`
+      + `wireC.ts` updateTriggers: 7 event (ATMO_ENTRY/STORM/LIGHTNING/EMERGENCY/
+      LANDING/CRASH/DOCKING), prioritas identik (CRASH=100), fase fraksi durasi
+      (0.12/0.25/0.55/0.75/0.92), camera grammar per fase, exposure cap 0.3.
+- [x] Trigger threshold SAMA: ENTRY 2500m@40m/s, LANDING <50m@<25m/s,
+      CRASH 10s, LANDING 6s, default 8s.
+- [x] Wire: `StormDirector.ApplyEnvironment` → `FeedEnvironment` (tiap env update);
+      `UE5VesselPawn::Tick` → `FeedVesselState(altitude, speed, emergency)` + `TickDirector`.
+- [x] Output = delegate `OnPhaseChanged`/`OnEventEnded` — Assignment Sequence/
+      kamera/shake = aset lo di editor (code 10% / asset 90%).
+- [ ] Altitude feed: `UE5VesselPawn.AltitudeMeters` di-set sistem planetary/terrain
+      (port terrain.ts = Slice lanjutan) — tanpa ini ATMO_ENTRY/LANDING diam.
+- [ ] Event server eksplisit (`/events`) belum ada endpoint di server —
+      `NotifyServerEvent` siap dipanggil begitu endpoint ada.
+- Gate: compile bersih Windows + uji jatuh atmosfer → kamera/guncangan ikut fase.
