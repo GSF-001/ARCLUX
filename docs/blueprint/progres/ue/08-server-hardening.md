@@ -512,14 +512,25 @@ terpengaruh.
       vonis/antrean. Test: 39/39 (`server-sprint5-dunia-mmo.test.ts`).
 
 ### Sprint 6 — Load & verifikasi AAA
-- [ ] Load-test harness (mass-testing ala EVE Singularity): 500 entity,
+- [x] Load-test harness (mass-testing ala EVE Singularity): 500 entity,
       100 intents/tick, 100 client poll — ukur p99 latency, tick p99,
-      bandwidth/client.
-- [ ] Public test-region (pemisahan test vs live).
-- [ ] Determinism certificate: replay event log → worldHash identik di 2
-      proses (dokumen + CI).
-- [ ] Acceptance banded: screenshot client TS vs UE5 identik (sudah jadi
-      milik `04-graphics.md`).
+      bandwidth/client. `gameserver/loadtest.ts` + `scripts/loadtest.ts`
+      (fase A engine-only + fase B server HTTP penuh); CI skala kecil di
+      `tests/loadtest-harness.test.ts`; skala penuh via
+      `npx tsx scripts/loadtest.ts [entities intents pollers durasiMs]`.
+- [x] Public test-region (pemisahan test vs live): `GameServerOptions.
+      environment` ("live"|"test", fallback env `ARCLUX_GAME_ENV`) — default
+      regionId `test-region-1` (persistence key terpisah, data live tersentuh
+      nol), manifest directory bertag `environment`, filter `/servers?
+      environment=test|live`, `arclux serve --test` + banner — regresi
+      `tests/server-sprint6-load-verify.test.ts`.
+- [x] Determinism certificate: replay event log → worldHash identik di 2
+      proses (dokumen + CI): `gameserver/determinism.ts` + CLI
+      `npx tsx scripts/determinism.ts` (bundle seeded → 2 child process
+      `determinism-worker.ts` → bandingkan hash), CI
+      `tests/determinism-certificate.test.ts` (4 test).
+- [x] Acceptance banded: screenshot client TS vs UE5 identik — pindah ke
+      `04-graphics.md` §8 (uji banded); di sini selesai (transfer).
 
 ### Sprint 7 — Combat depth (lock-on, projectile, AI, pipeline) — SPEC-FINAL
 > Spesifikasi lengkap (angka, state machine, kontrak, test): `09-combat-depth.md`.
@@ -796,6 +807,18 @@ determinisme identik; ceiling 12 berlaku di SEMUA jalur damage baru; `npx tsc
 - [x] P3-4 /metrics · P3-7 rotasi backup 7 hari · P3-8 audit JSONL ·
       P3-9 net backoff · P3-10 static ETag/HEAD/immutable
 - [x] Authority blob persist — restart ≠ reset ekonomi/vonis/antrean
+
+**Sprint 6 — "Load & verifikasi AAA"** — DONE (PR #794)
+- [x] Load-test harness: engine (tick p50/p95/p99, worldHash) + HTTP penuh
+      (latensi p99 snapshot/intent, bandwidth/client, histogram penolakan)
+- [x] Public test-region: environment test vs live, regionId default terpisah,
+      tag + filter directory, `arclux serve --test`
+- [x] Determinism certificate: bundle seeded → replay di 2 proses child →
+      hash identik (CI + CLI dokumentasi)
+- [x] Acceptance banded — transfer ke `04-graphics.md` §8
+- Catatan: fixture spawn fleet 1 AU dari bintang (spawn dalam radius bintang
+      = overheat → adrift → semua move ditolak); histogram alasan tolak
+      (`rejectionsByReason`) menangkap kelas bug begitu
 
 ---
 
