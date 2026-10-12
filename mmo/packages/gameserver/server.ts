@@ -48,6 +48,7 @@ import {
 import { validateIntent, type AuthorityDeps } from "./validator";
 import { createRateLimiter } from "./rateLimiter";
 import { createSessionStore } from "./session";
+import { createLockStore } from "./targeting";
 import { createHackStore } from "./hack";
 import { createClaimStore } from "./claims";
 import { sanitizeSnapshot } from "./visibility";
@@ -259,6 +260,8 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
   // antrean rakit. Dibagikan ke validator (ctx) + sim (opts).
   const authority: AuthorityDeps = {
     sessions: createSessionStore(),
+    // 09 §2: lock store volatile — validator (gate missile) + sim stepLocks.
+    locks: createLockStore(),
     wanted: createWantedStore(),
     economy: createEconomy(),
     hacks: createHackStore(),

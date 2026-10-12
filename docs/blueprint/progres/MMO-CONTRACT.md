@@ -70,10 +70,17 @@ simulation.ts     = SimulationEngine.tick: SATU-SATUNYA tempat intent
                     capability/governance → move). Sistem sim baru WAJIB
                     dipanggil dari tick sini, bukan jalan sendiri.
 validator.ts      = validateIntent (identity/owner/range/cooldown/safe-zone
-                    + universe/license checkComponent). Aturan tolak/terima
-                    baru = sini. Hasil: ACCEPT|REJECT, tidak ada setengah.
+                    + universe/license checkComponent + lock gate: missile
+                    wajib locked). Aturan tolak/terima baru = sini. Hasil:
+                    ACCEPT|REJECT, tidak ada setengah.
 combat.ts         = applyCombatIntent + DAMAGE_CEILING + SUBSYSTEM_DESTROYED_AT.
                     Damage baru = sini (satu pipa, tidak ada damage jalur lain).
+targeting.ts      = lock-on server-authoritative (09 §2): LockStore volatile
+                    (bukan entity), stepLocks dipanggil simulation SEBELUM
+                    projectile. Intent: `lock {targetId}` / `unlock` (ship-only).
+                    Events `lock_started/lock_acquired/lock_broken` PRIVAT
+                    (actor = pemilik lock). Missile wajib phase locked
+                    (validator). State lock TIDAK masuk snapshot/persistence.
 physics.ts        = clampSpeed + gerak. environs.ts = orbit/benda langit
                     (D-016/D-020). collision.ts = tabrakan → damage (D-017).
                     thermics.ts = radiasi/termal. cosmicEvent.ts = event acak.

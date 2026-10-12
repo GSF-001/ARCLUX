@@ -46,6 +46,7 @@ export * from "./claims";
 export * from "./hack";
 export * from "./visibility";
 export * from "./observability";
+export * from "./targeting";
 export * from "./planetary/environment";
 export * from "./planetary/geography";
 export * from "./planetary/chunks";

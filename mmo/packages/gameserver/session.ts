@@ -20,6 +20,9 @@ export interface PlayerSession {
 /** Intent yang HANYA legal di ship mode (06 §2.5: FPS skills hidden). */
 export const SHIP_ONLY_INTENTS = new Set<string>([
   "attack",
+  // Sprint 7 PR-A (09 §2.3): lock/unlock hanya di cockput ship.
+  "lock",
+  "unlock",
   "activate_capability",
   "teleport",
   "scan",

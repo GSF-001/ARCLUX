@@ -34,6 +34,7 @@ import {
   type HackTargetType,
 } from "./hack";
 import { CLAIM_PLANT_RADIUS_M, CLAIM_MAX_PER_PLAYER, type ClaimStore } from "./claims";
+import { lockRangeOf, type LockStore } from "./targeting";
 import { ARCLUX_STORE, type Economy } from "../economy";
 import { WANTED_GATE_LEVEL, type WantedStore } from "../wanted";
 
@@ -63,6 +64,9 @@ export interface AuthorityDeps {
   economy: Economy;
   hacks: HackStore;
   claims: ClaimStore;
+  /** Sprint 7 PR-A (09 §2): store lock volatile per-region — validator
+   *  butuh untuk gate missile (`lock_required`); server membuat + inject. */
+  locks?: LockStore;
   /** Sprint 5 — opsional agar konsumen lama tetap valid. */
   prison?: PrisonStore;
   bounty?: BountyStore;
@@ -146,6 +150,18 @@ export function validateIntent(
   switch (intent.type) {
     case "move":
       return validateMove(region, entity, intent);
+    case "lock": {
+      const v = entity as VesselEntity;
+      if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot lock" };
+      return validateLock(region, v, intent, ctx);
+    }
+    case "unlock": {
+      if (!ctx.authority?.locks) return { decision: "reject", reason: "lock system offline" };
+      if (!ctx.authority.locks.current(entity.id)) {
+        return { decision: "reject", reason: "no active lock" };
+      }
+      return { decision: "accept" };
+    }
     case "attack": {
       const v = entity as VesselEntity;
       if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot attack" };
@@ -463,6 +479,37 @@ function safeZoneBlocked(region: WorldRegion, target: WorldEntity): string | und
   return undefined;
 }
 
+/**
+ * Intent `lock` (09 §2.3): target valid & ada, bukan diri sendiri, dalam
+ * jarak lock, rate-limit kecil (cooldown 2 tick — anti spam re-lock).
+ * Kelas/cone tidak divalidasi di sini — progress NAIK hanya kalau syarat
+ * geometry terpenuhi (stepLocks §2.2), jadi lock ilegal tetap mentah di
+ * acquiring, bukan instan.
+ */
+function validateLock(
+  region: WorldRegion,
+  attacker: VesselEntity,
+  intent: PlayerIntent,
+  ctx: ValidatorContext
+): ValidationResult {
+  const targetId = intent.payload?.targetId as string | undefined;
+  if (!targetId) return { decision: "reject", reason: "lock requires targetId" };
+  if (!ctx.authority?.locks) return { decision: "reject", reason: "lock system offline" };
+
+  const cd = attacker.cooldowns["lock"] ?? 0;
+  if (cd > 0) return { decision: "reject", reason: `lock intent on cooldown (${cd} ticks)` };
+
+  const target = region.get(targetId);
+  if (!target) return { decision: "reject", reason: `unknown lock target: ${targetId}` };
+  if (target.kind === "station") return { decision: "reject", reason: "cannot lock a station" };
+  if (target.id === attacker.id) return { decision: "reject", reason: "cannot lock self" };
+  // Teman satu owner = valid (friendly-fire policy terpisah — 06 §1).
+  if (distanceBetween(attacker, target) > lockRangeOf(attacker)) {
+    return { decision: "reject", reason: "lock target out of range" };
+  }
+  return { decision: "accept" };
+}
+
 function validateAttack(
   region: WorldRegion,
   attacker: VesselEntity,
@@ -500,6 +547,15 @@ function validateAttack(
   const cooldown = attacker.cooldowns[weaponType] ?? 0;
   if (cooldown > 0) {
     return { decision: "reject", reason: `weapon ${weaponType} on cooldown (${cooldown} ticks)` };
+  }
+
+  // 09 §2.3: missile = komitmen nyata — wajib lock phase "locked" dengan
+  // target yang sama. Turret cukup target valid (tanpa lock).
+  if (weaponType === "weapon.missile") {
+    const lock = ctx.authority?.locks?.current(attacker.id);
+    if (!lock || lock.phase !== "locked" || lock.targetId !== targetId) {
+      return { decision: "reject", reason: "lock_required" };
+    }
   }
 
   // Component/license authorization (Layer I.6) — attacker must be authorized

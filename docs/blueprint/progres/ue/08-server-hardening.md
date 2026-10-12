@@ -526,10 +526,12 @@ terpengaruh.
 > Sumber ide: riset 3 repo UE5 — ideas-only, nol kode disalin (lisensi NONE).
 > Catatan urutan: TIDAK bergantung ke Sprint 3-6 — boleh disisipkan kapan saja
 > setelah Sprint 2 (kalau mau gameplay terasa lebih dulu), tanpa menahan sprint lain.
-- [ ] PR-A Lock-on: `targeting.ts` (state machine acquiring/locked/breaking,
+- [x] PR-A Lock-on: `targeting.ts` (state machine acquiring/locked/breaking,
       cone 45°, grace 4 tick, re-lock 50%, kelas target 8/15/30 tick) +
       validator (`lock`/`unlock`, missile wajib locked, turret cukup range+cone)
-      + event privat `lock_*` — `09-combat-depth.md` §2.
+      + event privat `lock_*` — `09-combat-depth.md` §2. DONE (branch
+      `feat/sprint7a-lock-on`, 9/9 test §2.6 + determinisme 2 proses hijau;
+      turret tetap range seperti baseline — cone turret = urusan PR-B/D).
 - [ ] PR-B Projectile: `projectiles.ts` (homing slerp turn-rate — BISA DIELAK,
       TTL fizzle, arm 2 tick, cap 100) + spawn dari intent missile + point
       defense `intercept` deterministik — §3.
