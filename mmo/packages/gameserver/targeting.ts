@@ -16,6 +16,7 @@ import type { VesselEntity, WorldEntity } from "./types";
 import type { WorldRegion } from "./world";
 import type { SessionStore } from "./session";
 import { distanceBetween } from "./world";
+import { signatureOf } from "./stats";
 import { fitDefinitionsOf } from "./fitting";
 import { isInSafeZone } from "./governance";
 import { hullOf } from "./vesselState";
@@ -104,14 +105,12 @@ export function createLockStore() {
 // ── Derivasi (§2.2) ───────────────────────────────────────────────────────
 
 /**
- * Signature target — proxy massa/kelas dari integrity kapal (0..100):
- * kapal tebal = gampang dilacak, kapal ringan = susah (EVE-like disederhanakan).
- * CATATAN: PR-D (§5.1) memindahkan ini ke `stats.ts::signatureOf` — sementara
- * menempel di sini agar PR-A berdiri sendiri tanpa membuka stats.ts dini.
+ * Signature target — delegasi `stats.ts::signatureOf` (satu sumber, §5.1).
+ * Kapal tebal = gampang dilacak, kapal ringan = susah (EVE-like
+ * disederhanakan).
  */
 export function targetSignatureOf(target: WorldEntity): number {
-  if (target.kind !== "vessel") return 50;
-  return Math.max(0, Math.min(100, target.vessel.integrity));
+  return signatureOf(target);
 }
 
 /** Kelas target untuk tabel akuisisi (§2.2) — deterministik dari signature. */
@@ -153,15 +152,23 @@ function forwardOf(v: { heading: { yaw: number; pitch: number } }): { x: number;
 }
 
 /** Angle (derajat) antara haluan penyerang dan arah ke target. */
-export function lockAngleDeg(attacker: VesselEntity, target: WorldEntity): number {
-  const f = forwardOf(attacker);
-  const dx = target.position.x - attacker.position.x;
-  const dy = target.position.y - attacker.position.y;
-  const dz = target.position.z - attacker.position.z;
+/** Sudut heading vs posisi absolut (satu sumber cone — lock + point defense). */
+export function angleToPosDeg(
+  v: { heading: { yaw: number; pitch: number }; position: { x: number; y: number; z: number } },
+  pos: { x: number; y: number; z: number }
+): number {
+  const f = forwardOf(v);
+  const dx = pos.x - v.position.x;
+  const dy = pos.y - v.position.y;
+  const dz = pos.z - v.position.z;
   const len = Math.hypot(dx, dy, dz);
   if (len === 0) return 0;
   const cos = (f.x * dx + f.y * dy + f.z * dz) / len;
   return (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+}
+
+export function lockAngleDeg(attacker: VesselEntity, target: WorldEntity): number {
+  return angleToPosDeg(attacker, target.position);
 }
 
 // ── Transisi lock (§2.2-2.4) ──────────────────────────────────────────────

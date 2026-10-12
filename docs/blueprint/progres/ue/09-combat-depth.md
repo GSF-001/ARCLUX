@@ -358,14 +358,20 @@ capture SourceAttackPower / TargetDefensePower → kami capture via `stats.ts`).
       membawa targetId) dicatat PR-A. Sisa: `intercept`,
       `projectile_spawned/hit/fizzle/destroyed`, `npc_killed`,
       `wave_started/completed` — PR-B/C.
-- [ ] `visibility.ts` sanitizeSnapshot: proyeksi projectile ringan (§3.5) + lock
-      state PEMILIK saja (lock = intel privat).
-- [ ] `types.ts`: `ProjectileEntity` type + `WorldRegion.projectiles`.
-- [ ] `stability.ts`: cap projectile (§3.3) + cap AI (§4.3) masuk ladder trim.
-- [ ] `persistence`: TIDAK menyentuh projectile/lock (volatile, §0.6) — tapi
-      `world.restore` harus **mengosongkan** store baru (bukan bawaan lupa).
-- [ ] `server.ts`: route `/intent` meneruskan intent baru (validator sudah cukup
-      — tidak ada route baru).
+- [x] `visibility.ts`/snapshot: proyeksi projectile ringan `{id, ownerId,
+      targetId, pos, weaponType}` (tanpa ttl/turnRate) di `WorldRegion.snapshot`
+      (§3.5) — sanitizeSnapshot tak perlu ubahan (projection sudah light).
+      Lock state = intel privat, tidak pernah masuk snapshot (PR-A).
+- [x] `types.ts`: `ProjectileEntity` + `ProjectileSnapshot` + 
+      `WorldRegion.projectiles` (PR-B).
+- [x] `stability.ts`: cap projectile (§3.3) masuk `STABILITY_LIMITS.
+      maxProjectiles` + `worldHash` ikut include projectile. Cap AI (§4.3) =
+      `NPC_MAX_ACTIVE_PER_REGION` (20) di npcBrain + reject event
+      `wave_rejected` (PR-C).
+- [x] `persistence`: TIDAK menyentuh projectile/lock (volatile, §0.6);
+      `world.restore` mengosongkan `projectiles[]` (PR-B).
+- [x] `server.ts`: route `/intent` meneruskan intent `intercept` tanpa ubahan
+      (validator sudah cukup — tidak ada route baru, PR-B).
 - [ ] Client TS: panel target lock minimal (daftar target dalam lock range + progress)
       — polish = urusan `09-client-polish.md` fase UE.
 

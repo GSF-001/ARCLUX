@@ -123,6 +123,47 @@ export interface RegionSnapshot {
   /** P2-3: status time-dilation region (client slow-motion adil). */
   dilation?: DilationState;
   entities: WorldEntity[];
+  /** 09 §3.5: proyeksi projectile RINGAN (posisi publik, intel minor
+   *  ttl/turnRate disembunyikan). Volatile — tidak pernah dipersist. */
+  projectiles?: ProjectileSnapshot[];
+}
+
+/**
+ * 09 §3.1: projectile server-side (missile/torpedo). BUKAN WorldEntity —
+ * array terpisah di WorldRegion, tidak masuk scan-by-default, tidak
+ * dipersist (volatile §0.6).
+ */
+export interface ProjectileEntity {
+  /** prj:<fnv1a(owner|weapon|tick|seq)> */
+  id: string;
+  /** Vessel penembak. */
+  ownerId: string;
+  /** Sumber stat — "weapon.missile" | "weapon.torpedo" | .... */
+  weaponType: string;
+  /** MVP homing-only; target mati = inert fly-by ke titik terakhir. */
+  targetId: string;
+  pos: Vec3;
+  /** Arah terbang. |dir| ≤ 1 (bukan strict unit — turning bleed speed, 09 §3.2.1b). */
+  dir: Vec3;
+  /** Unit/tick (mis. 60 = 600u/s @10Hz). */
+  speed: number;
+  /** Fraction lerp arah per tick (mis. 0.12 = 12%/tick) — "bisa dielak". */
+  turnRate: number;
+  /** baseDamage SEBELUM pipeline (§5) — preview; resolusi hit = applyWeaponDamage. */
+  damage: number;
+  /** Sisa umur; habis = fizzle. */
+  ttlTicks: number;
+  /** >0 = masih arming; meledak baru boleh saat 0 (anti point-blank self-fizzle). */
+  armTicks: number;
+}
+
+/** Proyeksi ringan projectile untuk snapshot client (09 §3.5). */
+export interface ProjectileSnapshot {
+  id: string;
+  ownerId: string;
+  targetId: string;
+  pos: Vec3;
+  weaponType: string;
 }
 
 /** P2-3: status time-dilation region saat ini. */

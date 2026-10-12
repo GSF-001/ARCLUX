@@ -16,6 +16,7 @@ import {
   type DilationState,
   type GameEntity,
   type RegionSnapshot,
+  type ProjectileEntity,
   type StationEntity,
   type VesselEntity,
   type WorldEntity,
@@ -58,6 +59,10 @@ export class WorldRegion {
   dilation: DilationState = { level: 0, scale: 1 };
 
   private entities = new Map<string, WorldEntity>();
+
+  /** 09 §3: projectile server-side — array terpisah (bukan WorldEntity),
+   *  tidak masuk scan-by-default, tidak dipersist (volatile). */
+  projectiles: ProjectileEntity[] = [];
 
   /** Cache stations (invalidated on mutation) — safe-zone O(stations), bukan O(n). */
   private stationsCache: StationEntity[] | null = null;
@@ -178,6 +183,10 @@ export class WorldRegion {
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
       dilation: this.dilation,
       entities: Array.from(this.entities.values()),
+      // 09 §3.5: proyeksi ringan — tanpa ttl/turnRate (intel minor, hemat byte).
+      projectiles: this.projectiles.map((p) => ({
+        id: p.id, ownerId: p.ownerId, targetId: p.targetId, pos: p.pos, weaponType: p.weaponType,
+      })),
     };
   }
 
@@ -209,7 +218,9 @@ export class WorldRegion {
       vessel: opts.vessel,
       stateHash: "",
       cooldowns: {},
-      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      // Defensive copy — caller boleh simpan opts.position (mis. wave
+      // pending); entity bergerak tak boleh mengmutasi array caller.
+      position: opts.position ? { ...opts.position } : { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
       heading: { yaw: 0, pitch: 0 },
     };
@@ -229,7 +240,7 @@ export class WorldRegion {
       owner: opts.owner,
       communityId: opts.communityId,
       safeZoneRadius: opts.safeZoneRadius ?? 1000,
-      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      position: opts.position ? { ...opts.position } : { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
       heading: { yaw: 0, pitch: 0 },
     };
@@ -249,7 +260,7 @@ export class WorldRegion {
       owner: opts.owner,
       vesselId: opts.vesselId,
       deck: opts.deck ?? "plaza",
-      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      position: opts.position ? { ...opts.position } : { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
       heading: { yaw: 0, pitch: 0 },
     };
@@ -279,6 +290,8 @@ export class WorldRegion {
   restore(state: RegionSnapshot): void {
     this.tick = state.tick;
     this.entities.clear();
+    // 09 §6: store volatile DIOSONGKAN (bukan ikut hydrate dari snapshot lama).
+    this.projectiles = [];
     this.stationsCache = null;
     this.pendingChanges.clear();
     this.pendingRemovals.clear();

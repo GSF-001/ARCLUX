@@ -49,6 +49,7 @@ import { validateIntent, type AuthorityDeps } from "./validator";
 import { createRateLimiter } from "./rateLimiter";
 import { createSessionStore } from "./session";
 import { createLockStore } from "./targeting";
+import { createNpcStore, createWaveStore } from "./npcBrain";
 import { createHackStore } from "./hack";
 import { createClaimStore } from "./claims";
 import { sanitizeSnapshot } from "./visibility";
@@ -272,6 +273,9 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
     sessions: createSessionStore(),
     // 09 §2: lock store volatile — validator (gate missile) + sim stepLocks.
     locks: createLockStore(),
+    // 09 §4: NPC AI + wave spawner (internal sim path, bukan authority pemain).
+    npcs: createNpcStore(),
+    waves: createWaveStore(),
     wanted: createWantedStore(),
     economy: createEconomy(),
     hacks: createHackStore(),

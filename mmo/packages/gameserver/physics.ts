@@ -47,6 +47,42 @@ export function lorentz(speed_mps: number): number {
   return 1 / Math.sqrt(1 - beta2);
 }
 
+/**
+ * Newtonian thrust steer (D-019 baseline): a=4 m/s², cap 250 m/s. Dipakai
+ * move intent (simulation) DAN NPC AI (npcBrain) — satu sumber gerak.
+ * Heading ikut di-set ke arah gerak (atan2) — konsisten lock/PD cone.
+ */
+export function steerToward(
+  entity: { position: Vec3; velocity: Vec3; heading: { yaw: number; pitch: number }; vessel?: { mass?: number } | object },
+  target: Vec3,
+  dt: number
+): void {
+  const thrust = 2e7;
+  const mass = (entity.vessel as { mass?: number } | undefined)?.mass ?? 5e6;
+  const maxSpeed = 250;
+  const dx = target.x - entity.position.x;
+  const dy = target.y - entity.position.y;
+  const dz = target.z - entity.position.z;
+  const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  if (d < 1) {
+    entity.velocity.x *= 0.85;
+    entity.velocity.y *= 0.85;
+    entity.velocity.z *= 0.85;
+    if (Math.sqrt(entity.velocity.x ** 2 + entity.velocity.y ** 2 + entity.velocity.z ** 2) < 0.5) {
+      entity.velocity.x = 0; entity.velocity.y = 0; entity.velocity.z = 0;
+    }
+    return;
+  }
+  const ax = (dx / d) * (thrust / mass);
+  const ay = (dy / d) * (thrust / mass);
+  const az = (dz / d) * (thrust / mass);
+  entity.velocity.x = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.x + ax * dt));
+  entity.velocity.y = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.y + ay * dt));
+  entity.velocity.z = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.z + az * dt));
+  entity.heading.yaw = Math.atan2(dx, dz);
+  entity.heading.pitch = Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
+}
+
 export function clampSpeed(v: Vec3, max: number): Vec3 {
   const s = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
   if (s <= max) return { ...v };

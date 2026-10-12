@@ -23,6 +23,8 @@ export const SHIP_ONLY_INTENTS = new Set<string>([
   // Sprint 7 PR-A (09 §2.3): lock/unlock hanya di cockput ship.
   "lock",
   "unlock",
+  // 09 §3.3: point defense = turret di cockpit ship.
+  "intercept",
   "activate_capability",
   "teleport",
   "scan",

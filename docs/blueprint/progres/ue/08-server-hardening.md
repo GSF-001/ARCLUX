@@ -543,19 +543,27 @@ terpengaruh.
       + event privat `lock_*` — `09-combat-depth.md` §2. DONE (branch
       `feat/sprint7a-lock-on`, 9/9 test §2.6 + determinisme 2 proses hijau;
       turret tetap range seperti baseline — cone turret = urusan PR-B/D).
-- [ ] PR-B Projectile: `projectiles.ts` (homing slerp turn-rate — BISA DIELAK,
+- [x] PR-B Projectile: `projectiles.ts` (homing lerp turn-rate — BISA DIELAK,
       TTL fizzle, arm 2 tick, cap 100) + spawn dari intent missile + point
-      defense `intercept` deterministik — §3.
-- [ ] PR-C NPC AI: `npcBrain.ts` (PATROL→DETECT→CHASE→AIM→FIRE, think 3 tick
+      defense `intercept` deterministik — §3. DONE (branch
+      `feat/sprint7b-projectile`, 7/7 test §3.6 + determinisme 2 proses hijau;
+      homing pakai lerp tanpa re-normalize — turning bleed speed, catat di
+      projectiles.ts).
+- [x] PR-C NPC AI: `npcBrain.ts` (PATROL→DETECT→CHASE→AIM→FIRE, think 3 tick
       stagger, safe-zone no-fire, faction matrix) + wave spawner ala
       GameMode_Survival + budget 20 AI/region; kill NPC tanpa wanted + salvage
-      — §4.
-- [ ] PR-D Pipeline: `stats.ts` (attackPower/defensePower/signature derived) +
+      — §4. DONE (branch `feat/sprint7c-npc-ai`, 6/6 test §4.4 hijau;
+      `steerToward` pindah ke physics.ts — satu sumber gerak AI & move
+      intent; kill handler tunggal onVesselDestroyed).
+- [x] PR-D Pipeline: `stats.ts` (attackPower/defensePower/signature derived) +
       refactor `combat.ts` ke pipeline `raw × power/defense × mod-hooks ×
       resist × ceiling` (mod MVP: rangeFalloff, conditionPenalty) — fondasi
-      Sprint 5 skill — §5.
-- [ ] Kontrak: `MMO-CONTRACT.md` + sanitizeSnapshot proyeksi projectile ringan
-      + stability caps baru — §6.
+      Sprint 5 skill — §5. DONE (branch `feat/sprint7d-pipeline`, 6/6 test
+      §5.3; fase3-cap-combat di-update nilai formula baru; child determinism
+      hijau — hindari cycle ESM stats↔projectiles: maxRange literal 5000).
+- [x] Kontrak: `MMO-CONTRACT.md` + sanitizeSnapshot proyeksi projectile ringan
+      + stability caps baru — §6. DONE (PR-B: kontrak projectiles/validator +
+      light projection + maxProjectiles; PR-C: npcBrain; PR-D: stats).
 
 > Regresi per-PR: `tests/server-sprint7-{lock,projectile,ai,pipeline}.test.ts`
 > (9+7+6+6 test) + determinisme replay 2 proses lock/projectile/AI.

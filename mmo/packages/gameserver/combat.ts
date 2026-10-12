@@ -16,6 +16,15 @@ import type { WorldRegion } from "./world";
 import { computeResists, MAX_RESIST } from "../universe/fitCalc";
 import type { DamageType } from "../universe/types";
 import { fitDefinitionsOf } from "./fitting";
+import { distanceBetween } from "./world";
+import {
+  attackPowerOf,
+  defensePowerOf,
+  rangeFalloffOf,
+  conditionPenaltyOf,
+  weaponRangeOf,
+} from "./stats";
+import { WEAPON_DEFS } from "./projectiles";
 
 /** Max damage a single attack can deal, per subsystem (Layer I.7 ceiling). */
 export const DAMAGE_CEILING = 12;
@@ -54,35 +63,45 @@ export function applyCombatIntent(
   const target = region.getVessel(targetId);
   if (!target) return undefined;
 
+  const impact = applyWeaponDamage(attacker, target, weaponType, logger, {
+    distance: distanceBetween(attacker, target),
+  });
+  // Set a cooldown on the attacker's weapon so it can't fire every tick.
+  if (impact) attacker.cooldowns[weaponType] = cooldownTicks(weaponType);
+  return impact;
+}
+
+/**
+ * Satu pipa damage (D-008): turret hitscan DAN projectile hit (09 §3.2.2)
+ * SEMUA lewat sini — resist target, ceiling 12, subsystem. Tanpa cooldown
+ * (caller yang atur — spawn missile sudah kena cooldown saat ditembak).
+ */
+export function applyWeaponDamage(
+  attacker: VesselEntity,
+  target: VesselEntity,
+  weaponType: string,
+  logger?: CombatLogger,
+  ctx?: DamageContext
+): CombatImpact | undefined {
   const subsystemId = resolveTargetSubsystem(weaponType);
   const sys = target.vessel.systems.find((s) => s.id === subsystemId);
   if (!sys) return undefined;
 
-  const rawCapability = attackPower(attacker, weaponType);
-  // Resistensi fit target (Fase 3) — dihitung dari komponen TERPASANG
-  // lewat fitCalc::computeResists (cap MAX_RESIST, tanpa duplikasi
-  // logika). Weapon tak dikenal → jalur polos (perilaku lama).
-  const dtype = damageTypeOf(weaponType);
-  const resist = dtype ? resistFactor(target, dtype) : 0;
-  const afterResist = Math.round(rawCapability * (1 - resist) * 10) / 10;
-  const resisted = Math.round((rawCapability - afterResist) * 10) / 10;
-  const damage = applyDamageCeiling(afterResist, sys.health);
+  const pipeline = damageFormulaOf(attacker, target, weaponType, ctx);
+  const damage = applyDamageCeiling(pipeline.afterResist, sys.health);
 
   const before = sys.health;
   sys.health = Math.max(SUBSYSTEM_DESTROYED_AT, before - damage);
   const destroyed = sys.health <= SUBSYSTEM_DESTROYED_AT;
 
-  // Set a cooldown on the attacker's weapon so it can't fire every tick.
-  attacker.cooldowns[weaponType] = cooldownTicks(weaponType);
-
   const impact: CombatImpact = {
-    targetId,
+    targetId: target.id,
     subsystemId,
     before,
     after: sys.health,
     damage,
     destroyed,
-    resisted,
+    resisted: pipeline.resisted,
   };
 
   logger?.({
@@ -111,11 +130,71 @@ function resolveTargetSubsystem(weaponType: string): string {
   }
 }
 
-/** Raw damage from attacker capability + weapon (before ceiling). */
-function attackPower(attacker: VesselEntity, weaponType: string): number {
-  const weaponStat = attacker.vessel.systems.find((s) => s.id === "weapons")?.health ?? 50;
-  const base = 4 + (weaponStat / 100) * 8; // 4..12
-  return Math.round(base * 10) / 10;
+/** Konteks opsional pipeline (09 §5.2). */
+export interface DamageContext {
+  /** Jarak penembak→target (atau projectile→target saat hit). Default 0. */
+  distance?: number;
+}
+
+export interface DamagePipeline {
+  subsystemId: string;
+  resist: number;
+  /** base × attacker/100 / max(defense/100, 0.5). */
+  raw: number;
+  /** raw × rangeFalloff × conditionPenalty (mod hooks, urutan tetap). */
+  afterMods: number;
+  /** afterMods × (1 − resist). */
+  afterResist: number;
+  /** resisted ≥ 0 (poin yang terserap). */
+  resisted: number;
+  /** min(afterResist, DAMAGE_CEILING, sys.health). */
+  damage: number;
+}
+
+/**
+ * Formula damage (09 §5.2) — pure, deterministik:
+ *   raw        = basePower(weapon) × (attackPowerOf/100) / max(defensePowerOf/100, 0.5)
+ *   afterMods  = applyMods(raw)   // rangeFalloff → conditionPenalty
+ *   afterResist= afterMods × (1 − resist)
+ *   damage     = min(afterResist, DAMAGE_CEILING, targetSys.health)
+ * Dipakai applyWeaponDamage + test (assertion per tahap, §5.3).
+ */
+export function damageFormulaOf(
+  attacker: VesselEntity,
+  target: VesselEntity,
+  weaponType: string,
+  ctx?: DamageContext
+): DamagePipeline {
+  const subsystemId = resolveTargetSubsystem(weaponType);
+  const sys = target.vessel.systems.find((s) => s.id === subsystemId);
+  const dtype = damageTypeOf(weaponType);
+  const resist = dtype ? resistFactor(target, dtype) : 0;
+
+  const raw =
+    (basePowerOf(weaponType) * (attackPowerOf(attacker) / 100)) /
+    Math.max(defensePowerOf(target) / 100, 0.5);
+  // Mod hooks — urutan tetap, murni, deterministik (Sprint 5 menambah di
+  // array yang SAMA: booster, skill aktif, hack effect).
+  const afterMods = raw * rangeFalloffOf(ctx?.distance ?? 0, weaponRangeOf(weaponType)) * conditionPenaltyOf(attacker);
+  const afterResistRaw = afterMods * (1 - resist);
+  const afterResist = Math.round(afterResistRaw * 10) / 10;
+  const resisted = Math.max(0, Math.round((afterMods - afterResistRaw) * 10) / 10);
+  const damage = sys ? applyDamageCeiling(afterResist, sys.health) : applyDamageCeiling(afterResist, 0);
+
+  return { subsystemId, resist, raw: Math.round(raw * 10) / 10, afterMods: Math.round(afterMods * 10) / 10, afterResist, resisted, damage };
+}
+
+/** Base power per senjata — WEAPON_DEFS (projectile) atau tabel turret. */
+function basePowerOf(weaponType: string): number {
+  const def = WEAPON_DEFS[weaponType];
+  if (def) return def.baseDamage;
+  switch (weaponType) {
+    case "weapon.plasma": return 8;
+    case "weapon.railgun": return 9;
+    case "weapon.emp": return 6;
+    case "weapon.explosive": return 10;
+    default: return 8;
+  }
 }
 
 /** Clamp damage to the ruleset ceiling, never dipping below 0. */

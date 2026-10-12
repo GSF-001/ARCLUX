@@ -34,7 +34,12 @@ import {
   type HackTargetType,
 } from "./hack";
 import { CLAIM_PLANT_RADIUS_M, CLAIM_MAX_PER_PLAYER, type ClaimStore } from "./claims";
-import { lockRangeOf, type LockStore } from "./targeting";
+import { lockRangeOf, angleToPosDeg, LOCK_CONE_DEG, type LockStore } from "./targeting";
+import {
+  INTERCEPT_RANGE_M,
+  INTERCEPT_COOLDOWN_TICKS,
+  INTERCEPT_COOLDOWN_KEY,
+} from "./projectiles";
 import { ARCLUX_STORE, type Economy } from "../economy";
 import { WANTED_GATE_LEVEL, type WantedStore } from "../wanted";
 
@@ -72,6 +77,9 @@ export interface AuthorityDeps {
   bounty?: BountyStore;
   skills?: SkillStore;
   crafting?: CraftingStore;
+  /** 09 §4: NPC AI + wave spawner (server-inject, bukan authority pemain). */
+  npcs?: import("./npcBrain").NpcStore;
+  waves?: import("./npcBrain").WaveStore;
 }
 
 export interface ValidatorContext {
@@ -166,6 +174,21 @@ export function validateIntent(
       const v = entity as VesselEntity;
       if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot attack" };
       return validateAttack(region, v, intent, ctx);
+    }
+    case "dev_spawn_wave": {
+      // 09 §4.3: trigger wave = dev/admin ONLY (guard env eksplisit).
+      if (!ctx.authority?.waves || !ctx.authority?.npcs) {
+        return { decision: "reject", reason: "wave spawner offline" };
+      }
+      if (process.env.ARCLUX_DEV_WAVE !== "1") {
+        return { decision: "reject", reason: "dev_spawn_wave disabled (set ARCLUX_DEV_WAVE=1)" };
+      }
+      return { decision: "accept" };
+    }
+    case "intercept": {
+      const v = entity as VesselEntity;
+      if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot intercept" };
+      return validateIntercept(region, v, intent);
     }
     case "activate_capability": {
       const v = entity as VesselEntity;
@@ -569,6 +592,44 @@ function validateAttack(
     }
   }
 
+  return { decision: "accept" };
+}
+
+/**
+ * 09 §3.3 point defense: peluru dalam range + cone 45°, tanpa target
+ * kapal (target = projectile). Roll deterministik di simulation.
+ */
+function validateIntercept(
+  region: WorldRegion,
+  shooter: VesselEntity,
+  intent: PlayerIntent
+): ValidationResult {
+  const projectileId = intent.payload?.projectileId as string | undefined;
+  if (!projectileId) return { decision: "reject", reason: "intercept requires projectileId" };
+
+  const blocked = flightBlocked(shooter);
+  if (blocked) return { decision: "reject", reason: blocked };
+
+  const proj = region.projectiles.find((p) => p.id === projectileId);
+  if (!proj) return { decision: "reject", reason: `unknown projectile: ${projectileId}` };
+
+  const dist = Math.hypot(
+    proj.pos.x - shooter.position.x,
+    proj.pos.y - shooter.position.y,
+    proj.pos.z - shooter.position.z
+  );
+  if (dist > INTERCEPT_RANGE_M) {
+    return { decision: "reject", reason: "projectile out of intercept range" };
+  }
+  if (angleToPosDeg(shooter, proj.pos) > LOCK_CONE_DEG) {
+    return { decision: "reject", reason: "projectile out of intercept cone" };
+  }
+
+  const cd = shooter.cooldowns[INTERCEPT_COOLDOWN_KEY] ?? 0;
+  if (cd > 0) {
+    return { decision: "reject", reason: `intercept on cooldown (${cd} ticks)` };
+  }
+  void INTERCEPT_COOLDOWN_TICKS; // dipakai simulation saat apply
   return { decision: "accept" };
 }
 

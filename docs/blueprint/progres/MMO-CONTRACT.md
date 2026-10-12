@@ -71,7 +71,8 @@ simulation.ts     = SimulationEngine.tick: SATU-SATUNYA tempat intent
                     dipanggil dari tick sini, bukan jalan sendiri.
 validator.ts      = validateIntent (identity/owner/range/cooldown/safe-zone
                     + universe/license checkComponent + lock gate: missile
-                    wajib locked). Aturan tolak/terima baru = sini. Hasil:
+                    wajib locked + intercept gate: projectile dalam range
+                    5000m + cone 45°). Aturan tolak/terima baru = sini. Hasil:
                     ACCEPT|REJECT, tidak ada setengah.
 combat.ts         = applyCombatIntent + DAMAGE_CEILING + SUBSYSTEM_DESTROYED_AT.
                     Damage baru = sini (satu pipa, tidak ada damage jalur lain).
@@ -81,6 +82,31 @@ targeting.ts      = lock-on server-authoritative (09 §2): LockStore volatile
                     Events `lock_started/lock_acquired/lock_broken` PRIVAT
                     (actor = pemilik lock). Missile wajib phase locked
                     (validator). State lock TIDAK masuk snapshot/persistence.
+npcBrain.ts       = NPC AI combat (09 §4): brain store (PATROL→DETECT→CHASE→
+                    AIM→FIRE/RETURN), think 3-tick offset hash(id)%3, faction
+                    matrix (friendly-fire OFF), wave spawner (WAIT→SPAWNING→
+                    IN_PROGRESS→COMPLETED/FAILED, budget 20 AI/region).
+                    Intent `dev_spawn_wave` = guard env ARCLUX_DEV_WAVE=1.
+                    Kill NPC → npc_killed + salvage credits, TANPA wanted
+                    (05 §2) — handler di simulation.onVesselDestroyed.
+                    Damage = applyWeaponDamage SAMA (pipeline tunggal).
+stats.ts          = damage pipeline accessors (09 §5): attackPowerOf/
+                    defensePowerOf (0..150, derived — tanpa state baru),
+                    signatureOf (satu sumber targeting), weaponRangeOf,
+                    mod hooks rangeFalloffOf (100%→60% linear) +
+                    conditionPenaltyOf (weapons<50 → ×0.7). Formula:
+                    raw = basePower × atk/100 / max(def/100, 0.5) → mods →
+                    resist → min(CEILING, health). Pure via damageFormulaOf
+                    (combat.ts) untuk assertion per-tahap.
+projectiles.ts    = projectile server-side (09 §3): WEAPON_DEFS (missile/
+                    torpedo/rocket), homing turn-rate (bisa dielak), arm 2
+                    tick, TTL fizzle, cap 100/region (satu sumber dgn
+                    STABILITY_LIMITS.maxProjectiles). Intent: `attack`
+                    weapon projectile → spawn entity (bukan hitscan) +
+                    `intercept {projectileId}` (point defense, roll seeded).
+                    Events projectile_spawned/hit/fizzle/destroyed/rejected
+                    REGION-WIDE (posisi peluru memang publik). Volatile —
+                    restore() mengosongkan, worldHash ikut include.
 physics.ts        = clampSpeed + gerak. environs.ts = orbit/benda langit
                     (D-016/D-020). collision.ts = tabrakan → damage (D-017).
                     thermics.ts = radiasi/termal. cosmicEvent.ts = event acak.

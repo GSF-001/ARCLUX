@@ -206,7 +206,9 @@ describe("Fase 3 sisa — kapasitor server-side", () => {
 });
 
 describe("Fase 3 sisa — resistensi fit di combat", () => {
-  /** Attacker weapons health 100 → attackPower = 4 + 8 = 12. */
+  /** Formula §5.2 (PR-D): raw = basePower × atkPower/100 / max(defPower/100, 0.5).
+   * Fixture: weapons 100 → atk 100; hull avg (70+100+60+75+100+50)/6 = 75.8;
+   * defPower = (75.8+75)/2 = 75.4 → missile raw = 10 × 1 / 0.754 ≈ 13.3. */
   function spawnPair(targetV: VesselModel, targetId: string, attackerId: string) {
     const { region, entity: target } = spawn(targetV, targetId);
     const a = region.spawnVessel({ id: attackerId, owner: "p1", vessel: vessel() });
@@ -227,7 +229,7 @@ describe("Fase 3 sisa — resistensi fit di combat", () => {
     const { region, target } = spawnPair(vessel({ fitted: [] }), "target-bare", "attacker-1");
     const impact = attack(region, "attacker-1", "target-bare", "weapon.missile");
     expect(impact).toBeDefined();
-    expect(impact!.damage).toBe(12); // raw 12, ceiling 12, health 75
+    expect(impact!.damage).toBe(12); // raw ~13.3 → ceiling 12 (I.7 menang)
     expect(impact!.resisted).toBe(0);
     expect(target.vessel.systems.find((s) => s.id === "defense")!.health).toBe(63);
   });
@@ -239,11 +241,11 @@ describe("Fase 3 sisa — resistensi fit di combat", () => {
       "attacker-2"
     );
     const impact = attack(region, "attacker-2", "target-armored", "weapon.missile");
-    // resist missile = 0.05(t1) + 0.10(t2) = 0.15 → 12 × 0.85 = 10.2
+    // resist missile = 0.05(t1) + 0.10(t2) = 0.15 → ~13.3 × 0.85 ≈ 11.3
     const resists = computeResists(fitDefinitionsOf(target.vessel));
     expect(resists.missile).toBeCloseTo(0.15, 5);
-    expect(impact!.resisted).toBeCloseTo(1.8, 5);
-    expect(impact!.damage).toBeCloseTo(10.2, 5);
+    expect(impact!.resisted).toBeCloseTo(2.0, 5);
+    expect(impact!.damage).toBeCloseTo(11.3, 1);
     expect(impact!.damage).toBeLessThan(12);
     expect(impact!.damage).toBeLessThanOrEqual(DAMAGE_CEILING);
   });
@@ -268,7 +270,7 @@ describe("Fase 3 sisa — resistensi fit di combat", () => {
     const impact = attack(region, "attacker-4", "t3", "weapon.laser");
     expect(impact!.subsystemId).toBe("defense"); // default resolve
     expect(impact!.resisted).toBe(0);
-    expect(impact!.damage).toBe(12);
+    expect(impact!.damage).toBeCloseTo(10.6, 1); // base default 8 × 1 / 0.754 ≈ 10.6
   });
 
   it("resist menghormati ceiling MAX_RESIST — damage tidak pernah di bawah 40% raw", () => {
@@ -278,7 +280,8 @@ describe("Fase 3 sisa — resistensi fit di combat", () => {
       "attacker-5"
     );
     const impact = attack(region, "attacker-5", "t4", "weapon.missile");
-    // 12 × (1 − min(0.6, resist)) ≥ 12 × 0.4 = 4.8
+    // ~13.3 × (1 − min(0.6, resist)) ≥ 13.3 × 0.4 ≈ 5.3 (tetap ≤ ceiling)
     expect(impact!.damage).toBeGreaterThanOrEqual(4.8);
+    expect(impact!.damage).toBeLessThanOrEqual(DAMAGE_CEILING);
   });
 });

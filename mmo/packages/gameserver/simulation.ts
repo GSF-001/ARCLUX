@@ -35,7 +35,15 @@ import { CLAIM_HALF_M } from "./claims";
 import type { HackAttempt } from "./hack";
 import { createSeedRng } from "./random";
 import { projectFitAction, stepCapacitor } from "./fitting";
-import { applyCombatIntent } from "./combat";
+import { applyCombatIntent, applyWeaponDamage } from "./combat";
+import {
+  stepNpcs,
+  stepWaves,
+  requestWave,
+  salvageCreditsFor,
+  isNpcEntity,
+  createNpcStore as createEmptyNpcStore,
+} from "./npcBrain";
 import {
   startLock,
   applyLockNeed,
@@ -45,6 +53,14 @@ import {
   LOCK_INTENT_COOLDOWN_TICKS,
   type LockStore,
 } from "./targeting";
+import {
+  weaponDefOf,
+  spawnProjectile,
+  stepProjectiles,
+  interceptProjectile,
+  INTERCEPT_COOLDOWN_TICKS,
+  INTERCEPT_COOLDOWN_KEY,
+} from "./projectiles";
 import type { EnvironsState } from "./environs";
 import { integrateEnvirons, getBodiesArray } from "./environs";
 import { checkCollisions, vesselMass } from "./collision";
@@ -56,7 +72,7 @@ import { isWithinBaseline, perRegionTimeDilation } from "./baseline";
 import { useComponent } from "./component";
 import { recordCreation } from "./lineage";
 import { computeRecall } from "./teleport";
-import { clampSpeed } from "./physics";
+import { clampSpeed, steerToward } from "./physics";
 import { recordTickTrace, countIntentAccepted, countIntentRejected, countDilatedTick } from "./observability";
 import { BOUNTY_OPEN_LEVEL } from "./bounty";
 import { classifyForWanted } from "./prison";
@@ -198,6 +214,13 @@ export class SimulationEngine {
     // Lock NAIK hanya kalau geometry (jarak/cone/mode/safe-zone) terpenuhi.
     this.stepLocks();
 
+    // 09 §3.2: projectile step SETELAH lock, SEBELUM physics (intents →
+    // locks → projectiles → resolve/physics — urutan spec).
+    this.stepProjectiles();
+
+    // 09 §4: NPC AI + wave — internal only (tanpa /intent), damage pipeline sama.
+    this.stepNpcAi();
+
     const start = Date.now();
     this.integratePhysics();
     this.decrementCooldowns();
@@ -316,6 +339,70 @@ export class SimulationEngine {
     }
   }
 
+  /** 09 §4.1/§4.3: NPC think (3-tick cadence) + wave state machine. */
+  private stepNpcAi(): void {
+    const npcs = this.authority?.npcs;
+    const waves = this.authority?.waves;
+    if (waves && (!npcs || npcs.size === 0)) {
+      // Wave phase "wait"/"spawning" jalan walau belum ada NPC aktif.
+      stepWaves(this.region, npcs ?? createEmptyNpcStore(), waves, this.region.tick, (t, m) => this.log(t, "system", m));
+      return;
+    }
+    if (!npcs || npcs.size === 0) return;
+    stepNpcs(this.region, npcs, this.region.tick, {
+      applyDamage: applyWeaponDamage,
+      log: (type, meta) => this.log(type, (meta.attackerId as string) ?? "npc", meta),
+      onKill: (destroyed, killerId) => this.onVesselDestroyed(destroyed, killerId ?? "unknown"),
+    });
+    if (waves) {
+      stepWaves(this.region, npcs, waves, this.region.tick, (t, m) => this.log(t, "system", m));
+    }
+  }
+
+  /** Kill handler tunggal (turret/projectile/AI): NPC → salvage tanpa wanted;
+   *  pemain → vessel_destroyed + bounty escalation (P1-5, 05 §2). */
+  private onVesselDestroyed(target: VesselEntity, attackerPlayerId: string): void {
+    if (isNpcEntity(target)) {
+      const credits = salvageCreditsFor(target.id);
+      this.log("npc_killed", attackerPlayerId, { entityId: target.id, salvage: credits });
+      if (!attackerPlayerId.startsWith("npc:")) {
+        this.authority?.economy?.topup(attackerPlayerId, credits, this.region.tick);
+      }
+      const waves = this.authority?.waves;
+      if (waves && waves.state.phase === "in_progress") waves.state.salvage += credits;
+      this.region.remove(target.id);
+      return;
+    }
+    this.log("vessel_destroyed", attackerPlayerId, { entityId: target.id });
+    if (!attackerPlayerId.startsWith("npc:")) {
+      this.escalateCrime(attackerPlayerId, target, { crime: "kill" });
+    }
+  }
+
+  /** 09 §3.2: homing + hit resolution projectile — event region-wide. */
+  private stepProjectiles(): void {
+    stepProjectiles(this.region, (event) => {
+      this.log(event.type, event.ownerId, {
+        attackerId: event.ownerId,
+        projectileId: event.projectileId,
+        targetId: event.targetId,
+        weaponType: event.weaponType,
+        ...(event.meta ?? {}),
+      });
+      if (event.type === "projectile_hit") {
+        const target = this.region.get(event.targetId);
+        if (target) this.region.noteChange(target.id);
+        // P1-5: hull target habis via projectile = kill — naikkan buronan
+        // penembak (owner = vessel → owner player), sama dgn jalur turret.
+        if (target && target.kind === "vessel" && hullOf(target.vessel) <= 0) {
+          const shooter = this.region.get(event.ownerId);
+          const shooterPlayer = shooter && shooter.kind === "vessel" ? (shooter.owner ?? event.ownerId) : event.ownerId;
+          this.onVesselDestroyed(target, shooterPlayer);
+        }
+      }
+    });
+  }
+
   /** The full event log (replay foundation). P2-2: baca dari store bila ada. */
   replayLog(): GameEvent[] {
     if (this.eventStore) return this.eventStore.replay();
@@ -348,13 +435,32 @@ export class SimulationEngine {
       case "move": {
         const to = intent.payload as unknown as Vec3;
         // Block move if in safe-zone and trying to leave? — governed by validator, not here
-        moveToward(entity, to, this.effDt);
+        steerToward(entity, to, this.effDt);
         break;
       }
       case "attack": {
         if (entity.kind === "vessel") {
           // Safe-zone: station protects
           if (isInSafeZone(this.region, entity.position)) return;
+          const targetIdA = intent.payload?.targetId as string | undefined;
+          const weaponTypeA = intent.payload?.weapon as string | undefined;
+          const def = weaponTypeA ? weaponDefOf(weaponTypeA) : undefined;
+          if (weaponTypeA && def?.projectile && targetIdA) {
+            // 09 §3.3: missile/torpedo = entity terbang (bukan hitscan).
+            const prj = spawnProjectile(this.region, entity.id, weaponTypeA, targetIdA, this.region.tick, intent.seq);
+            if (!prj) {
+              this.log("projectile_rejected", intent.playerId, {
+                attackerId: entity.id, weaponType: weaponTypeA,
+                reason: "region_projectile_cap",
+              });
+              break;
+            }
+            entity.cooldowns[weaponTypeA] = def.cooldownTicks;
+            this.log("projectile_spawned", intent.playerId, {
+              attackerId: entity.id, projectileId: prj.id, targetId: targetIdA, weaponType: weaponTypeA,
+            });
+            break;
+          }
           applyCombatIntent(this.region, entity, intent, (meta) => {
             this.log("combat", intent.playerId, { entityId: entity.id, ...meta });
           });
@@ -364,8 +470,7 @@ export class SimulationEngine {
           const target = targetId ? this.region.get(targetId) : undefined;
           if (target) this.region.noteChange(target.id); // P2-1: damage → klien target
           if (target && target.kind === "vessel" && hullOf(target.vessel) <= 0) {
-            this.log("vessel_destroyed", intent.playerId, { entityId: target.id });
-            this.escalateCrime(intent.playerId, target, { crime: "kill" });
+            this.onVesselDestroyed(target, intent.playerId);
           }
         }
         break;
@@ -393,6 +498,33 @@ export class SimulationEngine {
         if (!store) break;
         const tr = releaseLock(store, entity.id);
         if (tr) this.log(tr.type, intent.playerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason });
+        break;
+      }
+      case "intercept": {
+        // 09 §3.3: point defense — roll deterministik di interceptProjectile.
+        if (entity.kind !== "vessel") break;
+        const projectileId = intent.payload?.projectileId as string | undefined;
+        if (!projectileId) break;
+        const shotDown = interceptProjectile(this.region, entity, projectileId, this.region.tick);
+        entity.cooldowns[INTERCEPT_COOLDOWN_KEY] = INTERCEPT_COOLDOWN_TICKS;
+        if (shotDown) {
+          this.log("projectile_destroyed", intent.playerId, {
+            shooterId: entity.id, projectileId, reason: "point_defense",
+          });
+        } else {
+          this.log("intercept_miss", intent.playerId, { shooterId: entity.id, projectileId });
+        }
+        break;
+      }
+      case "dev_spawn_wave": {
+        const waves = ctx.authority?.waves;
+        const npcs = ctx.authority?.npcs;
+        if (!waves || !npcs) break;
+        const count = (intent.payload?.count as number) ?? 5;
+        const seed = (intent.payload?.seed as number)
+          ?? fnv1a(`${this.region.regionId}:${this.region.tick}:${intent.playerId}`);
+        const res = requestWave(this.region, npcs, waves, { seed, count, origin: entity.position }, this.region.tick);
+        if (!res.ok) this.log("wave_rejected", intent.playerId, { reason: res.reason });
         break;
       }
       case "activate_capability": {
@@ -991,33 +1123,6 @@ function stationSeed(regionId: string, tick: number, eventSeq: number): number {
     h = Math.imul(h, 0x01000193);
   }
   return (h ^ Math.imul(tick, 7919) ^ Math.imul(eventSeq, 104729)) >>> 0;
-}
-
-function moveToward(entity: WorldEntity, target: Vec3, dt: number): void {
-  // Newtonian thrust: F=ma, thrust 2e7 N, mass 5e6 kg → a=4 m/s², clamp 250 m/s (baseline D-019).
-  const thrust = 2e7;
-  const mass = (entity as any)?.vessel?.mass ?? 5e6;
-  const maxSpeed = 250;
-  const dx = target.x - entity.position.x;
-  const dy = target.y - entity.position.y;
-  const dz = target.z - entity.position.z;
-  const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  if (dist < 1) {
-    // Brake: apply reverse thrust
-    entity.velocity.x *= 0.85;
-    entity.velocity.y *= 0.85;
-    entity.velocity.z *= 0.85;
-    if (Math.sqrt(entity.velocity.x**2 + entity.velocity.y**2 + entity.velocity.z**2) < 0.5) entity.velocity = { x: 0, y: 0, z: 0 };
-    return;
-  }
-  const ax = (dx / dist) * (thrust / mass);
-  const ay = (dy / dist) * (thrust / mass);
-  const az = (dz / dist) * (thrust / mass);
-  entity.velocity.x = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.x + ax * dt));
-  entity.velocity.y = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.y + ay * dt));
-  entity.velocity.z = Math.max(-maxSpeed, Math.min(maxSpeed, entity.velocity.z + az * dt));
-  entity.heading.yaw = Math.atan2(dx, dz);
-  entity.heading.pitch = Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
 }
 
 /** Compute a deterministic state hash for a vessel (Layer I.5 fingerprint) — Phase C anti-cheat: full state + tick. */
