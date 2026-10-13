@@ -166,7 +166,7 @@ describe("Sprint 7 PR-A lock-on (09 §2.6)", () => {
     expect(LOCK_RELOCK_WINDOW_TICKS).toBe(100);
   });
 
-  it("5. ganti target → progress reset 0", () => {
+  it("5. lock target KEDUA → slot baru (multilock 11.2 M1) — slot lama utuh", () => {
     const f = fixture();
     const tv = makeVesselModel("tgt2");
     tv.integrity = 40;
@@ -177,9 +177,10 @@ describe("Sprint 7 PR-A lock-on (09 §2.6)", () => {
 
     f.enqueue(lockIntent("tgt2", 2));
     f.step(1);
-    const cur = f.authority.locks?.current("atk");
-    expect(cur?.targetId).toBe("tgt2");
-    expect(cur?.progress).toBe(1); // 0 saat start, +1 stepLocks tick yang sama
+    // Slot 0 (tgt) tetap; tgt2 = slot 1 dengan progress sendiri.
+    expect(f.authority.locks?.locksOf("atk").map((l) => l.targetId)).toEqual(["tgt", "tgt2"]);
+    expect(f.authority.locks?.lockOn("atk", "tgt2")?.progress).toBe(1); // +1 stepLocks tick sama
+    expect(f.authority.locks?.lockOn("atk", "tgt")?.progress).toBe(4); // tak terganggu
   });
 
   it("6. target di safe-zone lain → safety_boundary break", () => {

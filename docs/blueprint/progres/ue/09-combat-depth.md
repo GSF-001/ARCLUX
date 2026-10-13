@@ -493,7 +493,7 @@ bukan fitur.
 
 | PR | Isi | Test |
 |---|---|---|
-| E | Multi-lock (3 slot) + unlock per-target + rocket wiring + switch | 6 (lock lama tetap hijau, multi missile) |
+| E | Multi-lock (3 slot) + unlock per-target + rocket wiring + switch | 7 (DONE 2026-10-13: branch `feat/sprint7e-multilock`; `releaseLock` per-target; rocket = projectile penuh) |
 | F | ECM/EW hack mode + jam cooldown | 4 |
 | G | Splash torpedo (radius + falloff + event) | 4 |
 | H | Wreck salvage drop table + intent salvage | 5 |

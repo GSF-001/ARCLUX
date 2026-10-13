@@ -76,12 +76,14 @@ validator.ts      = validateIntent (identity/owner/range/cooldown/safe-zone
                     ACCEPT|REJECT, tidak ada setengah.
 combat.ts         = applyCombatIntent + DAMAGE_CEILING + SUBSYSTEM_DESTROYED_AT.
                     Damage baru = sini (satu pipa, tidak ada damage jalur lain).
-targeting.ts      = lock-on server-authoritative (09 §2): LockStore volatile
-                    (bukan entity), stepLocks dipanggil simulation SEBELUM
-                    projectile. Intent: `lock {targetId}` / `unlock` (ship-only).
-                    Events `lock_started/lock_acquired/lock_broken` PRIVAT
-                    (actor = pemilik lock). Missile wajib phase locked
-                    (validator). State lock TIDAK masuk snapshot/persistence.
+targeting.ts      = lock-on server-authoritative (09 §2 + addendum §11.2 M1):
+                    LockStore volatile, **multi-lock ≤ LOCK_MAX_SLOTS=3** per
+                    kapal (locksOf/lockOn; current() = slot 0 back-compat).
+                    Intent: `lock {targetId}` / `unlock {targetId?}` (kosong =
+                    semua slot; ship-only). Events `lock_started/lock_acquired/
+                    lock_broken` PRIVAT. Missile wajib `lockOn(targetId).
+                    phase==="locked"` (slot mana pun). State lock TIDAK masuk
+                    snapshot/persistence.
 npcBrain.ts       = NPC AI combat (09 §4): brain store (PATROL→DETECT→CHASE→
                     AIM→FIRE/RETURN), think 3-tick offset hash(id)%3, faction
                     matrix (friendly-fire OFF), wave spawner (WAIT→SPAWNING→

@@ -42,6 +42,8 @@ export const LOCK_RELOCK_WINDOW_TICKS = 100;
 export const LOCK_RELOCK_PROGRESS_FACTOR = 0.5;
 /** Anti spam re-lock: cooldown intent lock per kapal (§2.3). */
 export const LOCK_INTENT_COOLDOWN_TICKS = 2;
+/** Jumlah slot lock simultan per kapal (11.2 M1 — multi-lock ala EVE). */
+export const LOCK_MAX_SLOTS = 3;
 /** Komponen yang dihitung sebagai sensor untuk bonus range (§2.2). */
 export const LOCK_SENSOR_CAPABILITY_RE = /^(security|search|graph)\./;
 
@@ -69,9 +71,11 @@ export interface LockState {
   breakingFor: number;
 }
 
-/** Memori per penyerang: lock aktif + break terakhir (untuk re-lock 50%). */
+/** Memori per penyerang: slot lock (≤ LOCK_MAX_SLOTS, insertion-ordered)
+ * + break terakhir (untuk re-lock 50%). */
 export interface LockMemory {
-  current?: LockState;
+  /** 0..LOCK_MAX_SLOTS — slot kosong = dihapus dari array. */
+  locks: LockState[];
   recentBreak?: { targetId: string; brokenTick: number };
 }
 
@@ -82,13 +86,22 @@ export function createLockStore() {
   const mem = new Map<string, LockMemory>();
   return {
     memoryOf(attackerId: string): LockMemory {
-      return mem.get(attackerId) ?? {};
+      return mem.get(attackerId) ?? { locks: [] };
     },
     setMemory(attackerId: string, m: LockMemory): void {
       mem.set(attackerId, m);
     },
+    /** Semua lock aktif kapal (≤ LOCK_MAX_SLOTS, insertion-ordered). */
+    locksOf(attackerId: string): LockState[] {
+      return mem.get(attackerId)?.locks ?? [];
+    },
+    /** Lock aktif pada target tertentu (multilock 11.2 M1). */
+    lockOn(attackerId: string, targetId: string): LockState | undefined {
+      return mem.get(attackerId)?.locks.find((l) => l.targetId === targetId);
+    },
+    /** Back-compat 1-slot: lock pertama (slot 0). */
     current(attackerId: string): LockState | undefined {
-      return mem.get(attackerId)?.current;
+      return mem.get(attackerId)?.locks[0];
     },
     entries(): IterableIterator<[string, LockMemory]> {
       return mem.entries();
@@ -194,9 +207,12 @@ export function startLock(
   tick: number
 ): { started: boolean; state?: LockState; reason?: string } {
   const memory = store.memoryOf(attacker.id);
-  const cur = memory.current;
-  if (cur && cur.targetId === targetId) {
+  const locks = memory.locks ?? [];
+  if (locks.some((l) => l.targetId === targetId)) {
     return { started: false, reason: "lock already active on target" };
+  }
+  if (locks.length >= LOCK_MAX_SLOTS) {
+    return { started: false, reason: "lock_slots_full" };
   }
   const recent = memory.recentBreak;
   const reuse =
@@ -212,17 +228,29 @@ export function startLock(
     phase: "acquiring",
     breakingFor: 0,
   };
-  store.setMemory(attacker.id, { ...memory, current: state, recentBreak: reuse ? recent : undefined });
+  store.setMemory(attacker.id, {
+    ...memory,
+    locks: [...locks, state],
+    recentBreak: reuse ? recent : undefined,
+  });
   return { started: true, state };
 }
 
 /** Set need hasil hitung caller (dipisah supaya startLock tanpa region). */
-export function applyLockNeed(store: LockStore, attackerId: string, need: number): void {
+export function applyLockNeed(
+  store: LockStore,
+  attackerId: string,
+  need: number,
+  targetId?: string
+): void {
   const m = store.memoryOf(attackerId);
-  if (!m.current) return;
-  const cur = m.current;
+  const idx = targetId
+    ? m.locks.findIndex((l) => l.targetId === targetId)
+    : 0;
+  if (idx < 0 || !m.locks[idx]) return;
+  const cur = m.locks[idx];
   const relock = m.recentBreak === undefined ? false : true;
-  m.current = {
+  m.locks[idx] = {
     ...cur,
     need,
     progress: relock ? Math.floor(need * LOCK_RELOCK_PROGRESS_FACTOR) : 0,
@@ -234,31 +262,49 @@ export function breakLock(
   store: LockStore,
   attackerId: string,
   tick: number,
-  reason: LockBreakReason
+  reason: LockBreakReason,
+  targetId?: string
 ): LockTransition | undefined {
   const m = store.memoryOf(attackerId);
-  const cur = m.current;
+  const locks = m.locks ?? [];
+  const idx = targetId ? locks.findIndex((l) => l.targetId === targetId) : 0;
+  const cur = locks[idx];
   if (!cur) return undefined;
+  const rest = locks.filter((_, i) => i !== idx);
   store.setMemory(attackerId, {
-    current: undefined,
-    recentBreak: reason === "target_destroyed" ? undefined : { targetId: cur.targetId, brokenTick: tick },
+    locks: rest,
+    recentBreak:
+      reason === "target_destroyed"
+        ? m.recentBreak
+        : { targetId: cur.targetId, brokenTick: tick },
   });
   return { type: "lock_broken", attackerId, targetId: cur.targetId, reason, need: cur.need, progress: cur.progress };
 }
 
-/** Intent `unlock` — lepas manual: reset penuh (tanpa memori re-lock). */
-export function releaseLock(store: LockStore, attackerId: string): LockTransition | undefined {
+/** Intent `unlock` — lepas manual (semua slot ATAU target tertentu 11.2 M1). */
+export function releaseLock(
+  store: LockStore,
+  attackerId: string,
+  targetId?: string
+): LockTransition[] {
   const m = store.memoryOf(attackerId);
-  if (!m.current) return undefined;
-  store.setMemory(attackerId, {});
-  return {
-    type: "lock_broken",
-    attackerId,
-    targetId: m.current.targetId,
-    reason: "manual",
-    need: m.current.need,
-    progress: m.current.progress,
-  };
+  const locks = m.locks ?? [];
+  if (locks.length === 0) return [];
+  const out: LockTransition[] = [];
+  const dropIds = new Set(targetId ? [targetId] : locks.map((l) => l.targetId));
+  for (const st of locks) {
+    if (!dropIds.has(st.targetId)) continue;
+    out.push({
+      type: "lock_broken",
+      attackerId,
+      targetId: st.targetId,
+      reason: "manual",
+      need: st.need,
+      progress: st.progress,
+    });
+  }
+  store.setMemory(attackerId, { locks: locks.filter((l) => !dropIds.has(l.targetId)) });
+  return out;
 }
 
 // ── stepLocks (§2.4) — dipanggil SimulationEngine tiap tick ───────────────
@@ -276,18 +322,19 @@ export function stepLocks(
 ): LockTransition[] {
   const out: LockTransition[] = [];
   for (const [attackerId, memory] of store.entries()) {
-    const cur = memory.current;
-    if (!cur) continue;
+    // Salin slot — breakLock memutasi array di dalam store.
+    const locksSnapshot = [...(memory.locks ?? [])];
+    for (const cur of locksSnapshot) {
     const attacker = region.get(attackerId);
     const target = region.get(cur.targetId);
 
     // 1. Target mati/hilang → break instan (tanpa grace — tak bisa dikejar).
     if (!target || (target.kind === "vessel" && hullOf(target.vessel) <= 0)) {
-      out.push(breakLock(store, attackerId, tick, "target_destroyed")!);
+      out.push(breakLock(store, attackerId, tick, "target_destroyed", cur.targetId)!);
       continue;
     }
     if (!attacker || attacker.kind !== "vessel") {
-      out.push(breakLock(store, attackerId, tick, "target_destroyed")!);
+      out.push(breakLock(store, attackerId, tick, "target_destroyed", cur.targetId)!);
       continue;
     }
 
@@ -310,31 +357,30 @@ export function stepLocks(
     }
 
     if (!reason) {
-      const st = memory.current!;
-      if (st.phase === "breaking") {
+      if (cur.phase === "breaking") {
         // Recover: syarat kembali dalam grace → lanjut akuisisi (§2.6 #2).
-        st.phase = "acquiring";
-        st.breakingFor = 0;
+        cur.phase = "acquiring";
+        cur.breakingFor = 0;
       }
-      if (st.phase === "acquiring") {
-        st.progress += 1;
-        if (st.need > 0 && st.progress >= st.need) {
-          st.phase = "locked";
-          out.push({ type: "lock_acquired", attackerId, targetId: st.targetId, need: st.need, progress: st.progress });
+      if (cur.phase === "acquiring") {
+        cur.progress += 1;
+        if (cur.need > 0 && cur.progress >= cur.need) {
+          cur.phase = "locked";
+          out.push({ type: "lock_acquired", attackerId, targetId: cur.targetId, need: cur.need, progress: cur.progress });
         }
       }
       continue;
     }
 
     // 3. Syarat hilang → grace, lalu break (§2.2).
-    const st = memory.current!;
-    if (st.phase !== "breaking") {
-      st.phase = "breaking";
-      st.breakingFor = 0;
+    if (cur.phase !== "breaking") {
+      cur.phase = "breaking";
+      cur.breakingFor = 0;
     }
-    st.breakingFor += 1;
-    if (st.breakingFor >= LOCK_BREAK_GRACE_TICKS) {
-      out.push(breakLock(store, attackerId, tick, reason)!);
+    cur.breakingFor += 1;
+    if (cur.breakingFor >= LOCK_BREAK_GRACE_TICKS) {
+      out.push(breakLock(store, attackerId, tick, reason, cur.targetId)!);
+    }
     }
   }
   return out;
