@@ -495,7 +495,7 @@ bukan fitur.
 |---|---|---|
 | E | Multi-lock (3 slot) + unlock per-target + rocket wiring + switch | 7 (DONE 2026-10-13: branch `feat/sprint7e-multilock`; `releaseLock` per-target; rocket = projectile penuh) |
 | F | EW jam: intent `ew_jam {targetId}` + jam window | 4 (DONE 2026-10-13: branch `feat/sprint7f-ew-jam`) |
-| G | Splash torpedo (radius + falloff + event) | 4 |
+| G | Splash torpedo (radius + falloff + event) | 4 (DONE 2026-10-13: branch `feat/sprint7g-torpedo-splash`) |
 | H | Wreck salvage drop table + intent salvage | 5 |
 | I | Wave table data-driven + continuous mode | 4 |
 

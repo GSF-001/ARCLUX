@@ -15,6 +15,7 @@
 import type { ProjectileEntity, VesselEntity, Vec3 } from "./types";
 import type { WorldRegion } from "./world";
 import { applyWeaponDamage, DAMAGE_CEILING } from "./combat";
+import { hullOf } from "./vesselState";
 import { createSeedRng } from "./random";
 import { angleToPosDeg, LOCK_CONE_DEG } from "./targeting";
 
@@ -56,6 +57,15 @@ export const WEAPON_DEFS: Record<string, WeaponDef> = {
     maxRange: 5000,
   },
 };
+
+// ── Splash torpedo (09-addendum §11.2 M3 — PR-G) ─────────────────────────
+
+/** Radius splash torpedo (m) dari titik impact. */
+export const TORPEDO_SPLASH_RADIUS_M = 800;
+/** Linear falloff: damage × max(0, 1 − falloff × dist/radius). */
+export const TORPEDO_SPLASH_FALLOFF = 0.5;
+/** Cap victim splash per torpedo (deterministik: nearest, lalu id). */
+export const TORPEDO_SPLASH_MAX_TARGETS = 5;
 
 export function weaponDefOf(weaponType: string): WeaponDef | undefined {
   return WEAPON_DEFS[weaponType];
@@ -173,10 +183,27 @@ export function spawnProjectile(
   return proj;
 }
 
+/** Victim splash: vessel lain dalam radius, nearest-first, cap MAX_TARGETS. */
+function splashVictimsOf(
+  region: WorldRegion,
+  center: { x: number; y: number; z: number },
+  excludeId: string
+): VesselEntity[] {
+  const inRadius: Array<{ v: VesselEntity; d: number }> = [];
+  for (const v of region.vessels()) {
+    if (v.id === excludeId) continue;
+    if (hullOf(v.vessel) <= 0) continue;
+    const d = Math.hypot(v.position.x - center.x, v.position.y - center.y, v.position.z - center.z);
+    if (d <= TORPEDO_SPLASH_RADIUS_M) inRadius.push({ v, d });
+  }
+  inRadius.sort((a, b) => a.d - b.d || (a.v.id < b.v.id ? -1 : a.v.id > b.v.id ? 1 : 0));
+  return inRadius.slice(0, TORPEDO_SPLASH_MAX_TARGETS).map((x) => x.v);
+}
+
 // ── Per-tick step (§3.2) ─────────────────────────────────────────────────
 
 export interface ProjectileEvent {
-  type: "projectile_hit" | "projectile_fizzle";
+  type: "projectile_hit" | "projectile_fizzle" | "projectile_splash";
   projectileId: string;
   ownerId: string;
   targetId: string;
@@ -236,6 +263,30 @@ export function stepProjectiles(
         );
         const impact = owner ? applyWeaponDamage(owner, target, proj.weaponType, undefined, { distance: dist }) : undefined;
         if (impact) {
+          // 11.2 M3: torpedo splash — victim LAIN dalam radius, falloff
+          // linear, friendly-fire EVE-like, cap MAX_TARGETS (nearest-first).
+          if (proj.weaponType === "weapon.torpedo" && owner) {
+            const center = { ...proj.pos };
+            const victims = splashVictimsOf(region, center, target.id);
+            const hits: Array<{ targetId: string; damage: number; destroyed: boolean }> = [];
+            for (const vic of victims) {
+              const d = Math.hypot(vic.position.x - center.x, vic.position.y - center.y, vic.position.z - center.z);
+              const scale = Math.max(0, 1 - TORPEDO_SPLASH_FALLOFF * (d / TORPEDO_SPLASH_RADIUS_M));
+              if (scale <= 0) continue;
+              const sp = applyWeaponDamage(owner, vic, proj.weaponType, undefined, { distance: dist, scale });
+              if (sp) hits.push({ targetId: vic.id, damage: sp.damage, destroyed: sp.destroyed });
+            }
+            if (hits.length > 0) {
+              logger?.({
+                type: "projectile_splash",
+                projectileId: proj.id,
+                ownerId: proj.ownerId,
+                targetId: target.id,
+                weaponType: proj.weaponType,
+                meta: { center, hits },
+              }, owner);
+            }
+          }
           logger?.({
             type: "projectile_hit",
             projectileId: proj.id,
