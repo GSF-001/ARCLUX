@@ -34,7 +34,7 @@ import {
   type HackTargetType,
 } from "./hack";
 import { CLAIM_PLANT_RADIUS_M, CLAIM_MAX_PER_PLAYER, type ClaimStore } from "./claims";
-import { lockRangeOf, angleToPosDeg, LOCK_CONE_DEG, type LockStore } from "./targeting";
+import { lockRangeOf, angleToPosDeg, LOCK_CONE_DEG, EW_JAM_RANGE_M, EW_JAM_COOLDOWN_TICKS, type LockStore } from "./targeting";
 import {
   INTERCEPT_RANGE_M,
   INTERCEPT_COOLDOWN_TICKS,
@@ -173,6 +173,11 @@ export function validateIntent(
         return { decision: "reject", reason: "no active lock" };
       }
       return { decision: "accept" };
+    }
+    case "ew_jam": {
+      const v = entity as VesselEntity;
+      if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot jam" };
+      return validateEwJam(region, v, intent, ctx);
     }
     case "attack": {
       const v = entity as VesselEntity;
@@ -533,6 +538,37 @@ function validateLock(
   // Teman satu owner = valid (friendly-fire policy terpisah — 06 §1).
   if (distanceBetween(attacker, target) > lockRangeOf(attacker)) {
     return { decision: "reject", reason: "lock target out of range" };
+  }
+  return { decision: "accept" };
+}
+
+/** 11.2 M2 (PR-F): EW jam — instant lock break + re-lock window. */
+function validateEwJam(
+  region: WorldRegion,
+  attacker: VesselEntity,
+  intent: PlayerIntent,
+  ctx: ValidatorContext
+): ValidationResult {
+  const targetId = intent.payload?.targetId as string | undefined;
+  if (!targetId) return { decision: "reject", reason: "ew_jam requires targetId" };
+  if (!ctx.authority?.locks) return { decision: "reject", reason: "lock system offline" };
+
+  const cd = attacker.cooldowns["ew_jam"] ?? 0;
+  if (cd > 0) return { decision: "reject", reason: `ew_jam on cooldown (${cd} ticks)` };
+
+  // Fit gate (M2): EW suite = subsystem defense aktif (proxy — catalog
+  // belum punya capability `ew.*`; backlog fit-level module).
+  const defense = attacker.vessel.systems.find((sy) => sy.id === "defense");
+  if (!defense || defense.health <= 0) {
+    return { decision: "reject", reason: "ew_system_offline" };
+  }
+
+  const target = region.get(targetId);
+  if (!target) return { decision: "reject", reason: `unknown jam target: ${targetId}` };
+  if (target.kind !== "vessel") return { decision: "reject", reason: "can only jam a vessel" };
+  if (target.id === attacker.id) return { decision: "reject", reason: "cannot jam self" };
+  if (distanceBetween(attacker, target) > EW_JAM_RANGE_M) {
+    return { decision: "reject", reason: "jam target out of range" };
   }
   return { decision: "accept" };
 }
