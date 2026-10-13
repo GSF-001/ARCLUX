@@ -270,6 +270,9 @@ export async function runHttpLoadTest(opts: LoadTestOptions = {}): Promise<HttpL
       const gapMs = 1000 / posterRate;
       const deadline = Date.now() + durationMs;
       let seq = 0;
+      // Seeded per-worker (bukan Math.random) — harness loadtest
+      // reproducible; determinisme repo-wide tanpa kecuali (ship-gate §7).
+      const rng = createSeedRng(10_000 + worker);
       while (Date.now() < deadline) {
         // Target RELATIF ke posisi kapal (±100 m) — absolute 0..1000 jatuh di
         // dalam bintang default (0,0,0) → overheat → adrift → intent ditolak.
@@ -277,7 +280,7 @@ export async function runHttpLoadTest(opts: LoadTestOptions = {}): Promise<HttpL
         const base = ent?.kind === "vessel" ? ent.position : { x: 1.496e11, y: 0, z: 0 };
         const intent = {
           playerId, entityId, type: "move",
-          payload: { x: base.x + (Math.random() - 0.5) * 200, y: 0, z: base.z + (Math.random() - 0.5) * 200 },
+          payload: { x: base.x + rng.range(-100, 100), y: 0, z: base.z + rng.range(-100, 100) },
           seq: seq++,
         };
         const t0 = performance.now();
