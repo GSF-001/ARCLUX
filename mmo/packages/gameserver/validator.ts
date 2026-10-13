@@ -200,6 +200,16 @@ export function validateIntent(
       }
       return { decision: "accept" };
     }
+    case "wave_continuous": {
+      // 11.2 M5 (PR-I): toggle auto-next wave — dev/admin ONLY.
+      if (!ctx.authority?.waves) return { decision: "reject", reason: "wave spawner offline" };
+      const enabled = intent.payload?.enabled;
+      if (typeof enabled !== "boolean") return { decision: "reject", reason: "wave_continuous requires payload.enabled (boolean)" };
+      if (process.env.ARCLUX_DEV_WAVE !== "1") {
+        return { decision: "reject", reason: "wave_continuous disabled (set ARCLUX_DEV_WAVE=1)" };
+      }
+      return { decision: "accept" };
+    }
     case "intercept": {
       const v = entity as VesselEntity;
       if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot intercept" };

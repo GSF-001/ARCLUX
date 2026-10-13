@@ -97,6 +97,13 @@ targeting.ts      = lock-on server-authoritative (09 §2 + addendum §11.2 M1):
                     + cooldown 50 → `economy.topup(contentsCredits)` +
                     `waves.state.salvage` cumulative. Events `wreck_spawned`
                     (publik) + `salvage_completed {credits}`.
+  PR-I (11.2 M5): wave table data-driven — `WAVE_TABLE` (5 entry count/
+                    faction, loop), `waveTableEntry(n)`, `requestWaveFromTable`
+                    (seed `lastSeed+1` deterministik). Intent `wave_continuous
+                    {enabled}` (dev-guard `ARCLUX_DEV_WAVE=1`): completed →
+                    auto-next; budget reject → continuous OFF +
+                    `wave_continuous_off {reason}`. Events `wave_queued
+                    {source:"continuous"}`.
 
 npcBrain.ts       = NPC AI combat (09 §4): brain store (PATROL→DETECT→CHASE→
                     AIM→FIRE/RETURN), think 3-tick offset hash(id)%3, faction

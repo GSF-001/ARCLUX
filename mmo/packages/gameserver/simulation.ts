@@ -584,6 +584,14 @@ export class SimulationEngine {
         }
         break;
       }
+      case "wave_continuous": {
+        const waves = ctx.authority?.waves;
+        if (!waves) break;
+        const enabled = intent.payload?.enabled === true;
+        waves.state.continuous = enabled;
+        this.log("wave_continuous", intent.playerId, { enabled, wave: waves.state.wave });
+        break;
+      }
       case "dev_spawn_wave": {
         const waves = ctx.authority?.waves;
         const npcs = ctx.authority?.npcs;

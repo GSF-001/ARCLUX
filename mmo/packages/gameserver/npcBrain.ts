@@ -105,6 +105,36 @@ export interface WaveState {
   deadlineTick: number;
   /** Total credits salvage selama wave ini (diisi sim saat npc_killed). */
   salvage: number;
+  /** 11.2 M5: auto-next wave setelah completed (intent wave_continuous). */
+  continuous: boolean;
+  /** Seed terakhir dipakai — continuous memakai lastSeed+1 (deterministik). */
+  lastSeed: number;
+}
+
+// ── Wave table data-driven (09-addendum §11.2 M5 — PR-I) ────────────────
+
+export interface WaveTableEntry {
+  count: number;
+  faction: string;
+}
+
+/**
+ * Progresi wave deterministik — count & faction per gelombang, loop di
+ * ujung (wave n ke-(n mod len)). Data-driven: tambah entry = wave baru
+ * otomatis tanpa ubah kode spawner.
+ */
+export const WAVE_TABLE: readonly WaveTableEntry[] = [
+  { count: 3, faction: "pirate" },
+  { count: 5, faction: "pirate" },
+  { count: 7, faction: "raider" },
+  { count: 10, faction: "pirate" },
+  { count: 12, faction: "marauder" },
+];
+
+/** Entry table untuk nomor wave (1-based — wave 1 = index 0). */
+export function waveTableEntry(waveNumber: number): WaveTableEntry {
+  const idx = Math.max(0, waveNumber - 1) % WAVE_TABLE.length;
+  return WAVE_TABLE[idx];
 }
 
 export function createWaveStore(): { state: WaveState } {
@@ -112,6 +142,7 @@ export function createWaveStore(): { state: WaveState } {
     state: {
       phase: "idle", wave: 0, total: 0, spawned: 0, pending: [],
       since: 0, deadlineTick: 0, salvage: 0,
+      continuous: false, lastSeed: 0,
     },
   };
 }
@@ -369,10 +400,30 @@ export function requestWave(
     since: tick,
     deadlineTick: 0,
     salvage: 0,
+    // 11.2 M5: reset progres tapi pertahankan mode continuous antar wave.
+    continuous: waves.state.continuous ?? false,
+    lastSeed: opts.seed,
   };
   // Id unik per spawn: wave + idx (deterministik — seed sama = id sama).
   (waves.state as WaveState & { seed?: number }).seed = opts.seed;
+  waves.state.lastSeed = opts.seed;
   return { ok: true };
+}
+
+/**
+ * 11.2 M5: wave dari TABLE — count/faction `waveTableEntry(nextWave)`,
+ * seed deterministik (opts.seed eksplisit, default lastSeed+1).
+ */
+export function requestWaveFromTable(
+  region: Region,
+  npcs: NpcStore,
+  waves: WaveStore,
+  opts: { seed?: number; origin: Vec3 },
+  tick: number
+): { ok: boolean; reason?: string } {
+  const entry = waveTableEntry(waves.state.wave + 1);
+  const seed = opts.seed ?? waves.state.lastSeed + 1;
+  return requestWave(region, npcs, waves, { seed, count: entry.count, origin: opts.origin, faction: entry.faction }, tick);
 }
 
 /**
@@ -418,6 +469,18 @@ export function stepWaves(region: Region, npcs: NpcStore, waves: WaveStore, tick
         st.phase = "completed";
         st.since = tick;
         log("wave_completed", { wave: st.wave, salvage: st.salvage });
+        // 11.2 M5: continuous → langsung wave berikutnya (seed lastSeed+1).
+        // Budget reject → continuous OFF + log (tanpa diam-diam).
+        if (st.continuous) {
+          const origin = st.pending[0]?.patrolPoint ?? { x: 0, y: 0, z: 0 };
+          const next = requestWaveFromTable(region, npcs, waves, { origin }, tick);
+          if (!next.ok) {
+            st.continuous = false;
+            log("wave_continuous_off", { reason: next.reason ?? "wave_active" });
+          } else {
+            log("wave_queued", { wave: waves.state.wave, source: "continuous" });
+          }
+        }
       } else if (tick >= st.deadlineTick) {
         st.phase = "failed";
         st.since = tick;

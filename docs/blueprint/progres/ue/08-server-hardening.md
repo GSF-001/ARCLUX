@@ -572,6 +572,10 @@ terpengaruh.
       (LockStore.jam/isJammed) — §11.2 M2. DONE (branch
       `feat/sprint7f-ew-jam`, 4/4 test `server-sprint7f-ew.test.ts`;
       events `ew_fired` + `lock_broken {reason:jammed}`).
+- [x] PR-I Wave table: `WAVE_TABLE` data-driven (count/faction loop) +
+      `requestWaveFromTable` + intent `wave_continuous {enabled}` (auto-next
+      setelah completed; reject → OFF + event) — §11.2 M5. DONE (branch
+      `feat/sprint7i-waves`, 4/4 test `server-sprint7i-waves.test.ts`).
 - [x] PR-H Wreck salvage: kill NPC → wreck volatile (map terpisah region,
       TTL 600 tick, bukan loot instan) + intent `salvage {wreckId}` (range
       500m, cooldown 50) → credits + wave tally cumulative — §11.2 M4.
