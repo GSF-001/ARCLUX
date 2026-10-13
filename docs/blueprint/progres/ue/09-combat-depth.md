@@ -496,7 +496,7 @@ bukan fitur.
 | E | Multi-lock (3 slot) + unlock per-target + rocket wiring + switch | 7 (DONE 2026-10-13: branch `feat/sprint7e-multilock`; `releaseLock` per-target; rocket = projectile penuh) |
 | F | EW jam: intent `ew_jam {targetId}` + jam window | 4 (DONE 2026-10-13: branch `feat/sprint7f-ew-jam`) |
 | G | Splash torpedo (radius + falloff + event) | 4 |
-| H | Wreck salvage drop table + intent salvage | 5 |
+| H | Wreck salvage drop table + intent salvage | 5 (DONE 2026-10-13: branch `feat/sprint7h-wreck-salvage`) |
 | I | Wave table data-driven + continuous mode | 4 |
 
 Client TS UX (M8/M9) & UE5 (M10) = fase terpisah setelah server tuntas.

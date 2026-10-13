@@ -572,6 +572,12 @@ terpengaruh.
       (LockStore.jam/isJammed) — §11.2 M2. DONE (branch
       `feat/sprint7f-ew-jam`, 4/4 test `server-sprint7f-ew.test.ts`;
       events `ew_fired` + `lock_broken {reason:jammed}`).
+- [x] PR-H Wreck salvage: kill NPC → wreck volatile (map terpisah region,
+      TTL 600 tick, bukan loot instan) + intent `salvage {wreckId}` (range
+      500m, cooldown 50) → credits + wave tally cumulative — §11.2 M4.
+      DONE (branch `feat/sprint7h-wreck-salvage`, 5/5 test
+      `server-sprint7h-salvage.test.ts`; test AI #3 disesuaikan ke semantik
+      wreck+salvage).
 - [x] Kontrak: `MMO-CONTRACT.md` + sanitizeSnapshot proyeksi projectile ringan
       + stability caps baru — §6. DONE (PR-B: kontrak projectiles/validator +
       light projection + maxProjectiles; PR-C: npcBrain; PR-D: stats).

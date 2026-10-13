@@ -25,6 +25,8 @@ export const SHIP_ONLY_INTENTS = new Set<string>([
   "unlock",
   // 11.2 M2 (PR-F): EW jam = combat module cockpit ship.
   "ew_jam",
+  // 11.2 M4 (PR-H): salvage wreck = cockpit ship (dekat bangkai).
+  "salvage",
   // 09 §3.3: point defense = turret di cockpit ship.
   "intercept",
   "activate_capability",

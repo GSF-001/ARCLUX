@@ -431,6 +431,15 @@ export function stepWaves(region: Region, npcs: NpcStore, waves: WaveStore, tick
 }
 
 /** Salvage credits deterministik per NPC mati (drop table minimal). */
+// ── Wreck salvage (09-addendum §11.2 M4 — PR-H) ──────────────────────────
+
+/** Jarak maksimal intent salvage dari wreck (m). */
+export const SALVAGE_RANGE_M = 500;
+/** Cooldown intent salvage per kapal (tick @10Hz = 5 detik). */
+export const SALVAGE_COOLDOWN_TICKS = 50;
+/** TTL wreck sebelum hilang dari dunia (tick = 60 detik). */
+export const WRECK_TTL_TICKS = 600;
+
 export function salvageCreditsFor(npcId: string): number {
   const rng = createSeedRng(fnv1a(npcId));
   return rng.int(1, NPC_SALVAGE_UNITS_MAX) * NPC_SALVAGE_CREDITS_PER_UNIT;

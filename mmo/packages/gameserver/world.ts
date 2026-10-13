@@ -19,6 +19,7 @@ import {
   type ProjectileEntity,
   type StationEntity,
   type VesselEntity,
+  type WreckEntity,
   type WorldEntity,
 } from "./types";
 
@@ -36,6 +37,15 @@ export interface SpawnStationOptions {
   communityId?: string;
   position?: { x: number; y: number; z: number };
   safeZoneRadius?: number;
+}
+
+export interface SpawnWreckOptions {
+  id: string;
+  ownerId: string;
+  position: { x: number; y: number; z: number };
+  contentsCredits: number;
+  /** Tick server saat ini — TTL dihitung dari sini. */
+  tick: number;
 }
 
 export interface SpawnCharacterOptions {
@@ -59,6 +69,8 @@ export class WorldRegion {
   dilation: DilationState = { level: 0, scale: 1 };
 
   private entities = new Map<string, WorldEntity>();
+  /** Wreck volatile (11.2 M4) — map terpisah, TIDAK persist, TTL-based. */
+  private wrecks = new Map<string, WreckEntity>();
 
   /** 09 §3: projectile server-side — array terpisah (bukan WorldEntity),
    *  tidak masuk scan-by-default, tidak dipersist (volatile). */
@@ -227,6 +239,37 @@ export class WorldRegion {
     this.entities.set(entity.id, entity);
     this.changedAt.set(entity.id, this.tick + 1);
     return entity;
+  }
+
+  spawnWreck(opts: SpawnWreckOptions): WreckEntity {
+    if (this.wrecks.has(opts.id) || this.entities.has(opts.id)) {
+      throw new Error(`Entity already exists in region: ${opts.id}`);
+    }
+    const entity: WreckEntity = {
+      id: opts.id,
+      kind: "wreck",
+      owner: opts.ownerId,
+      position: { ...opts.position },
+      velocity: { x: 0, y: 0, z: 0 },
+      heading: { yaw: 0, pitch: 0 },
+      contentsCredits: opts.contentsCredits,
+      spawnedTick: opts.tick,
+    };
+    this.wrecks.set(entity.id, entity);
+    return entity;
+  }
+
+  getWreck(id: string): WreckEntity | undefined {
+    return this.wrecks.get(id);
+  }
+
+  removeWreck(id: string): boolean {
+    return this.wrecks.delete(id);
+  }
+
+  /** Salinan list wreck (volatile — TTL-based). */
+  wrecksList(): WreckEntity[] {
+    return Array.from(this.wrecks.values());
   }
 
   spawnStation(opts: SpawnStationOptions): StationEntity {

@@ -41,6 +41,9 @@ import {
   stepWaves,
   requestWave,
   salvageCreditsFor,
+  SALVAGE_RANGE_M,
+  SALVAGE_COOLDOWN_TICKS,
+  WRECK_TTL_TICKS,
   isNpcEntity,
   createNpcStore as createEmptyNpcStore,
 } from "./npcBrain";
@@ -221,6 +224,9 @@ export class SimulationEngine {
     // 09 §4: NPC AI + wave — internal only (tanpa /intent), damage pipeline sama.
     this.stepNpcAi();
 
+    // 11.2 M4: wreck expired → hilang dari dunia (volatile).
+    this.stepWrecks();
+
     const start = Date.now();
     this.integratePhysics();
     this.decrementCooldowns();
@@ -340,6 +346,16 @@ export class SimulationEngine {
   }
 
   /** 09 §4.1/§4.3: NPC think (3-tick cadence) + wave state machine. */
+  /** 11.2 M4: bersihkan wreck lewat TTL (iterasi salinan — remove aman). */
+  private stepWrecks(): void {
+    const tick = this.region.tick;
+    for (const w of this.region.wrecksList()) {
+      if (tick - w.spawnedTick >= WRECK_TTL_TICKS) {
+        this.region.removeWreck(w.id);
+      }
+    }
+  }
+
   private stepNpcAi(): void {
     const npcs = this.authority?.npcs;
     const waves = this.authority?.waves;
@@ -363,13 +379,24 @@ export class SimulationEngine {
    *  pemain → vessel_destroyed + bounty escalation (P1-5, 05 §2). */
   private onVesselDestroyed(target: VesselEntity, attackerPlayerId: string): void {
     if (isNpcEntity(target)) {
-      const credits = salvageCreditsFor(target.id);
-      this.log("npc_killed", attackerPlayerId, { entityId: target.id, salvage: credits });
-      if (!attackerPlayerId.startsWith("npc:")) {
-        this.authority?.economy?.topup(attackerPlayerId, credits, this.region.tick);
+      // 11.2 M4 (PR-H): kill → WRECK (loot tidak instan). Player harus
+      // `salvage {wreckId}` dalam SALVAGE_RANGE_M sebelum TTL habis.
+      const contents = salvageCreditsFor(target.id);
+      const wreckId = `wreck:${target.id}`;
+      if (!this.region.getWreck(wreckId)) {
+        this.region.spawnWreck({
+          id: wreckId,
+          ownerId: target.id,
+          position: { x: target.position.x, y: target.position.y, z: target.position.z },
+          contentsCredits: contents,
+          tick: this.region.tick,
+        });
+        this.log("wreck_spawned", attackerPlayerId, {
+          wreckId, ownerId: target.id, contents,
+          position: { ...target.position },
+        });
       }
-      const waves = this.authority?.waves;
-      if (waves && waves.state.phase === "in_progress") waves.state.salvage += credits;
+      this.log("npc_killed", attackerPlayerId, { entityId: target.id, wreckId });
       this.region.remove(target.id);
       return;
     }
@@ -518,6 +545,27 @@ export class SimulationEngine {
         store.jam(entity.id, targetId, tick + LOCK_COOLDOWN_AFTER_JAM);
         if (entity.kind === "vessel") entity.cooldowns["ew_jam"] = EW_JAM_COOLDOWN_TICKS;
         this.log("ew_fired", intent.playerId, { attackerId: entity.id, targetId, locksBroke: locks.length });
+        break;
+      }
+      case "salvage": {
+        // 11.2 M4 (PR-H): ambil isi wreck dalam range → credits + wave tally.
+        const v = entity as VesselEntity;
+        const wreckId = intent.payload?.wreckId as string | undefined;
+        if (!wreckId) break;
+        const wreck = this.region.getWreck(wreckId);
+        if (!wreck) break; // expire/tersalvage antara validate & apply — no-op.
+        this.region.removeWreck(wreckId);
+        if (v.kind === "vessel") v.cooldowns["salvage"] = SALVAGE_COOLDOWN_TICKS;
+        if (!intent.playerId.startsWith("npc:")) {
+          this.authority?.economy?.topup(intent.playerId, wreck.contentsCredits, this.region.tick);
+        }
+        // Cumulative tally — wave_completed log memakai nilai saat itu; salvage
+        // SETELAH completed tetap tercatat (riwayat, 11.2 M4).
+        const waves = this.authority?.waves;
+        if (waves) waves.state.salvage += wreck.contentsCredits;
+        this.log("salvage_completed", intent.playerId, {
+          wreckId, ownerId: wreck.owner, credits: wreck.contentsCredits,
+        });
         break;
       }
       case "intercept": {

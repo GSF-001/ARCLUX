@@ -131,14 +131,13 @@ describe("Sprint 7 PR-C NPC AI (09 §4.4)", () => {
     expect(weaponHealth()).toBe(hp); // nol hit setelah zone
   });
 
-  it("3. kill NPC → npc_killed + salvage credits, wanted pemain TIDAK naik", () => {
-    const f = fixture();
+  it("3. kill NPC → wreck_spawned (11.2 M4); salvage → credits; tanpa wanted", () => {
+    const f = fixture({ playerZ: 400 }); // salvage range 500m
     // NPC vessel tanpa brain (diam) — fokus kill handler (pola sprint2:
-    // hull 0 = semua subsystem habis; kill path natural mustahil karena
-    // navigation/ai tak bisa didamage — baseline hullOf avg).
+    // hull 0 = semua subsystem habis). Dekat player supaya salvage range.
     const npc = f.region.spawnVessel({
       id: "npc-target", owner: "npc:pirate:test", vessel: npcVesselModel("pirate", 1),
-      position: { x: 0, y: 0, z: 1000 },
+      position: { x: 0, y: 0, z: 400 },
     });
     const bal0 = f.authority.economy.balanceOf("p1");
     for (const sys of npc.vessel.systems) sys.health = 0; // hull 0 = hancur
@@ -148,7 +147,13 @@ describe("Sprint 7 PR-C NPC AI (09 §4.4)", () => {
     const killed = f.events().find((e) => e.type === "npc_killed");
     expect(killed).toBeTruthy();
     expect(f.authority.wanted.levelOf("p1")).toBe(0); // tanpa wanted (05 §2)
-    expect(f.authority.economy.balanceOf("p1")).toBeGreaterThan(bal0); // salvage
+    // 11.2 M4: kill TIDAK memberi credits instan — ada wreck, harus salvage.
+    expect(f.events().some((e) => e.type === "wreck_spawned")).toBe(true);
+    expect(f.authority.economy.balanceOf("p1")).toBe(bal0);
+    f.enqueue({ playerId: "p1", entityId: "p1v", type: "salvage", payload: { wreckId: "wreck:npc-target" }, seq: 2 });
+    f.step(1);
+    expect(f.events().some((e) => e.type === "salvage_completed")).toBe(true);
+    expect(f.authority.economy.balanceOf("p1")).toBeGreaterThan(bal0);
     expect(salvageCreditsFor("npc-target")).toBeGreaterThanOrEqual(50);
     void npc;
   });

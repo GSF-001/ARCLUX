@@ -23,7 +23,7 @@ export interface Vec3 {
 
 export type FactionId = string;
 
-export type EntityKind = "vessel" | "station" | "character";
+export type EntityKind = "vessel" | "station" | "character" | "wreck";
 
 /** Base identity shared by every in-world entity. */
 export interface GameEntity {
@@ -89,6 +89,21 @@ export interface CharacterEntity extends GameEntity {
   /** Vessel induk yang dimiliki pilot ini. */
   vesselId: string;
   deck: "hangar" | "promenade" | "plaza" | "habitat" | "corridor";
+}
+
+/**
+ * Wreck (09-addendum §11.2 M4) — kapal hancur meninggalkan bangkai
+ * volatile; loot diambil via intent `salvage` (bukan instan saat kill).
+ * TTL WRECK_TTL_TICKS lalu hilang. TIDAK masuk snapshot/persistence.
+ */
+export interface WreckEntity extends GameEntity {
+  kind: "wreck";
+  /** Kapal yang hancur (asal wreck). */
+  owner: string;
+  /** Credits deterministik dari id kapal (salvageCreditsFor). */
+  contentsCredits: number;
+  /** Tick saat wreck dibuat — TTL dihitung dari sini. */
+  spawnedTick: number;
 }
 
 export type WorldEntity = VesselEntity | StationEntity | CharacterEntity;
