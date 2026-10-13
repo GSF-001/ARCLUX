@@ -44,7 +44,7 @@ import {
   isNpcEntity,
   createNpcStore as createEmptyNpcStore,
 } from "./npcBrain";
-import {
+import { LOCK_COOLDOWN_AFTER_JAM, EW_JAM_COOLDOWN_TICKS, breakLock,
   startLock,
   applyLockNeed,
   releaseLock,
@@ -501,6 +501,23 @@ export class SimulationEngine {
         for (const tr of releaseLock(store, entity.id, targetId)) {
           this.log(tr.type, intent.playerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason });
         }
+        break;
+      }
+      case "ew_jam": {
+        // 11.2 M2 (PR-F): jam instan — semua lock attacker→target putus,
+        // pair kena re-lock window LOCK_COOLDOWN_AFTER_JAM.
+        const store = ctx.authority?.locks;
+        const targetId = intent.payload?.targetId as string | undefined;
+        if (!store || !targetId) break;
+        const tick = this.region.tick;
+        const locks = store.locksOf(entity.id).filter((l) => l.targetId === targetId);
+        for (const l of locks) {
+          const tr = breakLock(store, entity.id, tick, "jammed", l.targetId);
+          if (tr) this.log(tr.type, intent.playerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason });
+        }
+        store.jam(entity.id, targetId, tick + LOCK_COOLDOWN_AFTER_JAM);
+        if (entity.kind === "vessel") entity.cooldowns["ew_jam"] = EW_JAM_COOLDOWN_TICKS;
+        this.log("ew_fired", intent.playerId, { attackerId: entity.id, targetId, locksBroke: locks.length });
         break;
       }
       case "intercept": {

@@ -561,6 +561,17 @@ terpengaruh.
       Sprint 5 skill — §5. DONE (branch `feat/sprint7d-pipeline`, 6/6 test
       §5.3; fase3-cap-combat di-update nilai formula baru; child determinism
       hijau — hindari cycle ESM stats↔projectiles: maxRange literal 5000).
+- [x] PR-E Multi-lock: `LOCK_MAX_SLOTS=3` (locksOf/lockOn, unlock per-slot,
+      stepLocks nested) + rocket wiring (weapon.rocket = projectile penuh)
+      — addendum §11.2 M1/M6. DONE (branch `feat/sprint7e-multilock`,
+      7/7 test `server-sprint7e-multilock.test.ts` + regresi lock 10/10;
+      back-compat current() = slot 0; hindari cycle ESM — maxRange literal).
+- [x] PR-F ECM/EW: intent `ew_jam {targetId}` (ship-only, gate subsystem
+      defense aktif + range 6000m + cooldown 300 tick) → break semua lock
+      attacker→target reason `jammed` + pair kena window re-lock 50 tick
+      (LockStore.jam/isJammed) — §11.2 M2. DONE (branch
+      `feat/sprint7f-ew-jam`, 4/4 test `server-sprint7f-ew.test.ts`;
+      events `ew_fired` + `lock_broken {reason:jammed}`).
 - [x] Kontrak: `MMO-CONTRACT.md` + sanitizeSnapshot proyeksi projectile ringan
       + stability caps baru — §6. DONE (PR-B: kontrak projectiles/validator +
       light projection + maxProjectiles; PR-C: npcBrain; PR-D: stats).

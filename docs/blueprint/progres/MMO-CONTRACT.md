@@ -84,6 +84,13 @@ targeting.ts      = lock-on server-authoritative (09 §2 + addendum §11.2 M1):
                     lock_broken` PRIVAT. Missile wajib `lockOn(targetId).
                     phase==="locked"` (slot mana pun). State lock TIDAK masuk
                     snapshot/persistence.
+  PR-F (11.2 M2): intent `ew_jam {targetId}` (ship-only) — gate defense
+                    subsystem health>0 (`ew_system_offline`), `EW_JAM_RANGE_M=6000`,
+                    cooldown `EW_JAM_COOLDOWN_TICKS=300`. Efek: break SEMUA lock
+                    pair alasan `jammed` + `LockStore.jam()` window
+                    `LOCK_COOLDOWN_AFTER_JAM=50` (startLock → `target_jammed`).
+                    Events `ew_fired {locksBroke}` + `lock_broken {reason:jammed}`.
+
 npcBrain.ts       = NPC AI combat (09 §4): brain store (PATROL→DETECT→CHASE→
                     AIM→FIRE/RETURN), think 3-tick offset hash(id)%3, faction
                     matrix (friendly-fire OFF), wave spawner (WAIT→SPAWNING→

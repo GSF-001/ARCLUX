@@ -39,6 +39,15 @@ export const LOCK_ACQUIRE_TICKS: Record<"corvette" | "cruiser" | "capital", numb
 export const LOCK_BREAK_GRACE_TICKS = 4;
 /** Re-lock target SAMA dalam window ini → progress lanjut 50% (§2.2). */
 export const LOCK_RELOCK_WINDOW_TICKS = 100;
+
+// ── ECM/EW (09 §2.5 / 11.2 M2 — PR-F) ─────────────────────────────────────
+
+/** Jarak efektif ECM jam (m). */
+export const EW_JAM_RANGE_M = 6000;
+/** Cooldown module jam per kapal (tick @10Hz = 30 detik). */
+export const EW_JAM_COOLDOWN_TICKS = 300;
+/** Window re-lock dilarang setelah kena jam (tick = 5 detik). */
+export const LOCK_COOLDOWN_AFTER_JAM = 50;
 export const LOCK_RELOCK_PROGRESS_FACTOR = 0.5;
 /** Anti spam re-lock: cooldown intent lock per kapal (§2.3). */
 export const LOCK_INTENT_COOLDOWN_TICKS = 2;
@@ -57,7 +66,8 @@ export type LockBreakReason =
   | "safety_boundary"
   | "mode_switch"
   | "target_destroyed"
-  | "manual";
+  | "manual"
+  | "jammed";
 
 export interface LockState {
   attackerId: string;
@@ -84,7 +94,21 @@ export type LockStore = ReturnType<typeof createLockStore>;
 /** Store volatile per-region (bukan Map langsung — konsisten dgn store lain). */
 export function createLockStore() {
   const mem = new Map<string, LockMemory>();
+  const jammed = new Map<string, number>(); // key: `${attacker}|${target}` → untilTick
   return {
+    /** Pasang jam window: attacker→target tak bisa lock/re-lock sampai untilTick. */
+    jam(attackerId: string, targetId: string, untilTick: number): void {
+      jammed.set(`${attackerId}|${targetId}`, untilTick);
+    },
+    /** True bila pair sedang dalam window jam (tick server saat ini). */
+    isJammed(attackerId: string, targetId: string, tick: number): boolean {
+      const until = jammed.get(`${attackerId}|${targetId}`);
+      return until !== undefined && until > tick;
+    },
+    /** Bersihkan entry jam expired (panggil dari stepLocks). */
+    pruneJammed(tick: number): void {
+      for (const [k, until] of jammed) if (until <= tick) jammed.delete(k);
+    },
     memoryOf(attackerId: string): LockMemory {
       return mem.get(attackerId) ?? { locks: [] };
     },
@@ -211,6 +235,10 @@ export function startLock(
   if (locks.some((l) => l.targetId === targetId)) {
     return { started: false, reason: "lock already active on target" };
   }
+  // 11.2 M2 (PR-F): window jam → tolak lock/re-lock pair ini.
+  if (store.isJammed(attacker.id, targetId, tick)) {
+    return { started: false, reason: "target_jammed" };
+  }
   if (locks.length >= LOCK_MAX_SLOTS) {
     return { started: false, reason: "lock_slots_full" };
   }
@@ -321,6 +349,7 @@ export function stepLocks(
   sessions?: SessionStore
 ): LockTransition[] {
   const out: LockTransition[] = [];
+  store.pruneJammed(tick);
   for (const [attackerId, memory] of store.entries()) {
     // Salin slot — breakLock memutasi array di dalam store.
     const locksSnapshot = [...(memory.locks ?? [])];
