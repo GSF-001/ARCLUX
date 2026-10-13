@@ -485,7 +485,7 @@ export class SimulationEngine {
         const res = startLock(store, entity as VesselEntity, targetId, this.region.tick);
         if (res.started && res.state) {
           const need = lockNeedFor(target);
-          applyLockNeed(store, entity.id, need);
+          applyLockNeed(store, entity.id, need, targetId);
           if (entity.kind === "vessel") entity.cooldowns["lock"] = LOCK_INTENT_COOLDOWN_TICKS;
           this.log("lock_started", intent.playerId, { attackerId: entity.id, targetId, need });
         } else if (!res.started) {
@@ -496,8 +496,11 @@ export class SimulationEngine {
       case "unlock": {
         const store = ctx.authority?.locks;
         if (!store) break;
-        const tr = releaseLock(store, entity.id);
-        if (tr) this.log(tr.type, intent.playerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason });
+        // 11.2 M1: payload targetId spesifik → 1 slot; tanpa → semua slot.
+        const targetId = intent.payload?.targetId as string | undefined;
+        for (const tr of releaseLock(store, entity.id, targetId)) {
+          this.log(tr.type, intent.playerId, { attackerId: tr.attackerId, targetId: tr.targetId, reason: tr.reason });
+        }
         break;
       }
       case "intercept": {

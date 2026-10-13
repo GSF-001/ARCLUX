@@ -165,7 +165,11 @@ export function validateIntent(
     }
     case "unlock": {
       if (!ctx.authority?.locks) return { decision: "reject", reason: "lock system offline" };
-      if (!ctx.authority.locks.current(entity.id)) {
+      const targetId = intent.payload?.targetId as string | undefined;
+      const locks = ctx.authority.locks.locksOf(entity.id);
+      // 11.2 M1: targetId spesifik harus punya lock; tanpa = lepas semua.
+      const ok = targetId ? locks.some((l) => l.targetId === targetId) : locks.length > 0;
+      if (!ok) {
         return { decision: "reject", reason: "no active lock" };
       }
       return { decision: "accept" };
@@ -575,8 +579,8 @@ function validateAttack(
   // 09 §2.3: missile = komitmen nyata — wajib lock phase "locked" dengan
   // target yang sama. Turret cukup target valid (tanpa lock).
   if (weaponType === "weapon.missile") {
-    const lock = ctx.authority?.locks?.current(attacker.id);
-    if (!lock || lock.phase !== "locked" || lock.targetId !== targetId) {
+    const lock = ctx.authority?.locks?.lockOn(attacker.id, targetId);
+    if (!lock || lock.phase !== "locked") {
       return { decision: "reject", reason: "lock_required" };
     }
   }

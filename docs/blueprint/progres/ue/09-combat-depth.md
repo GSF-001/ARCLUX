@@ -451,3 +451,52 @@ bukan fitur.
 > Aturan main dokumen ini: **ide boleh diusulkan di issue/PR, angka balance boleh
 > ditune, tapi prinsip §0 tidak boleh dilanggar** (authority, determinisme, ceiling,
 > volatile, no-code-copy).
+
+---
+
+## 11. Addendum — riset mendalam 2 repo (2026-10-13) & backlog deepen
+
+> Status Sprint 7 (§2–§5, PR-A..D) = DONE. Addendum ini = hasil membaca
+> **detail seluruh file kunci** SpaceInvader3D (PlayerShip 627 baris,
+> EnemyShip 349, Missle 94) + Demo_ARPG (AttributeSet_Base, GEExeCalc,
+> GameplayAbility_TargetLock 267 baris, GameMode_Survival 215) — semua
+> mekanik dipetakan; **nol kode disalin** (lisensi NONE, idea only §9).
+
+### 11.1 Mekanik yang SUDAH kita port (konfirmasi, jangan diduplikasi)
+
+| Mekanik repo | Port kita |
+|---|---|
+| GEExeCalc: `BaseDamage × SourceAttackPower ÷ TargetDefensePower` | §5.2 `damageFormulaOf` (raw × atk/def) |
+| AttributeSet clamp + broadcast | `stats.ts` derived + event combat |
+| Lock cone/grace/re-lock | §2 (targeting.ts) |
+| Homing RInterpTo turn-rate → bisa dielak | §3 `stepProjectiles` lerp tanpa re-normalize |
+| AI patrol→detect(70°)→aim(8° keduanya)→fire→return | §4 npcBrain (think 3-tick) |
+| Wave state machine + counter kill→completed | §4.3 waves |
+
+### 11.2 Mekanik BARU terekstrak → keputusan
+
+| # | Mekanik repo (sumber) | Keputusan ARCLUX |
+|---|---|---|
+| M1 | **Multi-lock + switch L/R** (ARPG `TargetLock::SwitchTarget` — cross product Z kiri/kanan, nearest) | **IMPLEMENT (PR-E)**: lock store 1→3 slot, intent `lock {targetId}` per slot, `unlock {targetId\|all}`; switch = client pilih target → intent lock slot berbeda. Missile pakai lock `locked` apa pun slotnya. |
+| M2 | **ECM / target jammed** (09 §2.5 "future": lock_broken instan + cooldown re-lock) | **IMPLEMENT (PR-F)**: intent `hack {targetId, mode:"ew"}` (gate: fit "ew" terpasang + hack cooldown) → semua lock attacker→target putus instan + `LOCK_COOLDOWN_AFTER_JAM=50` tick; event `lock_jammed`. |
+| M3 | **Splash / multi-hit** (§5.1 signature→"splash future"; torp capital hunter) | **IMPLEMENT (PR-G)**: `weapon.torpedo` splash `SPLASH_RADIUS_M=800` — kapal lain dalam radius kena pipeline (dampak ×`SPLASH_FALLOFF=0.5`, satu pipa, ceiling per-target); event `projectile_splash`. |
+| M4 | **Salvage drop table** (§4.2 "drop table sederhana"; ARPG pick-up loop) | **IMPLEMENT (PR-H)**: kill NPC → `wreck` entity (volatile) berisi 1–3 unit komponen (seeded); intent `salvage {wreckId}` dari kapal dalam `SALVAGE_RANGE_M=500` → kredit + unit masuk; wreck TTL 600 tick. |
+| M5 | **Data-driven wave table** (ARPG `GameMode_Survival`: DataTable per wave, min/max per spawner, continuous respawn saat `ShouldKeepSpawn`) | **PR-I**: `WaveDef {count, faction, continuous}` per region dari data (cosmic event / world.json); `wave_continuous` respawn 1/tick saat IN_PROGRESS dan sisa budget. |
+| M6 | **Rocket** (§3.4 future — WEAPON_DEFS sudah ada) | **CEK & TUNTAS di PR-E**: kalau validator/sim sudah terima `weapon.rocket` (homing turn 0.05 pseudo-straight) → cukup test; kalau tidak → wire + test anti-frigate. |
+| M7 | **Combo damage bonus** (GEExeCalc light/heavy combo 5%/15% per step) | **SKIP untuk kapal** (combo = ritme melee ARPG; tak cocok 10Hz space). Catatan: jadi mod hook pertama Sprint 5 skill (`combo` counter karakter FPS). |
+| M8 | **Missile reload bar 2.5s** (tube reload feel) | **BACKLOG client**: reload bar render dari `cooldowns` weapon (server sudah punya angkanya) — Fase 3 client UX, tanpa server change. |
+| M9 | **Direction arrow + beep lock + thruster-color** (SpaceInvader PlayerShip) | **BACKLOG client (Fase 3)** — pure render dari event `lock_*` + snapshot; tidak menyentuh server. |
+| M10 | **Soft-lock camera interp + walk-speed slow saat lock** (ARPG TargetLock) | **BACKLOG UE5 (Fase 4)** — Appendix A row baru; server tak terpengaruh (validasi tetap geometry). |
+| M11 | **Difficulty dari save** (ARPG InitGame) | **SKIP** — world difficulty = urusan `05-hukum-kota`/world.json. |
+
+### 11.3 Slicing PR deepen (lanjutan §7 — gate & prinsip §0 identik)
+
+| PR | Isi | Test |
+|---|---|---|
+| E | Multi-lock (3 slot) + unlock per-target + rocket wiring + switch | 7 (DONE 2026-10-13: branch `feat/sprint7e-multilock`; `releaseLock` per-target; rocket = projectile penuh) |
+| F | ECM/EW hack mode + jam cooldown | 4 |
+| G | Splash torpedo (radius + falloff + event) | 4 |
+| H | Wreck salvage drop table + intent salvage | 5 |
+| I | Wave table data-driven + continuous mode | 4 |
+
+Client TS UX (M8/M9) & UE5 (M10) = fase terpisah setelah server tuntas.
