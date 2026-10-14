@@ -566,6 +566,10 @@ terpengaruh.
       — addendum §11.2 M1/M6. DONE (branch `feat/sprint7e-multilock`,
       7/7 test `server-sprint7e-multilock.test.ts` + regresi lock 10/10;
       back-compat current() = slot 0; hindari cycle ESM — maxRange literal).
+- [x] PR-G Splash torpedo: primary full + splash victim lain radius 800m
+      falloff linear 0.5 (cap 5 nearest, friendly-fire EVE-like) + event
+      `projectile_splash` + `DamageContext.scale` — §11.2 M3. DONE (branch
+      `feat/sprint7g-torpedo-splash`, 4/4 test `server-sprint7g-splash.test.ts`).
 - [x] PR-F ECM/EW: intent `ew_jam {targetId}` (ship-only, gate subsystem
       defense aktif + range 6000m + cooldown 300 tick) → break semua lock
       attacker→target reason `jammed` + pair kena window re-lock 50 tick

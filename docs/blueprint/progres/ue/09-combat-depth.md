@@ -498,5 +498,9 @@ bukan fitur.
 | G | Splash torpedo (radius + falloff + event) | 4 |
 | H | Wreck salvage drop table + intent salvage | 5 (DONE 2026-10-13: branch `feat/sprint7h-wreck-salvage`) |
 | I | Wave table data-driven + continuous mode | 4 (DONE 2026-10-13: branch `feat/sprint7i-waves`) |
+| G | Splash torpedo (radius + falloff + event) | 4 (DONE 2026-10-13: branch `feat/sprint7g-torpedo-splash`) |
+| H | Wreck salvage drop table + intent salvage | 5 |
+| I | Wave table data-driven + continuous mode | 4 |
+
 
 Client TS UX (M8/M9) & UE5 (M10) = fase terpisah setelah server tuntas.

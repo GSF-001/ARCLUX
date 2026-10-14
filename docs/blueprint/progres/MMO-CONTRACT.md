@@ -130,6 +130,13 @@ projectiles.ts    = projectile server-side (09 §3): WEAPON_DEFS (missile/
                     Events projectile_spawned/hit/fizzle/destroyed/rejected
                     REGION-WIDE (posisi peluru memang publik). Volatile —
                     restore() mengosongkan, worldHash ikut include.
+  PR-G (11.2 M3): splash torpedo — primary damage penuh + victim LAIN dalam
+                    `TORPEDO_SPLASH_RADIUS_M=800` (linear falloff
+                    `TORPEDO_SPLASH_FALLOFF=0.5`, cap
+                    `TORPEDO_SPLASH_MAX_TARGETS=5` nearest-first,
+                    friendly-fire EVE-like). Event `projectile_splash
+                    {center, hits[]}` REGION-WIDE. `DamageContext.scale`
+                    = multiplier pipeline sebelum ceiling.
 physics.ts        = clampSpeed + gerak. environs.ts = orbit/benda langit
                     (D-016/D-020). collision.ts = tabrakan → damage (D-017).
                     thermics.ts = radiasi/termal. cosmicEvent.ts = event acak.

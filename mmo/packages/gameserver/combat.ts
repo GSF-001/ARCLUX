@@ -134,6 +134,8 @@ function resolveTargetSubsystem(weaponType: string): string {
 export interface DamageContext {
   /** Jarak penembak→target (atau projectile→target saat hit). Default 0. */
   distance?: number;
+  /** Multiplier damage akhir sebelum ceiling (splash falloff, §11.2 M3). Default 1. */
+  scale?: number;
 }
 
 export interface DamagePipeline {
@@ -175,7 +177,11 @@ export function damageFormulaOf(
     Math.max(defensePowerOf(target) / 100, 0.5);
   // Mod hooks — urutan tetap, murni, deterministik (Sprint 5 menambah di
   // array yang SAMA: booster, skill aktif, hack effect).
-  const afterMods = raw * rangeFalloffOf(ctx?.distance ?? 0, weaponRangeOf(weaponType)) * conditionPenaltyOf(attacker);
+  const afterMods =
+    raw *
+    rangeFalloffOf(ctx?.distance ?? 0, weaponRangeOf(weaponType)) *
+    conditionPenaltyOf(attacker) *
+    (ctx?.scale ?? 1);
   const afterResistRaw = afterMods * (1 - resist);
   const afterResist = Math.round(afterResistRaw * 10) / 10;
   const resisted = Math.max(0, Math.round((afterMods - afterResistRaw) * 10) / 10);
