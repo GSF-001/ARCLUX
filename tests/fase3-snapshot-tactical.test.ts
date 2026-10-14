@@ -45,15 +45,16 @@ describe("Fase 3 PR-J — snapshot tactical (M8/M9)", () => {
     const { url } = await gs.start();
     gs.spawnPlayerVessel({ playerId: "p1", vessel: makeTestVesselModel("v1", 40) });
 
-    // Inject wave state + wreck.
+    // Inject wave state + wreck. phase "completed" = state stabil (server tick
+    // auto-advance in_progress→completed saat spawned mati semua — race).
     gs.authority.waves!.state = {
       ...createWaveStore().state,
-      phase: "in_progress", wave: 2, total: 5, spawned: 5,
+      phase: "completed", wave: 2, total: 5, spawned: 5,
     };
     gs.region.spawnWreck({ id: "wreck:npc-x", ownerId: "npc-x", position: { x: 10, y: 0, z: 10 }, contentsCredits: 80, tick: gs.region.tick });
 
     const snap = await fetch(`${url}/snapshot?playerId=p1`).then((r) => r.json());
-    expect(snap.tactical.wave).toMatchObject({ wave: 2, phase: "in_progress", total: 5, spawned: 5 });
+    expect(snap.tactical.wave).toMatchObject({ wave: 2, phase: "completed", total: 5, spawned: 5 });
     expect(snap.tactical.wrecks.map((w: { id: string }) => w.id)).toContain("wreck:npc-x");
 
     const anon = await fetch(`${url}/snapshot`).then((r) => r.json());

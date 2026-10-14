@@ -13,6 +13,7 @@
 
 import { initScene3D, type Scene3D } from "./scene3d/index";
 import { initHud, type Hud } from "./hud";
+import { initCombatHud, type CombatHud } from "./combatHud";
 import { createCockpitOverlay } from "./cockpitOverlay";
 import { connectNet, type NetHandle } from "./net";
 import { initInput, type InputHandle } from "./input";
@@ -30,6 +31,7 @@ export type DockingState = "EXTERIOR" | "ENTERING" | "INTERIOR";
 export interface RendererHandle {
   scene: Scene3D;
   hud: Hud;
+  combatHud: CombatHud;
   net: NetHandle;
   input: InputHandle;
   audio: AudioHandle;
@@ -55,10 +57,15 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   const settings = loadSettings();
   const scene = initScene3D(undefined, settings);
   const hud = initHud();
+  // Fase 3 (M8/M9): combat UX layer — lock panel, arrow, wave, salvage,
+  // reload bar. Data = snapshot.tactical (PR-J); sfx via audio.ui existing.
+  const combatHud = initCombatHud();
   // 10.V U4: overlay droplet + HUD shake diregistrasi sekali ke scene;
   // wireC mengumpan keduanya tiap frame dari CockpitState hidup.
   const cockpitOverlay = createCockpitOverlay();
   scene.setCockpitPresentation(cockpitOverlay, hud.root);
+  combatHud.setProjector((p) => scene.projectToScreen(p));
+  combatHud.onCue((cue) => audio.ui(cue === "broken" ? "alert" : cue === "locked" ? "click" : "hover"));
   const net = connectNet(opts?.serverUrl);
   const audio = initAudio();
   const input = initInput({
@@ -285,6 +292,8 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
       if (e.kind === "vessel") { localVessel = e as VesselEntity; break; }
     }
     input.setLocalVessel(localVessel);
+    // Fase 3: update combat HUD setelah localVessel diketahui (TDZ-safe).
+    combatHud.update(snap, localVessel);
     if (localVessel) { lastLocalVessel = localVessel; lastPlayerId = localVessel.owner ?? lastPlayerId; }
     // Audio: engine hum ∝ kecepatan normalized + ambient hum continuous (Fase 5)
     if (localVessel) {
@@ -300,6 +309,31 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   const onDocClick = (): void => { audio.unlock(); };
   const onKeyDown = (e: KeyboardEvent): void => {
     if (e.code === "KeyN") { e.preventDefault(); stadiumOverlay.show(); return; }
+    // Fase 3 M8/M9: T = cycle lock target berikutnya; B = salvage wreck terdekat.
+    if (e.code === "KeyT") {
+      e.preventDefault();
+      const tid = combatHud.cycleTargetId();
+      if (tid && lastLocalVessel) {
+        void net.send({
+          playerId: lastPlayerId, entityId: lastLocalVessel.id, type: "lock",
+          seq: Date.now() % 100000, payload: { targetId: tid },
+        } as unknown as import("../../../../mmo/packages/gameserver/types").PlayerIntent);
+        audio.ui("click");
+      }
+      return;
+    }
+    if (e.code === "KeyB") {
+      e.preventDefault();
+      const wid = combatHud.nearestWreckId();
+      if (wid && lastLocalVessel) {
+        void net.send({
+          playerId: lastPlayerId, entityId: lastLocalVessel.id, type: "salvage",
+          seq: Date.now() % 100000, payload: { wreckId: wid },
+        } as unknown as import("../../../../mmo/packages/gameserver/types").PlayerIntent);
+        audio.ui("click");
+      }
+      return;
+    }
     if (e.code === "KeyE" && dockingState === "INTERIOR") {
       const pos = input.getInteriorPosition();
       const near = bazaarPositions.some((p) => Math.hypot(pos.x - p.x, pos.z - p.z) < 30);
@@ -340,6 +374,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
     window.removeEventListener("keydown", onKeyDown);
     scene.dispose();
     hud.dispose();
+    combatHud.dispose();
     cockpitOverlay.dispose();
     menu.dispose();
     audio.dispose();
@@ -353,7 +388,7 @@ export function bootstrapRenderer(opts?: { serverUrl?: string }): RendererHandle
   if (typeof window !== "undefined") (window as any).__arcluxRenderer = { scene, net, hud, input, audio, menu, get dockingState() { return dockingState; }, enterInterior, exitInterior };
 
   return {
-    scene, hud, net, input, audio, menu,
+    scene, hud, combatHud, net, input, audio, menu,
     get dockingState(): DockingState { return dockingState; },
     enterInterior, exitInterior, dispose,
   };

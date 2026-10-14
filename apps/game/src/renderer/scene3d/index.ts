@@ -85,6 +85,8 @@ export interface Scene3D {
   initInteriorAnimation(result: import("../interior").InteriorBuildResult): void;
   /** 10.V U4: daftarkan overlay droplet + HUD root (sekali saat boot). */
   setCockpitPresentation(overlay: CockpitOverlay | null, hudRoot: HTMLElement | null): void;
+  /** Fase 3 M8: world → screen px (NDC→px, visible=false bila di belakang kamera). */
+  projectToScreen(pos: { x: number; y: number; z: number }): { x: number; y: number; visible: boolean };
   /** 10.V W1: weapon VFX spawning (presentation only, damage from sim). */
   spawnTracer(from: THREE.Vector3, to: THREE.Vector3, tint?: number): void;
   spawnBeam(from: THREE.Vector3, to: THREE.Vector3, width?: number, heat?: number): void;
@@ -685,6 +687,19 @@ export function initScene3D(container?: HTMLElement, settings?: GameSettings): S
       interiorAnimState = createInteriorAnimState(result);
     },
     setCockpitPresentation,
+    // Fase 3 M8 — panah arah target (off-screen indicator) butuh proyeksi.
+    projectToScreen: (pos: { x: number; y: number; z: number }) => {
+      const cam = ctx.camera;
+      if (!cam) return { x: 0, y: 0, visible: false };
+      const v = new THREE.Vector3(pos.x, pos.y, pos.z).project(cam);
+      const behind = v.z > 1;
+      const el = ctx.renderer.domElement;
+      return {
+        x: ((v.x + 1) / 2) * el.width,
+        y: ((1 - v.y) / 2) * el.height,
+        visible: !behind && v.x >= -1 && v.x <= 1 && v.y >= -1 && v.y <= 1,
+      };
+    },
     // 10.V W1 — weapon VFX facades (presentation only, damage from sim)
     spawnTracer: (from: THREE.Vector3, to: THREE.Vector3, tint?: number) => spawnProjectileTracer(ctx, from, to, tint),
     spawnBeam: (from: THREE.Vector3, to: THREE.Vector3, width?: number, heat?: number) => spawnBeam(ctx, from, to, width, heat),
