@@ -141,6 +141,41 @@ export interface RegionSnapshot {
   /** 09 §3.5: proyeksi projectile RINGAN (posisi publik, intel minor
    *  ttl/turnRate disembunyikan). Volatile — tidak pernah dipersist. */
   projectiles?: ProjectileSnapshot[];
+  /**
+   * Fase 3 client combat UX (09-addendum M8/M9) — proyeksi RINGAN
+   * per-request (/snapshot), bukan persist. `locks` PRIVATE (hanya lock
+   * milik vessel viewer); `wave` + `wrecks` publik (intel).
+   */
+  tactical?: TacticalSnapshot;
+}
+
+/** Satu slot lock milik viewer (privat — tak pernah broadcast). */
+export interface TacticalLockSnapshot {
+  targetId: string;
+  phase: "acquiring" | "locked" | "breaking";
+  progress: number;
+  need: number;
+}
+
+export interface TacticalWaveSnapshot {
+  wave: number;
+  phase: string;
+  total: number;
+  spawned: number;
+  salvage: number;
+  continuous: boolean;
+}
+
+export interface TacticalWreckSnapshot {
+  id: string;
+  ownerId: string;
+  position: Vec3;
+}
+
+export interface TacticalSnapshot {
+  locks: TacticalLockSnapshot[];
+  wave?: TacticalWaveSnapshot;
+  wrecks: TacticalWreckSnapshot[];
 }
 
 /**
