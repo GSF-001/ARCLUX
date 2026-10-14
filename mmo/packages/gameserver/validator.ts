@@ -35,6 +35,7 @@ import {
 } from "./hack";
 import { CLAIM_PLANT_RADIUS_M, CLAIM_MAX_PER_PLAYER, type ClaimStore } from "./claims";
 import { lockRangeOf, angleToPosDeg, LOCK_CONE_DEG, EW_JAM_RANGE_M, EW_JAM_COOLDOWN_TICKS, type LockStore } from "./targeting";
+import { SALVAGE_RANGE_M } from "./npcBrain";
 import {
   INTERCEPT_RANGE_M,
   INTERCEPT_COOLDOWN_TICKS,
@@ -179,6 +180,11 @@ export function validateIntent(
       if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot jam" };
       return validateEwJam(region, v, intent, ctx);
     }
+    case "salvage": {
+      const v = entity as VesselEntity;
+      if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot salvage" };
+      return validateSalvage(region, v, intent);
+    }
     case "attack": {
       const v = entity as VesselEntity;
       if (v.kind !== "vessel") return { decision: "reject", reason: "stations cannot attack" };
@@ -191,6 +197,16 @@ export function validateIntent(
       }
       if (process.env.ARCLUX_DEV_WAVE !== "1") {
         return { decision: "reject", reason: "dev_spawn_wave disabled (set ARCLUX_DEV_WAVE=1)" };
+      }
+      return { decision: "accept" };
+    }
+    case "wave_continuous": {
+      // 11.2 M5 (PR-I): toggle auto-next wave — dev/admin ONLY.
+      if (!ctx.authority?.waves) return { decision: "reject", reason: "wave spawner offline" };
+      const enabled = intent.payload?.enabled;
+      if (typeof enabled !== "boolean") return { decision: "reject", reason: "wave_continuous requires payload.enabled (boolean)" };
+      if (process.env.ARCLUX_DEV_WAVE !== "1") {
+        return { decision: "reject", reason: "wave_continuous disabled (set ARCLUX_DEV_WAVE=1)" };
       }
       return { decision: "accept" };
     }
@@ -543,6 +559,26 @@ function validateLock(
 }
 
 /** 11.2 M2 (PR-F): EW jam — instant lock break + re-lock window. */
+/** 11.2 M4 (PR-H): salvage wreck — range + cooldown. */
+function validateSalvage(
+  region: WorldRegion,
+  actor: VesselEntity,
+  intent: PlayerIntent
+): ValidationResult {
+  const wreckId = intent.payload?.wreckId as string | undefined;
+  if (!wreckId) return { decision: "reject", reason: "salvage requires wreckId" };
+
+  const cd = actor.cooldowns["salvage"] ?? 0;
+  if (cd > 0) return { decision: "reject", reason: `salvage on cooldown (${cd} ticks)` };
+
+  const wreck = region.getWreck(wreckId);
+  if (!wreck) return { decision: "reject", reason: `unknown wreck: ${wreckId}` };
+  if (distanceBetween(actor, wreck) > SALVAGE_RANGE_M) {
+    return { decision: "reject", reason: "wreck out of salvage range" };
+  }
+  return { decision: "accept" };
+}
+
 function validateEwJam(
   region: WorldRegion,
   attacker: VesselEntity,
