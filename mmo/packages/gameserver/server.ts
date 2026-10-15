@@ -393,6 +393,27 @@ export function createGameServer(opts: GameServerOptions = {}): GameServerHandle
             return Math.sqrt(dx * dx + dy * dy + dz * dz) <= radius;
           }) };
         }
+        // Fase 3 (M8/M9): proyeksi tactical — locks PRIVATE per viewer
+        // (kapalnya sendiri); wave + wrecks publik (intel). Anonim = tanpa.
+        if (viewer) {
+          const mine = region.vessels().find((v) => v.owner === viewer);
+          const locks = mine
+            ? (authority.locks?.locksOf(mine.id) ?? []).map((l) => ({
+                targetId: l.targetId, phase: l.phase, progress: l.progress, need: l.need,
+              }))
+            : [];
+          const w = authority.waves?.state;
+          base = {
+            ...base,
+            tactical: {
+              locks,
+              wave: w
+                ? { wave: w.wave, phase: w.phase, total: w.total, spawned: w.spawned, salvage: w.salvage, continuous: w.continuous }
+                : undefined,
+              wrecks: region.wrecksList().map((r) => ({ id: r.id, ownerId: r.owner, position: r.position })),
+            },
+          };
+        }
         const sanitized = sanitizeSnapshot(base, viewer);
         sendJson(res, 200, removed ? { ...sanitized, removed } : sanitized);
         return;
