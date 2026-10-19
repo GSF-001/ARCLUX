@@ -11,6 +11,7 @@
 // validates/simulates. Reuses packages/universe for vessel model + licensing.
 
 export * from "./types";
+export * from "./vehicle";
 export * from "./auth";
 export * from "./fitting";
 export * from "./random";
